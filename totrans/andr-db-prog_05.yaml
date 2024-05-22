@@ -1,0 +1,403 @@
+- en: Chapter 5. Querying the Contacts Table
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Earlier in this book, we looked at how we could build a SQLite database for
+    our application by overriding the `SQLiteOpenHelper` class. Then, we extended
+    our understanding of databases on Android by introducing the `ContentProvider`
+    class, which allowed us to expose our SQLite databases to external applications,
+    and more generally to the Android OS itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, while knowing how to design and implement your own database is a powerful
+    skill to have, knowing how to leverage existing data on the user's device can
+    be just as beneficial. Oftentimes, this will mean querying existing content providers
+    for various types of data, but one especially important content provider and by
+    far the most commonly queried content provider - is the `Contacts` content provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we'll start by exploring the structure of the `Contacts` content
+    provider (that is, its schema) and then look at the various ways to query for
+    contacts and their associated metadata.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Structure of the Contacts content provider
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Understanding the schema of the `Contacts` content provider is half of the
+    challenge. Because of the wealth of data that can potentially be associated with
+    a contact, much work had to be done in designing a schema which would be both
+    flexible and powerful enough to meet every user''s needs. In the following table,
+    I''ve sketched out how this schema is laid out, and from there we''ll examine
+    how the schema works at a high level, before diving into each table of the schema:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Structure of the Contacts content provider](img/Image1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'So here you have it – doesn''t look too daunting right? Of course, the columns
+    shown previously are just a subset of the actual columns in each table, but it
+    should hopefully be enough to give you an idea of how these tables all work together.
+    If you''d like to see all the columns in each table, I invite you to look at the
+    following links:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/reference/android/provider/ContactsContract.Contacts.html](http://developer.android.com/reference/android/provider/ContactsContract.Contacts.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/reference/android/provider/ContactsContract.RawContacts.html](http://developer.android.com/reference/android/provider/ContactsContract.RawContacts.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/reference/android/provider/ContactsContract.Data.html](http://developer.android.com/reference/android/provider/ContactsContract.Data.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's think about the schema from a high level first. At the top, we have the
+    `Contacts` table. In previous versions of Android (API levels 4 and under), this
+    was more or less all you had. It was just the typical, intuitive, `Contacts` table,
+    which contained each contact's unique ID as well as their names, phone numbers,
+    e-mails, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then things got complicated. Suddenly, Android 2.0 (API levels 5 and up) came
+    out and users were allowed to sync their contacts with Facebook, with Twitter,
+    with Google, along with numerous other services. Does it still make sense to have
+    just a simple `Contacts` table? Would each contact for each source be its own
+    separate row? And how would we know which rows are actually referring to the same
+    contact?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Because of this, Google had to develop a second layer of tables which reference
+    the `Contacts` table – these tables are called `Raw Contacts`. Every contact the
+    user has is an aggregation of raw contacts, where each raw contact represents
+    a single contact from a specific source. So, say you had a friend and you've synced
+    that contact with both Facebook and Twitter. This friend would then have two `Raw
+    Contact` tables, one describing his/her metadata from Facebook and the other describing
+    his/her metadata from Twitter. Both of these raw contacts would then both point
+    to a single entry in the `Contacts` table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But wait, whereas before each contact's metadata was more or less limited to
+    a few phone numbers and a few e-mails, now there's an enormous amount of metadata
+    available for each contact, thanks to social networking. So how would we store
+    all this metadata? Each contact's latest status messages or latest tweets? Would
+    we just have one enormous `Raw Contacts` table with thirty or so columns?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Preferably no – that's probably not a good use of memory, as that table would
+    likely be fairly sparse. So instead, the team at Google decided to create a third
+    layer of tables, known as the `Data` tables. These `Data` tables all reference
+    a raw contact, which again, references a contact. And so that's essentially how
+    a contact is described in the Android OS – a contact is an aggregation of raw
+    contacts which are each specific to a source (that is, Facebook or Twitter) and
+    each raw contact is an aggregation of separate data tables where each data table
+    contains a certain type of data (that is, phone numbers, e-mails, status messages,
+    and so on). That's the high-level picture of what's happening, and in the next
+    section we'll look at how you actually query these tables for common fields, such
+    as phone numbers and e-mails.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, there are many technical details that fully describe what's happening in
+    the schema, but for now I'll end this section with a brief discussion of how this
+    aggregation between raw contacts actually works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The system automatically aggregates raw contacts, and so each time you create
+    a new contact or sync a new account to an existing contact, that raw contact is
+    created with aggregation mode set to `DEFAULT`, which tells the system to aggregate
+    this raw contact with other raw contacts referencing the same contact. However,
+    you can explicitly define what kind of aggregation you want for that raw contact
+    and the options are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`AGGREGATION_MODE_DEFAULT` The default state, where automatic aggregation is
+    allowed'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AGGREGATION_MODE_DISABLED` Automatic aggregation is not allowed and the raw
+    contact will not be aggregated'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AGGREGATION_MODE_SUSPENDED` Automatic aggregation is deactivated, however,
+    if the raw contact was previously aggregated, then it will remain aggregated'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: These are the three modes of aggregation, which you can update and adjust for
+    each raw contact. As for how the aggregation is done, it's primarily done by matching
+    names and/or nicknames, and if names are not present, then the match is attempted
+    using phone numbers and e-mails.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By now you should have a decent understanding of what the `Contacts` content
+    provider looks like, and so we'll move on to looking at some code!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Querying for Contacts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: First, let's start with a simple query that targets the `Contacts` table and
+    gives us back the contact IDs, each contact's name (remember this is an aggregated
+    display name), as well as their `lookup` key. This `lookup` key is a relatively
+    new concept to the `Contacts` content provider and is meant to be a more reliable
+    way to reference `Contacts` than using the traditional row ID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The reason for this is that row IDs tend to be unreliable, especially for a
+    content provider like the `Contacts` content provider, which is likely to have
+    numerous applications referencing, and potentially updating, it simultaneously.
+    Say you try to reference a contact by its row ID, but earlier a different application
+    on the user''s device had made a change to the `Contacts` database so that either
+    the contact at that row ID is now different, or perhaps now it is no longer there!
+    Instead, the `lookup` key is a concatenation of the server side''s identifiers
+    for each raw contact (in other words, it is a function of the raw contact''s metadata)
+    and will be much more stable. But enough with the explanations, let''s take a
+    look at how a simple query might look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: So, here we retrieve our content resolver as we did in the previous chapter,
+    and pass in the `Contacts CONTENT_URI`. We then iterate through the cursor and
+    get the fields that we asked for in the projection array. Notice that I also use
+    a `Map` to keep track of each contact's `lookup` key. In my case, I set the keys
+    to be the contact's display name, but you could store the `lookup` keys and/or
+    the contact IDs with any data structure that you like.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you already know the `lookup` key of your contact (perhaps it had previously
+    been cached somewhere), then you can use that `lookup` key to directly access
+    the contact with the following snippet of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So, here we append the `lookup` value to the URI itself – similar to how we
+    earlier appended a row ID to the standard content URI to retrieve a single citizen.
+    However, the problem with this method is that there tends to be some more overhead
+    when trying to match by `lookup` key compared to the traditional match by row
+    ID. In other words, you sacrifice some performance in speed in order to obtain
+    better accuracy with your query. However, Android provides you with one more method
+    that is meant to give you both increased accuracy and increased performance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method allows you to first search for a contact by its contact ID – a much
+    faster and still somewhat reliable method. However, in the event that a contact
+    is not found with that contact ID, the system reverts to using the `lookup` key.
+    In either case, as long as the contact exists, you're guaranteed to retrieve the
+    correct `lookup` URI for that contact, but oftentimes using this method will give
+    you a nice performance boost without sacrificing any accuracy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that you have the contact IDs, the `lookup` keys, and their names, how
+    would you query for more specific metadata – say their phone numbers or e-mails?
+    Let''s take a look at the following example, where I request a contact''s phone
+    number and phone type by filtering through their `lookup` key:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that we leave some of the full package paths to the `Phone` and `Data`
+    classes to again give you a glimpse at the hierarchical nature of the schema.
+    Here, since we're targeting the `Data` tables now and not the `Contact` table,
+    we pass in the corresponding `Data CONTENT_URI`. Then, in the projection parameter,
+    we request the phone number as well as the phone type, and in the selection parameter
+    I make sure I filter by the `lookup` key. Once I successfully make the query,
+    we simply move the cursor (at this point there's only one number associated with
+    Vicky; otherwise, we would use a `while` loop) and grab the fields again. Notice
+    that we write a simple `switch` statement, which allows us to convert the `PHONE_TYPE`
+    – returned as an integer – into a more user-friendly string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And last but not least, let''s take a look at how we could query the `Raw Contacts`
+    table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is particularly useful if you want to look at a contact's metadata for
+    a specific source (say you only care about what information Facebook has on that
+    contact). Then you could potentially filter the `Raw Contacts` table by the `ACCOUNT_NAME`
+    or `ACCOUNT_TYPE`, and once you have the raw contact IDs associated with that
+    specific source, you could then query the `Data` tables for any metadata associated
+    with those specific raw contact IDs!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, let's take a quick look at how to modify contact data – more specifically,
+    how to insert and update contact data. Note that in order to successfully run
+    these Activities, we'll need to request special permissions in the `Android Manifest`
+    file. However, for now, let's continue to focus on the code, and we'll make sure
+    to take a detour and cover all the permissions at the very end.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Modifying Contacts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The code for the following examples should again look very familiar. And like
+    I said earlier, half of the challenge is just mastering the schema and understanding
+    how each table interacts with the others (it helps to see the schema laid out
+    like previously otherwise it can be extremely confusing and may require browsing
+    through a lot of verbose documentation). Let's say we want to insert a new phone
+    number for a user. Which table's URI should we reference?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Well, it'd have to be one of the `Data` tables and we should probably pass in
+    the `MIMETYPE` of the data so that the content provider knows exactly which of
+    the `Data` tables to insert the new row in. In this case, we'll specify the phone
+    content type and pass in a number and a number type. The only field we're missing
+    is the ID - whose phone `Data` table should this new row go into? Well, recalling
+    that each `Data` table points to a `Raw Contact` table, it would make sense to
+    pass in the raw contact ID of the contact.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So we try to repeat this thought process for every insert, update, or delete
+    that we have to make, and the code ends up looking like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we use our content resolver along with a `ContentValues` object to do a
+    standard insert. Once we insert it, we're returned the URI of that newly-inserted
+    row, and so we simply run a query on that URI and read back the data that we just
+    inserted, just as a sanity check that the insertion worked. I'll point this out
+    in the screenshot which follows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, the developers over at Google encourage another way to do an insertion,
+    and this is through using batch insertions. This is another relatively new concept
+    for the Android OS and is a variant on the traditional `ContentValues` class.
+    By using batch operations, not only will you gain a considerable boost in performance
+    when inserting multiple rows at once (saves you time from having to switch from
+    the client side to the server side), but it will also ensure **atomicity** in
+    your insertion. This is just a fancy database word meaning that either all of
+    the rows will get inserted or none will, so that if an error occurs midway through
+    your insertions, the system will make sure to roll back those previous insertions
+    so that the consistency of the database is preserved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The syntax for these batch insertions is shown as follows and is pretty intuitive:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To wrap up this chapter, we''ll take a quick look at how you could use this
+    new batch operation mechanism to update the e-mail of a contact:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That''s it! Here again, we think to ourselves that we''ll likely need to specify
+    both the raw contact ID so that the content provider knows whose `Data` table
+    to update, as well as the `MIMETYPE` of the `Data` table so that the content provider
+    knows which of the `Data` tables to update. As for the results from all the queries,
+    insertions, and updates done in this section, see the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Modifying Contacts](img/8123OS_05_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Here we first see all the contacts in my contact list along with their `lookup`
+    keys, IDs, and display names. Then, we see the phone numbers we retrieved from
+    Vicky, as well as the results of looking her up by her `lookup` key instead of
+    her contact ID, and followed by our query of the `Raw Contacts` table. Notice
+    that for account names and account types you see a bunch of null values, but this
+    is simply a result of my running my code on the emulator. When you try running
+    the code on a fully synced and live contact list, expect to see much more colorful
+    results. Lastly, we just see some of the results from our insertions and updates
+    and can further validate that our insertions/updates were successful by actually
+    looking at the contacts in the contacts list as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Modifying Contacts](img/8123OS_05_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Here we see that we''ve successfully inserted a work number for contact Vicky,
+    and then again for Daniel, we see the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Modifying Contacts](img/8123OS_05_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: So that he indeed now has a work e-mail with the correct e-mail that we specified.
+    And so that's it! Hopefully, now you'll have a strong understanding of both the
+    schema of the `Contacts` content provider as well as the general syntax for how
+    you would construct a valid query or insertion. Remember to keep the schema in
+    mind as you think through which fields to pass in and which tables you really
+    want to be querying from.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting permissions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that we''ve mastered the `Contacts` content provider without declaring
+    the proper permissions, you might encounter some rude force closes when trying
+    to run the previous code. To protect the user''s personal contact information
+    from potentially malicious applications, the Android OS requires you to declare
+    some read and write permissions in your applications in the `Android Manifest`
+    file. To do this, all you need to do is add the following two lines to your manifest
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: So basically, you just need to declare in your manifest that you want to be
+    able to both read and write (that is, modify) contacts (or just declare one or
+    the other according to what your application needs). This will then prompt the
+    user before they download your application that your application requires these
+    permissions, and as long as the user accepts them your application is all set
+    to run!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we expanded upon our knowledge of content providers by mastering
+    the most widely used content provider available to every application across every
+    device – the `Contacts` content provider. We started off by taking a look at the
+    schema of the `Contacts` content provider, which has grown increasingly complex
+    as the amount of metadata associated with a given contact has soared thanks to
+    various social networking sources. In order to solve this problem, the team at
+    Google decided to switch up the schema by having a first-tier table simply known
+    as the `Contacts` table, followed by a second-tier of tables known as the `Raw
+    Contact` tables, and then by a third-tier of tables simply known as the `Data`
+    tables. Each contact is then an aggregation of a group of raw contacts that are
+    specific to a source (that is, Facebook or Twitter), and each raw contact is then
+    an aggregation of a series of `Data` tables, each having its own type of data
+    (that is, phone numbers or e-mails).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Afterwards, we looked at multiple ways to query the `Contacts` content provider
+    as well as multiple ways to insert and update existing contacts in the content
+    provider. This proved to be relatively straightforward code-wise (extremely similar
+    to what we saw in previous chapters) and again, showed us how half the battle
+    is just in understanding the schema and making sure we include all the proper
+    fields.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, so far in this book, we've looked at ways to query your own as well as
+    external databases, but each time we've relied on simple system print statements
+    to actually see the results of our queries (by now I'm sure you're sick of seeing
+    DDMS logs too). So the question becomes – now that I know how to actually build
+    and query databases, how do I design Activities which allow me to bind this data
+    to the UI for the user to see and interact with? This is what we'll focus on in
+    the next chapter as we explore ways to bind and interact with our databases through
+    the user interface.
+  prefs: []
+  type: TYPE_NORMAL

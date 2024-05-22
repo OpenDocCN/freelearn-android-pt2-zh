@@ -1,0 +1,1529 @@
+- en: Chapter 14. Getting your app ready for the Play Store
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The new Android 6.0 Run-Time permission model
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to schedule an alarm
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Receive notification of device boot
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using AsyncTask for background work
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Adding speech recognition to your app
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Push Notification using Google Cloud Messaging
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to add Google sign-in to your app
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we approach the end of this book, it's time to add the finishing touches
+    to your application before releasing it to the Play Store. The recipes in this
+    chapter cover the topics that can make a difference between users keeping your
+    app or removing it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our first recipe, *The new Android 6.0 Run-Time permission model*, is certainly
+    an important topic, possibly being the primary reason Android went from version
+    5.x to version 6! Changes to the Android permission model have been requested
+    for some time, so this new model is a welcome change, at least for users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we'll take a look at using alarms in Android. One of the primary benefits
+    of alarms is that the OS is responsible for maintaining the alarm, even when your
+    application is not running. Since alarms do not persist after rebooting the device,
+    we'll also look at how to detect a device reboot so you can recreate your alarms
+    in *Receive notification of device boot*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Almost any serious Android application will need a way to perform potentially
+    blocking tasks off the main thread. Otherwise, your app runs the risk of being
+    perceived as sluggish, or worse, completely nonresponsive. `AsyncTask` was designed
+    to make it easier to create a background worker task as we'll demonstrate in the
+    *Using the AsyncTask for background work* recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you want your app to benefit from hands-free typing or voice recognition,
+    take a look at the *Adding Speech Recognition to your app* recipe in which we'll
+    explore the Google Speech API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Possibly one of the most interesting features for communicating with your users
+    is Push Notification or **Google Cloud Messaging** (**GCM**) as Google calls it.
+    The *Push Notification using Google Cloud Messaging* recipe will walk you through
+    the adding of GCM to your application as well as explain the bigger picture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we'll end the chapter with a recipe showing how to make your app more
+    comfortable and encourage users to log in with the *How to add Google Sign-In
+    to your app* recipe
+  prefs: []
+  type: TYPE_NORMAL
+- en: The new Android 6.0 Run-Time permission model
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The old security model was a sore point for many in Android. It's common to
+    see reviews commenting on the permissions an app requires. Sometimes, permissions
+    were out of the line (like a Flashlight app requiring internet permission), but
+    other times, the developer had good reasons to request certain permissions. The
+    main problem was that it was an all-or-nothing prospect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This finally changed with the Android 6 Marshmallow (API 23) release. The new
+    permission model still declares permissions in the manifest as before, but users
+    have the option of selectively accepting or denying each permission. Users can
+    even revoke a previously granted permission.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although this is a welcome change for many; however, for a developer, it has
+    the potential to break the code that was working before. We've talked about this
+    permission change in the previous recipes, as it has far reaching implications.
+    This recipe will put it all together to serve as a single point of reference when
+    implementing this change in your own apps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One important point to remember is that this change only affects users of Android
+    6.0 (API 23) and above.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Create a new project in Android Studio and call it `RuntimePermission`. Use
+    the default **Phone & Tablet** option and select **Empty Activity** when prompted
+    for **Activity Type**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The sample source code sets the minimum API to 23, but this is not required.
+    If your `compileSdkVersion` is API 23 or above, the compiler will flag your code
+    for the new security model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We need to start by adding our required permission to the manifest, then we''ll
+    add a button to call our check permission code. Open the Android Manifest and
+    follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following permission:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `activity_main.xml` and replace the existing `TextView` with this button:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `MainActivity.java` and add the following constant to the class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add this method for permission check:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add this method to show the explanation dialog:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add this method to request the permission:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the method for button click:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Override `onRequestPermissionsResult()` as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, you're ready to run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Using the new runtime permission model involves the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Check to see whether you have the desired permissions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If not, check whether we should display the rationale (meaning, the request
+    was previously denied).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Request the permission; only the OS can display the permission request.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Handle the request response.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Here are the corresponding methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ContextCompat.checkSelfPermission`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ActivityCompat.requestPermissions`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ActivityCompat.shouldShowRequestPermissionRationale`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onRequestPermissionsResult`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Even though you are requesting permissions at runtime, the desired permission
+    must be listed in the Android Manifest. If the permission is not specified, the
+    OS will automatically deny the request.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'You can grant/revoke permissions through the ADB with the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here''s an example to grant the SEND_SMS permission for our test app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Developer Docs: System Permissions** at [https://developer.android.com/guide/topics/security/permissions.html](https://developer.android.com/guide/topics/security/permissions.html)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to schedule an alarm
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Android provides `AlarmManager` to create and schedule alarms. Alarms offer
+    the following features:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Schedule alarms for a set time or interval
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Maintained by the OS, not your application, so alarms are triggered even if
+    your application is not running, or the device is asleep
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Can be used to trigger periodic tasks (such as an hourly news update), even
+    if your application is not running
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Your app does not use resources (such as timers or background services), since
+    the OS manages the scheduling
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Alarms are not the best solution if you need a simple delay while your application
+    is running, for example, a short delay for a UI event. For short delays, it's
+    easier and more efficient to use a Handler, as we've done in several previous
+    recipes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When using alarms, keep these best practices in mind:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Use as infrequent alarm timing as possible
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Avoid waking up the device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Use as imprecise timing as possible—the more precise the timing, the more resources
+    required
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Avoid setting alarm times based on clock time (such as 12:00); add random adjustments
+    if possible to avoid congestion on servers (especially important when checking
+    for new content, such as weather or news)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Alarms have three properties, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alarm type (see in the following list)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Trigger time (if the time has already passed, the alarm is triggered immediately)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Pending Intent
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A repeating alarm has the same three properties, plus an Interval:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alarm type (see in the following list)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Trigger time (if the time has already passed, it triggers immediately)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Interval
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Pending Intent
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'There are four alarm types:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`RTC` (**Real Time Clock**): This is based on the wall clock time. This does
+    not wake the device.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`RTC_WAKEUP`: This is based on the wall clock time. This wakes the device if
+    it is sleeping.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ELAPSED_REALTIME`: This is based on the time elapsed since the device boot.
+    This does not wake the device.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ELAPSED_REALTIME_WAKEUP`: This is based on the time elapsed since the device
+    boot. This wakes the device if it is sleeping.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Elapsed Real Time is better for time interval alarms—such as every 30 minutes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Alarms do not persist after device reboots. All alarms are cancelled when a
+    device shuts down, so it is your app's responsibility to reset the alarms on device
+    boot. (See *Receive notification of device boot* for more information.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following recipe will demonstrate how to create alarms with `AlarmManager`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new project in Android Studio and call it: `Alarms`. Use the default
+    **Phone & Tablet** option and select **Empty Activity** when prompted for **Activity
+    Type**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Setting an alarm requires a Pending Intent, which Android sends when the alarm
+    is triggered. Therefore, we need to set up a Broadcast Receiving to capture the
+    alarm intent. Our UI will consist of just a simple button to set the alarm. To
+    start, open the Android Manifest and follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following `<receiver>` to the `<application>` element at the same level
+    as the existing `<activity>` element:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `activity_main.xml` and replace the existing TextView with the following
+    button:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new Java class called `AlarmBroadcastReceiver` using the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `ActivityMain.java` and add the method for the button click:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You're ready to run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Creating the alarm is done with this line of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here''s the method signature:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Prior to Android 4.4 KitKat (API 19), this was the method to request an exact
+    time. Android 4.4 and later will consider this as an inexact time for efficiency,
+    but will not deliver the intent prior to the requested time. (See `setExact()`
+    as follows if you need an exact time.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To set the alarm, we create a Pending Intent with our previously defined alarm
+    action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: (This is an arbitrary string and could be anything we want, but it needs to
+    be unique, so we prepend our package name.) We check for this action in the Broadcast
+    Receiver's `onReceive()` callback.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If you click the **Set Alarm** button and wait for thirty minutes, you will
+    see the Toast when the alarm triggers. If you are too impatient to wait and click
+    the **Set Alarm** button again before the first alarm is triggered, you wouldn't
+    get two alarms. Instead, the OS will replace the first alarm with the new alarm,
+    since they both use the same Pending Intent. (If you need multiple alarms, you
+    need to create different Pending Intents, such as using different Actions.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cancel the alarm
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you want to cancel the alarm, call the `cancel()` method by passing the
+    same Pending Intent you have used to create the alarm. If we continue with our
+    recipe, this is how it would look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Repeating alarm
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you want to create a repeating alarm, use the `setRepeating()` method. The
+    Signature is similar to the `set()` method, but with an interval. This is shown
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For the Interval, you can specify the interval time in milliseconds or use
+    one of the predefined `AlarmManager` constants:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`INTERVAL_DAY`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`INTERVAL_FIFTEEN_MINUTES`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`INTERVAL_HALF_DAY`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`INTERVAL_HALF_HOUR`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`INTERVAL_HOUR`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Developer Docs: AlarmManager** at [https://developer.android.com/reference/android/app/AlarmManager.html](https://developer.android.com/reference/android/app/AlarmManager.html)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Receive notification of device boot
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android sends out many intents during its lifetime. One of the first intents
+    sent is `ACTION_BOOT_COMPLETED`. If your application needs to know when the device
+    boots, you need to capture this intent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This recipe will walk you through the steps required to be notified when the
+    device boots.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Create a new project in Android Studio and call it `DeviceBoot`. Use the default
+    **Phone & Tablet** option and select **Empty Activity** when prompted for **Activity
+    Type**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To start, open the Android Manifest and follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following permission:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following `<receiver>` to the `<application>` element, at the same
+    level as the existing `<activity>` element:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new Java class called `BootBroadcastReceiver` using the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Reboot the device to see the Toast.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When the device boots, Android will send the `BOOT_COMPLETED` intent. As long
+    as our application has the permission to receive the intent, we will receive notifications
+    in our Broadcast Receiver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are three aspects to make this work:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A permission for `RECEIVE_BOOT_COMPLETED`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Adding `BOOT_COMPLETED` to the receiver intent filter
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Checking for the `BOOT_COMPLETED` action in the Broadcast Receiver
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Obviously, you'll want to replace the Toast message with your own code, such
+    as for recreating any alarms you might need.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'If you followed the previous recipe, then you already have a Broadcast Receiver.
+    You don''t need a separate `BroadcastReceiver` for each action, just check for
+    each action as needed. Here''s an example if we need to handle another action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Developer Docs: Intent** at [https://developer.android.com/reference/android/content/Intent.html](https://developer.android.com/reference/android/content/Intent.html)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using the AsyncTask for background work
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Throughout this book, we have mentioned the importance of not blocking the main
+    thread. Performing long running operations on the main thread can cause your application
+    to appear sluggish, or worse, hang. If your application doesn't respond within
+    about 5 seconds, the system will likely display the **Application Not Responding**
+    (**ANR**) dialog with the option to terminate your app. (This is something you
+    will want to avoid as it's a good way to get your app uninstalled.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android applications use a single thread model with two simple rules, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Don't block the main thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Perform all UI operations *on* the main thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When Android starts your application, it automatically creates the main (or
+    UI) thread. This is the thread from which all UI operations must be called. The
+    first rule is "Don't block the main thread". This means that you need to create
+    a background, or a worker, thread for any long-running or potentially-blocking
+    task. This is why all network based tasks should be performed off the main thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android offers the following options when working with background threads:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Activity.runOnUiThread()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`View.post()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`View.postDelayed()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Handler`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AsyncTask`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This recipe will explore the `AsyncTask` class; since it was created previously,
+    you wouldn't have to use the Handler or post methods directly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new project in Android Studio and call it: `AsyncTask`. Use the default
+    **Phone & Tablet** option and select **Empty Activity** when prompted for **Activity
+    Type**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We only need a single button for this example. Open `activity_main.xml` and
+    follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Replace the existing TextView with the following button:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `MainActivity.java` and add the following global variable:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `AsyncTask` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the `onCreate()` to initialize the button:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the method for the button click:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You're ready to run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This is a very simple example of the `AsyncTask` just to get it working. Technically,
+    only `doInBackground()` is required, but usually, you may want to receive notifications
+    via `onPostExecute()` when it finishes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `AsyncTask` works by creating a worker thread for the `doInBackground()`
+    method, then responds back on the UI thread in the `onPostExecute()` callback.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notice how we have waited until `onPostExecute()` is called before we do any
+    UI actions such as enabling the button. If we attempt to modify the UI in the
+    worker thread, it would either not compile or throw a runtime exception. You should
+    also note how we instantiated a new `CountingTask` object on each button click.
+    This is because an `AsyncTask` can only execute once. Attempting to call execute
+    again will also throw an exception.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: At its minimum, the `AsyncTask` can be very simple but it is still very flexible
+    with more options available if you need them. When using an `AsyncTask` with an
+    Activity, it's important to understand whether the Activity is destroyed and recreated
+    (such as during an orientation change), or the `AsyncTask` continues to run. This
+    can leave your `AsyncTask` orphaned and it might respond back to the now destroyed
+    activity (causing a `NullPointer` exception). For this reason, it's common to
+    use the `AysncTask` with a Fragment (which is not destroyed on screen rotation),
+    or use a Loader instead. (See the link for Loaders in the following section.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parameter types
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'For many people, the most confusing aspect of the `AsyncTask` is the parameters
+    when creating their own class. If you look at our class declaration, there are
+    three parameters for the `AsyncTask`; they are defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The parameters are generic types and used as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Params**: This is the parameter type to call `doInBackground()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Progress**: This is the parameter type to post updates'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Result**: This is the parameter type to post results'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When you declare your own class, substitute the parameters with the variable
+    type you need.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s the process flow for the `AsyncTask` and how the preceding parameters
+    are used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`onPreExecute()`: This is called before `doInBackground()` begins'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`doInBackground(Params)`: This executes in a background thread'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onProgressUpdate(Progress)`: This is called (on the UI thread) in response
+    to the calling `publishProgress(Progress)` in the worker thread'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onPostExecute(Result)`: This is called (on the UI thread) when the worker
+    thread finishes'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cancel the task
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To cancel the task, call the cancel method on the object as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: You will need to have the object instance to access the `cancel()` method. (We
+    did not save the object in our previous example.) After setting `cancel(true)`,
+    the calling `isCancelled()` in `doInBackground()` will return `true`, allowing
+    you to exit a loop. If cancelled, `onCancelled()` will be called instead of `onPostExecute()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the *Access data in the background using a Loader* recipe, in [Chapter
+    6](ch06.html "Chapter 6. Working with Data"), *Working with Data*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Developer Docs: AsyncTask** at [http://developer.android.com/reference/android/os/AsyncTask.html](http://developer.android.com/reference/android/os/AsyncTask.html)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Adding speech recognition to your app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android 2.2 (API 8) introduced speech recognition in Android, and it continues
+    to improve with almost every new major Android release. This recipe will demonstrate
+    how to add speech recognition to your app using the Google Speech service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Create a new project in Android Studio and call it `SpeechRecognition`. Use
+    the default **Phone & Tablet** option and select **Empty Activity** when prompted
+    for **Activity Type**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We''ll start by adding a Speak Now (or microphone) button to the layout, then
+    we''ll add the necessary code to call the speech recognizer. Open `activity_main.xml`
+    and follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Replace the existing `TextView` with the following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Define the `REQUEST_SPEECH` constant:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the existing `onCreate()` callback:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the button click method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to override the `onActivityResult()` callback:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You're ready to run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The work here is done by the Google Speech Recognizer included in Android. To
+    make sure the service is available on the device, we call `PackageManager` in
+    `onCreate()`. If at least one activity is registered to handle the `RecognizerIntent.ACTION_RECOGNIZE_SPEECH`
+    intent, then we know it's available. If no activities are available, we display
+    a Toast indicating speech recognition is not available and disable the mic button.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The button click starts the recognition process by calling an intent created
+    with `RecognizerIntent.ACTION_RECOGNIZE_SPEECH`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `EXTRA_LANGUAGE_MODEL` parameter is required and has the following two
+    choices:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`LANGUAGE_MODEL_FREE_FORM`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`LANGUAGE_MODEL_WEB_SEARCH`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We get the result back in the `onActivityResult()` callback. If we get back
+    `RESULT_OK`, then we should have a list of words recognized, which we can retrieve
+    using `getStringArrayListExtra()`. The array list will be ordered starting with
+    the highest recognition confidence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you want to retrieve the confidence rating, retrieve the float array using
+    `EXTRA_CONFIDENCE_SCORES`. Here''s an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: The confidence rating is optional and may not be present. A score of 1.0 indicates
+    highest confidence, while 0.0 indicates lowest confidence.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Using the intent is a quick and easy way to get speech recognition; however,
+    if you would prefer not to use the default Google activity, you can call the `SpeechRecognizer`
+    class directly. Here''s an example of how to instantiate the class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: You will need to add the `RECORD_AUDIO` permission and implement the `RecognitionListener`
+    class to handle the speech events. (See the following links for more information.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Developer Docs: RecognizerIntent** at [http://developer.android.com/reference/android/speech/RecognizerIntent.html](http://developer.android.com/reference/android/speech/RecognizerIntent.html)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Developer Docs: SpeechRecognizer** at [http://developer.android.com/reference/android/speech/SpeechRecognizer.html](http://developer.android.com/reference/android/speech/SpeechRecognizer.html)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Developer Docs: RecognitionListener** at [http://developer.android.com/reference/android/speech/RecognitionListener.html](http://developer.android.com/reference/android/speech/RecognitionListener.html)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Push Notification using GCM
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'GCM, Google''s version of Push Notification, allows your application to receive
+    messages. The idea is similar to SMS messages, but much more flexible. There are
+    three components to GCM:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your server (this is where you initiate the message)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Google's GCM server
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android device (although GCM is also available on other platforms)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When the user starts your application, your code needs to connect to the GCM
+    server and obtain a device token, then send that token to your server. Your server
+    is responsible for initiating the message and passing it to the GCM server. Your
+    server needs to track the device tokens that have to be sent when initiating the
+    message. (Your server tells the GCM server which device tokens needs to be sent.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can implement your own server or choose to use one of many services available.
+    The next chapter, *Backend Service Options*, will look at several BaaS options,
+    many of which also offer Push Notification. (The *Simple Testing Option* section
+    offers an option to verify that your code is working.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: This recipe will walk you through the steps to add GCM using the current (Version
+    8.3) Google Services library. Before getting to the steps, it's worth noting that
+    GCM is supported all the way back to API 8, as long as the user has a Google account.
+    A Google account is not required after Android 4.0.4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Create a new project in Android Studio and call it `GCM`. Use the default **Phone
+    & Tablet** option and select **Empty Activity** when prompted for **Activity Type**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'GCM uses the Google Services plugin, which requires a Google Services configuration
+    file available from the Google Developer Console. To create the configuration
+    file, you will need the following information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your application package name
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'When you have the information, log in to this Google link and follow the wizard
+    to enable GCM for your app: [https://developers.google.com/mobile/add](https://developers.google.com/mobile/add)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you download the source files, you will need to create a new package name
+    when following the preceding steps, as the existing package name has already been
+    registered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'After completing the preceding Getting Ready section, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy the `google-services.json` file, which you downloaded in the *Getting Ready*
+    section, to your app folder (<project folder>\`GCM\app`).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Open the project Gradle build file: `build.gradle (Project: GCM)`, and add
+    the following to the `buildscript dependencies` sections:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open the app module Gradle build file: `build.gradle (Module: app)`, and add
+    the following statement to the beginning of the file (above the `android` section):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same module build file as step 3, add the following statement to the
+    dependencies section:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open the Android Manifest and add the following permissions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Within the `<application>` element, add the following `<receiver>` and `<service>`
+    declarations (these should be at the same level as the `<activity>`):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new Java class called `GCMRegistrationService` that extends `IntentService`,
+    as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new Java class called `GCMInstanceService` that extends `InstanceIDListenerService`,
+    as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new Java class called `GCMService` that extends `GcmListenerService,`
+    as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the existing `onCreate()` callback:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You're ready to run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Most of the actual GCM code is encapsulated within the Google APIs, simplifying
+    the implementation. We just have to set up the project to include Google Services,
+    and give our app the required permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Important**! When adding the permissions in Steps 5 and 6, replace the `<packageName>`
+    placeholder with your application''s package name.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The most complicated aspect of GCM is probably the multiple services required.
+    Even though the code in each service is minimal, each service has a specific task.
+    There are two main aspects of GCM:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Registering the app with the GCM server
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Receiving messages
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This is the code to register with the GCM server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: We don't call `getToken()` in the Activity, because it could block the UI thread.
+    Instead, we call the `GCMRegistrationService`, which handles the call in a background
+    thread. After you receive the device token, you need to send it to your server,
+    as it is needed when initiating a message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The process of receiving a GCM message is handled in `GCMService`, which extends
+    `GcmListenerService`. Since the Google API already handles most of the work, all
+    we have to do is respond to the `onMessageReceived()` callback.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To make it easier to type, we left out an important Google Services API verification
+    that should be included in any production application. Instead of calling `GCMRegistrationService`
+    directly, as we did in `onCreate()` in the preceding section, first check whether
+    the Google API Service is available. Here''s an example showing how to call the
+    `isGooglePlayServicesAvailable()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, change the `onCreate()` code to call this method first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: Simple testing option
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To help to verify that your code is working correctly, a testing application
+    was created and posted on Google Play. This app will run on both a physical device
+    and an emulator. The Google Play listing also includes a link to download the
+    source code and run the project directly, making it easier to enter the required
+    fields.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**GCM (Push Notification) Tester**: Refer to the following link for more information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://play.google.com/store/apps/details?id=com.eboyer.gcmtester](https://play.google.com/store/apps/details?id=com.eboyer.gcmtester)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the Google Cloud Messaging web page at [https://developers.google.com/android/reference/com/google/android/gms/gcm/GoogleCloudMessaging](https://developers.google.com/android/reference/com/google/android/gms/gcm/GoogleCloudMessaging)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the About the GCM Connection server web page at [https://developers.google.com/cloud-messaging/server](https://developers.google.com/cloud-messaging/server)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to add Google sign-in to your app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'A Google sign-in allows your users to sign in to your application using their
+    Google credentials. This recipe will walk you through the process of adding a
+    Google sign-in to your application. Here''s a screenshot showing the Google sign-in
+    button in the application that we''ll create in the recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to add Google sign-in to your app](img/B05057_14_1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Create a new project in Android Studio and call it `GoogleSignIn`. Use the default
+    **Phone & Tablet** option and select **Empty Activity** when prompted for **Activity
+    Type**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Google sign-in uses the Google Services plugin, which requires a Google
+    Services Configuration file, which is available from the Google Developer Console.
+    To create the configuration file, you will need the following information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your application package name
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Your signing certificate's SHA-1 hash code (see the *Authenticating Your Client*
+    link at the end of the recipe for more information)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'When you have the information, log in to this Google link and follow the wizard
+    to enable sign-in:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://developers.google.com/mobile/add](https://developers.google.com/mobile/add)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you are downloading the source files, you will need to create a new package
+    name when following the preceding steps, as the existing package name has already
+    been registered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'After completing the preceding *Getting Ready* section, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy the `google-services.json` file you downloaded in the *Getting Ready* section
+    to your app folder (`<project folder>\GoogleSignIn\app`)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Open the project Gradle build file: `build.gradle (Project: GoogleSignIn)`,
+    and add the following to the `buildscript dependencies` section:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open the app module Gradle build file: `build.gradle (Module: app)`, and add
+    the following statement to the beginning of the file (above the `android` section):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the same module build file as Step 3, add the following statement to the
+    dependencies section:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `activity_main.xml` and replace the existing `TextView` with the following
+    XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `MainActivity.java` and add the following global declarations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following `OnConnectionFailedListener`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the existing `onCreate()`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create an override for the `onActivityResult()` callback as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You're ready to run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Google has made it relatively simple to add a Google sign-in with their `GoogleApiClient`
+    and `GoogleSignInOptions` APIs. First, we create a `GoogleSignInOptions` object
+    with the builder. This is where we specify the sign-in options we want, such as
+    requesting e-mail ID. Then, we pass it to the `GoogleApiClient` builder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the user clicks on the Google sign-in button (created with the `com.google.android.gms.common.SignInButton`
+    class), we send an Intent for `GoogleSignInApi` to the handle. We process the
+    result in `onActivityResult()`. If the sign-in was successful, we can get the
+    account details. In our example, we just get the e-mail, but additional information
+    is available such as the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`getDisplayName()`: This is the display name'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getEmail(``)`: The e-mail address'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getId()`: The unique ID for the Google account'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getPhotoUrl()`: The display photo'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getIdToken()`: This is for the backend authentication'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: See the *GoogleSignInAccount* link in the *See also* section for a complete
+    list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If you want your application to be available to a wider audience, you'll want
+    to think about localization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Localization resources
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Google provides many localized strings in the SDK, located at this link: `<SDK
+    install folder>/sdk/extras/google/google_play_services/libproject/google-play-services_lib/res/`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the web page talking about authenticating your client at [https://developers.google.com/android/guides/client-auth](https://developers.google.com/android/guides/client-auth)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Visit GoogleSignInAccount at [https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInAccount](https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInAccount)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

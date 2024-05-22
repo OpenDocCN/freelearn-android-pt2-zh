@@ -1,0 +1,435 @@
+- en: Chapter 8. Exploring External Databases
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapter we introduced the notion of moving away from completely
+    localized databases that exist solely on the Android client side, and towards
+    utilizing an external database that could help us in several ways throughout the
+    development process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We saw how by using an external database, we were able to improve memory usage
+    in our Android applications (namely, by not having to store extremely large database
+    files) without sacrificing too much performance by using caches. Furthermore,
+    we saw how using an external database allowed us to back up user data (in case
+    a user switches phones or uninstalls your application), prevent users from seeing
+    stale data (since all data exists in one central location), as well as potentially
+    see other user's data (remember the global high scores example).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using external databases that your application can communicate with over a network
+    will make you a much more versatile application developer and will give you the
+    tools to create fully scalable data-centric applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Different external databases
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So what kinds of external databases are out there anyways? Just like how Android,
+    iOS, Palm, and so on, are all examples of operating systems which allow you to
+    develop mobile applications, there are several easily accessible platforms out
+    there which allow you to host and develop external databases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One such "platform" is just setting up a traditional dedicated server with database
+    capabilities. For instance, a popular example of this would be having a dedicated
+    computer hosting an **Apache Tomcat** server that's connected to a **MySQL** database.
+    I won't go into the details of how you would set up this kind of server-database
+    connection (primarily because you can do it in any number of ways), but instead
+    let's just think about high-level concepts and then move on to a simple pros and
+    cons list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At a high level, the Apache Tomcat server acts as an intermediary that handles
+    all incoming and outgoing HTTP requests (that is, network requests). The server
+    itself listens for all these incoming requests, and upon receiving one, has code
+    that tells it how to handle the request and subsequently what to return as a response.
+    The code that handles the request and returns a response is often known as the
+    **HTTP servlet,** and in upcoming chapters we'll actually implement a few of these
+    servlets to give you a better idea for how they work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moving on though, the Apache Tomcat server is also connected to a MySQL database
+    through a **Java Database Connectivity** driver (**JDBC**). Once configured, this
+    will allow us to handle incoming HTTP requests, which then tell the server to
+    issue a query to the MySQL database. Once the MySQL database retrieves the query,
+    it will execute it and return the desired data, ultimately to be sent back to
+    the original requester.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using this kind of a model, the pros are that it's fully customizable and that
+    you have full control over how each part is implemented. However, this can be
+    a double-edged sword and can be a good or bad thing depending on who is handling
+    the server and the database. Focusing on the database portion, because it is fully
+    customizable, we have complete control over what **database management system
+    (DBMS)** we want to use and furthermore what our database schema should look like
+    for our given database management system. Throughout the application development
+    process, we can even elect to switch our DBMS or alter our schema if we felt it
+    was necessary – for instance, if we needed a more scalable DBMS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: And this is where the problem lies. Though MySQL is by far the world's most
+    used DBMS and in most cases does a great job, it's not designed to be extremely
+    scalable. Thus, for large, data-heavy applications, using MySQL would be a sub
+    optimal design decision. And going back to my original point that using a fully
+    customizable server and database can be a double-edged sword, one can easily see
+    how flexibility and responsibility go hand in hand in this case. As we gain more
+    flexibility in the design/implementation of our system, we simultaneously have
+    more responsibility when it comes to making intelligent design decisions – otherwise,
+    our application's performance may deteriorate quickly (that is, imagine if all
+    of Google's data was hosted on a single computer – what a nightmare).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Other cons are that these systems typically require a higher cost initially,
+    as we need to actually buy computers/servers. In addition, because these computers/servers
+    are prone to failure, we'll have to manage them regularly to make sure they don't
+    crash. Because of their flexibility, many companies and startups opt for this
+    model, though many end up hiring specialists dedicated to maintaining these servers
+    as well as backend developers dedicated to building out these servers and databases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recently, though, the idea of cloud computing has become increasingly popular,
+    and here I'll introduce two such platforms. The first is **Amazon's Web Services
+    (AWS)**, which provides a suite of cloud computing services, but specifically
+    **Amazon's Elastic Compute Cloud (EC2)** and **Amazon's Relational Database Service
+    (RDS)**. The primary difference between the two is that Amazon's EC2 is designed
+    to be a fully-functional and fully-virtual computing environment that allows you
+    to control as many server/database instances as you'd like (thus making it inherently
+    scalable). Amazon's RDS, on the other hand, is designed to only act as a cloud
+    database, though the service contains features which give you the option of scaling
+    your computation and storage capabilities. Thus, depending on your applications,
+    you could choose whichever service is most appropriate. Amazon's computing services
+    are now used by many, including such high-profile startups as Yelp, Reddit, Quora,
+    FourSquare, Hootsuite, amongst others, and is definitely something to keep in
+    mind as you design any future backends.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The other cloud computing service is **Google's App Engine (GAE)** and is one
+    that we'll take a more in-depth look into. Both AWS and GAE are easy to set up
+    (relative to the traditional server method) with GAE known to be slightly more
+    user friendly. However, the primary reason we're going to look at GAE as opposed
+    to AWS (besides the fact that this is now a Google-themed book!) is that GAE allows
+    you to run small-scale applications for free (up to certain predefined limits),
+    while AWS only allows you to access their free pricing tier for a year. In this
+    way, everyone will get to follow along as we look at more code in later sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, the difference between the traditional server/database model and the
+    new cloud computing model is that we don't actually need to own and manage a dedicated
+    server! These cloud computing services allow us to essentially "rent out" server
+    space within Amazon/Google's various data centers and allow us to quickly/cheaply
+    create reliable, scalable applications. However, what we're giving up is some
+    control and flexibility in the implementation, and I'll discuss this in the next
+    section when we talk about **Google App Engine's Java Data Object (JDO)** databases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Google App Engine and JDO databases
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So what exactly is Google App Engine and why do we need it? Well, GAE is a platform
+    that enables you to build and host web apps on the same systems that power Google
+    applications. GAE allows us to quickly develop and deploy our applications without
+    having to worry about reliability, scalability, hardware, patches or backups,
+    and so on. However, this reliability and scalability comes at a cost and that
+    cost is the flexibility with which we can select our DBMS and design our database
+    schema. In fact, both of these are more or less chosen for you when you choose
+    to use GAE as your backend!
+  prefs: []
+  type: TYPE_NORMAL
+- en: GAE comes with a JDO database - meaning that it comes with a special database
+    that allows you to directly convert Java objects into rows of data called **entities**
+    (hence the name). This JDO database is built on top of a special web database
+    called BigTable, which is designed to be extremely quick and scalable, and is
+    actually not a relational DBMS like MySQL (see [http://en.wikipedia.org/wiki/BigTable)](http://en.wikipedia.org/wiki/BigTable)).
+    This primarily means that not all of the features we learned in [Chapter 3](ch03.html
+    "Chapter 3. SQLite Queries"), *SQLite Queries*, about SQL (that is, JOINS) will
+    be applicable here, so your design decisions regarding how your database schema
+    should look are somewhat limited.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In light of this, Google does a nice job in providing you with a variant of
+    SQL called **GQL,** which is a querying language designed for retrieving entities
+    from the App Engine scalable datastore. Again, there are some differences but
+    the general feel of GQL is much like that of SQL: where you have `SELECT` statements
+    with `WHERE` filters and other familiar clauses like `ORDER BY` and `LIMIT`. In
+    this way, for those who are only familiar with relational systems like MySQL,
+    it shouldn''t be terribly difficult to pick up.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the sake of completeness, other differences include not being able to filter
+    on multiple conditions without having to build an index, not being able to use
+    inequality filters on multiple columns within the same query, and not being able
+    to filter for rows with missing fields, amongst others. The reason for all of
+    these seemingly arbitrary differences involve the architecture of the BigTable
+    database. Because of the way it's designed and the way it indexes each row that
+    is inserted, certain queries that are available in relational databases like MySQL
+    will no longer be applicable with BigTable. However, because of this architecture,
+    BigTable is inherently scalable, and so when choosing between the two just keep
+    these trade-offs in mind.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In any case, words can only take you so far and all of these differences and
+    similarities will become much clearer once we start seeing some actual code. Thus,
+    in addition to having the Android SDK installed, I invite you to take some time
+    getting Google App Engine set up using the following URL as a guide:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://code.google.com/appengine/downloads.html#Download_the_Google_App_Engine_SDK](http://code.google.com/appengine/downloads.html#Download_the_Google_App_Engine_SDK)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, we're ready to dive right into some code and try to piece together
+    a fully functional Google App Engine backend for our Android applications!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'GAE: an example with video games'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the next couple of chapters, we'll be going through an example where we wish
+    to create an application that allows us to see what video games are available
+    through Blockbuster. This will ultimately involve everything from writing a scraper
+    to fetch and retrieve those video games from Blockbuster's website, storing these
+    game objects into our GAE database, writing servlets to get/remove game objects
+    from our GAE database through HTTP requests, and last but not least finishing
+    it off with some code for the Android client side.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we''ll focus on setting up our database and writing wrapper
+    methods to help us store, retrieve, update, and delete data for future steps.
+    And so to start, every GAE application needs to first define a base entity class
+    which essentially defines what a row is in our database. Note that each entity
+    needs to have an ID or a key associated with it, so the only field we really need
+    is the one for an ID. Here is the `ModelBase` class, which we will use as our
+    base entity class and which we will override for all objects that we create:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So we''ll notice that the general structure of the class resembles that of
+    a relatively simple Java object, but that there are some odd `@` tags. Let''s
+    look at the first two:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first one tells us that this class needs to be `PersistenceCapable`. When
+    you define an object as capable of being persistent, what you're telling the JDO
+    database is that this object is capable of being stored and retrieved from the
+    datastore. It's important to declare your entity classes as `PersistenceCapable`
+    and then declare the desired fields as being `Persistent`. You'll see that there's
+    also a parameter called `detachable`, which we set to be `true`. This gives us
+    permission to edit and modify entities that we retrieved from our database even
+    after we've closed it. Now, this does not mean that those modifications will persist
+    in the database because it is closed, but at least we'll have permission to do
+    so.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next there is an `Inheritance` tag which basically means that we're allowed
+    to create entities that override this base entity, hence inherit the base entity.
+    The other two tags are pretty self-explanatory. The first declares that our ID
+    (I'll quickly note that in my case I chose to use a long type as my ID but one
+    can also use a Key type object) acts as the `PrimaryKey` for our entity. For people
+    with a background in SQL this should immediately ring a bell, but basically this
+    just tells the JDO database that objects of this entity will have a unique long
+    ID field to be used for lookups, and so on. The last tag is one that we mentioned
+    briefly earlier - namely the `Persistent` tag which simply tells us that this
+    long ID field should be stored as its own column in our table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And now, for the actual `VideoGame` object, first notice how we extend (inherit)
+    the previous `ModelBase` class and then we continue by defining all desired persistent
+    fields as well as implementing the constructor, and so on, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once you get the gist of what the `@` tags are doing, the rest is pretty self-explanatory.
+    Here I''m simply declaring a few fields as persistent, and then I implement a
+    constructor as well as a convenient inner class. The reason why I like having
+    a convenience class (that is, `VideoGameConsole` in this case) is that typically
+    in tables, querying for integers is a lot more efficient and reliable than querying
+    for strings (one: you don''t need to worry about case matching, and two: integer
+    comparisons are just much more efficient in general than string comparisons).
+    And so, ideally I''d like a way to convert strings to integers and potentially
+    even be able to map a group of strings to an integer (that is, "PS3" could get
+    mapped to 1, and so could "Playstation 3" or "PS 3").'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have our `VideoGame` entity defined, we're ready to start implementing
+    our database and telling it how to interact with these `VideoGame` entities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The PersistenceManager and Queries
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'So the first step is defining a way to establish a connection between the server
+    and the database. Remember back at the beginning of the book when we had to call
+    methods such as `getWritableDatabase()` before making any queries? Well the same
+    is true here, but instead of using a `SQLiteOpenHelper` class, we will define
+    a `PersistenceManager` class as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that it is defined as a singleton for improved efficiency, and all we're
+    doing is opening a persistence (database) manager that can handle transactions
+    (queries). Then in our future queries, we no longer need to sacrifice performance
+    by repeatedly requesting for a `PersistenceManager` and instead can grab the existing
+    instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we have our `PersistenceManager` defined, we can start implementing our
+    series of wrappers and we''ll begin by looking at how to insert new game objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Not too bad right? The idea is simple and is one that we have seen earlier
+    simply grab our instance of the `PersistenceManager` (that is, our connection
+    to the database) and make the `VideoGame` object that''s passed in persistent.
+    Again, remember that when working with GAE, the idea of persistence is the same
+    as insertion and so by making an object persistent, we are literally telling the
+    database to convert our entity into a row of our `VideoGame` table. We can also
+    see that when adding many entities at once, GAE offers us an efficient way to
+    do so by using batch inserts. Now let''s take a look at how we would get video
+    game objects from our database. Querying for entities is much more involved than
+    simply inserting entities, but instead of devoting an entire chapter to all the
+    different ways you can submit queries (like we did in [Chapter 3](ch03.html "Chapter 3. SQLite
+    Queries"), *SQLite Queries)* I''ll just s how you one convenient and intuitive
+    way to do it, and if you''re curious I invite you to check out:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://code.google.com/appengine/docs/java/datastore/queries.html](http://code.google.com/appengine/docs/java/datastore/queries.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But yes, here''s one way to do it and it should remind you of our previous
+    encounters with the `SQLiteQueryBuilder` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s dissect the first method piece by piece:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we grab our `PersistenceManager` and then we convert the passed-in platform
+    into an integer type, since we''re going to filter by platform. Next, we tell
+    our `PersistenceManager` that we want to open a new query (that is, start a new
+    `SELECT` statement) and so we call our `newQuery()` method. Then, we set the details
+    of our query with the following methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here we first set our filter and specify on which column we want to perform
+    the filtering (that is, setting the `WHERE` part of our query). Next, we set a
+    placeholder for the parameters that will get passed in (think of the ? placeholders
+    from earlier) and lastly, we execute the query and pass in the platform type parameter.
+    In the method that follows, everything remains the same except for an additional
+    `LIMIT` filter, set using the following method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The third method we implemented is relatively straightforward – the JDO database
+    allows you to quickly retrieve an entity if you have their unique key or ID by
+    calling the PersistenceManager''s `getObjectById()` method. Again, there are many
+    ways to execute queries in GAE as well as many other clauses and subtleties that
+    I won''t go into in this book, but for now you should have the basic idea down
+    and should be able to execute the vast majority of queries needed. Finally, let''s
+    take a look at how we would update and delete objects from our database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Again, let''s take the first method – our update method — and dissect it piece
+    by piece:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: So just like in the previous example, we start by getting our connection with
+    the JDO database. Then we try to retrieve our `VideoGame` object by calling the
+    `getObjectById()` method and passing in the unique ID of the entity we want to
+    update. Here's one of the odd things about the `PersistenceManager` that you should
+    keep in mind.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instead of having an explicit update method, which we are used to seeing by
+    now, with a `PersistenceManager` as long as the connection is open any changes
+    you make to the object will automatically get updated in the database. So notice
+    that in this method, the first step is to retrieve the entity, update it while
+    the connection is still open, and then close the connection once the entity has
+    been updated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Of course in this example we only update a specific ID at a time, but one can
+    see how by keeping this detail in mind, we can easily write a method that updates
+    a group of entities at once - simply query for a list of them and update each
+    one while the `PersistenceManager` is still open.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And last but not least, for our delete method, we see that all the steps are
+    the same as the previous get methods, except for the last line, where we use the
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Otherwise, all of the prior logic stays the same. And that's it! Now we have
+    a JDO database wrapper class that allows us to abstract away all of the messy
+    `PersistenceManager` syntax, and which gives us a quick way to insert, retrieve,
+    update, and delete data from our GAE backend! The next step then is to actually
+    figure out a way to retrieve this video game data, at which point we can simply
+    wrap it in our `VideoGame` entity class and push it into our database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we moved away from the Android platform and started expanding
+    upon our understanding of external databases. We began by taking a cursory look
+    at what our options were: the traditional dedicated server with the database connection
+    (for instance an Apache Tomcat server hooked up to a MySQL server) or a cloud
+    computing server/database combination, such as **Amazon Web Services (AWS)** or
+    **Google App Engine (GAE)**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Google App Engine is nice in that it's much easier to set up and also allows
+    us to build simple, relatively small-scale applications free of cost and time
+    constraints. Both cloud-computing solutions come with reliable servers as well
+    as efficient, scalable databases, but limit the amount of control you have over
+    your backend – especially when compared to the unlimited freedom you have when
+    you buy your own dedicated server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sticking with GAE, we started building out a simple video games application
+    that shows us all the games available through Blockbuster. We introduced the notion
+    of persistence in GAE and wrote our first entity class. We then wrote our own
+    `PersistenceManager` singleton class and implemented a convenience class for getting,
+    inserting, updating, and deleting data from our database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We covered a lot of ground in this chapter, but we still have a long way to
+    go before having a complete, fully functional application. In the next chapter,
+    we'll look at ways to retrieve data and then store it using the wrapper methods
+    written in this chapter.
+  prefs: []
+  type: TYPE_NORMAL

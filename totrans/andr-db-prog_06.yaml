@@ -1,0 +1,530 @@
+- en: Chapter 6. Binding to the UI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've covered a lot of ground over the previous five chapters – looking at lightweight
+    forms of data storage (such as `SharedPreferences)` to more heavy-weight forms
+    of data storage (such as SQLite databases). But for each data storage method and
+    in each example that we've looked at – in order to actually see the results of
+    our queries and our backend data manipulations, we had to rely on very simple
+    system IO print commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: More often than not though, as mobile developers, our applications will need
+    to both aesthetically display the results of such data queries, as well as give
+    users an intuitive interface to store and insert data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will focus on the former – on binding data to the user interface
+    (UI) and will look specifically at various classes that will allow us to bind
+    our data in the form of lists (the most common and intuitive way to display rows
+    of data).
+  prefs: []
+  type: TYPE_NORMAL
+- en: SimpleCursorAdapters and ListViews
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are two major ways of retrieving data on Android, and each has its own
+    class of `ListAdapters`, which will then know how to handle and bind the passed-in
+    data. The first way of retrieving data is one that we're very familiar with already
+    – through making queries and obtaining `Cursor` objects. The subclass of `ListAdapters`
+    that wrap around `Cursors` is called `CursorAdapter`, and in the next section
+    we'll focus on the `SimpleCursorAdapter`, which is the most straightforward instance
+    of `CursorAdapter`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we already know, the `Cursor` points to a subtable of rows containing the
+    results of our query. By iterating through this cursor, we are able to examine
+    the fields of each row, and in previous chapters we've printed out the values
+    of these fields in order to inspect the subtable that was returned. Now we would
+    like to convert each row of the subtable into a corresponding row in our list.
+    The first step in doing this is to set up a `ListActivity` (a variant of the more
+    common `Activity` class).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As its name suggests, a `ListActivity` is simply a subclass of the `Activity`
+    class which comes with methods that allow you to attach `ListAdapters`. The `ListActivity`
+    class also allows you to inflate XML layouts, which contain list tags. In our
+    example, we will use a very bare-bones XML layout (named `list.xml)` that only
+    contains a `ListView` tag as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is the first step in setting up what's called a `ListView` in Android.
+    Similar to how defining a `TextView` allows you to see a block of text in your
+    `Activity`, defining a `ListView` will allow you to interact with a scrollable
+    list of row objects in your `Activity`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Intuitively, the next question in your mind should be: Where do I define how
+    each row actually looks? Not only do you need to define the actual list object
+    somewhere, but each row should have its own layout as well. So, to do this we
+    create a separate `list_entry.xml` file in our layouts directory.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The example I''m about to use is the one that queries the `Contacts` content
+    provider and returns a list containing each contact''s name, phone number, and
+    phone number type. Thus, each row of my list should contain three TextViews, one
+    for each data field. Subsequently, my `list_entry.xml` file looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: So we have a vertical `LinearLayout` which contains three TextViews, each with
+    its own properly defined ID as well as its own aesthetic properties (that is,
+    text size and text color).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In terms of set up – this is all we need! Now we just need to create the `ListActivity`
+    itself, inflate the `list.xml` layout, and specify the adapter. To see how all
+    this is done, let''s take a look at the code before breaking it apart piece by
+    piece:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: So what's going on here? Well, the first part of the code you should recognize
+    by now – we're simply making a query over the phone's contact list (specifically
+    over the Contact content provider's `Phone` table) and asking for the contact's
+    name, number, and number type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, the `SimpleCursorAdapter` takes as two of its parameters, a string array
+    and an integer array which represent a mapping between `Cursor` columns and XML
+    layout views. In our case, this is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is so that the data in the `DISPLAY_NAME` column will get bound to the
+    `TextView` with ID `name_entry`, and so on. Once we have these mappings defined,
+    the next part is to just instantiate the `SimpleCursorAdapter`, which can be seen
+    in this line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, the `SimpleCursorAdapter` takes five parameters - the first is the `Context`,
+    which essentially tells the `CursorAdapter` which parent `Activity` it needs to
+    inflate and bind the rows to. The next parameter is the ID of the R layout that
+    you defined earlier, which will tell the `CursorAdapter` what each row should
+    look like and, furthermore, where it can inflate the corresponding Views. Next,
+    we pass in the `Cursor`, which tells the adapter what the underlying data actually
+    is, and lastly, we pass in the mappings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Hopefully, the previous code makes sense, and the parameters of `SimpleCursorAdapter`
+    make sense as well. The result of this previous `Activity` can be seen in the
+    following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![SimpleCursorAdapters and ListViews](img/Image4884.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Everything looks good, except for these random integers floating around under
+    the phone number. Why are there a bunch of 1s, 2s, and 3s at the bottom of each
+    row where the types should be? Well, recall from the previous chapter that the
+    phone number types are not returned as Strings but are instead returned as integers.
+    From there through a simple `switch` statement, we can easily convert these integers
+    into more descriptive Strings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, you'll quickly see that with our very simple, straightforward use of
+    the built-in `SimpleCursorAdapter` class, there was nowhere for us to implement
+    any "special" logic that would allow us to convert such returned integers to Strings.
+    This is when overriding the `SimpleCursorAdapter` class becomes necessary, because
+    only then can we have full control over how the Cursor's data is to be displayed
+    in each row. And so, we move onwards to the next section where we see just that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Custom CursorAdapters
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this section, we will expand upon the `SimpleCursorAdapter` and try to write
+    our own `CursorAdapter` class, which will give us greater flexibility in terms
+    of how the underlying data is to be displayed. The goal of our custom class will
+    be simple - instead of having the phone number types being displayed as integers,
+    let's find a way to display them as readable Strings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Upon extending the `SimpleCursorAdapter` class, we'll need to override and implement
+    the `newView()` method, and most importantly the `bindView()` method. Optionally,
+    we can also customize our constructor, which depending on your implementation
+    can be useful for caching and performance-enhancing reasons (we'll see an example
+    of this later on).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conceptually, what's happening here is that each time a new row is actually
+    displayed on the Android device's screen, the `newView()` method gets called.
+    This means that as the user scrolls through the Activity's list and new rows appear
+    on the device's screen (for the first time), this `newView()` method will get
+    called. And so, the functionality of this `newView()` should be kept relatively
+    straightforward. In my implementation, this means that given the context, I make
+    a request for the associated `LayoutInflater` class and use it to inflate the
+    new row's layout (as defined in `list_entry.xml)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The meat of the logic then occurs in the `bindView()` method. Once the `newView()`
+    method is called and the actual layout of the row is initialized, the next method
+    that gets called is the `bindView()` method. This method takes as parameters the
+    new View object that was previously instantiated, as well as the `Cursor` that
+    belongs to this adapter class. It''s important to note that the `Cursor` that''s
+    passed in has already been moved to the correct index. In other words, the adapter
+    is smart enough to pass you a `Cursor` that is pointing to the row of data corresponding
+    to the row of your layout that you''re creating! Now of course, it''s hard to
+    see and understand these methods without actually seeing the code side by side
+    and so, before I go any further, let''s take a quick look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again, you'll notice that the `newView()` method's implementation is pretty
+    straightforward. You'll also notice that the Context being passed in is the same
+    Context for each new row that is added - and so each time this method gets called,
+    I'm actually requesting the same `LayoutInflater` object. Though it didn't make
+    a noticeable difference in this case, little nuances like this (that is, not requesting
+    the same resource continuously) are small ways in which you can optimize the performance
+    of your lists. Here, by instantiating the `LayoutInflater` a single time in the
+    constructor and reusing it each time, we can potentially save hundreds of unnecessary
+    requests. Though this may seem like a very minor optimization, keep in mind that
+    when it comes to lists, especially on mobile devices, users expect them to be
+    extremely snappy and responsive. A list that lags is often a huge nuisance to
+    users over time, and is frequently indicative of a poorly written application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now for the `bindView()` method. Again, the flow is that first `newView()` gets
+    called and a new row is instantiated, and then `bindView()` gets called with this
+    new row's layout view passed in. Here we have also passed a `Cursor` object, but
+    it's important to note that the `Cursor` is actually pointing to the next row
+    of data. In other words, the `Cursor` is not pointing to the first row of the
+    queried subtable but instead is pointing to a single row and is being incremented
+    accordingly behind the scenes. This is what I mean by the `CursorAdapter` class
+    being a nice class to use because of how it handles the underlying `Cursor` for
+    you as the list scrolls up and down.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As for the logic in our binding – it's pretty simple. Given the `Cursor`, we
+    ask for the corresponding fields and their respective values, and since we're
+    also passed the View object of that row, we just need to set the correct String
+    value for each `TextView`. However, notice that here we have the flexibility to
+    insert additional logic which allows us to handle the fact that the phone number's
+    type is returned as an integer. So, naturally we include the switch statement
+    here, and instead of setting the integer into the `type_text TextView`, we set
+    the readable String value there!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, even though this is a pretty simple example, the goal of this exercise
+    is to see how by extending the `SimpleCursorAdapter` class and implementing our
+    own `CursorAdapter`, we can override the `bindView()` method and use the passed
+    in View and `Cursor` objects to customize our row's display in any way that we
+    want!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As for how you actually use your custom `CursorAdapter` in the previous `SimpleCursorAdapter`
+    example, simply swap out the following line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'with the line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And how does this all look in the end? Let''s take a quick look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Custom CursorAdapters](img/Image4891.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Here we see that in each row, instead of simply showing the integer type of
+    the phone number, we can see the actual readable String type as desired! Much
+    nicer now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: BaseAdapters and Custom BaseAdapters
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Earlier we mentioned that there were typically two ways to retrieve data – the
+    first being in the form of a `Cursor` object and the second being in the form
+    of a list of objects. In this section, we'll focus on this latter method of retrieving
+    and handling data, and subsequently how to convert lists of objects into viewable
+    rows of data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So in what situations would we actually have a list of objects instead of a
+    `Cursor?` Up until now, all of our focus has been on building up SQLite databases
+    and content providers and in all cases we've been returned a `Cursor`. But, as
+    we'll see in future chapters, oftentimes data storage isn't actually done on the
+    mobile device side, but instead on external databases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In these cases, retrieving data isn't as easy as just making SQLite queries,
+    but instead needs to be done over the network through HTTP requests. Furthermore,
+    once the data is obtained, it will likely be in some kind of String format (typically
+    either XML or JSON – but more on this later), and instead of parsing this String
+    for data and then inserting it into a SQLite database, typically you will simply
+    convert each String into an object and store them in a standard list. To handle
+    lists of objects, Android has a kind of `ListAdapter` known as the `BaseAdapter`,
+    which we will override and dissect in this section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s take a simple example where we have a list of contact objects (for simplicity,
+    let''s just call the class `ContactEntry)`, which, like the previous examples,
+    contain a name, phone number, and phone number type field. The code for this would
+    simply be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here you'll notice that in the constructor of the `ContactEntry`, I convert
+    the integer type directly into the readable String type. As for the implementation,
+    we create our own `ContactBaseAdapter` class and extend the `BaseAdapter` class,
+    allowing us to override the `getView()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Conceptually, the `BaseAdapter` is very similar to the `CursorAdapter` except
+    that instead of passing in and holding onto a `Cursor`, we pass in and hold onto
+    a list of objects. This is simply done in the constructor of the `BaseAdapter`,
+    at which point we store a private pointer to that list of objects and can optionally
+    write a bunch of wrapper methods around that list (that is, `getCount(), getItem()`,
+    and so on). And again, just as how the `CursorAdapter` class knows how to manage
+    and iterate through the `Cursor`, the `BaseAdapter` class will know how to manage
+    and iterate through the list of objects given.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The meat then is in the `getView()` method of the `BaseAdapter`. Notice how
+    in the `CursorAdapter` class we had both a `newView()` method as well as a `bindView()`
+    method. Here, our `getView()` method is designed to play the role of both - instantiating
+    new views where the row was previously null, and binding data to old rows where
+    the rows had previously been inflated. Let''s take a quick look at the code and
+    try to connect all these pieces again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: First off, let's take a look at the constructor. Notice that I utilized the
+    optimization mentioned earlier - namely, I instantiate the `LayoutInflater` just
+    once in the constructor, because I know that the Context will remain the same
+    throughout the Activity. This will give us a slight boost in performance when
+    we actually run our Activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, let's see what's going on in this `getView()` method. The parameters for
+    this method are the position (of the row), the row's view, and the parent view.
+    The first thing we need to check is if the current row's view is null - this will
+    be the case when the current row has not previously been instantiated, which in
+    turn happens when the current row appears on the user's screen for the first time.
+    If that's the case, then we instantiate and inflate this row's view. Otherwise,
+    we know that we've already previously inflated this row's view, and simply need
+    to update its fields.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here, we also make use of a static `ContactViewHolder` class which acts as
+    a cache. This method is recommended by the Android team over at Google (see [http://developer.android.com/resources/samples/ApiDemos/src/com/example/android/apis/view/List14.html](http://developer.android.com/resources/samples/ApiDemos/src/com/example/android/apis/view/List14.html)
+    for details) and is meant to enhance the list''s performance. The inflating of
+    the view looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that when the view is null, the inflation of the view is pretty standard
+    use the `LayoutInflater` class and tell it which R layout to inflate. However,
+    once the view has been inflated, we create an instance of the `ContactViewHolder`
+    class and create pointers to each newly inflated view's `TextView` fields (in
+    this case - though they could just as easily be `ImageViews`, and so on). Once
+    the new `ContactViewHolder` class has been fully initiated, we associate it by
+    setting it as the current row's tag (think of this as a view to holder mapping
+    where the view is the key and the holder is the value).
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the view is not null, then we simply need to ask for the previously instantiated
+    view's tag (again, you can think of this as requesting a key's value).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have the corresponding `ContactViewHolder`, we can use the passed-in
+    position to get the corresponding `ContactEntry` object in our list. From there,
+    we know what contact the current row is referencing, and so we can dig out the
+    name, number, and phone type, and then set them accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That's it! Let's take a look at how we would implement our `ContactBaseAdpater:`
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For our purposes, you can ignore the first part, as we are literally querying
+    the Contact content provider, taking the resulting `Cursor`, iterating through
+    it, and creating a list of `ContactEntry` objects. Obviously this is silly, so
+    assume that in your implementation you will directly be returned a list of objects.
+    Once we have our list though, the call is simply:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: And the results of running this code look exactly like that of the second screenshot
+    in our earlier example (as expected).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we've taken a look at both `CursorAdapters` and `BaseAdapters` and
+    how to implement each in code, let's take a step back and think about potential
+    use cases for the two classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling list interactions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now, one common feature of every `ListView` in Android is that the user should
+    often be able to select a row in the list and expect some sort of added functionality.
+    For instance, maybe you have a list of restaurants, and selecting a specific restaurant
+    within the list brings you to a more detailed description page. This is again
+    where the `ListActivity` class comes in handy, as one method we can override is
+    the `onListItemClick()` method. This method takes several parameters, but one
+    of the most important is the position parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The full declaration of the method is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And once we have the position index, regardless of whether or not our underlying
+    data is a `Cursor` or a list of objects, we can use this position index to retrieve
+    the desired row/object. The code for the previous `CursorAdapter` example would
+    look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similarly, the code for the `BaseAdapter` example would be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Both are pretty similar and pretty self-explanatory. We simply retrieve the
+    desired row/object using the position index, and then output the desired fields.
+    Oftentimes, the developer might have a separate Activity where they would give
+    the user more details on the object in the row they clicked (that is, the restaurant,
+    the contact, and so on). This may require passing the ID (or some other identifier)
+    of the row/object from the `ListActivity` to the new details Activity, and this
+    is done through embedding fields into Intent objects – but more on this in the
+    next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Comparing CursorAdapters and BaseAdapters
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So under what typical scenarios would you find yourself using a `BaseAdapter`
+    instead of a `CursorAdapter` and vice versa? We've already thought of a few instances
+    previously, but let's take a little more time to brainstorm some use cases, just
+    to get you even more comfortable with the two `ListAdapters` and when to switch
+    between the two.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The general rule of thumb should be whenever your underlying data is returned
+    as a `Cursor`, use a `CursorAdapter`, and whenever your data is returned or can
+    be manipulated into a list of objects, use a `BaseAdapter`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This means that for most network requests when the data is returned as one long
+    String (again, getting a little ahead of myself but this String will typically
+    be in either an XML or JSON format), it's best to simply parse the String and
+    convert it into objects. These can then be stored in a list and passed into a
+    custom `BaseAdapter`. This will often also be the case if you are calling an external
+    API, in which case the data will typically come back as either XML or JSON. The
+    exception then is when you want to cache the results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Caching typically involves temporarily storing some data in a more local (or
+    faster) area of memory (with CPU systems, this means storing data in RAM instead
+    of on disk, and for mobile applications this means storing data locally instead
+    of continuously requesting external data through a network). If you want to cache
+    some of your network calls – whether it's for performance reasons or for offline
+    access reasons – then the suggested flow is to make your network request, retrieve
+    the formatted data String, parse the data String, and insert the data into a SQLite
+    database (meant to mimic the external database). Then, since your data is already
+    housed in a SQLite database, it's best (and easiest) to just make a quick query
+    and get back a `Cursor`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, what about a scenario where you have a static list of primitive objects,
+    for instance Strings? This would often be the case if you had some kind of fixed
+    table of contents where the user has to select from a pre-defined list of options.
+    In that case, both a `BaseAdapter` and a `CursorAdapter` would be overkill, and
+    instead you should opt to use a much simpler kind of Adapter known as the `ArrayAdapter`.
+    I tried not to spend any time on this kind of `ListAdapter`, as it's extremely
+    simple to use and conceptually it's extremely simple as well - if you have a static
+    Array of Strings and you want to make a list out of them, just pass that Array
+    into an `ArrayAdapter` and you're good to go.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, this is all I will say on the `ArrayAdapter` and I invite you to read
+    through the example found on the following site:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/resources/tutorials/views/hello-listview.html](http://developer.android.com/resources/tutorials/views/hello-listview.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Otherwise, just remember that for lightweight static data, use the `ArrayAdapter`,
+    for dynamic object-oriented data, use the `BaseAdapter` and for locally stored
+    subtable based data, use the `CursorAdapter`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we finally shifted our focus away from the backend and towards
+    the frontend – getting an in-depth look at ways we can bind our data to the user
+    interface. Of course, users can interact with data in numerous ways, but by far
+    the most common is through a `ListView`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ListViews` and `ListActivities` are convenient classes which allow us to bind
+    `ListAdapters` to the Activity and subsequently to the list layouts, handling
+    events such as when a user touches a row in the list. `ListAdapters` are then
+    classes which take in the underlying data and handle the binding process for you
+    – namely, that as your list scrolls up and down you don''t need to keep track
+    of the position in the list; all that is done for you behind the scenes. Instead,
+    all you need to do is choose which `ListAdapter` to use depending on the type
+    of underlying data you have, and specify how you want the binding to occur.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Equipped with these `ListAdapters`, we were able to recreate a stripped-down
+    version of our contact list and, more importantly, were given a taste for all
+    of the ways we could take our data and display it in interactive, beautiful ways.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We finished off the chapter thinking about the use cases between each subclass
+    of `ListAdapters` (seeing in total three different subclasses, the `CursorAdapter`,
+    the `BaseAdapter`, and lastly the `ArrayAdapter)` and again, the hope is to build
+    intuition into both the backend and frontend application design process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll continue our brainstorming and try to pull together
+    everything that we've seen – walking through a handful of practical examples and
+    discussing ways we could design our backend and frontend to implement those examples.
+  prefs: []
+  type: TYPE_NORMAL

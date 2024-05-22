@@ -1,0 +1,534 @@
+- en: Chapter 9. Collecting and Storing Data
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Onwards we go! In the previous chapter, we introduced a couple of popular external
+    databases that you could use and decided to develop a fully functional backend
+    using Google's App Engine (GAE). We managed to create a new project on GAE and
+    use the `PersistenceManager` to build out an extremely useful wrapper class that
+    illustrated some of the concepts central to our JDO database. This wrapper class
+    will soon be extremely handy to have around as we start inserting real data and
+    subsequently query that data using our Android application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So here we are — the next step! For most people trying to build out a data-centric
+    application, actually getting that data will be extremely difficult and will typically
+    require a lot of time and money. However, there are many tools and methods at
+    our disposal which can help us use existing data to fill up our databases. In
+    this next chapter, we'll take a look at some of those methods, and will finish
+    by inserting our newly acquired data into our JDO database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Methods for collecting data
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To begin, let''s briefly go over two different ways in which you can collect
+    data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Through an Application Programming Interface (API)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Through web scraping
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The first and simplest way is through using an API. For those who have never
+    used an API before, think of this as a *web library* created by some third-party
+    company, which typically allows you to call a handful of functions (almost always
+    executed as HTTP requests), which then give you access to a subset of their data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For instance, a common API is the Facebook Graph API which, when authenticated,
+    allows you to query for a user's profile information or an event's details, and
+    so on. Essentially, through the API, I can access the same data about a person
+    or event that I would see on Facebook's website, just through a different channel.
+    This is what I mean by the company *exposing* a subset of their data. Another
+    example might be with Yelp, whose API allows you to query for restaurants and
+    venues when passed a set of parameters (that is, location). Here, even though
+    I'm not actually on Yelp's web page, I can still access their data through their
+    API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having an API available to collect your data is extremely useful because of
+    how the data is already there and ready for you to use; depending on the credibility
+    of the company, oftentimes the data will already be cleaned and well formatted.
+    This saves you from having to find the data on your own and subsequently clean
+    the data on your own. The catch, however, is that oftentimes companies will not
+    allow you to store their data for proprietary reasons, and so depending on what
+    your application does, you may need to keep this legal issue in mind.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So what exactly happens when no API is available for you to use? Well, then
+    you'll have to resort to getting that data on your own, and one great way to do
+    that is through **web scraping**. In the next section, I'll devote a great deal
+    of time to explaining what the art of web scraping is and how you go about doing
+    it. For now, let's end this short section with a discussion on the two popular
+    formats in which data is often returned by APIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first is called Extensible Markup Language (XML) and is a human-readable
+    and machine-readable data format that takes the form of a tree and looks very
+    similar to HTML actually. A simple example of what this tree structure looks like
+    is say you call the Facebook Graph API and it returns a list of your friends.
+    The root of the tree might have the tag`<friends>`, and underneath it may have
+    a series of leaves with the tag`<friend>`. Then, each`<friend>` node might branch
+    off into several descriptor tags such as`<name>, <age>`, and so on. In fact, in
+    the examples later on, I'll actually use XML as the data format of choice because
+    of how it's human readable, so you'll get to see real examples of what this looks
+    like.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next is called **JavaScript Object Notation (JSON)** and it is a much more
+    lightweight data structure than XML. JSON is still machine readable but is less
+    friendly for human readability. The trade-off though is that parsing JSON tends
+    to be more efficient, and so really the decision between which to use just depends
+    on how important human readability is relative to performance. The general structure
+    of JSON resembles that of a map instead of a tree. Using the same preceding example,
+    instead of being returned a tree structure with`<friends>` as the root node, we
+    might have `friends` as a key with value equal to a JSON array. The JSON array
+    would then have a list of `friend` keys, each of which has a value equal to a
+    JSON object. Finally, the JSON object would have keys equal to `name, age`, and
+    so on. In other words, you can think of JSON structures as series of e mbedded
+    maps, where many times keys will point to a sub-map, which then has its own keys,
+    an so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So often when using third-party APIs, you'll need to be aware of which data
+    format they choose to return their data in, and parse the results accordingly.
+    Furthermore, even when you're implementing web scrapers and finding yourself having
+    to build your own API, it often helps to pick one of the two data formats and
+    stick with it. This will make your life a lot simpler when it comes to calling
+    your own API from external applications and then parsing the returned result.
+    Now, moving on to web scraping.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A primer on web scraping
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Web scraping is the art of structuring web HTML and methodically parsing data
+    from it. The idea is that HTML should be (to some extent) inherently well structured,
+    as every open tag (that is,`<font>)` should be followed by a close tag (that is,`</font>)`.
+    In this way, HTML if structured correctly, can be viewed as a tree structure very
+    much like XML often is. Scraping a website can be achieved in any number of ways,
+    which typically vary with the complexity of the underlying HTML source code, but
+    at a high level, it involves three steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Obtain the desired URL, establish a connection to the URL, and retrieve its
+    source code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Structure and clean the underlying source code so that it becomes a valid XML
+    document.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run a tree-navigating language like XPath (or XQuery and XSLT), and/or use regular
+    expressions (REGEX) to parse out desired nodes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The first step is relatively self-explanatory, but I will note one thing. Often
+    you'll find yourself needing to scrape some sort of dynamic web page, meaning
+    that the URL is not going to be static and may change depending on the date, some
+    set of criteria, and so on. Let's walk through two examples of what I mean here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first involves stocks. Let''s say you''re trying to write a web scraper
+    that can scrape for the current price of a given stock, say from Yahoo! Finance.
+    Well, first off, what does the URL look like? Checking really quickly for Google''s
+    (ticker GOOG) current price, we see that the URL of the corresponding web page
+    is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://finance.yahoo.com/q?s=GOOG](http://finance.yahoo.com/q?s=GOOG)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It''s a pretty simple URL and we''ll quickly notice that the ticker of the
+    stock gets passed as a parameter to the URL. In this case, the parameter has key
+    `s` and value equal to the ticker. Now it''s pretty easy to see how we can quickly
+    construct a dynamic URL to solve our problem-all we would have to do is write
+    a simple method as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Neat, right? Now let''s say we don''t just want the current stock price, but
+    we want to pull all historical prices between two dates. Well, first let''s take
+    a look at what a sample URL would be, again for Google''s stock:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://finance.yahoo.com/q/hp?s=GOOG&a=07&b=19&c=2004&d=02&e=14&f=2012](http://finance.yahoo.com/q/hp?s=GOOG&a=07&b=19&c=2004&d=02&e=14&f=2012)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: So what do we notice here? We notice that the ticker is still being passed as
+    a parameter with key `s`, but in addition to that we notice what looks like two
+    distinct dates being passed with various keys. The dates look like 07/19/2004,
+    most likely the start date, and 02/14/2012, what appears to be the end date, and
+    they seem to have key values `a` through `f`. In this case, the key values aren't
+    the most intuitive, and oftentimes you'll see key values of `day` or `d` and `month`
+    or `m` instead. However, the idea is simply that with this URL, not only can you
+    dynamically adjust what the ticker is but depending on what range of dates your
+    user is looking for, you can adjust those as well. By keeping this idea in mind,
+    you'll slowly learn how to better decipher various URLs and learn how to make
+    them extremely dynamic and suitable for your scraping needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, some websites make their requests through POST requests. The difference
+    is that in POST requests, the parameters are embedded within the request (as opposed
+    to being embedded within the URL). This way, potentially private data is not visibly
+    displayed in the URL (though this is just one use case for POST requests). So
+    what do we do when this is the case? Well, there's no terribly easy answer. Typically,
+    you'll need to download an HTTP request listener (for browsers like Chrome and
+    Firefox, simply search for an HTTP request listener add-on). This will then allow
+    you to see what requests are being made (both GET and POST requests), as well
+    as the parameters that were passed. Once you know what the parameters are, then
+    the rest works just like a GET request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, once we have our URL, the next step is to get the underlying source code
+    and structure it. Of course, this can be a pain to do yourself, but fortunately,
+    there are libraries out there which will clean and structure the source code for
+    us. The one that I most frequently use is called **HtmlCleaner** and can be found
+    at the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://htmlcleaner.sourceforge.net/](http://htmlcleaner.sourceforge.net/)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's a great library that gives you methods for cleaning and structuring the
+    source code, navigating the resulting XML document, and ultimately parsing the
+    values and attributes of the XML nodes. Once our data is cleaned, the last step
+    is simply to walk through the tree and pick out the pieces of data we want. Now,
+    this is easier said than done, as there's no really easy way to traverse the tree
+    methodically and reliably using just Java and its native packages. What I mean
+    by methodically and reliably is being able to traverse the tree and parse the
+    correct data even when the structure of the underlying source code has changed
+    slightly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For instance, say your parsing method was as naive as telling your code to give
+    you the value of the fifth node. What happens then, when Yahoo! (or whatever site
+    you're scraping) decides to add a new header to their website, and now the fifth
+    node becomes the sixth? Even under this relatively simple change to the underlying,
+    your scraper will break and will start returning you values from an incorrect
+    node, and so ideally, we'd like to find a method for getting the correct node
+    value regardless of how the underlying website changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Luckily for us, oftentimes frontend engineers will build websites where important
+    fields will have tags that contain either `class` or `id` attributes with unique
+    values. We can then take advantage of these helpful and descriptive naming conventions
+    and use a nifty language called **XPath**. The language itself is fairly self-explanatory
+    once you see it; in fact, the syntax resembles that of any path (that is, directory
+    path, URL path, and so on), so I''ll simply direct you to the following URL to
+    learn the ins and outs, if you wish:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://www.w3schools.com/xpath/](http://www.w3schools.com/xpath/)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In any case, for now just keep in mind that XPath is a simple language that
+    allows you to return sets of nodes which are determined by a path. What's special
+    about XPath is that within the path, you can further refine your search by including
+    various filters, ones that allow us to return only those `div` that are of a certain
+    `class` for instance. This is where having descriptive `class` and `id` attributes
+    comes in handy because we can drill into the HTML and efficiently find only those
+    nodes that are important to us. Furthermore, if you still need additional weapons
+    to parse the resulting XML, you could include regular expressions (REGEX) to help
+    you in your search.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the end, the idea is to be as robust as possible with your parsing, as the
+    last thing you want to do is to have to update your scrapers constantly as small,
+    insignificant changes are made to the underlying website. Again, sometimes the
+    website changes dramatically and you'll legitimately have to update your scraper,
+    but the idea is to write them, again, as robustly as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At this point I''m sure you have plenty of questions. What does the code actually
+    look like? How do you grab a website''s HTML? How do you even use the `HtmlCleaner`
+    library? What''s an example of XPath? Previously, my goal was to lead you to a
+    high-level understanding of what web scraping is, and along the way, I introduced
+    a lot of different technologies and techniques that one would use. Now, let''s
+    get our hands dirty with some code and see each of the preceding steps in action.
+    Here are steps one and two for scraping our Blockbuster video games data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So first we have a simple convenience class that allows us to get the source
+    code of a passed-in URL. It simply opens a connection, sets a few standard web
+    parameters, and then reads the input stream. We use a `StringBuilder` to efficiently
+    construct one large string containing each line of the input stream, and finally
+    close all connections and return the string. This string will then be the underlying
+    HTML of the passed-in URL, and is what we''ll need in the next step to construct
+    a clean, organized XML document. The code for that is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And so here we first write a simple method which allows us to connect to the
+    resulting URL and grab its underlying source code. We then take that result and
+    pass it to a cleaning method which instantiates a new instance of our `HtmlCleaner`
+    class and calls the `clean()` method. This method will structure the underlying
+    HTML into a well-formed XML document, and return the root of the XML as a `TagNode`
+    object. The last step is simply looking at the underlying source code, determining
+    what the correct XPaths are, and then running those over the given root `TagNode`.
+    The abridged source code of Blockbuster''s video game rental page looks like the
+    following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: However, note that that this source code is as of the date I'm writing this
+    and is not guaranteed to remain the same. However, from this source code above,
+    we can see that each game is listed in a `div` tag with class `addToQueueEligible
+    game sizeb gb6 bvr-gamelistitem`. This is somewhat of a long class name but we
+    can have some confidence that by searching for `divs` with this class tag, we'll
+    find video games and only video games because of how the class tag involves adding
+    eligible games to a queue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, once we get to those desired `divs`, we see that the nodes we want are
+    simply the first `a` node, as well as that `a` node''s corresponding `img` tag.
+    Hence, in order to get the title and image URLs, respectively, our desired XPaths
+    should look as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With this, let''s now take a look at the full code of our scraper:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And that''s it! Most of this code we''ve already seen earlier, so really it''s
+    just the `grabGamesWithTag()` method that we should hone in on. The first part
+    of the method is to take the HTML patterns that we saw earlier (in the source
+    code of the website) and combine them with our XPath formats. At this point, we
+    have a valid XPath that will lead us to both the titles of the video games, as
+    well as to the image URLs of the video games. The method from `HtmlCleaner` that
+    we need to use to actually run this XPath command is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will return a list of `Objects` which can then be cast to individual `TagNode`
+    objects. What we need to do then is loop through each `Object` in our array, cast
+    it to a `TagNode`, and extract either the value of the node or an attribute of
+    the node to obtain the desired data. We can see that in the following part of
+    the method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In both cases here, the values that we need are specific attributes of the
+    node, as opposed to the value of the node. Had it been a value, our code would
+    have looked more like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, we've run through a quick primer on web scraping. Again, web
+    scraping is a technique and an art that will take time to get used to and master,
+    but is a great skill to have and is one that will open up countless opportunities
+    for mining data across the Web. For now, focus on the concepts that were introduced
+    in this chapter, as opposed to the actual code. The reason I say this is because
+    how your code looks will very much depend on what web page you're trying to scrape.
+    What won't change are the concepts behind the scraping, and so use those three
+    steps mentioned in this chapter as a guide to how you can write a scraper for
+    any web page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extending HTTP servlets for GET/POST methods
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we have our web scraper written, we need a way to take the `VideoGame`
+    objects that are returned, and actually store them in our database. Furthermore,
+    we need a way to communicate with our server once it's up and running and tell
+    it to scrape the site and insert it into our JDO database. Our gateway for communicating
+    with our server is through what's called an HTTP servlet — something that we briefly
+    mentioned earlier in the book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Setting up your backend in this way will be especially useful when we talk
+    later about CRON jobs which, in order to automatically run some kind of function,
+    require a servlet to communicate with (more on this soon). For now though, let''s
+    see how we can extend the `HttpServlet` class and implement its `doGet()` method,
+    which will listen and handle all HTTP GET requests sent to it. But first, what
+    exactly is an HTTP GET request? Well, an HTTP web request is simply a user making
+    a request to some server that will be sent over the network (that is, the Internet).
+    Depending on the type of request, the server will then handle and send an HTTP
+    response back to the user. There are then two common types of HTTP requests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: GET request — web requests that are only meant to retrieve data. These web requests
+    will typically ask the server to query for some kind of data to be returned.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: POST request — web requests that submit data to be processed. Typically, this
+    will ask the server to insert some kind of data that was submitted by the user.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In this case, since we aren''t getting any data for a user or submitting any
+    data from a user (in fact we''re not really interacting with any users at all),
+    it really doesn''t make a difference which type of request we use, so we''ll stick
+    with the simpler GET request as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So the method itself is quite simple. We already have our `getVideoGamesByConsole()`
+    method from earlier, which goes and does all the scraping, returning a list of
+    `VideoGame` objects as a result. We then simply run it for every console that
+    we want, and at the end use our nifty JDO database wrapper class and call its
+    `batchInsertGames()` method for quicker insertions. Once that''s done, we take
+    the HTTP response object that is passed in and quickly write some kind of message
+    back to the user to let them know whether or not the scraping was successful.
+    In this case, we don''t make use of the `HttpServletRequest` object that gets
+    passed in, but that object will come in very handy if the requester passes parameters
+    into the URL. For instance, say you wanted to write your servlet in a way that
+    only scrapes one specific game platform instead of all of them. In that case,
+    you would need some way of passing a p latform-type parameter to your servlet,
+    and then extracting that passed-in parameter value within the servlet. Well, just
+    like how earlier we saw that Yahoo! Finance allows you to pass in tickers with
+    key value `s`, to pass in a platform type, we could simply do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, on the servlet side do:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Pretty simple, right? You just have to make sure that the key used in the URL
+    matches the parameter you request within the servlet class. Now, the last and
+    final step for getting this all hooked together is defining the URL path in your
+    GAE project — namely, making sure your GAE project knows that the URL pattern
+    actually points to this class you just wrote. This can be found in your GAE project''s
+    `/war/WEB-INF/` directory, specifically in the `web.xml` file. There you''ll need
+    to add the following. To make sure that the servlet name and class path matches
+    the given URL pattern:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, we have our scraper, we have our JDO database, and we even have
+    our first servlet all hooked up and ready to go. The last part is scheduling your
+    scraper to run periodically; that way, your database has the latest and most up-to-date
+    data, without you having to sit in front of your computer every day and manually
+    call your scraper. In this next section, we'll see how we can use CRON jobs to
+    accomplish just this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scheduling CRON jobs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'First, let''s define what a CRON job is. The term **cron** originally referred
+    to a time-based job scheduler in Unix that allowed you to schedule jobs/scripts
+    to be run periodically at specific times. The same concept can be applied to web
+    requests, and in our case, the goal is to run our web scraper and update the data
+    in our database periodically and without our interference. Another reason why
+    GAE is so convenient to use is because of how easy the platform makes scheduling
+    CRON jobs. To do so, we simply need to create a `cron.xml` file in the `/war/WEB-INF/`
+    directory of our GAE project. In this XML file, we add the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is pretty self explanatory. First, we define root tags named`<cronentries>`
+    and within these, we can insert any number of`<cron>` tags — each one denoting
+    a scheduled process. In these`<cron>` tags, we need to tell the scheduler what
+    the URL that we want to hit is (this will be relative to the root URL, of course),
+    as well as the schedule itself (in our case, it's everyday at 12:50 A.M.). Other
+    optional tags are a description tag, a time-zone tag, and/or a target tag that
+    allows you to specify which version of your GAE project to invoke the specified
+    URL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, in my case, I asked the scheduler to run the job every day at 12:50 A.M.
+    (PST), but examples of other schedule formats are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'I won''t go into the exact syntax of the scheduler tags, but you can see that
+    it''s pretty intuitive. However, for those of you who would like to learn more
+    about CRON jobs in GAE or look at some of the less commonly used features, feel
+    free to check out the following URL for a comprehensive look at CRON jobs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://code.google.com/appengine/docs/java/config/cron.html](http://code.google.com/appengine/docs/java/config/cron.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: But as far as our example goes, what we did previously will suffice and so we'll
+    stop here!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we yet again covered a lot of ground. We started off the chapter
+    simply looking at various ways to collect data. In some cases, convenient APIs
+    released by other companies are readily available for us to use and query (though
+    one must be careful about legal issues when it comes to storing that data). However,
+    many times we'll find ourselves needing to go out and grab that data ourselves,
+    and this can be done through web scraping.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we went through a primer on web scraping — starting with
+    the high-level concepts behind what web scraping is and what steps you need to
+    take to perform it, and ending with the implementation. The example we went through
+    involved scraping Blockbuster's site for the latest video games available for
+    rent, and in the process, we wrote our first XPath expressions and implemented
+    our first HTTP servlet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While implementing our HTTP servlet, we briefly discussed the two common types
+    of HTTP requests (GET and POST requests) and proceeded to implement an HTTP GET
+    request that would allow us to call our video game scraper class, collect the
+    aggregated `VideoGame` objects, and then insert them into our JDO database using
+    our convenient wrapper class from the previous chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we ended the chapter by looking at ways in which we could schedule
+    the scraping of Blockbuster's site in order to ensure the latest and most up-to-date
+    data, without having to manually call the scraper ourselves every day. We introduced
+    a special technology known as CRON jobs and implemented one using the GAE platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next and last chapter, we'll try to bring everything we learned together.
+    More specifically, now that the data collection and insertion parts of our system
+    are up and running, we'll implement a few more servlets that will allow us to
+    make an HTTP GET request and retrieve various types of data. Then, we'll go through
+    the client side of the code, and look at how you can make these GET requests from
+    the Android application and parse the response for the desired data.
+  prefs: []
+  type: TYPE_NORMAL

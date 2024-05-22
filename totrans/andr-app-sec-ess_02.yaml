@@ -1,0 +1,1093 @@
+- en: Chapter 2. Application Building Blocks
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'This chapter focuses on the building blocks of an Android application, namely,
+    the application components and the inter-component communication. There are four
+    types of components in the Android system: Activities, Services, Broadcast Receivers,
+    and Content Providers. Each component is specially designed to accomplish a specific
+    task. A collection of these components makes an Android application. These components
+    talk to each other using Intents which is Android''s mechanism for inter-process
+    communication.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are several books that discuss how to build Android components and Intents.
+    In fact, the Android developer website does a pretty good job introducing programming
+    using these components as well. So in this chapter, instead of covering the implementation
+    details, our objective is to discuss the security aspects of each component and
+    how to define and use component and Intents securely in an application to protect
+    our reputation as a developer and the privacy of our consumers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Components and Intents are the focus of this chapter. For each Android component,
+    we will cover component declaration, permissions associated with the component,
+    and other security considerations specific to that particular component. We will
+    discuss different types of Intents and the best Intent to use in a particular
+    context.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application components
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we have briefly touched in [Chapter 1](ch01.html "Chapter 1. The Android
+    Security Model – the Big Picture"), *Android Security Model – the Big Picture*,
+    an Android application is a loosely bound stack of application components. Application
+    components, manifest file, and application resources are packaged in an **Application
+    Package Format** `.apk` file. An **APK** file is essentially a ZIP file formatted
+    in JAR file format. The Android system only recognizes the APK format, so all
+    packages have to be in the APK format to be installed on the Android device. An
+    APK file is then signed with the developer's signature to assert the authorship.
+    The `PackageManager` class handles the task of installing and uninstalling the
+    application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we will talk about the security of each of the components in
+    detail. This includes the declaration of a component in the manifest file, so
+    we prune loose ends and other security considerations that are unique to each
+    component.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Activity
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: An Activity is the application component that usually interacts with the user.
+    An Activity extends the `Activity` class and is implemented as views and fragments.
+    Fragments were introduced in **Honeycomb** to address the issue of different screen
+    sizes. On a smaller screen, a fragment is shown as a single Activity and allows
+    the user to navigate to the second Activity to display the second fragment. Fragments
+    and threads spun by an Activity run in the context of the Activity. So if the
+    Activity is destroyed, the fragments and threads associated with it will be destroyed
+    as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An application can have several activities. It is best to use an Activity to
+    focus on a single task and to create different activities for individual tasks.
+    For example, if we are creating an application that lets users order books on
+    a website, it is best to create an Activity to log the user in, another Activity
+    for searching books in the database, another Activity for entering ordering information,
+    another one for entering payment information, and so on. This style encourages
+    Activity reuse within the application and by other applications installed on the
+    device. The reuse of components has two major benefits. First, it helps to reduce
+    bugs, as there is less duplication of code. Second, it makes the application more
+    secure as there is less sharing of data between different components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Activity declaration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Any Activity that an application uses has to be declared in the `AndroidManifest.xml`
+    file. The following code snippet shows a login Activity and an order Activity
+    declared in the manifest file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that `LoginActivity` is declared as a public Activity that may be launched
+    by any other Activity in the system. The `OrderActivity` is declared as a private
+    Activity (an Activity with no Intent filters is a private Activity to be invoked
+    only by specifying its exact filename) that is not exposed outside the application.
+    An additional `android:exported` tag can be used to specify if it is visible outside
+    the application. A value of `true` makes the Activity visible outside the application,
+    and a value of `false` does otherwise. The Intent Filter is discussed later in
+    this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All the Activities can be secured by permissions. In the preceding example,
+    the `OrderActivity,` besides being private, is also protected by a permission
+    `com.example.project.ORDER_BOOK`. Any component that tries to invoke `OrderActivity`
+    should have this custom permission to invoke it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Usually, whenever an Activity is launched, it runs in the process of the application
+    that declared it. Setting the `android:multiprocess` attribute to `true` lets
+    an Activity run in a process different from the application. These process specifics
+    can be defined using the `android:process` attribute. If the value of this attribute
+    starts with a colon (`:`), a new process private to the application is created;
+    if it starts with a lowercase character, the Activity runs in a global process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `android:configChanges` tag lets the application handle Activity restarts
+    due to listed configuration changes. Such changes include changes in locale, plugging
+    an external keyboard, and SIM changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Saving the Activity state
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: All the Activities are managed by the system in the **activity stack**. The
+    Activity currently interacting with the user runs in the foreground. The current
+    Activity can then launch other Activity. Any Activity that is in the background
+    may be killed by the Android system due to resource constraints. An Activity may
+    also be restarted during configuration changes such as change in orientation from
+    vertical to horizontal. As mentioned in the preceding section, an Activity can
+    use the `android:configChanges` tag to handle some of these events itself. It
+    is not encouraged as it may lead to inconsistencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The state of the Activity should be preserved before a restart happens. The
+    lifecycle of an Activity is defined by the following methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'An Activity may override `onSaveInstanceState(Bundle savedInstanceState)` and
+    `onRestoreInstanceState(Bundle savedInstanceState)`, to save and restore the instance
+    values such as user preferences and unsaved text. The Android developer website,
+    [http://www.developer.android.com](http://www.developer.android.com), illustrates
+    this process beautifully with the following flowchart:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Saving the Activity state](img/5603OT_02_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The following code snippet shows how an Activity may store and retrieve the
+    preferred language, number of search results, and author name. User preferences
+    are stored as a **Bundle**, which stores name-value pairs, when the Activity is
+    killed. When the Activity restarts, this Bundle is passed to the `onCreate` method,
+    which restores the Activity state. It is important to note that this method of
+    storage does not persist application restarts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Saving user data
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As we discussed earlier, the Activities interact with the users so they may
+    collect some user data. The data could be private to the application or shared
+    with others. An example of such data could be the user's preferred language or
+    book category. This kind of data is generally retained by the application to enhance
+    the user experience. It is useful within the application itself and is not shared
+    with other applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An example of shared data could be the wish list of books that the user keeps
+    adding to the collection as users browse through the store. This data may or may
+    not be shared with other applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Based on the privacy and kind of data, a different storage mechanism can be
+    employed. An application can decide to use `SharedPreferences,` Content Provider,
+    a file stored on internal or external memory, or even on the developer's own website
+    to store this type of data. Content providers are discussed in this chapter. Other
+    persistent data storage mechanisms are discussed in detail in [Chapter 7](ch07.html
+    "Chapter 7. Securing Application Data"), *Securing Application Data*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Service
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Unlike Activities, Services lack a visual interface and are used in the background
+    for long running tasks. Ideally, a Service should keep running in the background
+    even when the Activity that started it no longer exists. When the task is completed,
+    a Service should stop by itself. Examples of tasks best suited for a Service are
+    syncing with database, uploading or downloading files from the network, interacting
+    with the music player to play tracks selected by the user, and global services
+    that applications can bind to for information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Securing a Service starts with the Service declaration in the manifest file.
+    Next it is important to identify the correct Service for a use case and manage
+    the lifecycle of a Service. This includes starting and stopping a Service and
+    creating a worker thread to avoid blocking the application. In the next few sections,
+    we will walk through each of these aspects. The last section of the chapter is
+    about binders, which is the backbone for most of Android's IPC and enables the
+    Service to be used in a client-server fashion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Service declaration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'All the Services that an application plans to start need to be declared in
+    the manifest file. The Service declaration defines how a Service, once created,
+    will run. The syntax of the `<service>` tag in the manifest file is shown in the
+    following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Based on the preceding declaration syntax, a Service that is private to the
+    application, and runs in its global process to store books in the database, can
+    be declared as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: By default, a Service runs in the global process of the application. In case
+    an application wants to start a Service in a different process, it may do so using
+    the attribute `android:process`. If the value of this attribute starts with a
+    colon (`:`), the Service starts in a new private process within the application.
+    If the value starts with a lowercase, a new global process is created that is
+    visible and accessible to all applications of the Android system. In the preceding
+    example, the Service runs in its own global process. The application should have
+    permissions to create such a process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This `android:enabled` attribute defines if the Service can be instantiated
+    by the system or not. The default value is `true`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `android:exported` attribute limits the exposure of the Service. A value
+    of `true` means that this Service is visible outside the application. If the Service
+    contains an Intent Filter then the Service is visible to other applications. The
+    default value of this attribute is `true`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To run the Service in an isolated process, devoid of all permissions, set the
+    `android:isolatedProcess` attribute to `true`. In this case, the only way to interact
+    with the Service is through binding to the Service. The default value of this
+    attribute is `false`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with Activities, Services can be protected by permissions. These services
+    are declared in the manifest file using the `android:permission` attribute. The
+    invoking components need to have proper permission to invoke the Service, otherwise
+    a `SecurityException` is thrown from the call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Service modes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A Service can be used in two contexts. In the first case, a Service acts as
+    a helper Service that a component can start to run long running tasks. Such a
+    Service is called a **started service**. The second use case for a Service is
+    as a provider of information to components of one or many applications. In this
+    case, the Service runs in the background and the application components bind to
+    the Service by calling `bindService ()`. Such a Service is called a **bound service**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A started service extends either the `Service` class or the `IntentService`
+    class. The main difference between the two approaches is the handling of multiple
+    requests. When extending the `Service` class, the application needs to take care
+    of handling multiple requests. This is done in the `onStartCommand()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `IntentService()` class makes it easier by queuing all the requests and
+    processing them one at a time, so the developer does not need to take care of
+    threading. If suitable for a use case, it is always better to use the `IntentService`
+    class to avoid multithreading bugs. The `IntentService` class starts a worker
+    thread for the task and requests are queued automatically. The task is done in
+    `onHandleIntent` and that''s it! The following is an example of an `IntentService`
+    class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: A bound service is the client server case where a Service acts as the server
+    and clients bind to it for information. This is done using the `bindService()`
+    method. When the clients are satisfied, they unbind themselves from the Service
+    using `unbindService()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A bound service can cater to components of one application or components of
+    different applications. A bound service that only caters to one application component
+    can extend the `Binder` class and implements the `onBind()` method which returns
+    the `IBinder` object. If a Service caters to multiple applications, a messenger
+    or **Android Interface Definition Language** (**AIDL**) tool can be used to generate
+    interfaces published by a Service. Using a messenger is easier to implement as
+    it takes care of multithreading.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When binding to a Service, it is important to check the identity of the Service
+    that the Activity is binding to. This can be done by explicitly specifying the
+    Service name. If the Service name is not available, the client can check the identity
+    of the Service it is connected to using `ServiceConnection.onServiceConnected()`.
+    Another method is to use permission checks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For a started service the `onBind()` method returns null.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lifecycle management
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A Service can be started by any component using the `startService()` method
+    and passing an Intent object as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Just like any other component, a started service can also be destroyed by the
+    Android system to gather resources for the process that the user is interacting
+    with. In such a scenario, the Service will be restarted based on the return value
+    set in the `onStartCommand` method. The following is an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There are three options for restarting a Service:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`START_NOT_STICKY`: This option indicates the Android system not to restart
+    the Service unless there are pending Intents. Pending Intents are discussed later
+    in this chapter. This option is best for cases where an unfinished job can be
+    safely restarted and finished later.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`START_STICKY`: This option indicates that a Service should be started by the
+    system. If the initial Intent is lost, the `onStartCommand()` method is started
+    with a null Intent. This is best for cases, where even if the initial Intent is
+    lost, the Service can resume its task. An example is the music player that starts
+    again once it is killed by the system.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`START_REDELIVER_INTENT`: In this option, the Service is restarted and the
+    pending Intent is redelivered to the Service `onStartCommand()`. An example is
+    downloading a file over the network.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It is important to note that a Service is different from creating a thread.
+    A thread is killed immediately when the component that spun it is killed. A Service
+    by default runs in the global application thread and remains alive even if the
+    invoking component is destroyed. If the Service is doing some time consuming activity
+    such as downloading a huge file, it is prudent to do it in a separate thread to
+    avoid blocking the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A started service runs in the application thread by default. Any blocking Activities
+    should be done in a separate thread to avoid potential bottlenecks when running
+    your application. The `IntentService` class takes care of this scenario by spawning
+    a worker thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both kinds of started services should stop themselves by calling `stopSelf()`
+    when the task has completed. Any component can stop the Service as well by using
+    the method `stopService()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A bound service is destroyed by the system when no more clients are binding
+    to it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A Service can be both started and bound. In this case, do not forget to call
+    `stopSelf()` or `stopService()` to stop a Service from continuing to run in the
+    background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Binder
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Binder** is the backbone of most of Android''s IPC. It is a kernel driver
+    and all calls to Binder go through the kernel. The messenger is based on Binder
+    as well. Binders can be confusing to implement and should only be used if the
+    Service caters to multiple applications running in different processes and wants
+    to handle multithreading itself. The Binder framework is integrated in the OS,
+    so a process that intends to use a Service of another process needs to marshal
+    the objects into primitives. The OS then delivers it across the process boundary.
+    To make this task easier for developers, Android provides the AIDL. The following
+    figure illustrates how Binder is the core of all Android IPC. A Binder is exposed
+    by AIDL. Intents are implemented as Binders as well. But these intricacies are
+    hidden from the user. As we move to bigger concentric circles, the implementation
+    becomes more abstract.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Binder](img/5603OT_02_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: To create a bounded service using AIDL, we first create the AIDL file. Then,
+    using the Android SDK tools, we generate the interface. This interface contains
+    the `stub` method that extends the `android.os.Binder` class and implements the
+    `onTransact()` method. The client receives a reference to the Binder interface
+    and calls its `transact()` method. Data flows through this channel as a `Parcel`
+    object. A `Parcel` object is serializable so it can effectively cross process
+    boundaries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `Parcel` objects are defined for high performance IPC transport, so they
+    should not be used for general-purpose serialization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If multiple processes are using the Service, beware not to change your AIDL
+    once you have exposed it, as other applications might be using it as well. If
+    this change is absolutely necessary then it should at least be backward compatible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Binders are globally unique in the system and references to binders can be used
+    as a shared secret to verify a trusted component. It is always a good idea to
+    keep Binders private. Anyone who has a reference to the Binder can make calls
+    to it and can call the `transact()` method. It is up to the Service to respond
+    to the request. For example, Zygote, the system Service, exposes a Binder that
+    any Activity can bind to. But calling its `transact()` method does not mean it
+    will be entertained.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Binder can run in the same process or different process based on the `android:process`
+    attribute of the `<service>` tag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Binder provides the identity of the calling component and its permission securely
+    through the kernel. The identity of the caller can be checked using the methods
+    `getCallingPid()` and `getCallingUid()` of the Binder. A Binder in turn can call
+    other Binders which in this case can use the identity of the calling Binder. To
+    check the permission of the caller, `Context.checkCallingPermission()` can be
+    used. To check if the caller or Binder itself has a particular permission, `Context.checkCallingOrSelfPermission()`
+    can be used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Content Provider
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Android system uses Content Providers for data storage such as contact list,
+    calendar, and word dictionary. A Content Provider is Android's mechanism to handle
+    structured data across process boundaries. It can be used within an application
+    as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In most cases, the Content Provider's data is stored in the SQL database. The
+    identifier `_id` is used as the primary key. As with SQL, users access data by
+    writing queries. These can be `rawQuery()` or `query()` depending on whether they
+    are raw SQL statements or structured queries. The return type of a query is a
+    `Cursor` object that points to one of the rows of the results. Users can use helper
+    methods such as `getCount()`, `moveToFirst()`, `isAfterLast()`, and `moveToNext()`
+    to navigate multiple rows. `Cursor` needs to be closed using `close()` once the
+    task is completed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Providers support many different types of data including integer, long, float,
+    double, and BLOB (Binary Large Object) implemented as a 64 KB array. Providers
+    can also return standard or MIME types. An example of a standard MIME type is
+    `text/html`. For custom MIME types, the value is always `vnd.android.cursor.dir`
+    and `vnd.android.cursor.item` for multiple and single rows respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following figure illustrates a Content Provider that can abstract a database,
+    a file, or even a remote server. Other components of the application can access
+    it. So can other application components, provided they have appropriate permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Content Provider](img/5603OT_02_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The following sections discuss the proper declaration of a provider, defining
+    appropriate permissions, and avoiding common security pitfalls that are necessary
+    for the secure access of provider data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Provider declaration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Any provider that the application wants to use has to be declared in the manifest
+    file. The syntax of the `provider` tag is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Based on the preceding declaration syntax, a custom provider that maintains
+    a list of books in the user's wish list can be declared as follows. The provider
+    has read and write permissions and the client can request for temporary access
+    to the path `/figures`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The string `android:authorities` lists the providers exposed by an application.
+    For example, if the URI of a provider is `content://com.example.android.books.contentprovider/wishlist/English`,
+    `content://` is the scheme, `com.example.android.books.contentprovider` is the
+    authority, and `wishlist/English` is the path. At least one authority has to be
+    specified. Semicolons should separate multiple authorities. It should follow Java
+    namespace rules to avoid conflicts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The boolean `android:enabled` tag specifies that the system can initiate the
+    provider. If the value is true, the system can. A value false does not let the
+    system initiate the provider. It is important to note that both the `android:enabled`
+    attributes, one in the `<application>` tag and the other in the `<provider>` tag,
+    need to be true for this to happen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the provider is published to other applications, `android:exported` is set
+    to true. The default value is true for applications with `android:targetSdkVersion`
+    or `android:minSdkVersion` set to 16 or lower. For all other applications, the
+    default value is false.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The attribute tag `android:grantUriPermissions` is used to provide one time
+    access to data that is protected by permissions otherwise and is not accessible
+    by the component. This facility, if set to `true`, lets the component overcome
+    the restrictions imposed by the `android:readPermission`, `android:writePermission`,
+    and `android:permission` attributes and will allow access to any of Content Provider's
+    data. If this attribute is set to `false` then permissions can only be granted
+    to datasets listed in the `<grant-uri-permission>` tag. The default value of this
+    tag is false.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The integer `android:initOrder` is the order in which a provider is initialized.
+    The higher the number, the earlier it is initialized. This attribute is of particular
+    importance if there are dependencies in the providers of an application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The string `android:label` is the user-readable label for the Content Provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The boolean `android:multiprocess` attribute, if set to true, lets the system
+    create an instance of the provider in each application's process that interacts
+    with it. This avoids the overhead of inter-process communication. The default
+    value is false which means that the provider is instantiated only in the application
+    process that defined it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The string `android:permission` tag declares the permissions that a client should
+    have to interact with the provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The string `android:readPermission` and string `android:writePermission` define
+    permissions that the client should have to read and write provider data respectively.
+    If defined, these permission supersede the `android:permission` value. It is interesting
+    to note that although the string `android:writePermission` allows only writes
+    on the database, it usually uses a `WHERE` clause and a smart engineer can work
+    around these to read the database. So write permission should be regarded as read
+    permission as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `android:process` attribute defines the process in which the provider should
+    run. Usually, the provider runs in the same process as the application. However,
+    if it is required to run the process in a separate private process, it can be
+    assigned a name starting with a colon (`:`). If the name begins with a lowercase
+    character, the provider is instantiated in a global process to enable cross application
+    sharing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `android:syncable` attribute allows data to sync to the server by setting
+    the value to `true`. A value of `false` does not let data sync to the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `<provider>` tag can contain three sub tags.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first is `<grant-uri-permission>` with the following syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The other is the `<path-permission>` tag with the following syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The third is the `<meta-data>` tag that defines the metadata associated with
+    the provider as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To provide with provider level single read and write, use `android:readPermission`
+    and `android:writePermission` respectively. To provide blanket provider level
+    read/write permissions, use the `android:permission` attribute. To enable temporary
+    permissions, set the `android:grantUriPermissions` attribute. You can also use
+    the `<grant-uri-permission>` child element for the same. To enable path level
+    permission, use the `<path-permission>` child element of `<provider>`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Other security consideration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A Content Provider extends the `ContentProvider` abstract class. This class
+    has six methods such as `query()`, `insert()`, `update()`, `delete()`, `getType()`,
+    and `onCreate()`, all of which need to be implemented. If the provider does not
+    support some functionality, an exception should be returned. This exception should
+    be able to communicate across process boundaries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Synchronization can be an issue if multiple threads are reading and writing
+    provider data. This can be taken care of by making all the previously mentioned
+    methods synchronized by using the keyword `synchronize` so only one thread can
+    access the provider. Alternatively, `android:multipleprocess=true` can be set
+    so that an instance is created for each client. Latency and performance issues
+    have to be balanced in this case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In some cases, to maintain data integrity, data may have to be entered in the
+    provider in a certain format. For example, it might be necessary that a tag append
+    each element. To achieve this, a client may decide to not call the `ContentProvider`
+    and `ContentResolver` classes directly. Instead, an Activity can be entrusted
+    to interface with the provider. All clients who need to access the provider data
+    should send an Intent to this Activity and then this Activity performs the intended
+    action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'SQL injection can easily happen with Content Providers if the value fed to
+    the query is not validated. The following is an example of how it can happen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: A malicious user can enter any text here. It could be `nothing; DROP TABLE *;`,
+    which will delete tables. Developers should use the same discretion that applies
+    for any SQL query. The user data should be parameterized and vetted for possible
+    bad activities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The user may decide to use regular expressions to check the syntax of the input
+    that the user enters. The following code snippet shows how to validate user input
+    for alphanumeric characters. The snippet uses the `matches` function of the `String`
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: When storing data in the database, you might like to encrypt sensitive information
+    such as passwords and credit card information before storing it. Be aware that
+    encrypting some fields may affect your ability to index and sort fields. Additionally,
+    there are some open source tools, such as SQLCipher for Android ([http://sqlcipher.net](http://sqlcipher.net))
+    that provides full SQLite database encryption using 256-bit AES.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Broadcast Receiver
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Introduced in API level 1, a Broadcast Receiver is a mechanism for an application
+    to receive Intents from the system or other applications. The beauty of a receiver
+    is that even if the application is not running, it still receives Intents that
+    can trigger further events. The user is unaware of a broadcast. As an example,
+    an application that intends to start a background Service as soon as the system
+    is up can register for the `Intent.ACTION_BOOT_COMPLETE` system Intent. An application
+    that wants to customize itself to a new time zone can register for an `ACTION_TIMEZONE_CHANGED`
+    event. An example of a Service sending out a broadcast Intent is shown in the
+    following figure. Receivers that have registered with the Android system for such
+    a broadcast will receive the broadcast Intent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Broadcast Receiver](img/5603OT_02_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: An application can declare a receiver in the manifest file. The receiver class
+    then extends the `BroadcastReceiver` class and implements the `onReceive()` method.
+    Or an application can create and register a receiver dynamically using `Context.registerReceiver`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Receiver declaration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A receiver can be declared in the manifest file as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As an example, let''s assume there are two applications. The first application
+    lets users search for books and add books to a wish list. The second application
+    listens for the Intent that a book has been added to wish list. The second application
+    then syncs up the wish list to the list on the server. An example receiver declaration
+    in the manifest file of the second application could be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The receiver `com.example.android.book2.MessageListener` is a public receiver
+    and listens to events from application `com.example.android.book1`. The `intent-filter`
+    tag filters out Intents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The application `book1` can send an Intent as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The attributes of the `<receiver>` tag are discussed as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`android:enabled`: Setting this attribute to true lets the system instantiate
+    the receiver. The default value for this attribute is true. This tag has to be
+    used in conjunction with the `android:enabled` attribute of `<application>`. Both
+    have to be true for the system to instantiate it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:exported`: Setting this attribute to true makes your receiver visible
+    to all applications in the system. If it is false then it can receive Intents
+    only from the same application or applications with the same user ID. If your
+    application does not have Intent Filters then the default value is false as it
+    assumes that this receiver is private to you. If you define Intent filters then
+    the default value is true. In our preceding example, we do have Intent filters,
+    so the receiver is visible to the rest of the system.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:name`: This is the name of the class that implements the receiver.
+    This is a required attribute and should be a fully qualified name of the class.
+    Once you have declared a receiver you should try not to change the name as other
+    applications might be using it and changing the name will break their functionality.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:permission`: You can protect your receiver with permissions. Using
+    this attribute you specify the permissions that the components that send an Intent
+    to your receiver should have. If no permissions are listed here then the permissions
+    of the `<application>` tag are used. If no permissions are specified there as
+    well then your receiver is not protected at all.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:process`: By default the receiver is instantiated in the application
+    process. If you want to, you may declare a name of the process here. If the name
+    starts with a colon (`:`), it is instantiated in a private process within your
+    application. If it starts with a lowercase letter, and your applications have
+    permission to do so, it is run in a global process.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Secure sending and receiving broadcasts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: There are two types of broadcasts, normal broadcasts and ordered broadcasts.
+    Normal broadcasts are sent asynchronously using `Context.sendBroadcast()` and
+    all the receivers listening to it will receive it. Ordered broadcasts, sent with
+    a `Context.sendOrderedBoradcast`, are delivered to one receiver at a time. The
+    receiver adds its result and sends it to the next receiver. The order can be set
+    using the `android:priority` attribute in an Intent Filter. If there are multiple
+    filters with same priority, the order in which the broadcast is received is random.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Broadcasts are asynchronous. You send them off but cannot be guaranteed that
+    the receiver will receive it. An application must act gracefully in such a situation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A broadcast can contain extra information. Any receiver listening to a broadcast
+    can receive a sent broadcast. It is thus prudent to not send any sensitive information
+    in the broadcast. Additionally, broadcasts can be protected with permissions.
+    This is done by supplying a permission string in the `sendBroadcast()` method.
+    Only applications that have appropriate permissions, by declaring it with `<uses-permission>`
+    can receive it. Similarly, a permission string can be added to the `sendOrderedBroadcast()`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a process is still executing `onReceive()`, it is considered as a foreground
+    process. Once the process is out of the `onReceive()` method, it is considered
+    as an inactive process and the system will try to kill it. Any asynchronous action
+    being performed in the `onReceive()` method may be killed. As an example, starting
+    a Service when a broadcast is received should be done using `Context.startService()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A sticky broadcast keeps living on until the phone powers off or some component
+    removes it. When the information in the broadcast is updated, the broadcast is
+    updated with the newer information. Any application that has the `BROADCAST_STICKY`
+    permission can remove or send sticky broadcasts, so do not put any sensitive information
+    in there. Moreover, a sticky broadcast cannot be protected by permissions so they
+    should be used sparingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Permissions can be enforced on receivers. As discussed in the previous section,
+    this can be done by adding a permission in the manifest file or dynamically by
+    adding it in the `registerReceiver()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting an **Ice Cream Sandwich**, you can restrict broadcasts to be received
+    by only one application by setting `Intent.setPackage`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are some system broadcast actions that are defined in the `Intent` class.
+    These events are triggered by the system and an application cannot trigger them.
+    Receivers can register to listen to any of these events. Some of these actions
+    include `ACTION_TIMEZONE_CHANGED`, `ACTION_BOOT_COMPLETED`, `ACTION_PACKAGE_ADDED`,
+    `ACTION_PACKAGE_REMOVED`, `ACTION_POWER_DISCONNECTED`, and `ACTION_SHUTDOWN`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Local broadcasts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If the broadcast is intended for components within an application only, it is
+    better to use a `LocalBroadcastManager` helper class. This helper class is a part
+    of the Android support package. Besides being more efficient than sending a global
+    broadcast, it is more secure as it does not leave the application process and
+    other applications cannot see it. A local broadcast does not need to be declared
+    in the manifest, as it is local to the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A local broadcast can be created as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following code snippet listens to a local broadcast:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Intents
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Intents are Android's mechanism for inter-component communication. Intents are
+    asynchronous so components fire them off and it is the onus of the receiving component
+    to validate the incoming Intent's data and act upon it. Intents are used by the
+    Android system for starting an Activity or Service, for communicating with a Service,
+    to broadcast events or changes, for receiving notifications using pending Intents,
+    and to query the Content Provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are different mechanisms to handle Intents for each component. So, the
+    Intents sent out to Activities, Services, and Broadcast Receivers are only sent
+    to their respective counterparts by the Android system. For example, an event
+    sent out to start an Activity using `Context.startActivity()` will resolve only
+    Activities matching the Intent criterion. Similarly, a broadcast sent out using
+    `Context.sendBroadcast()` will be received only by receivers and not by other
+    components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before an Intent is sent out, it is important to check if there is a component
+    to handle the Intent. If there is no component to handle the Intent, the application
+    will crash. Matching Intents can be queried using the `queryIntentActivities()`
+    method of the `PackageManager` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Any rogue application can send an Intent to an exposed component. It is your
+    component's responsibility to validate the input before acting on it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Intents are basically serialized objects passed between components. This object
+    contains some information used by the other component to act upon. For example,
+    an Activity that logs in the user using their login credentials may start another
+    Activity that loads up the books previously selected by the user using `Context.startActivity()`.
+    In this case, the Intent may contain the user's account name that will be used
+    to fetch books stored on the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'An `Intent` object contains the following four kinds of information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Component Name**: A Component Name is required only in case of an explicit
+    Intent. It has to be a fully qualified classname if communicating with an external
+    component or just the classname in case of an internal component.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Action String**: An Action String is the action that should be performed.
+    For example, an Action String `ACTION_ CALL` initiates a phone call. A broadcast
+    action `ACTION_BATTERY_LOW` is a warning to applications about low battery.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Data**: This is the URI of the data along with the MIME type. For example,
+    for `ACTION_CALL`, the data will be of type `tel:`. Both data and the type of
+    data go hand in hand. In order to work on some data, it is important to know the
+    type so that it can be handled appropriately.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Category**: The Category provides additional information about the kind of
+    Intents a component can receive, thereby adding further restrictions. For example,
+    the browser can safely invoke an Activity with a Category of `CATEGORY_BROWSERABLE`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Intents are asynchronous so no result is expected. In case of Activities, Intents
+    can also be used for starting an Activity for result. This is done using `Context.startActivityForResult()`
+    and the result is returned to the calling Activity using the `finish()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Intents used for broadcasts are usually announcements about an action that just
+    happened. Broadcast Receivers register to listen to such events. Some examples
+    include `ACTION_PACKAGE_ADDED`, `ACTION_TIME_TICK`, `ACTION_BOOT_COMPLETED`. In
+    this scenario, an Intent works like a trigger for some action to be performed
+    once an event takes place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Do not put any sensitive information in the `Intent` object. Use another mechanism
+    such as a Content Provider that can be protected by permissions to share information
+    between components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The receiving component gets extra information attached to the `Intent` class
+    using `getIntent().getExtras()`. A secure programming practice requires that this
+    input be validated and vetted for accepted values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Explicit Intents
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A component can send a targeted Intent to only one component. For this to happen,
+    a component should know the fully qualified name of the target component. An Activity
+    in **Application A** sending an explicit Intent to an Activity in **Application
+    B** can be shown graphically as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Explicit Intents](img/5603OT_02_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'For example, an Activity can explicitly communicate with an internal Activity
+    called `ViewBooksActivity` using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If `ViewBooksActivity` is an external Activity, the component name should be
+    a fully qualified name of the class. This can be done as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since intents can be intercepted by any application, if the component name is
+    available, it is best to call the component explicitly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implicit Intent
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If the fully qualified name of the component is not known, the component can
+    be called implicitly by specifying the action that a receiving component needs
+    to do with it. The system then identifies components that are best suited to handle
+    the Intent by matching the criterion specified in the `Intent` object. An illustration
+    of an implicit Intent is shown as follows. An Activity in **Application A** sends
+    out an Intent, and the system searches the relevant components (based on their
+    Intent Filters and permissions) that can handle such an Intent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Implicit Intent](img/5603OT_02_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following are some examples of implicit Intents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Intent Filter
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For a component to be resolved by the system, it needs to be declared in the
+    manifest file with appropriate identifiers. This task is done using the Intent
+    Filters. Intent filters are defined for activities using the `<intent-filter>`
+    subtag of the `<activity>`, `<service>`, or `<receiver>` declaration. While resolving
+    an appropriate Activity for an Intent, the system considers only three aspects
+    of an `Intent` object. These are action, data (both URI and MIME type), and category.
+    All these Intent aspects must match for a successful resolution. A component name
+    is used only for explicit Intents.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Intent Filters must contain the `<action>` subtag and may contain `<category>`
+    and `<data>`. Some examples of the `<intent-filter>` declarations are as follows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'An Activity that is the starting point of the application is identified with
+    these tags:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'An Activity that lets user request data of the type `book` can be defined as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Intent Filters are not security boundaries and should not be relied upon for
+    security. Intent Filters cannot be secured with permissions. Moreover, any component
+    with Intent Filters becomes an exported component and any application can send
+    Intents to this component.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pending Intent
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In case of Intents, the receiving application executes code with its own permission
+    as if it is a part of the receiving application. In case of a pending Intent,
+    the receiving application uses the original application's identity and permissions
+    and executes the code on its behalf.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thus a pending Intent is a token an application gives to another application
+    so that the other application can execute a piece of code with the original application's
+    permissions and identity. A pending Intent will execute even if the sending application
+    process is killed or destroyed. This property of pending Intents can be used beautifully
+    to send notification to the originating application once an event has happened.
+    Pending Intents can be either explicit or implicit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For additional security, so that only one component receives the Intent, a component
+    can be baked into the Intent by using the `setComponent()` method. By default,
+    a pending Intent cannot be modified by the receiving component. This is good for
+    security reasons. The only part that the receiving component can edit is `extras`.
+    The sender can, however, set flags to explicitly enable receiving components to
+    edit `PendingIntent`. For this to happen, the sender sets rules for using the
+    `fillIn(Intent, int)` method. For example, if the sender wants to let the receiver
+    overwrite the data field, even if it is set, then the sender can set `FILL_IN_DATA=true`.
+    This is a very sensitive operation and should be done with care.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we reviewed the four components of an Android system—Activities,
+    Services, Content Providers, and Broadcast Receivers, and inter-component communication
+    mechanisms—Intents and Binders. Security begins with secure declaration of these
+    components. As is the general rule with security, exposing the minimum is always
+    a good idea. All Android components are protected by permissions. Intents are
+    asynchronous components and should always validate their input. Intent Filters
+    are a good way to reduce the attack surface of an application, but an explicit
+    Intent can still send Intents to it. Now that we understand the Android components
+    and communication mechanism, let's move on to the next chapter to review Android
+    permissions in detail.
+  prefs: []
+  type: TYPE_NORMAL

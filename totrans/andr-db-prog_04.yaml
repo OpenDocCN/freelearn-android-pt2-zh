@@ -1,0 +1,600 @@
+- en: Chapter 4. Using Content Providers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've accomplished a lot so far in this book! In just three chapters, we've
+    looked at data storage mechanisms ranging from the simple, unassuming `SharedPreferences`
+    class, to the powerful and complex SQLite database, equipped with a variety of
+    query methods and classes that leverage the equally powerful language of SQL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, let's say that you've mastered the last three chapters and you've successfully
+    built from scratch a database schema for your application that is now live in
+    the market. Now, let's say you want to create a second application that extends
+    the functionality of the first and requires access to your original application's
+    database. Or perhaps you don't need to create a second application, but you simply
+    want to better market your application by making available your database for external
+    applications to access and integrate into their own.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Or, maybe you never even wanted to build your own database, but instead just
+    wanted to tap into the wealth of data already existing on each Android device,
+    and which is readily available for querying! In this chapter, we'll learn how
+    to do all these things with the `ContentProvider` class, and at the end we'll
+    spend some time brainstorming practical use cases of why you might benefit from
+    exposing your database schema through a `ContentProvider`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ContentProvider
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s start with the question: What exactly *is* a `ContentProvider?` And
+    why do I need to interact with this `ContentProvider?`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A `ContentProvider` is essentially an *interface* that sits between the developer
+    and the database schema where the desired data sits. Why is this intermediary
+    interface necessary? Consider the following (true) scenario:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the Android OS, a user's contact list (this includes phone numbers, addresses,
+    birthdays, and numerous other data fields pertaining to a contact) is stored in
+    a fairly complex database schema on the user's device. Consider a scenario where
+    as a developer, I'd like to query this schema for a user's contacts' phone numbers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Think about how inconvenient it would be for me to have to learn the entire
+    database's schema just to access one or two fields? Or how inconvenient it would
+    be if every time Google updated the Android OS and tweaked the contact schema
+    (and believe me, this has happened several times already), I had to relearn the
+    schema and restructure my query subsequently?
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's for these reasons that such an intermediary exists – so that instead of
+    having to interact directly with the schema, one only needs to query through the
+    content provider. Now, on that note, each time Google updates its contact schema,
+    they need to make sure they re-tweak their implementation of the `Contacts` content
+    provider; otherwise our queries through the content provider may fail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Said another way, much of this chapter and its implementation of the `ContentProvider`
+    class is going to remind you of what we did earlier when writing convenience methods
+    for our database. If you so choose to expose your data through a content provider,
+    you will need to define how an external application can query your data, how an
+    external application can insert new data or update existing data, and so on. These
+    will all be methods that you'll need to override and implement.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But now let''s be a little more discreet. There are many parts and pieces in
+    implementing a content provider from start to finish, so to start, let''s begin
+    by laying out this section and looking at all of these pieces:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining the data model (which is typically a SQLite database, which then extends
+    the `ContentProvider` class)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Defining its **Uniform Resource Identifier (URI)**
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Declaring the content provider in the Manifest file
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing the abstract methods (`query(), insert(), update(), delete(), getType()`,
+    and `onCreate())` of `ContentProvider`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Now, let''s start with defining the data model. Typically, the data model resembles
+    that of a SQLite database (although it doesn''t necessarily have to), which then
+    simply extends the `ContentProvider` class. For my example, I''ve chosen to implement
+    a pretty simple database schema consisting of just one table – a citizens table,
+    meant to replicate a standard database that keeps track of a list of people who
+    all have a unique ID (think social security ID), a name, a registered state, and
+    in my case a reported income. Let''s first define this `CitizensTable` class and
+    its schema:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Pretty straightforward. Now let''s create a class that extends the `SQLiteOpenHelper`
+    class (just like we did earlier in the previous chapter), but this time we''ll
+    declare it as an inner class where the outer class extends the `ContentProvider`
+    class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: You don't have to declare your SQLite database as an inner class – for me, it
+    just makes the implementation a little easier and everything is nicely in one
+    place. In any case, you'll notice that the implementation of the data model itself
+    is exactly the same as before – override the `onCreate()` method and create your
+    table, and then override the `onUpdate()` method and drop/recreate the table.
+    In the skeleton we just saw, you'll also see the various methods that need to
+    be implemented as a result of extending the `ContentProvider` class (this we will
+    get into in the next section).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The only thing different about the code we just saw is the inclusion of the
+    string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This authority is *what identifies the provider* – not necessarily the path.
+    What I mean by this is that later on we'll see how you can define the entire *path*
+    (this is known as the URI) to direct the query to the correct locations in your
+    database schema.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In our content provider, we''ll let developers query our database in one of
+    two ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen/#`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Those are the two fully specified paths that we'll register in our content provider,
+    and based on which path the developer requests, the content provider will know
+    how to query our database. So what do these mean – notice that both start with
+    the prefix `content://`, which is simply the standard prefix that tells the object
+    this is a URI that points to a content provider (just as how `http://` tells the
+    browser the path is pointing to a web page).
+  prefs: []
+  type: TYPE_NORMAL
+- en: After the prefix we specify the authority so that the object knows which content
+    provider to go to, and after that we have the suffixes `/citizen` and `/citizen/#`.
+    The former we will simply define as the base query – the developer is just issuing
+    a standard query and will pass any filters in the `query()` method. The second
+    is for situations where the developer already knows the ID of the citizen (that
+    is, the social security ID) and just wants to get a specific row of the table.
+    Instead of forcing the developer to pass a `WHERE` filter with the ID, we can
+    simplify things and allow the developer to specify the `WHERE` filter in the form
+    of a path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, in case all of this still sounds confusing, the most intuitive analogy
+    to this would likely be: When you register an internet domain, you must specify
+    a base URL, and once registered, the browser will know how to find the location
+    of other files relative to this base URL. Likewise, in our case, we specify in
+    the **Android manifest** (the motherboard of our application) that we want to
+    expose a content provider and we define the path to it. Once registered, anytime
+    a developer wants to reach our content provider, he/she must specify this *base*
+    URI (that is, the authority), and furthermore he/she will need to specify what
+    kind of query they are making by completing the path of the URI. For more on how
+    the `ContentProvider` URI is defined, I invite you to check out:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/guide/topics/providers/content-providers.html#urisum](http://developer.android.com/guide/topics/providers/content-providers.html#urisum)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But for now, let''s take a quick look at how you would declare your provider
+    in the Android manifest file, and afterwards let''s move on to the meat of the
+    implementation, which is in overriding the abstract methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again, pretty straightforward. All you need to do is define a name and authority
+    for your content provider – in fact, the Manifest file will complain if you give
+    an improper base URI as your authority, so as long as it compiles you know you're
+    good to go! Now, let's move on to the more complex implementation of your content
+    provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing the query method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now that we''ve built the data model, defined the table''s authority and URI,
+    and successfully declared it in our Android manifest file, it''s time to write
+    the bulk of the class and implement its six abstract methods. We''ll begin with
+    the `onCreate()` and `query()` methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: So let's just get the easy stuff out of the way first. You'll notice first off
+    that after we define our SQLite database (by extending the `SQLiteOpenHelper`
+    class), we declare a global `DatabaseHelper` variable and initialize it in our
+    `onCreate()` method. The `onCreate()` method is called automatically after a request
+    to open our particular content provider is made by an activity (through the use
+    of a `ContentResolver` object, which we'll talk about later as well). Of course,
+    any other initialization should go here, but in our case, all we want to do is
+    initialize a connection to our database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once that's done, let's take a look at those static variables we've declared
+    at the end. What the `projectionMap` does is it allows you to *alias your columns*.
+    In most content providers, this mapping will seem a little meaningless, as you're
+    simply telling the content provider to map your table's columns onto themselves
+    (as we are doing in the implementation of the `onCreate()` and `query()` methods,
+    which we just saw). However, there are certain instances where for more complex
+    schemas (that is, ones with joint tables), being able to rename and alias your
+    table's columns can make accessing your content provider's data much more intuitive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, remember the two paths we talked about earlier (that is, `/citizen` and
+    `/citizen/#)?` Well, all we're doing here is instantiating an `UriMatcher` object
+    which allows us to define those paths through the method `addURI()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At a high level, what this method does is define a set of mappings – it's telling
+    our `ContentProvider` class that any queries with path `/citizen` should be mapped
+    to any behavior specified with the `CITIZENS` flag. Likewise, any queries with
+    the path `/citizen/#` should be mapped to those behaviors specified by the `SSID`
+    flag (these flags were both defined at the top of the class). Having this functionality
+    can be useful for the developer as it allows him to efficiently query for a citizen
+    if his/her ID is known ahead of time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These flags then typically appear in `switch` statements, so now we'll focus
+    our attention onto the `query()` method. It starts by initiating a `SqliteQueryBuilder`
+    class (which we spent a great deal of time looking at in our previous chapter),
+    and from there it uses our `UriMatcher` object to match the passed-in URI. In
+    other words, what the `UriMatcher` is doing is looking at the requested path and
+    first figuring out if it's a valid path (if not, we throw an exception with error
+    `unknown URI)`. Once it sees that the developer has submitted a valid URI, it
+    then returns that path's associated flag (that is, `CITIZENS` or `SSID` in our
+    case), at which point we can use a `switch` statement to navigate to the proper
+    functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once you understand what''s happening at a high level, the rest should be pretty
+    straightforward and familiar by now. If the user just submitted a general query
+    (that is, with the `CITIZENS` flag), then all we need to do is define the projection
+    map and the table name that will be queried. And again, if the user wants to go
+    *directly* to a row in our table, then by specifying the social security ID in
+    the path, we can parse that citizen out with the line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Don't worry too much about the `SSID_PATH_POSITION` variable – all we're doing
+    here is taking the passed-in URI and breaking it into its path segments. Once
+    we have the path segments, we're going to get the first one (and subsequently
+    `SSID_PATH_POSITION` is set to `1` as we'll see soon), as in our example we only
+    ever have one path segment passed in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, once we have the desired social security ID that was passed into the query,
+    all we need to do is append it to a `WHERE` filter and the rest is just stuff
+    we've seen before – getting the readable database, and filling in the `query()`
+    method of `SQLiteDatabase`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last thing I'll mention is that after the query has been successfully made
+    and we get back our `Cursor` pointing at the data, since we are exposing our content
+    provider to all external applications on the device, there is a chance that multiple
+    applications may be accessing our database simultaneously, in which case our data
+    is subject to change. Because of this, we tell our returned `Cursor` to *listen*
+    for any changes that are made to its underlying data, so that when a change is
+    made, the `Cursor` will know to update itself and subsequently any UI components
+    that may use our `Cursor`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing the delete and update methods
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Hopefully, everything makes sense at this point, so let''s move on to the `delete()`
+    and `update()` methods, which will look very similar to the `query()` method in
+    structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: And so we see that the logic behind these two statements very much follows that
+    of the `query()` method. We see that in the `delete()` method, we first get our
+    writable database (note that in this case we don't need the help of a `SQLiteQueryBuilder`,
+    as we are deleting something and not querying for anything), and then we direct
+    the passed-in URI to our `UriMatcher`. Once the `UriMatcher` validates the path,
+    it then directs it to the appropriate flag, at which point we can vary the functionality
+    accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In our case, any queries with the `CITIZEN` path specification just become
+    a standard `delete()` statement, while those with the `SSID` path specification
+    become a `delete()` statement with an additional `WHERE` filter on the ID column
+    of the table. Again, the intuition here is that we are deleting a specific citizen
+    from our database. Look at the following snippet of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Note how we''re appending the ID filter onto whatever original `WHERE` filter
+    the user may have specified. It''s important to remember details like this in
+    your implementation — namely, that the developer may have passed in additional
+    arguments along with the ID in the path specification, so your final `WHERE` filter
+    should take all of these into consideration. The only detail left is in the line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here what we're doing is requesting for the `Context` and the `ContentResolver`
+    that made this call, and notifying it that a change to its underlying data was
+    successfully made. Why this is important will become clearer when we talk about
+    how to bind `Cursors` to the UI, but for now consider a situation where in your
+    activity, you display the rows of the data as a list. Naturally, every time something
+    alters a row of the data in the underlying database, you'd want your list to reflect
+    those changes, so this is why we need to notify those changes made at the end
+    of our methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, I won't say much about the `update()` method as the logic is identical
+    to that of the `delete()` method – the only difference is in the calls made by
+    the writable SQLite database that you get. So, let's push onwards and finish our
+    implementation with the `getType()` and `insert()` methods!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing the insert and getType methods
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'It''s time to implement our final two methods and complete our `ContentProvider`
+    implementation. Let''s take a look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, let''s tackle the `getType()` method. This method simply returns the
+    **Multipurpose Internet Mail Extensions (MIME)** type of the data object requested
+    for a given URI, which really just means you are giving each row (or rows) of
+    your data a distinguishable data type. This then allows developers, if needed,
+    the ability to identify whether or not a `Cursor` pointing to your table is indeed
+    retrieving valid *citizen* objects. The rules behind specifying MIME types for
+    your data are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`vnd.android.cursor.item/` for a single record'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vnd.android.cursor.dir/` for multiple records'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Subsequently, we''ll define our MIME types in our `CitizenTable` class (which
+    is also where we define our columns and schema):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: So now that we have our MIME types defined, the rest is simply passing the URI
+    in the `UriMatcher` (again) and returning the corresponding MIME type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: And last but not least, we have our `insert()` method. This method is slightly
+    different, but not significantly so. The only difference is that when inserting
+    something, it doesn't make sense to pass a `SSID` URI path (think about it – if
+    you're inserting a *new* citizen how could you possibly already have a desired
+    social security ID to pass into the URI). So in this case, if a URI that *does
+    not* have the `CITIZEN` path specification passed in, we throw an error. Otherwise,
+    we proceed and simply retrieve our writable database and insert the values into
+    our content provider (this we've seen before as well).
+  prefs: []
+  type: TYPE_NORMAL
+- en: That's it! The goal is that after seeing the complete implementation, all the
+    pieces tie together and you start to understand, at least intuitively, what is
+    happening in our `ContentProvider` class. As long as this makes sense intuitively,
+    the rest will follow when you actually program and implement the content provider
+    yourself!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, before moving on to practical reasons for exposing your data through a
+    content provider, let''s take a quick look at how you would interact with a content
+    provider (let''s just use ours for now) and subsequently introduce the `ContentResolver`
+    class, which we''ve seen come up a few times by now. This will seem quick for
+    now, but no worries – soon we will devote an entire chapter on querying the most
+    commonly used content provider: the `Contacts` content provider.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Interacting with a ContentProvider
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: At this point, we've successfully implemented our own content provider, which
+    can now be read, queried, and updated (assuming the proper permissions are granted)
+    by external applications! To interact with a content provider, the first step
+    is to acquire from your `Context` the associated `ContentResolver`. This class
+    behaves very much like a `SQLiteDatabase` class in the sense that it has your
+    standard `insert(), query(), update()`, and `delete()` methods (in fact, the syntax
+    and parameters for the two classes are extremely similar as well), but it's designed
+    especially for interacting with content providers through URIs that are passed
+    in by the developer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s take a look at how you would instantiate a `ContentResolver` within
+    an `Activity` class, and then insert and query for data using both path specifications:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So what''s going on here is we first insert three rows into our database, so
+    that the citizen table now looks like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| ID | Name | State | Income |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | Jason Wei | CA | 100000 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 2 | James Lee | NY | 120000 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 3 | Daniel Lee | NY | 80000 |'
+  prefs: []
+  type: TYPE_TB
+- en: 'From here, we use our content resolver to make a general query of our table
+    (that is, just passing in the basic URI path specification) in an order of increasing
+    incomes. Then, we use our content resolver to make a specific query using the
+    `SSID` path specification. To do this, we utilize the static method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This transforms the base content URI from:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen/2`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, to validate our results, let''s take a look at what was outputted:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Interacting with a ContentProvider](img/8123OS_04_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: From the previous screenshot, we can see that both queries indeed outputted
+    the correct rows of data!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, the only remaining thing I'll say about the previous example (as most of
+    the syntax and `Cursor` handling is identical to that of examples from previous
+    chapters) is regarding the method `startManagingCursor()`. In earlier chapters,
+    you'll notice that every time I open a `Cursor` through a `query()`, I have to
+    make sure to close it at the end of the `Activity`; otherwise, the OS will throw
+    out various hanging `Cursor` warnings. However, with the `startManagingCursor()`
+    convenience method, the `Activity` will manage the life cycle of the `Cursor`
+    for you making sure to close it before the `Activity` destroys itself, and so
+    on. In general, it's a good idea to allow the `Activity` to manage your `Cursors`
+    for you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Practical use cases
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'So, now that you know how to both implement and access a content provider,
+    you might be scratching your head and thinking to yourself: *Why would I ever
+    need to do this?*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: What practical use cases are there for a content provider that would motivate
+    you to go through the extra hassle of building a content provider instead of just
+    extending a `SQLiteOpenHelper` and writing some convenience methods?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Well, one thing that is *unique* about the `ContentProvider` is that it allows
+    you to expose your data to all external applications, and so we can start our
+    brainstorming from there. Let's say you're running a small (or large) startup
+    and you've developed an application that allows the user to look up restaurants
+    and book reservations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, sensibly, your application will most likely store these booked reservations
+    in some kind of database, so that the user can see what reservations they made
+    previously each time they open the application. But, say you expose your content
+    provider and turn it into a *local* API (perhaps for some it's easiest to just
+    think of a content provider as such) — in this case, other applications, perhaps
+    a calendar application or a tasks list application, could develop some special
+    functionality that allows them to *sync* their calendars and/or tasks with that
+    user's restaurant reservations!
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, you have two applications, both with their own specific functionalities,
+    leveraging the power of content providers to provide the user with a great experience
+    (and happy users mean happy reviews for your application)!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's brainstorm one more example before we wrap up this chapter and move on
+    to the next. One of the great things about the Android OS (and about Google in
+    general) is the search functionality! As a result, within the Android OS, there's
+    a native Quick Search application, which typically appears as a widget on the
+    home screen of the device (see [http://developer.android.com/resources/articles/qsb.html](http://developer.android.com/resources/articles/qsb.html)
+    for more).
+  prefs: []
+  type: TYPE_NORMAL
+- en: This Quick Search widget is especially cool because of how it allows you to
+    search through *any and all* databases that declare themselves as searchable.
+    And what prerequisites are there for making your database searchable? You guessed
+    it – it has to be through a content provider. Again, it's only through exposing
+    your data with a content provider that any application (whether native or third
+    party) can read and access your database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: And so, say you are writing a texting application, and as a result you maintain
+    a content provider that stores all of the most recent texts you've had with your
+    friends. One neat feature you could add is to declare your content provider as
+    searchable and then specify in your content provider what fields the search is
+    to be done over (in this case, it would likely be the field containing the body
+    of the text). Once you've done this, the user can quickly use the home screen's
+    search widget and seamlessly maneuver through their texts with their friends!
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the end of the day, the principles and concepts behind the content provider
+    are simple, and implementing is just half of the work – the other half is being
+    creative and thinking of innovative and useful applications for your content provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we went into great detail about both what a `ContentProvider`
+    is and how it is implemented, and as a result we saw a *lot* of code. However,
+    conceptually, the `ContentProvider` is fairly simple you first define an inner
+    class that extends the `SQLiteOpenHelper`, and from there – you specify how that
+    SQLite database should be queried and/or modified, based on the *instructions*
+    that are passed into each method. These instructions come in the form of URIs,
+    and so in each method you're going to parse the different paths of the URI and
+    perform the appropriate functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then quickly saw how you could interact with your new content provider (or
+    any content provider, in fact) through the use of a `ContentResolver` which is
+    obtained from the `Context` and then used to `query(), insert(), delete()`, or
+    `update()` a corresponding content provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, we took some time to step away from the code and consider practical
+    ways we could use a content provider. This is always an important exercise to
+    do when developing an application, and is one of my goals for this book – to equip
+    you with both the low-level implementation details of these techniques as well
+    as the high-level motivations and use cases for them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, earlier I mentioned that the Android OS is replete with pre-existing content
+    providers that any developer is free to query and update. This is in fact true,
+    and some of the more common content providers that are built into the system are
+    the Media and Calendar content providers. However, by far the most important and
+    most commonly used `ContentProvider` is the `Contacts` content provider – the
+    database schema that is built into the OS and which houses the user's contacts
+    list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll devote our entire attention into learning and understanding
+    this `Contacts` content provider, its schema, and how to interact with it to accomplish
+    standard queries and updates.
+  prefs: []
+  type: TYPE_NORMAL

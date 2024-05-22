@@ -1,0 +1,715 @@
+- en: Chapter 6. Your Tools – Crypto APIs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To respect user privacy, applications that process sensitive data need to protect
+    this data from prying eyes. Although the Android stack provides layered security
+    architecture with security built in the operating system itself, it is relatively
+    easy to gain root access on the device, thereby compromising the data stored on
+    the device. It is thus important for application developers to be aware of the
+    tools that they can use to securely store data. On the same note, it is important
+    for them to understand how to properly transmit data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Android stack provides tools that developers can use to perform tasks such
+    as encryption and decryption, hashing, generating random numbers, and message
+    authentication codes. These tools are the cryptographic APIs provided by various
+    packages in the stack. The `javax.crypto` package provides capabilities to encrypt
+    and decrypt messages, and generate message authentication codes and key agreement
+    APIs. Random number generation is provided as a utility by the `java.util.Random`
+    class, and the `java.security` package provides APIs for hashing, key generation,
+    and certificate management.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will discuss crypto APIs provided by the Android stack and
+    available to application developers to protect sensitive information. We begin
+    the basic terminology used in cryptography, followed by information on how to
+    find out the security providers available. Next, we will discuss random number
+    generation followed by hashing functions. Asymmetric and symmetric key cryptography
+    and different cipher modes are discussed next followed by message authentication
+    codes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Terminology
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let us start off with an understanding of some terms that are used in cryptography.
+    As we progress through the chapter, these terms will be repeatedly used, so it
+    is important to become familiar with them before we proceed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Cryptography: Cryptography is the study and practice of secure communication
+    in an insecure environment and in the presence of adversaries. As our lives become
+    more digitalized and connected, cryptography has gained increasing importance.
+    Cryptography is practised in the form of algorithms and protocols that are designed
+    using mathematical formulae and problems that are computationally hard.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Plaintext: Also called cleartext, plaintext is the message that a sender wants
+    to transmit and that needs to be kept a secret. If Alice wants to send a message
+    "Hello World" to Bob, then "Hello World" is the plaintext.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Ciphertext: Also called codetext, this is the encoded or encrypted message
+    of plaintext that is sent to the receiver. Let us follow the previous example
+    where Alice wants to sends the message "Hello World" to Bob. Alice uses a substitution
+    method where each alphabet is replaced by the next alphabet to form the ciphertext.
+    So, the plaintext "Hello World" is now transformed into "Ifmmp Xpsme". "Ifmmp
+    Xpsme" is the ciphertext that is transmitted to Bob.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Encryption: Encryption is the process of converting plaintext into ciphertext
+    such that an eavesdropper cannot decipher the message as it is being transmitted
+    or stored, and only the parties that know the code can understand it. In the preceding
+    example the process of converting "Hello World" to "Ifmmp Xpsme" is called encryption.![Terminology](img/5603_06_01.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Decryption: Decryption is the reverse of encryption. It is the process of converting
+    a ciphertext back to a plaintext at the receiving end to retrieve the information.
+    So, the conversion of "Ifmmp Xpsme" back to "Hello World" is called decryption.![Terminology](img/5603_06_02.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Key: In cryptographic terms, a key is the critical piece of information or
+    mathematical parameter that determines the output of a cryptographic algorithm.
+    In the preceding example, when "Hello World" is converted to "Ifmmp Xpsme", the
+    critical information is adding one to each alphabet and this is the key. During
+    decryption, the critical information is subtracting one from each alphabet and
+    this is the key for decryption.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Cipher: A cipher is the cryptographic algorithm that performs the encryption
+    and decryption of messages. It is also called a cryptographic algorithm. In the
+    preceding example, the cipher is an algorithm of encrypting "Hello World" to "Ifmmp
+    Xpsme" and then at the receiving end, converting "Ifmmp Xpsme" back to "Hello
+    World".'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Security providers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Android stack is customizable as far as the security providers are concerned.
+    This means that the device manufacturers can add their own crypto providers. As
+    an application developer, you are at liberty to use your own security provider
+    as well. Since the Android stack provides only some capabilities of the Bouncy
+    Castle security provider, Spongy Castle is hugely popular. Also, different versions
+    of the Android stack keep updating their crypto capabilities by removing cryptographic
+    algorithms that are way insecure and adding new ones. You may like to check the
+    providers and their complete list of algorithms supported at a given point of
+    time. Also, make sure to test your application on different devices to confirm
+    that the crypto algorithms work as expected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following code snippet shows how to obtain a list of crypto providers by
+    using the `java.security.Providers` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![Security providers](img/5603_06_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Now to get the detailed information about each provider, let''s enhance the
+    function to log more details, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following screenshot shows the details about some security providers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Security providers](img/5603_06_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Always use well-known, industry standard cryptographic algorithms. Writing a
+    crypto routine sounds fun and easy, but it is much harder that it seems. Industry
+    standard algorithms like we will study in the following section have been developed
+    by cryptographic experts and thoroughly tested. If any weakness is found in such
+    algorithms, then that is made aware to the public, and developers can update their
+    code with stronger crypto algorithms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Random number generation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Generating a random number is one of the most important tasks in cryptography.
+    A random number acts as a seed for other crypto functions, such as encryption
+    and generating message authentication codes. It is hard to simulate the generation
+    of true random numbers as it comes from unpredictable acts of nature. Computer
+    systems generate pseudo random numbers which means that they are not truly random
+    but appear random.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are two approaches to compute generated random numbers: **Pseudo Random
+    Number Generators** (**PRNG**) and **True** **Random Number Generators** (**TRNG**).
+    PRNGs are generated by an algorithm based on some mathematical formula. TRNGs
+    are based on system characteristics, such as **CPU** (**Central Processing Unit**)
+    cycles, clock, noise, and keystrokes. Dr. Mads Haahr, professor at Trinity College
+    runs [www.random.org](http://www.random.org) and this is a very interesting stop
+    for anyone who is interested in randomness. Check it out!'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Use cases of random numbers include gaming applications such as those where
+    users roll a dice, gambling applications, music applications that play songs randomly,
+    and as a seed for crypto operations like hashing, encryption, or key generation.
+    Not all use cases require strong randomness. A music player playing tracks randomly
+    does not require as strong randomness as a key generation algorithm might require.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android provides the ability to generate random numbers using the `java.util.Random`
+    class of the `java.util` package. The class provides methods to generate one or
+    more arrays of random double, byte, float, int, or long. This class is thread-safe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following code snippet shows an example of how to generate a random number
+    within a range of 1 to 100.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: A random number can be generated using a seed as well. However, since the Android
+    stack has a pseudo random number generator that seeds itself with an initial state
+    quite unpredictable, the seed actually makes the random number more predictable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hashing functions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Hashing functions are algorithms that work on data of an arbitrary length to
+    produce a fixed length output. Given the same input, the output is always the
+    same and for different input values, the output is always different. These functions
+    are one way, which means that the reverse operation on data is not possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In mathematical terms, a one-way hash function can be defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Given a message *M*, and a one-way hash function *H*, it is easy to compute
+    *x* such that *H(M) = x*. But given *x* and *H*, it is infeasible to get the message
+    *M*. This can be shown mathematically as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*H(M) = x*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*H(x) ≠ M*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Another property of hash functions is low collision probability. This means
+    that given a message *M*, it is hard to find another message *M*, such that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*H(M)* ≠ *H(M'')*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: One-way hash functions can be used for various applications. They are used to
+    create a fixed size output for a variable length string. Using a hash, a value
+    can be securely stored as given by the hash; it is unfeasible to retrieve the
+    original message. For example, instead of storing passwords, the hash of passwords
+    is stored in the table. Since the hash value is always the same for a given message,
+    entering the correct password will lead to the generation of the same hash value.
+    They are used as a checksum to ensure that the message is not altered in transit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The most popular hash functions that are used today are the **MD5** (**Message
+    Digest Algorithm**) and **SHA** (**Secure Hash Algorithm**) family of hash functions.
+    All these hash functions are different in strength and collision probability,
+    and you should use the one best suited for your application. Usually, using SHA-256
+    is a good choice. Many applications still use MD5 and SHA-1 but these are now
+    considered secure enough. For applications that require very high-level of security,
+    stronger hash functions, such as SHA-3 should be considered. The following table
+    summarizes the length of the output for some common hashing functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Hash algorithm | Block length (in bits) | Output length (in bits) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| MD5 | 512 | 128 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| SHA-1 | 512 | 160 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| SHA-256 | 512 | 256 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| SHA-512 | 1024 | 512 |'
+  prefs: []
+  type: TYPE_TB
+- en: 'The following image from Wikipedia shows how small changes in input change
+    the output completely. The hash function in this case is SHA-1:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Hashing functions](img/5603_06_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Hashing functionality is provided by the `java.security.MessageDigest` class
+    of the `java.security` package. The following code snippet shows how to use this
+    class to create a SHA-256 hash on string `s`. The method `update` updates the
+    digest with bytes and the method `digest` creates the final digest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Public key cryptography
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Public key cryptography is a cryptographic system that uses two keys: one for
+    encryption and one for decryption. One of the keys is made public and the other
+    is kept private.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Public key cryptography is most commonly used to target two use cases. One for
+    confidentiality and the other is for authentication. In case of confidentiality,
+    the sender encrypts the message using the receiver's public key and sends it over.
+    Since the private key is in possession of the receiver, the receiver uses the
+    private key to decrypt the message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the case of authentication to serve as a digital signature, a sender uses
+    their private key to encrypt the message (in most use cases, it is the hash of
+    the message that is encrypted and not the entire message) and makes it available.
+    Anyone with a public key can access it and be certain that the message comes from
+    the sender.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Both the use cases are shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Public key cryptography](img/5603_06_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In the following section, we discuss two common public key cryptography algorithms:
+    RSA for encryption and authentication, and Diffie-Hellman for key exchange.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: RSA
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Named after its inventors Ron Rivest, Adi Shamir, and Leonard Adleman, RSA is
+    an algorithm based on the public key cryptography. The security of RSA is based
+    on factoring two large primes. The algorithm itself is not a secret and neither
+    is the public key. Only the primes are secret.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The length of the RSA key used can be 512, 1024, 2048, or 4096 bits based on
+    the strength required. Currently the 2048 bit key is considered strong. RSA is
+    very slow, so its use to encrypt large data sets should be avoided. It is important
+    to note that the length of the message that can be encrypted with RSA cannot exceed
+    the length of modulus (length of the product of the two primes). Since RSA is
+    inherently slow, the usual approach is to encrypt the plaintext with a symmetric
+    key and then encrypt the key with RSA.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'RSA can be used both for confidentiality and authentication using the digital
+    signature. There are three main operations when using RSA which are discussed,
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Key generation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The first step in implementing RSA is to generate the keys. In Android, this
+    can be done by using the `java.security.KeyPairGenerator` class. The following
+    code snippet shows how to generate a 2048 bit key pair:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If the key is already available in raw and the private and public keys need
+    to be extracted from it, then the `java.security.KeyFactory` class can be used
+    to extract the public and private keys from the key specs, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Encryption
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Both encryption and decryption can be performed by either private or public
+    keys based on the use case. The following code snippet encrypts the data with
+    the public key of the receiver. This example follows from the preceding method
+    where a key pair is generated by using the `java.security.KeyPairGenerator` class.
+    The following example uses the `java.security.Cipher` class to initialize the
+    cipher and perform the operation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Decryption
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Decryption is the opposite operation of encryption. The following code shows
+    how to decrypt data using the private key. Following from the preceding example,
+    this is the case where the sender encrypts the message using the receiver's public
+    key and then the receiver decrypts it, by using their private key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Padding
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the previous examples you will notice that the cipher is initialized with
+    **PKCS1Padding**. Let us talk more about padding. The RSA algorithm has no random
+    components. This means that the same plaintext when encrypted with the same key
+    will result in the same ciphertext. This property can lead to a chosen plaintext
+    attack against the cryptosystem. Before encrypting the plaintext, it is usually
+    padded with random data. **PKCS#1** (**Public Key Cryptography Standard**) published
+    by the RSA Laboratories, is used to embed structured random data in plaintext.
+    It was later shown that even PKCS#1 padding is not enough to avoid adaptive chosen
+    plaintext attacks. This is a kind of chosen ciphertext attack in which subsequent
+    ciphers are chosen based on results from the first set of decrypted ciphertexts.
+    To mitigate these kinds of attacks, PKCS#1 v1.5 is recommended. Another kind of
+    padding that can be used is **OAEP** (**Optical Asymmetric Encryption Padding**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the example you will also notice **CBC** (**Cipher Block Chaining**) as the
+    parameter. This mode is discussed later in this chapter, under the *Block Cipher
+    Modes* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Diffie-Hellman algorithm
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Published by Whitefield Diffie and Martin Hellman in 1976, Diffie-Hellman is
+    the most popular key exchange algorithm. The beauty of this algorithm is that
+    two parties can independently generate a secret key over an insecure channel without
+    exchanging the secret key. This secret key can then be used in symmetric encryption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Diffie-Hellman algorithm does not authenticate the two parties. It is thus
+    susceptible to the man-in-the-middle attack where an eavesdropper sits in the
+    middle and communicates with the two parties posing as the other party. The following
+    illustration from Wikipedia explains the concept of Diffie-Hellman beautifully
+    using two parties: Alice and Bob:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Diffie-Hellman algorithm](img/5603_06_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following code sample shows an example implementation of generating key
+    pairs. The `java.security.KeyPairGenerator` class is used to generate the key
+    pair based on the DH parameters. Next, the `javax.crypto` class is used to generate
+    the key agreement:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Symmetric key cryptography
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The symmetric key cryptography is based on a secret key that is the same for
+    both parties. The same key is used for both encryption and decryption. This is
+    a problem compared to the public key cryptography, as it is required to exchange
+    the secret keys securely by some means. If an eavesdropper gets hold of the key,
+    the security of the system is defeated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Symmetric key cryptography](img/5603_06_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Symmetric key is much faster than a public key and is ideal when encrypting/decrypting
+    large chunks of data. Security of a symmetric key algorithm is based on the length
+    of the key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Stream cipher
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A stream cipher is a type of a symmetric key cryptography where each bit or
+    byte of data is encrypted individually with a stream of random bits called a key
+    stream. Usually, each bit or byte is **XOR**ed (**Exclusive OR**) with a key stream.
+    The length of the key stream is the same as the length of data. The security of
+    a stream cipher depends upon the randomness of the key stream. If the same key
+    stream is used for encrypting multiple data sets, then vulnerability in the algorithm
+    can be identified and exploited. The following image shows a stream cipher in
+    action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Stream cipher](img/5603_06_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The best use of a stream cipher is where the length of data is variable like
+    in Wi-Fi or an encrypting voice data. They are also easy to implement in hardware.
+    Some examples of algorithms that use stream cipher technique include RC4, A5/1,
+    A5/2, and Helix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since the key is as long as the data in question, there are severe key management
+    problems with stream ciphers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Block cipher
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the case of a block cipher, a block of data is encrypted with a key one at
+    a time. The plaintext is divided into fixed length blocks and each block is encrypted
+    individually. The following figure shows the basic idea of a block cipher. Each
+    plaintext is divided in fixed blocks of data. If the blocks cannot be evenly divided,
+    they are padded with a standard set of bits to make them the desired length. Each
+    block is then encrypted with a key and a fixed length encrypted block is generated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Block cipher](img/5603_06_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: A problem with block ciphers is that if the same block of data is repeated,
+    the output is always the same. Another problem is that if a block is lost in transit,
+    there is no way to identify that a block has been lost. Various block cipher modes
+    have been designed that help solve the previously mentioned problems. Block ciphers
+    are widely used in cryptographic algorithms, such as AES, DES, RC5, and Blowfish.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As plaintext is divided into blocks, it is common that the last block will not
+    have enough bits to fill the block. In such a case, the last block is padded with
+    additional bits to attain the desired length. This process is known as padding.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Block cipher modes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the block cipher mode, the plaintext is divided into blocks and each block
+    is encrypted with the same key. In the following section some techniques that
+    are used to realize block encryption are discussed. These modes are used both
+    for symmetric encryption and also for asymmetric encryption, such as RSA. In practice
+    though, large chunks of data are rarely encrypted using the asymmetric ciphers,
+    as these tend to be very slow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Electronic Code Book (ECB)
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the ECB mode, a plaintext is divided into blocks and each block is independently
+    encrypted with the key. This mode can be easily parallelized and is therefore
+    fast. This mode does not conceal patterns in plaintext. So, the same blocks will
+    yield the same ciphertext. Any attacker can modify or steal the plaintext and
+    it will be oblivious to the sender.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following figure shows how encryption and decryption is realized in the
+    ECB mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Electronic Code Book (ECB)](img/5603_06_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following code illustrates how to initialize the RSA cipher with the ECB
+    mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similarly, to initialize an AES symmetric algorithm with ECB, the following
+    code can be used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Cipher Block Chaining (CBC)
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the CBC mode, each block of plaintext is XORed with the previous ciphertext
+    and then encrypted. This mode takes care of the two shortcomings associated with
+    the ECB mode. XORing the block with the previous plaintext block conceals any
+    patterns in the plaintext. Additionally, except for the first and the last block
+    if any other block is removed or altered, the receiver easily detects it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following figure illustrates encryption and decryption of a plaintext block
+    with the CBC mode. Note the use of an **Initialization Vector** (**IV**) for adding
+    randomness to the first block. IV is a random set of bits that are XORed with
+    the first block:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Cipher Block Chaining (CBC)](img/5603_06_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following code illustrates how to initialize the RSA cipher with the CBC
+    mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similarly, to initialize an AES symmetric algorithm with CBC, the following
+    code can be used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Cipher Feedback Chaining (CFB)
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the CFB mode, the previous ciphertext is first encrypted and then XORed with
+    the plaintext to produce the ciphertext. This mode also conceals the plaintext
+    patterns and creates dependency of one plaintext block on the previous block.
+    This enables the tracking and integrity verification of blocks during transmission.
+    Again, note the use of IV for the first block.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Cipher Feedback Chaining (CFB)](img/5603_06_13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following code illustrates how to initialize the RSA cipher with the CFB
+    mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similarly, to initialize an AES symmetric algorithm with CFB, the following
+    code can be used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Output Feedback Mode (OFB)
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'OFB is similar to the CFB mode except that the XORed ciphertext acts as a synchronous
+    stream cipher such that an error in one bit affects only one bit and not the entire
+    block. Again, an IV is used to seed the process as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Output Feedback Mode (OFB)](img/5603_06_14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following code illustrates how to initialize the RSA cipher with the OFB
+    mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similarly, to initialize an AES symmetric algorithm with OFB, the following
+    code can be used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Advanced Encryption Standard (AES)
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: AES is the most popular block symmetric cipher. It is much more secure than
+    the other common block symmetric ciphers, such as DES and DES3\. This cipher divides
+    the plaintext into fixed block sizes of 128 bits and the keys could be 128 bit,
+    192, or 256 bit keys. AES is fast and has low memory requirements. The Android
+    disk encryption also uses AES 128 bit encryption and the master key is encrypted
+    with AES 128 bit encryption as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following code snippet shows how to generate a 128 bit AES key:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, the following code shows how to encrypt a plaintext with an AES key:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Following from the preceding example, to decrypt with AES, the following code
+    can be used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Message Authentication Codes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'A **Message Authentication Code** (**MAC**) is a tag or checksum that is appended
+    to a message to ascertain its authenticity and integrity. Authentication is provided
+    by the possession of a secret key, and verifying accidental or intentional changes
+    in the message provides integrity. The following figure illustrates the working
+    of a MAC:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Message Authentication Codes](img/5603_06_15.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'A MAC can be generated using different methods: by using a one time pad or
+    one time secret key, by using a hash function, and by using a stream cipher or
+    by using a block cipher and output the final block as a checksum. An example of
+    the last method is DES with the CBC mode.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A hash function is used to create a checksum called **Hashed MAC** (**HMAC**).
+    This hash is then encrypted with a symmetric key and appended to the message.
+    This is the most popular method of generating the MAC. Some examples of this kind
+    of MAC are AES 128 with SHA1 and AES 256 with SHA1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android provides the capability to generate an HMAC by using the `javax.crypto.Mac`
+    class. The following code snippet shows how to generate a digest with SHA-1:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we discussed the tools that application developers can use
+    to protect the privacy of their application and user data. We discussed about
+    random number generation for seeding, and for use as initialization vectors for
+    crypto algorithms. Hashing techniques, such as SHA-1 and MD5, were discussed,
+    which developers can use to store passwords. They are also ideal to compress large
+    data into a finite and defined length. Public key cryptography for the exchange
+    of secret keys and symmetric key algorithms, such as AES to encrypt large amounts
+    of data, were also discussed. We also discussed stream and block ciphers and block
+    cipher modes. Most of the algorithms have test vectors published and available
+    online. Developers can test their implementation against these test vectors. In
+    the following chapters we will use these tools and techniques to protect data.
+    Now let's move on to the next chapter to learn how to decide the best storage
+    option for different types of data.
+  prefs: []
+  type: TYPE_NORMAL

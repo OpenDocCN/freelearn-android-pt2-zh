@@ -1,0 +1,867 @@
+- en: Chapter 7. Securing Application Data
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: An application developer's credibility depends on how securely they handle their
+    user's data. It is always prudent to not store huge amounts of user data on the
+    device. It not only eats up memory but is a huge security risk as well. However,
+    there are use cases where applications need to share data, cache application preferences,
+    and store data on the device. This data could be private to the application or
+    shared with other applications. An example of such data could be the user's preferred
+    language or book category. This kind of data is kept by the application to enhance
+    the user experience. It is useful within the application itself and is not shared
+    with other applications. An example of shared data could be the wish list of books
+    that the user keeps adding to the collection as the user browsers through the
+    store. This data may or may not be shared with other applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Based on the privacy and kind of data, different storage mechanisms can be employed.
+    An application can decide to use shared preferences, a Ccontent Provider, a file
+    stored on internal or external memory, or even the developer's own servers to
+    store data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter begins with the most important question of identifying information
+    that an application should store and how to make a decision on storage location
+    for data. As is always the case, a minimum amount of information should be collected
+    and user consent should be obtained before collecting sensitive information. Next,
+    we discuss storage mechanisms in Android, including shared preferences, device
+    storage, external storage, and storing data on the backend servers. We will discuss
+    protocols to secure data in transit. We will close the chapter with a discussion
+    on installing an application on external memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data storage decisions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A number of factors affect the data storage decision in the context of an application.
+    Most of them are based on data security aspects that a developer should be aware
+    of such as privacy, data retention, and implementation details of the system.
+    These are discussed in the following sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Privacy
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Applications today collect and use different kinds of information about their
+    users. User preferences, location, health records, financial accounts, and assets
+    are some of them. The collection of such information should be done with care
+    and with user consent, as collecting private information can cause legal and moral
+    issues and can be termed as invasion of privacy. Even when such information is
+    collected, it should be stored properly encrypted and transmitted securely. Secure
+    data storage and transmission is the focus of the later half of the chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Privacy manifests itself in different forms. First, it is different in different
+    cultures and countries. Each country has established rules and regulations about
+    personally identifiable information, or PII. For example, the European Union has
+    a **Data Protection Directive** for the processing and movement of personal data.
+    More information can be found at this website maintained by the European Commission's
+    Directorate General of Justice [http://ec.europa.eu/justice/data-protection/index_en.htm](http://ec.europa.eu/justice/data-protection/index_en.htm).
+    Cyber laws in India about this can be found at [http://deity.gov.in/content/cyber-laws](http://deity.gov.in/content/cyber-laws).
+    The United States follows a sectoral approach to data protection. This is a combination
+    of legislation, regulation, and self-regulation, rather than government alone.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Second, there are different laws for different use cases. For example, if an
+    application is related to medical or health then the rules are different from
+    an application that is tracking user location or making financial transactions.
+    Some examples of specific laws in the United States are the Americans with Disability
+    Act, Children's Online Privacy Act of 1998, and Electronic Communication Privacy
+    Act of 1986\. So, it is important to be aware of the rules and regulations pertaining
+    to your use case and of the country in which you want to operate. When in doubt,
+    use the services of companies that are experts in their field. For example, instead
+    of trying to work out your own payment system, you might like to use a payment
+    provider such as PayPal that has been doing payment processing for years and is
+    compliant with rules and regulations such as PCI in this space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Third, the transfer of private information from one country to another falls
+    under rules and regulations as well. In most cases, the other country should have
+    sufficient protection laws to satisfy the protection criterion of the other country.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Universal Declaration of Human Rights, Article 12, states the privacy rule
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*"No one shall be subjected to arbitrary interference with his privacy, family,
+    home or correspondence, nor to attacks upon his honour and reputation. Everyone
+    has the right to the protection of the law against such interference or attacks."*'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Some examples of PII include full name, e-mail address, mailing address, driving
+    license, voter registration number, date of birth, mother's maiden name, birthplace,
+    credit card numbers, criminal records, and national identification number. In
+    some cases, age, gender, job position, and race may be considered as PII. Sometimes
+    privacy may mean anonymity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If your application is collecting PII, you will have to disclose it to your
+    users and maybe take their consent. You can present them with terms and conditions
+    for using the application or using certain features that might require your application
+    to collect sensitive information about users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data retention
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Data retention refers to the storage of data for the particular period of time.
+    This data is used for tracing and identifying information such as people, devices,
+    and location. For example, banking data is usually saved for seven years. Data
+    retention should not be an issue in most use cases, unless it is an organization
+    catering to a specific use case such as postal, banking, government, telecommunication,
+    public health, and safety. In most cases, proper access rights have to be defined
+    for access of this PII. Again, data retention rules are different for different
+    countries and different use cases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementation decisions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'When dealing with data and deciding upon the most secure security mechanism,
+    the first question is to identify where that data will be stored. Let''s go back
+    to our bookstore example. As we identified in [Chapter 3](ch03.html "Chapter 3. Permissions"),
+    *Permissions*, the data elements of our example are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Name
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Credit card number
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Mailing address
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Last author searched
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Last language searched
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Last category searched
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Username
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Password
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Wish list of books
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Further analysis of the preceding assets, based on their privacy needs, leads
+    us to the identification of PII as name, credit card number, mailing address,
+    and password. Please note that this classification is changed based on the country
+    as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next is the question of persistence. Do we want data to be available only during
+    one instance of the application or multiple instances? Do we want the data to
+    persist resets? In our example, we would like all the assets to be persisted.
+    However, if the user preferences such as author, category, and language do not
+    persist resets, we do not lose valuable information and the user can select them
+    again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The third important task is to identify which data is private to the application
+    and which data is shared. Visibility of data will affect the storage option we
+    choose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The fourth question is that of size of data. Large files should preferably
+    be stored on external storage. The following figure shows the memory options available
+    in a typical Android phone device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Implementation decisions](img/5603OT_07_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: It is always advisable to use a storage mechanism provided by the framework
+    instead of inventing a new one. In the sections that follow, I have discussed
+    storage mechanisms provided by the Android framework for different storage needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: User preferences
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: An application collects user preferences in two ways. In the first case, an
+    application presents a settings screen to the user to choose preferences such
+    as language, number of results to show per page, and so on. Such preferences are
+    best stored using the `Preference` class. The other case is when user preferences
+    are picked up as the user navigates through the application. For example, when
+    searching for a book, the user selects books by a particular author. An application
+    might want to save such a preference for the next time when the user logs in.
+    Such user preferences are best stored using `SharedPreferences`. Under the hood,
+    the `Preference` class also calls `SharedPreferences`. Please note that `SharedPreferences`
+    only persist primitive data types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Shared preferences
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `SharedPreferences` class is used to store primitive data types in a key-value
+    pair. These primitive types include `int`, `long`, `Boolean`, `float`, `string
+    set`, and `string`. Data stored in this `SharedPreferences` persists application
+    sessions. A preference file is stored in the form of an XML file on the device
+    in the `data` directory of the application. This file is thus sandboxed by the
+    same Linux permissions as the application itself. The data in the preferences
+    file persists even if the application is killed and is destroyed only when the
+    application is uninstalled or specific values are removed using the methods of
+    the `Preference` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Three operations for any kind of data storage are instantiating storage, storing
+    data, and retrieving data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a preference file
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The following code snippet instantiates `SharedPreferences`, using the default
+    filename:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The filename in this case can be retrieved using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You may specify the name of the preferences file as well. In the following
+    example, the name of the preference file is `MyPref`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding code snippet brings up an important discussion about preference
+    file visibility and sharing. By default, all preference files are private to the
+    application that created it. So their mode is `MODE_PRIVATE`. If a preference
+    file needs to be shared among different applications, it can either be set to
+    `MODE_WORLD_WRITABLE` or `MODE_WORLD_READABLE` to allow other applications to
+    write and read the preference file respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing preference
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The next step is to store primitive data into a preference file. The following
+    code snippet follows from the preceding code snippet and shows how to add data
+    into the preference file. You will notice that you need the `SharedPreferences.Editor`
+    class to store values. All values in the `Editor` class are batched and need to
+    commit for values to persist. In the following example, `MyString` is the key
+    for the string and its value is `Hello World!`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Reading preference
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The next step is to read the key-value pairs that are in the preference file.
+    The following code snippet follows from the preceding code snippet and shows how
+    to read data from the preference file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`SharedPreferences` are accessible to all the components of the application.
+    Other applications can write and read the preference file if set to `MODE_WORLD_WRITABLE`
+    or `MODE_WORLD_READABLE` respectively.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To read the preference file of a different application, the first step is to
+    get a pointer to the other application's context and then to read the value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Preference Activity
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: With Honeycomb, Android extended the capabilities of the `Preference` class
+    to collect settings from UI. These values are set as an XML file and the Activity
+    inflates from it. Under the hood, the `Preference` class uses the `SharedPreferences`
+    class to store key-value pairs. Such settings are private to the application and
+    are only accessible by an `Activity` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To select a ringtone, the following code has to be set up in the `Preference.xml`
+    file under the `res/xml` directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To inflate an Activity from this XML file, the following code is used in the
+    `onCreate()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Remember to add this Activity in the manifest file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: File
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: An application can use Android's filesystem to store and retrieve data as well.
+    The `java.io` package provides this functionality. This package provides classes
+    to write and read different data types from a file. By default, files created
+    by applications are private to the application and cannot be accessed by other
+    applications. Files persist reboots and application crashes; they are only removed
+    when the application is uninstalled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The following code snippet shows how to create a file. As I have said before,
+    by default, all files are private to the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The file `MyFile.txt` will be created in the `/data/data/<application-path>/files/`
+    directory. The preceding file is created as `MODE_WORLD_READABLE`, that means
+    that other applications can read this file. The other options are `MODE_WORLD_READABLE`,
+    `MODE_PRIVATE`, and `MODE_APPEND` that let other applications write to the file,
+    keep it private to the application, or append to it respectively. It is important
+    to decide upon the appropriate visibility. As is always the rule with security,
+    only give the least amount of visibility that is required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since `MODE_WORLD_READABLE` and `MODE_WORLD_WRITABLE` are very dangerous options
+    to have, starting API level 17, these options have been deprecated. If files still
+    need to be shared between applications associated with the same certificate, the
+    `android:sharedUserId` option can be used. If these are different applications
+    then file access can be handled with a wrapper class that interfaces with the
+    file and provides read and write functionality. Access to this wrapper class can
+    be protected using permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing to a file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The next step is to write to a file. The following code snippet shows the use
+    of the `OutputStreamWriter` class to write a string to a file. There are many
+    options available in the `java.io` package to write different kinds of data to
+    files. Please check the package to pick the correct option for your use case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Reading from a file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Again as stated earlier, please check out the `java.io` package to find the
+    best method to read data from a file. The following code snippet shows how to
+    read the string from the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following example reads one line at a time from the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: File operations on an external storage
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A file can also be created on an external storage. If the API level is 8 or
+    greater, Android provides a special function called `getExternalFilesDir()` to
+    get the application directory on an external storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you will notice in the preceding code snippet, the `getExternalFilesDir()`
+    method takes a parameter. This parameter is used to identify the appropriate storage
+    directory based on the media type. For example, to store a picture, `ENVIRONMENT.DIRECTORY_PICTURES`
+    is used, and to store a music file, `ENVIRONMENT.DIRECTORY_MUSIC` is used. If
+    such a directory does not exist, it will be created and then the file will be
+    stored there. The value `null` is the root directory of the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: For an API level of less than 8, users can use `getExternalStorageDirectory()`
+    to get the root of the external storage. The file can then be created in the `/Android/data/<application-path>/files/`
+    directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create a file on an external storage, the application should have the `WRITE_EXTERNAL_STORAGE`
+    permission. The files created on external storage will be removed when the user
+    uninstalls the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The external storage lacks the security mechanism of internal storage. It is
+    best to assume that any data stored on the external storage is insecure and globally
+    readable. And if external storage is not mounted, the file is not accessible and
+    proper error handling mechanisms have to be employed for the application to fail
+    gracefully.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In some cases, an external storage may actually be desired, especially if the
+    files have no PII and are intended to be shared and be available on different
+    devices. The media scanner will scan these directories when searching for relevant
+    content. These directories are listed as follows. These follow the root directory
+    of the application `/data/data/<application-path>/`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Audio (music) files**: `Music/`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Podcast files**: `Podcasts/`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Video files (except for camcorder)**: `Movie/`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Ringtones**: `Ringtones/`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Pictures**: `Pictures/`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Miscellaneous downloads**: `Downloads/`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Notification sounds**: `Notifications/`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Alarms**: `Alarms/`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cache
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If an application needs to cache data, it is prudent to use a cache storage
+    mechanism provided by the Android stack. Android stores cache files in the filesystem
+    along with the application so that they are sandboxed with the application that
+    created it. All cache files are created in the `/data/data/<application-path>/cache/`
+    directory. In case the system is running low on memory, these cache files are
+    deleted first. Regular pruning of these files is necessary as they may grow big
+    and eat up disk space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following code snippet first writes a string to the cache file and then
+    reads the same string from the cache file. As you will notice, reading and writing
+    is the same as any file input/output, only the location of the file is obtained
+    using `getCacheDir()` to write a string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Just as files can be created on an external storage, so can the cache files.
+    The approach is different depending upon the API level. Starting with API level
+    8, Android provides a special function called `getExternalCacheDir()` to get the
+    cache directory on an external storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This directory is linked to the application and when the application in uninstalled
+    this directory ceases to exist. If it is a multiuser environment each user has
+    his/her own personal directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the API level is less than 8, users can use `getExternalStorageDirectory()`
+    to get the external storage, then create the file in the `/Android/data/<application-path>/cache/`
+    directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create a cache on an external storage, the application should have the `WRITE_EXTERNAL_STORAGE`
+    permission.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a cache on an external storage is not without security concerns. First,
+    if the external storage has not mounted the cache file, it is not accessible and
+    proper error handling mechanisms have to be employed for the application to fail
+    gracefully. Secondly, an external storage is inherently insecure so anything stored
+    on external memory should be assumed to be globally readable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The cache files should be pruned regularly and files that are not needed should
+    be removed to preserve memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Database
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A database is the best option to store structured data. Android provides support
+    for SQLite using the `android.database.sqlite` package. This database is a part
+    of the Android stack and the system administers the database. Using SQLite for
+    mobile operating systems is a prudent choice as it is small and requires no setup
+    or administration. And it is free!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once created, the database files are sandboxed with the application and are
+    stored in the `/data/data/<application-path>/databases/` directory. This private
+    database will be accessible to all the components of the application but not outside
+    the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following code snippet shows how to create a database that resides on the
+    internal memory. The class will extend the `SQLiteOpenHelper` class and uses the
+    SQL (Structured Query Language) `CREATE_TABLE` clause. The table stores a list
+    of books that the user marks as a wish list. There are two columns in our table
+    `wishlist`, a column ID that auto increments and the name of the book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You will notice two methods here, `onCreate()` and `onUpgrade()`. `OnCreate()`
+    will create a new database (if it does not exist) and a new database table. If
+    the database already exists, the method `onUpgrade()` is called.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Similarly, other database queries can be used to add a row, read a row, and
+    delete a row. Any good book on SQL can help you with these queries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is also possible to create a database that exists in external memory. Creating
+    a custom context class that accepts directory paths can accomplish this. You also
+    need to have write access to the external storage. However, it is not advisable
+    to do so if there is sensitive information in the tables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As I noted earlier, the SQLite database is a private database and is sandboxed
+    with the application. In case this data need to be shared with other applications
+    then this is accomplished using a Content Provider that is addressed as a URI.
+    We have already covered Content Providers in detail in [Chapter 2](ch02.html "Chapter 2. Application
+    Building Blocks"), *Application Building Blocks*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Account manager
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the context of storing sensitive data, storing passwords or authentication
+    tokens is an important aspect. Consider applications such as Google Mail, Twitter,
+    and Facebook, which lets users log in. Other applications work with an authentication
+    token as used by identity protocols such as OAuth2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android provides the `android.accounts.AccountManager` class as a centralized
+    repository for storing user credentials. An application can choose to use its
+    own pluggable authenticator to handle account authentication. From storing the
+    username to identity information to creating your custom account manager, Android's
+    `AccountManager` is a powerful utility.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `AccountManager` class functions are permissions protected so that your
+    application will have to request for `android.permission.GET_ACCOUNTS` to access
+    the list of accounts stored on it and `android.permission.ACCOUNT_MANAGER` for
+    OAuth2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Each account is in a namespace format. For example, a Google account uses `com.google`
+    and a Twitter account uses `com.twitter.android.auth.login`. The `AccountManager`
+    is accessed as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The entire list of accounts can be retrieved using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `auth` token is acquired in the form of a `Bundle` and is retrieved using
+    the named value of `KEY_AUTHTOKEN`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are two important points to remember when using `AccountManager`. First,
+    if your app is trying to authenticate using OAuth2, your application will be talking
+    to the server so this may cause delays and the calls should be made asynchronously.
+    Second, the credentials are stored on `AccountManager` in plain text. So on a
+    rooted phone, these will be visible to any user using the `adb shell` commands.
+    So, as is the case with storing information on a device, instead of storing passwords
+    and other PII in clear, it should be stored in a cryptographically secure manner
+    by wither hashing it or encrypting it. This will minimize the risk from a compromised
+    device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SSL/TLS
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: I was reading a very interesting research conducted by the students of the Leibniz
+    University of Hannover and the Philipps University of Marburg, Germany, about
+    MITM (man-in-the-middle) attacks on data in transit. The applications studied
+    were using SSL (Secure Socket Layer) or TLS (Transport Layer Security) protocols
+    to protect data over the network. Many of the applications were not using SSL/TLS
+    properly, which resulted in vulnerability. Another interesting observation is
+    that since the Android browser does not show the green padlock usually associated
+    with the sites using SSL/TLS, users were not aware of the fact that they were
+    using an insecure website. Check out the paper at [http://www2.dcsec.uni-hannover.de/files/android/p50-fahl.pdf](http://www2.dcsec.uni-hannover.de/files/android/p50-fahl.pdf).
+    I'm sure it will make an interesting read.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The preceding research brought to light the importance of implementing protocols
+    correctly in the applications. This section introduces SSL/TLS and some notes
+    to implement it correctly. Developed by Netscape, SSL is a protocol for secure
+    communication over the Internet. The protocol follows a series of calls between
+    the client and server where they negotiate on a key and cipher suite for data
+    exchange.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android provides the capability to integrate SSL/TLS using the `javax.net.ssl`,
+    `org.apache.http.conn.ssl`, and `android.net` packages. The following figure illustrates
+    the sequence in SSL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![SSL/TLS](img/5603OT_07_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The first step is to set up a keystore and import the server certificate chain.
+    Next is to link the keystore to `DefaultHttpClient` so it knows where to find
+    the certificates for the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During the development phase, especially in an enterprise environment, we set
+    up our SSL to trust all certificates by creating a custom `TrustManager` and to
+    allow all the hostnames using `SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER`.
+    If such an application is released, it presents a serious security flaw. Please
+    check for this before releasing your application. So remember to fix such issues
+    before you release your application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing an application on an external storage
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we have discussed in [Chapter 4](ch04.html "Chapter 4. Defining the Application's
+    Policy File"), *Defining the Application's Policy File*, starting with API level
+    8, applications can choose to be installed on the SD card. Once the APK is moved
+    to external storage, the only memory taken up by the app is private data of applications
+    stored on the internal memory. It is important to note that even for SD card resident
+    APKs, the DEX (Dalvik Executable) files, private data directories, and native
+    shared libraries remain on the internal storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding an optional attribute in the manifest file enables this feature. The
+    **Application Info** screen for such an application either has a **Move to SD
+    card** or **Move to Phone** button, depending on the current storage location
+    of APK. The user then has an option to move the APK file accordingly. If the external
+    device is un-mounted or the USB mode is set to **Mass Storage** (where the device
+    is used as a disk drive), all the running Activities and Services hosted on that
+    external device are immediately killed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following screenshot shows the option **Move to SD Card** in the setting
+    of the application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Installing an application on an external storage](img/5603OT_07_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The `ApplicationInfo` object for each application now has a new flag called
+    `FLAG_EXTERNAL_STORAGE`. The value of this flag is set to `true` for applications
+    stored on the external devices. If such an application is uninstalled, the internal
+    storage for that application is removed as well. If the external device becomes
+    unavailable (for example, when the SD card is unmounted), the internal memory
+    is not cleared. In this case, the user can clear this internal memory by uninstalling
+    the application. The SD card does not need to be mounted for this action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Two new broadcasts have been added as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE`: This intent is sent out when the
+    SD card is unmounted. It contains a list of disabled applications (using the `EXTRA_CHANGED_PACKAGE_LIST`
+    attribute) and a list of unavailable application UIDs (using the `EXTRA_CHANGED_UID_LIST`
+    attribute).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ACTION_EXTERNAL_APPLICATIONS_AVAILABLE`: This intent is sent out when the
+    SD card becomes available again. It contains a list of disabled applications (using
+    the `EXTRA_CHANGED_PACKAGE_LIST` attribute) and a list of unavailable application
+    UIDs (using the `EXTRA_CHANGED_UID_LIST` attribute).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When an application is moved from internal memory to an external location, `ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE`
+    is fired. The assets and resources are then copied over to the new location. The
+    application is then enabled and the `ACTION_EXTERNAL_APPLICATIONS_AVAILABLE` broadcast
+    intent is fired again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Any kind of an external device is inherently insecure. For example, SD cards
+    are susceptible to memory corruption due to power failure (dead battery in case
+    of a phone) or improper removal of card (without properly unmounting). The SD
+    card is also globally readable so applications can be read, written, copied, or
+    deleted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To securely store APKs on the external devices, Android applications are stored
+    in an encrypted container (the ASEC file) so that other applications or programs
+    cannot modify or corrupt them. The ASEC file is an encrypted filesystem whose
+    key is randomly generated and stored by the device so that it can be decrypted
+    only by the device that originally installed it. Thus, an application installed
+    on an SD card works for only one device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When mounting the SD card (using the Linux loopback mechanism), these containers
+    are mounted in the same way as apps on the internal memory. The filesystem enforces
+    permissions so that other applications cannot modify its contents and nobody but
+    the system itself can modify anything through the ASEC file because other applications
+    do not have the key for it. Also the SD card is mounted as `noexec` so nobody
+    can put executable code there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multiple SD cards can be associated with one device so that SD cards can be
+    easily swapped. As long as the SD card is mounted, there is no performance issue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Android developer website ([developer.android.com](http://developer.android.com))
+    gives a list of use cases when installing an application on an SD card can make
+    the application perform erratically, if the SD card is unmounted. Some of them,
+    such as Services, are based on the sequence in which a Service will become available
+    when a phone is booted up. These are listed as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Services**: Running Services will be killed. The application can register
+    for the `ACTION_EXTERNAL_APPLICATIONS_AVAILABLE` broadcast Intent, which will
+    notify your application when applications installed on external storage have become
+    available to the system. The Service can be restarted once the Intent is received.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Alarm services**: Alarms registered with `AlarmManager` will be canceled
+    and must be manually re-registered when an external storage is remounted.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Input Method Engines (IME)**: An IME is a control that lets users input text.
+    If your IME resides on an external storage, it will be replaced by the default
+    IME. When an external storage is remounted, the user will have to open the system
+    settings to enable the custom IME again.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Live wallpapers**: The default live wallpaper will replace running live wallpaper
+    if the one that is set is stored on an external storage. When an external storage
+    is remounted, the user will have to select their custom live wallpaper again.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**App Widgets**: If your App Widget lives on the external storage, it will
+    be removed from the home screen. In most cases, a system reset is required for
+    the App Widget to appear again on the home screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Account managers**: If any accounts were created with `AccountManager`, they
+    will disappear until the external storage is remounted.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Sync adapters**: `AbstractThreadedSyncAdapter` and all its sync functionality
+    will not work. The external storage has to be remounted for sync to work again.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Device administrators**: This piece is critical as `DeviceAdminReceiver`
+    and all its admin capabilities will be disabled, and this may not be fully functional
+    even when the SD card is remounted.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Broadcast Receivers**: Any Broadcast Receiver that is listening for the `ACTION_BOOT_COMPLETE`
+    broadcast will cease to work as the system delivers this broadcast before the
+    external storage is mounted to the device. So any application installed on the
+    external storage can never receive this broadcast.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter covered the storage mechanisms available on Android. We started
+    off with an understanding of terms such as privacy and data retention. We should
+    always think about these issues before we collect personal identifiable information
+    to avoid legal and moral issues. It is important to note that rules and regulations
+    pertaining to privacy and data security are different based on country and use
+    case. We looked at storing user preferences using shared preferences, storing,
+    reading, and writing data on files, caches, and databases. We also covered some
+    important considerations when using SSL/TLS and application installation on the
+    external memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next three chapters will cover very interesting topics such as device administration,
+    security focused testing, and new and emerging use cases on Android. Keep reading!
+  prefs: []
+  type: TYPE_NORMAL

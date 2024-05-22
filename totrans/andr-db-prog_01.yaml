@@ -1,0 +1,571 @@
+- en: Chapter 1. Storing Data on Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Today, we live in an increasingly data-centric and data-driven world. We live
+    in a world where companies like Amazon track every item we view and every item
+    we purchase so as to recommend similar products to us. We live in a world where
+    companies like Google store every search query thrown at them so as to recommend
+    better search queries in the future. We live in a world where social media sites
+    like Facebook remember every event and every thought we share with our friends
+    so as to better learn about each of their hundreds of millions of users. We live
+    in an increasingly data-centric world, and so it's imperative that we develop
+    applications with a data-centric perspective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, why Android you might ask? Or more generally, why mobile applications?
+    Take a look around you — the growth of mobile devices, such as smart phones and
+    tablets, has been explosive over the last couple of years. Furthermore, mobile
+    devices implicitly give us another layer of data that we previously didn't have
+    with desktop applications. As you carry your smart phone or tablet around with
+    you, it knows your location, it knows where you're checking in and what you're
+    doing; in short, it knows much more about you than you're probably aware of.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Keeping these two points in mind, we begin our exploration of data and Android
+    with a quick dive into the various methods the folks over at Google have built
+    into the Android OS. This book assumes the reader has had *some* experience with
+    the Android OS, as we'll dive right into the code. Now, not only is it important
+    to know all the different data storage methods available to you, but equally important
+    is to understand the strengths and weaknesses of each method, so that you can
+    craft an efficient, well-designed, and scalable application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using SharedPreferences
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '`SharedPreferences` is the most simple, quick, and efficient way of storing
+    local data in your Android application. It''s a framework that essentially allows
+    you to store and associate various **key-value** pairs with your application (think
+    of this as a map that comes with your application, which you can tap into at any
+    time), and because each application is associated with its own `SharedPreferences`
+    class, the data that gets stored and committed persists across all user sessions.
+    However, because of its simple and efficient nature, `SharedPreferences` only
+    allows you to save primitive data types (that is, booleans, floats, longs, ints,
+    and strings), so keep this in mind when deciding what to store as a shared preference.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s look at an example of how you would access and use your application''s
+    `SharedPreferences` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s walk through what''s going on in this little code snippet. First we
+    start an `Activity` and in the `onCreate()` method, we make a request to retrieve
+    a `SharedPreferences` class. The arguments for the `getSharedPreferences()` method
+    are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here the first argument simply specifies which shared preference mapping you
+    want (each application can own several separate shared preference mappings, and
+    so, just like you would specify the table name in a database, you must specify
+    which mapping you want to retrieve). The second argument is a little more complex
+    — in the example above, we pass in `MODE_PRIVATE` as the argument and this argument
+    simply specifies the visibility of the shared preference instance you are retrieving
+    (in this case the visibility is set to private, so that only your application
+    can access the mappings contents). Other modes include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`MODE_WORLD_READABLE:` Makes the visibility of your map accessible by other
+    applications, though contents can only be read'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MODE_WORD_WRITEABLE:` Makes the visibility of your map accessible by other
+    applications for both reading and writing'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MODE_MULTI_PROCESS:` This mode, available since API Level 11, allows you to
+    modify your map by multiple processes which may be writing to the same shared
+    preference instance'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Now, once we have our shared preference object, we can immediately start retrieving
+    contents by its various `get()` methods — for instance, the `getString()` and
+    `getBoolean()` methods we saw earlier. These `get()` methods will typically take
+    two parameters: the first being the *key*, and the second being the default value
+    if the given key is not found. Taking the previous example, we have:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: And so, in the first case, we're trying to retrieve the string value associated
+    with the key `strKey`, and defaulting to the string `error` if no such key is
+    found. Likewise, in the second case, we're trying to retrieve a boolean value
+    associated with the key `boolKey`, and defaulting to the boolean `false` if no
+    such key is found.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, if you want to *edit* contents or *add new* content, then you'll have
+    to retrieve the `Editor` object that each shared preference instance contains.
+    This `Editor` object contains all of the `put()` methods which allow you to pass
+    a key along with its associated value (just like you would for a standard `Map`
+    object) — the only caveat is that after you add or update the content of your
+    shared preference, you need to call the `Editor` object's `commit()` method to
+    *save down those changes*. Furthermore, again, just like a standard `Map` object,
+    the `Editor` class also contains `remove()` and `clear()` methods for you to freely
+    manipulate the contents of your shared preference.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One last thing to note before we move on to typical use cases of `SharedPreferences`
+    is that if you decide to set the visibility of your shared preference instance
+    to `MODE_WORLD_WRITEABLE`, then you are potentially exposing yourself to various
+    security breaches by malicious external applications. As a result, in practice,
+    this mode is not recommended. However, the desire to share information locally
+    between two applications is still one that many developers face, and so a method
+    for doing so was developed that simply involves setting an `android:sharedUserId`
+    in your application's manifest files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How this works is that each application, when signed and exported, is given
+    an auto-generated application ID. However, if you explicitly set this ID in the
+    application's manifest file, then, assuming two applications are signed with the
+    same key, they will be able to freely access each other's data without having
+    to expose their data to the rest of the applications on a user's phone. In other
+    words, by setting the same ID for two applications, those two *and only those
+    two* applications will be able to access each other's data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Common use cases for SharedPreferences
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now that we know how to instantiate and edit a shared preference object, it's
+    important to think about some typical use cases for this type of data storage.
+    And so, following are a couple of examples, illustrating what kinds of small,
+    primitive key-value data pairs applications tend to like to save.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Checking if it's the user's first time visit to your application
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'For many applications, if this is the user''s first visit, then they will want
+    to display some kind of instructions/tutorials activity or a splash screen activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Checking when the application last updated itself
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Many applications will have some kind of caching, or syncing, feature built-in,
+    which will require regular updating. By saving the last update time, we can quickly
+    check to see how much time has elapsed, and decide whether or not an update/sync
+    needs to occur:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Downloading the example code**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can download the example code files for all Packt books you have purchased
+    from your account at [http://www.packtpub.com](http://www.packtpub.com). If you
+    purchased this book elsewhere, you can visit [http://www.packtpub.com/support](http://www.packtpub.com/support)
+    and register to have the files e-mailed directly to you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Remembering what the user's login username was
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Many applications will allow the user to remember their username (as well as
+    other login-oriented fields such as PINs, phone numbers, and so on) and a shared
+    preference is a great way to store a simple primitive string ID:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Remembering an application's state
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'For many applications, the functionality of the application will change depending
+    on the application''s state, typically set by the user. Consider a phone ringer
+    application — if the user specifies that no functionality should occur if the
+    phone is in silent mode, then this is probably an important state to remember:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Caching a user's location
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Any location-based application will often want to cache the user''s last location
+    for a number of reasons (perhaps the user has turned off GPS, or has a weak signal,
+    and so on). This can be easily done by converting the latitude and longitude of
+    the user to floats and then storing those floats in a shared preference instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With the latest version of Android (API Level 11), there is also a new `getStringSet()`
+    method which allows you to set and retrieve a set of string objects for a given
+    associated key. Here''s how it looks in action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Use cases for this are plenty — but for now let's move on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Internal storage methods
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let's begin with internal storage mechanisms on Android. For those with experience
+    in standard Java programming, this section will come pretty naturally. Internal
+    storage on Android simply allows you to read and write to files that are associated
+    with each application's internal memory. These files can only be accessed by the
+    application and cannot be accessed by other applications or by the user. Furthermore,
+    when the application is uninstalled, these files are automatically removed as
+    well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is a simple example of how to access an application''s internal
+    storage:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here we simply use the `Context` class''s `openFileOutput()` method, which
+    takes as its first argument the name of the file to be created (or overridden)
+    and as its second argument the visibility of that file (just like with `SharedPreferences`,
+    you can control the visibility of your files). It then converts the string we
+    want to write to byte form and passes it into the output stream''s `write()` method.
+    One thing to mention though is an additional mode that can be specified with `openFileOutput()`
+    and that is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`MODE_APPEND:` This mode allows you to open an existing file and append a string
+    to its existing contents (any other mode and the existing contents will be deleted)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Furthermore, if you are programming in Eclipse, then you can go to the **DDMS**
+    screen and look at your application''s internal files (amongst other things):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Internal storage methods](img/8123OS_01_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'And so we see the text file that we just created. For those developing with
+    the terminal, the path for this would be `/data/data/{your-app-path}/files/ my_file.txt`.
+    Now, unfortunately, reading back files is much more verbose and the code for how
+    you would do that looks like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here we start by opening a file input stream instead and pass it into a stream
+    reader. This will allow us to call the `read()` method and read in the data as
+    bytes which we can then append to a `StringBuilder`. Once the contents have been
+    read back fully, we simply return the String from the `StringBuilder` and voila!
+    At the end, just for the sake of completeness, the `Context` class provides you
+    with a simple method for deleting files saved in the internal storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: External storage methods
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: External storage, on the other hand, involves storing data and files to the
+    phone's external **Secure Digital (SD)** card. The concept behind internal and
+    external storage is similar, and so let's begin by laying down the pros and cons
+    of this kind of storage versus what we saw earlier — that is, `SharedPreferences`.
+    In a shared preference, there is much less overhead and so reading/writing to
+    a simple `Map` object is much more efficient than reading/writing to a disk. However,
+    because you are limited to simple primitive values (for the most part; again the
+    most recent version of Android allows you to save sets of strings), you are essentially
+    trading flexibility for efficiency. With internal and external storage mechanisms,
+    you can save not only much bigger chunks of data (that is, entire XML files) but
+    also much more complicated forms of data (that is, media files, image files, and
+    so on).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, how about internal versus external storage? Well the pros and cons of these
+    two are much more subtle. First, let's consider the amount of **storage space**
+    (*memory*). Though this varies depending on the phone a user owns, the amount
+    of internal memory can often be quite low, and it is not uncommon for even relatively
+    new phones to have as low as 512 MB of internal storage. External storage, on
+    the other hand, depends solely on what SD card the user has in their phone. Typically,
+    if an SD card is present, then the amount of external storage can be many times
+    greater than the amount of internal storage (depending on the size of the SD card,
+    this can be as high as 32 GB of storage).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, let's consider the **access speed** for internal versus external storage.
+    Unfortunately, in this case, nothing conclusive can be drawn as the read and write
+    speeds are highly dependent on the type of internal flash memory the phone uses,
+    as well as the classification of the SD card for external storage. And so the
+    last thing to consider is the *accessibility* of each type of storage mechanism.
+    Again, for internal storage, the data is only accessible by your application,
+    and so it is extremely safe from potentially malicious external applications.
+    The con is that if the application is uninstalled, then that internal memory is
+    wiped as well. For external storage, the visibility is inherently world readable
+    and writeable, and so any files saved are exposed both to external applications
+    as well as to the user. There is no guarantee then that your files will remain
+    safe and uncorrupted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we''ve flushed out some of the differences, let''s get back to the
+    code and see how you can actually access the external SD card with this following
+    example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: In order to execute the previous code, don't forget to add into your manifest
+    file the `WRITE_EXTERNAL_STORAGE` permission. Here, we start by making a call
+    to the `Environment` class's `getExternalStorageState()` method, which allows
+    us to detect whether an external SD card is actually mounted and writeable. Trying
+    to read or write to a file without performing these preliminary checks will cause
+    an error to be thrown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we know that an SD card is mounted and, indeed, writeable, then for those
+    with API Levels 7 and below, we call `getExternalStorageDirectory()` to retrieve
+    the file path to the root of the SD card. At this point, we simply need to create
+    our new file and instantiate a `FileWriter` and `BufferedWriter` and write our
+    string to the file. One thing to note here is that the method for writing to disk
+    when dealing with external storage differs from our previous method for writing
+    to disk with internal storage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is actually an important point to note and understand, which is why I place
+    so much emphasis on these write methods. In the internal storage example, we obtained
+    a `FileOutputStream` object by calling the `Context` class's `openFileOutput()`
+    method, which took as its second argument a mode. When passing in `MODE_PRIVATE`,
+    what happens behind the scenes is that each time a file is created and written
+    to with that `FileOutStream`, that file is encrypted and signed with your application's
+    unique ID (as mentioned earlier), so that external applications cannot access
+    the contents of those files. However, remember that when creating and writing
+    to files in *external storage*, by default they are created with no security enforcements,
+    so any application (or user) can both read and write to those files. This is why
+    you can use standard Java methods (for example, `FileWriter)` for writing to external
+    SD cards, but not when writing to internal storage. One last thing to note is
+    that just as you can see the newly created file in the **DDMS** perspective in
+    Eclipse, assuming you have an SD card setup, you can just as easily see the newly
+    created text file in **DDMS:**
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![External storage methods](img/8123OS_01_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: So while developing your application, by leveraging this **DDMS** perspective
+    you can quickly push, pull, and monitor files that you are writing to disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With that said, I'll quickly mention some of the changes in writing to external
+    storage that were introduced after API Level 8\. These changes are actually very
+    well documented at [http://developer.android.com/reference/android/content/Context.html#getExternalFilesDir(java.lang.String)](http://developer.android.com/reference/android/content/Context.html#getExternalFilesDir(java.lang.String))
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But from a high level, in API Level 8 and above, we simply have two new primary
+    methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: You'll notice that for each of these methods you can now pass in a `type` parameter.
+    These `type` parameters allow you to specify what kind of file yours is, so that
+    it gets organized into the right subfolders. In the first method, the external
+    file directory root that is returned is specific to your application, so that
+    when your application is uninstalled all of those associated files are deleted
+    from the external SD card as well. In the second method, the file directory root
+    that is returned is a public one, so that files stored on these paths will remain
+    persistent even when your application is uninstalled. Deciding which to use simply
+    depends on the kind of file you are trying to save — for instance, if it's a media
+    file that gets played in your application, then the user probably has no use for
+    it if he/she decides to uninstall your application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, say your application allows the user to download wallpapers for their
+    phone: in this case, you might consider saving any image files to a public directory,
+    so that even if the user uninstalls your application, those files will still be
+    accessible by the system. The different `type` parameters that you can specify
+    are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: And so we wrap up our somewhat lengthy discussion on internal and external storage
+    mechanisms and dive right into the even heftier topic of SQLite databases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SQLite databases
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Last, but not least, by far the most sophisticated and, arguably, the most powerful
+    method for local storage is with SQLite databases. Each application is equipped
+    with its own SQLite database, which is accessible by any class in the application,
+    but not by any outside applications. Before moving on to complex queries or snippets
+    of code, let me just give a quick summary of what SQLite databases are.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SQL (Structured Query Language)** is a programming language designed especially
+    for managing data in *relational* databases. **Relational databases** allow you
+    to submit insert, delete, update, and get queries, while also allowing you to
+    create and modify schemas (more simply thought of as tables). **SQLite** then
+    is simply a scaled-down version of MySQL, PostgreSQL, and other popular database
+    systems. It is entirely self-contained and server-less, while still being transactional
+    and still using the standard SQL language for executing queries. Because of how
+    it''s self-contained and executable, it is extremely efficient, flexible, and
+    accessible by a wide variety of programming languages across a wide variety of
+    platforms (including our very own Android platform).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For now, let''s simply take a look at how we would instantiate a new SQLite
+    database schema and create a very simple table with this code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, the first thing we''ll notice is that in order to create a customizable
+    database schema, we must override the `SQLiteOpenHelper` class. By overriding
+    it, we can then override the `onCreate()` method, which will allow us to dictate
+    the structure of the table. In our case, you''ll notice that we''re simply creating
+    a table with two columns, an ID column and a name column. The query is equivalent
+    to running the following command in SQL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: You'll also see that the ID column has been designated as a `PRIMARY KEY` and
+    given the `AUTOINCREMENT` property — this is actually recommended for all tables
+    created in Android and we'll adhere to this standard going forward. Lastly, you'll
+    see that the name column was declared a string type with maximum character length
+    of `255` (for longer strings, we can simply type the column as a `LONGTEXT` type).
+  prefs: []
+  type: TYPE_NORMAL
+- en: After overriding the `onCreate()` method, we also override the `onUpgrade()`
+    method. This allows us to quickly and simply change the structure of our table.
+    All you need to do is increment the `DATABASE_VERSION` integer and the next time
+    you instantiate the `SQLiteHelper`, it will automatically call its `onUpgrade()`
+    method, at which point we will first drop the old version of the database and
+    then create the new version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, let''s take a quick look at how we would insert and query for values
+    in our very basic, bare-bones table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Pay close attention to this example, as it will set the path for the next couple
+    of chapters. In this example, we first instantiate our `SQLiteHelper` and obtain
+    a writeable `SQLiteDatabase` object. We then introduce the `ContentValues` class,
+    which is a very convenient wrapper method that allows you to quickly insert, update,
+    or remove rows in your table. Here you''ll notice that since our ID column was
+    created with the `AUTOINCREMENT` field, we don''t need to manually assign or increment
+    our IDs when inserting rows. Thus, we only need to pass to the `ContentValues`
+    object the non-ID fields: in our case just the name column.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Afterwards, we go back to our `SQLiteDatabase` object and call its `insert()`
+    method. The first argument is simply the name of the database, and the third argument
+    is the `ContentValue` we just created. The second argument is the only *tricky*
+    one — basically, in the event that an empty `ContentValue` is passed in, because
+    a SQLite database cannot insert an empty row, whatever column is passed in as
+    the second argument, the SQLite database will automatically set the value of that
+    column to `null`. By doing so, we can better avoid SQLite exceptions from being
+    thrown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Additionally, we can insert rows into our database by just passing in a raw
+    SQL query, as shown in the second method, to the `execSQL()` method. Lastly, now
+    that we''ve inserted two rows into our table, let''s practice getting and reading
+    these rows back. Here I show two methods as well — the first is by using the `SQLiteDatabase`
+    helper method `query()`, and the second is by executing a raw SQL query. In both
+    cases, a `Cursor` object is returned, which you can think of as an iterator over
+    the rows of the sub-table that is returned by your query:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once we have the desired `Cursor`, the rest is straightforward. Because the
+    `Cursor` behaves like an iterator, in order to retrieve each row we need to throw
+    it into a `while` loop, and in each loop, we move the cursor down one row. Then,
+    within the `while` loop we get the column indices of the columns we want to pull
+    data from: in our case, let''s just get both columns, though in practice often
+    times you''ll only want data from specific columns at any given time. Finally,
+    pass these column indices into the proper `get()` methods of `Cursor` — namely,
+    if the type of the column is an integer, then call the `getInt()` method; if it
+    is a string, then call the `getString()` method, and so on.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: But again, what we see here are simply the building blocks leading up to a wealth
+    of tools and weapons that will soon be at our disposal. Soon we'll look at how
+    we can write various wrapper methods to simplify our lives when developing large-scale
+    applications, as well as dig further into the various methods and parameters the
+    `SQLiteDatabase` class provides us with.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this first chapter, we accomplished a lot. We started off by looking at the
+    simplest and most efficient data storage method of them all — the `SharedPreferences`
+    class. We looked at the pros and cons of using a `SharedPreferences` object in
+    your application, and though the class itself is limited to storing primitive
+    data types, we saw that its use cases are plenty.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we moved up a little in complexity and examined both internal and external
+    storage mechanisms. Though not as intuitive and efficient as a shared preference
+    object, by leveraging internal and external storage, we are capable of storing
+    both much more data and much more complex data (that is, images, media files,
+    and so on). The pros and cons of using internal storage versus external storage
+    are much more subtle and many times are highly phone and hardware dependent. But
+    in any case, this goes to illustrate my earlier point that part of mastering data
+    on Android is being able to analyze the pros and cons of every storage method
+    and intelligently decide the most suitable method for your application's needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we dipped our toes into SQLite databases and looked at how you can
+    override the `SQLiteOpenHelper` class to create your custom SQLite database and
+    table. From there we saw an example of how to open and retrieve this SQLite database
+    from an `Activity` class, and subsequently, how to both insert into and retrieve
+    rows from our table. Because of the flexibility of the `SQLiteDatabase` class,
+    we saw that there were multiple ways for both inserting and retrieving data, allowing
+    those less familiar with SQL to utilize the wrapper methods, while allowing those
+    SQL aficionados to flex their querying prowess by executing raw SQL commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll focus on SQLite databases, and attempt to build a
+    much more complex, yet realistic, database schema.
+  prefs: []
+  type: TYPE_NORMAL

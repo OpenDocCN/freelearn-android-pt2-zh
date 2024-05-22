@@ -1,0 +1,345 @@
+- en: Chapter 10. Bringing it Together
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: At last, it's time to bring everything together. Earlier in [Chapter 8](ch08.html
+    "Chapter 8. Exploring External Databases"), *Exploring External Databases*, we
+    started our example of writing a Blockbuster games application by creating a new
+    Google App Engine (GAE) project and building up the JDO database. We first defined
+    what our `VideoGame` table should look like, and then we wrote a handful of convenient
+    wrapper methods which would allow us to retrieve, insert, update, and/or delete
+    `VideoGame` data from our backend. Then in [Chapter 9](ch09.html "Chapter 9. Collecting
+    and Storing Data"), *Collecting and Storing Data*, we looked at various ways in
+    which we could collect data, either by using convenient APIs or by writing scrapers
+    to do the dirty work for us. In our example, a scraper was necessary and so we
+    wrote some code to first clean and structure Blockbuster's game rental page, before
+    finally navigating and parsing the desired data. The la st step was simply to
+    reintroduce ourselves to HTTP servlets and look at how we could implement a servlet
+    that, when hit, would scrape and update our database with the latest games.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, we'll finish off the application by writing an HTTP servlet that will actually
+    query and return data (as opposed to our earlier example, which simply returned
+    a success or failure message), and, once returned, we'll write some simple XML
+    parsers and list adapters to show you what to do with the data once it's on the
+    mobile side. Then, you'll have a fully functional backend that will periodically
+    scrape and update its own data, a series of HTTP servlets that will allow you
+    to retrieve data independent of the platform, and an Android application that
+    will parse the data and bind it to the UI for the user to see.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing HTTP GET requests
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the last chapter, we briefly went over the difference between a GET and POST
+    request. The next step in our application development is writing a few classes
+    on the GAE server side which will allow us to hit a URL and get back a list of
+    video game objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This means we need to override another HTTP servlet which will likely take a
+    parameter that indicates which game platform we're looking for. Intuitively, once
+    we know the platform we're looking for, we recall from earlier that one of our
+    wrapper methods for our JDO database involved querying for all games of a certain
+    platform. Hence, we'll likely need to utilize our JDO wrapper class again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, you might also recall that our JDO database returns rows not as strings
+    but as objects, and so we''ll need to take the additional step of converting each
+    `VideoGame` object into some kind of readable, formatted string, whether as XML
+    or JSON. With these initial thoughts and intuitions at hand, let''s take a look
+    at how you would implement this new GET request:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Everything should look familiar and the logic is fairly simple. The only part
+    that''s unclear is near the end when I pass in a list of `VideoGame` objects and
+    get back a string. As the name of the class suggests, I wrote a simple class which
+    takes `VideoGame` objects, strips out their fields, and organizes them into well-formatted
+    XML code (again, you could use JSON as well). Let''s take a quick look at how
+    I defined my `GamesToXMLConverter` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: And voila – nothing too complicated. Really, you can write your XML/JSON converters
+    in any way you'd like in fact, if you search hard enough, I'm willing to bet there
+    are convenient libraries out there which are designed to do this for you. However,
+    as is the theme of this book, focus more on the concepts and less on my actual
+    code – the idea is you reach into your JDO database and get back a list of objects
+    and from there you simply need to think of a clean way to write those objects
+    into the `HttpServletResponse` object that is returned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And again, just like with our previous HTTP servlet, in order for our GAE project
+    to recognize this as a valid servlet, we need to define it as one in the `/war/WEB-INF/web.xml`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And once we have our name and URL pattern defined, we simply deploy the project
+    and hit the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`http://{your-project-name}.appspot.com/getVideoGames?type={type}`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And we''re done. For those following along, I invite you to check it out and
+    see if you get a nicely formatted list of data. Otherwise, feel free to check
+    out the following links to see my results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`http://entertainmentapp.appspot.com/getVideoGames?type=Xbox`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`http://entertainmentapp.appspot.com/getVideoGames?type=Ps3`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is a screenshot for those reading this on the go:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Implementing HTTP GET requests](img/8123OS_10_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: And now, let's move it back to the Android side and see how we would both make
+    the request and then handle/parse the result.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Back to Android: parsing responses'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we have our backend completely finished, all that remains is implementing
+    these HTTP requests from the Android, parsing out the data, and then binding this
+    data to the UI once it's been retrieved (though this will likely be a rehash of
+    [Chapter 6](ch06.html "Chapter 6. Binding to the UI"),*Binding to the UI*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To start, you''ll need to build an HTTP client which will allow you to make
+    GET/POST requests. What this HTTP client essentially does is it acts as a vehicle
+    for which you can make various HTTP requests. The HTTP client requires that you
+    set some HTTP parameters for how the request should be made. Then, based on those
+    parameters, the client knows how to handle each request accordingly. For instance,
+    one such parameter is telling the HTTP client how to handle HTTP versus HTTPS
+    requests (that is, requests made through an unsecured channel versus a secured
+    one). Each channel requires that you specify a different port, so you''ll have
+    to define these accordingly in your client. In the following code you can see
+    an HTTP client which is configured for both HTTP and HTTPS requests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once you have that, I prefer to build some simple GET/POST wrapper methods,
+    which when passed an HTTP client and a URL will return the result as a string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: At first glance this may all seem very intimidating, especially for someone
+    who has never seen any of these technologies or classes. Yes — there are a lot
+    of new classes involved, but none of this is rocket science; in fact, the class
+    names are all pretty intuitive and descriptive and there isn't too much going
+    on beyond that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the first method, what we're doing is pretty simple. Java has an `HttpGet`
+    class that's included in the Android SDK as well as in the Java SDK, which then
+    gets instantiated with a URL. Next, we pass this `HttpGet` object into our HTTP
+    client and wait for the response to come back to us. The response will eventually
+    come back as an `HttpResponse` object, and within this object there are descriptive
+    fields that tell you the HTTP status code, the content of the response (this is
+    what we'll need shortly), and so on. The status code is a useful thing to have,
+    as it will tell us whether or not the GET request was successful, and, if not,
+    what error it failed with. With these different error codes at hand, we can then
+    handle each event accordingly for instance, if the server is down, then we're
+    out of luck and should either tell the user to check back later or potentially
+    direct them to an offline version of your applica tion. On the other hand, if
+    it was just a temporary connection issue, then maybe we'll silently make the request
+    again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have the response and check that it succeeded, it's time to get the
+    response body! The code for that is in the next section — that is, the `getResponseBody()`
+    method. This method is a little more cumbersome, but hopefully the inline comments
+    help guide you through what's going on. From a high level, essentially what we're
+    doing is grabbing the content body of the `HttpResponse` object known in this
+    case as the entity. However, the entity is a separate object which contains numerous
+    descriptive fields, but what we're actually interested in is the string representation
+    of the `HttpEntity` object. Hence, from the `HttpEntity` we request an `InputStream`,
+    which will allow us to utilize a `StringBuilder` object and stream the characters
+    of the content body line by line. Now, the rest of the code in between is simply
+    a series of checks to make sure that there's actua lly a message to be buffered,
+    and, if so, that it's not too large for our buffer to handle (that is, it doesn't
+    exceed the maximum size of a string). Lastly, we just need to retrieve the content
+    body's character set so that our `InputStreamReader` will know which character
+    set to use when converting the message into characters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, here''s how we''ll use the two previous classes to actually make the GET
+    request from the Android client side:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At this point you''ll notice that the meat of what''s happening is indeed in
+    our `GetMethods` class, and that once this class has been implemented, making
+    GET requests becomes quite simple: one only needs the URL. So then what does the
+    XML parser look like in this case? Well, you can implement it in any number of
+    ways, depending on how complicated the XML is and/or how familiar you are with
+    various XML document parsers. For extremely simple XML (that is, documents with
+    just a single layer of nodes), sometimes using simple REGEX commands will do the
+    trick. In more complex XML, sometimes it helps to use Java''s built-in `SAXParser`
+    classes or to even use our buddy `HtmlCleaner`. Note that in many cases the data
+    returned might also be in JSON format, in which case you would need to write some
+    simple JSON parsers that take the various key-value pairs and reconstruct the
+    `VideoGame` objects on the mobile side.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because of all these previous dependencies, I''ll leave the actual implementation
+    of the `parseGameResponse()` method to you guys — the goal is clear and if you
+    need a reminder of what the data looks like, just refer back to the first image
+    of this chapter. Now you just need to parse it, which should be a relatively simple
+    exercise. One last thing I''ll mention is that typically these HTTP requests can
+    take some time (at least a couple of seconds, sometimes upwards of 10-20 depending
+    on how much work is being done on the server). Because of how the Android OS will
+    throw an "Application Not Responding" (ANR) error if the main UI thread gets held
+    up for too long (5-10 seconds depending on the condition), I would highly recommend
+    making all HTTP requests on separate threads. You can do this the traditional
+    way using `Runnable` and `Handler` classes, but Android also provides you with
+    nice wrapper classes like the `A syncTask` class. I''d also encourage you to read
+    this post made by our friends at Google for more on designing responsive applications:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/guide/practices/design/responsiveness.html](http://developer.android.com/guide/practices/design/responsiveness.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: And so now, we've made our GET request, we've parsed the data, and we have a
+    nice list of `VideoGame` objects on the mobile side which are duplicates of the
+    `VideoGame` objects that came from our server. The only thing left to do is use
+    one of our `ListAdapters` which we saw earlier in the book and bind it to the
+    UI!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Final steps: binding to the UI (again)'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: It's time for the last and final step – binding our data to the user interface.
+    This section should look very familiar for those who have gone through the entire
+    book, so I'll try to be brief but complete.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the previous sections, we essentially hooked all the network requests together,
+    both on the application side as well as on the server side, so that now we should
+    be able to seamlessly make GET requests from any mobile application. We also looked
+    at ways in which we could parse the resulting response (again, this was left as
+    an exercise, as the response could come back in any number of ways) and convert
+    the data from string form back into `VideoGame` object form.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So now let''s think back to [Chapter 6](ch06.html "Chapter 6. Binding to the
+    UI"), *Binding to the UI*. In that chapter, we looked at two subclasses of `ListAdapters`
+    the `BaseAdapter` and the `CursorAdapter`. As you''ll recall, the `CursorAdapter`
+    is used when our data is stored into a SQLite database. The subsequent query into
+    our SQLite database is returned in the form of a `Cursor` object which then gets
+    wrapped by the `CursorAdapter` class. In our `VideoGame` example, we currently
+    have a list of objects, not a `Cursor`. That''s not to say that we couldn''t store
+    our results into a SQLite database, effectively making a cache (remember these?)
+    on our application side and then issuing a query into our cache to get back a
+    `Cursor`. But, for simplicity, let''s stick with our list of `VideoGame` objects
+    and simply use a `BaseAdapter` which is designed especially for such lists. The
+    code for it might look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: So just like how in [Chapter 6](ch06.html "Chapter 6. Binding to the UI"), *Binding
+    to the UI*, we implemented a custom `BaseAdpater` that created a list of `Contact`
+    objects - in this case, we're doing something extremely similar but for our `VideoGame`
+    objects! Notice here that my `VideoGameViewHolder` only displays the name of the
+    game and the type of the game and that I'm not doing anything with the image URL.
+    Again, one could easily incorporate this into each row through using an `ImageView`,
+    but that would require converting a URL into a Bitmap object - something that's
+    not difficult to do but unnecessary in our case; you get the idea by now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that this is done, we simply need to create an Activity which makes the
+    GET request, takes the resulting list of `VideoGames`, and sets them as its `ListAdapter`
+    by using the custom `VideoGameBaseAdapter`. The code for this is extremely simple:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once done, our end result looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Final steps: binding to the UI (again)](img/8123OS_10_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: And voila! Pat yourself on the back, as we've now just finished our first full-scale
+    data-centric application! Now not only do we have a fully functional backend equipped
+    with its own set of HTTP requests, but we've also built the beginning of a promising
+    Android application that can make HTTP requests to this backend, obtain the results,
+    and display them in a simple list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So, we've reached the end but before we part, let's take a look from start to
+    finish at all the incredible things we've learned and covered. We started this
+    book by looking at various local storage methods on Android – methods that were
+    extremely light-weight and efficient, as well as methods like the SQLite database,
+    which were more complex but at the same time much more powerful.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then took a deeper look at the SQLite database – likely the most common form
+    of local data storage that you'll encounter in your Android application development
+    careers, before moving onto SQL queries in [Chapter 3](ch03.html "Chapter 3. SQLite
+    Queries"), *SQLite Queries*. Next, we learned about ways in which we could expose
+    our SQLite databases to external applications through wrapping them in content
+    providers. Then we took a look at the most popular content provider on the Android
+    OS - the Contacts content provider, and implemented some common queries that one
+    might encounter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we had completely mastered local storage methods, we moved on to actually
+    binding these local data sources to the user interface through various `ListAdapter`
+    classes. It was in this chapter that we saw implementations and use cases of both
+    the `CursorAdapter` as well as the `BaseAdapter`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From there we moved onto a more holistic look at data-centric application design
+    and programming. We talked about practical ways in which we could use all the
+    various forms of local data storage, and also introduced the notion of a cache
+    as one extremely practical use case for a SQLite database. This naturally transitioned
+    us into considering external databases, as caches typically go hand in hand with
+    web requests and web programming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It was with external databases that we ended our book. We discussed different
+    kinds of external databases that we could use and decided to stick with Google
+    App Engine (GAE) for our sample implementation. It was with GAE that we implemented
+    a fully-functional JDO database (all done in the cloud), at which point we also
+    implemented a series of HTTP servlets that would allow us to make HTTP GET and
+    POST requests. And finally, we ended the book by implementing the code for the
+    mobile side of our application – bringing us full circle and back to Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's my hope that through all this, we can better see how databases, both local
+    and external, fit into the grand scheme of developing powerful, data-centric Android
+    applications. Best of luck and happy developing.
+  prefs: []
+  type: TYPE_NORMAL

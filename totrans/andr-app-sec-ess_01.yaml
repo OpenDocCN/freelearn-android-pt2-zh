@@ -1,0 +1,463 @@
+- en: Chapter 1. The Android Security Model – the Big Picture
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Welcome to the first chapter of *Android Application Security Essentials*!
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Android stack is different in many ways. It is open; more advanced than
+    some of the other platforms, and imbibes the learning from attempts to develop
+    a mobile platform in the past. In this first chapter, we introduce the basics
+    of the Android security model from the kernel all the way to the application level.
+    Each security artifact introduced in this chapter is discussed in greater detail
+    in the following chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We kick off the chapter with explaining why install time application permission
+    evaluation is integral to the security of the Android platform and user data.
+    Android has a layered architecture and a security evaluation of each architectural
+    layer is discussed in this chapter. We end the chapter with a discussion of core
+    security artifacts such as application signing, secure data storage on the device,
+    crypto APIs, and administration of an Android device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing with care
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the differentiating factors of Android from other mobile operating systems
+    is the install time review of an application's permissions. All permissions that
+    an application requires have to be declared in the application's manifest file.
+    These permissions are capabilities that an application requires for functioning
+    properly. Examples include accessing the user's contact list, sending SMSs from
+    the phone, making a phone call, and accessing the Internet. Refer [Chapter 3](ch03.html
+    "Chapter 3. Permissions"), *Permissions*, for a detailed description of the permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a user installs an application, all permissions declared in the manifest
+    file are presented to the user. A user then has the option to review the permissions
+    and make an informed decision to install or not to install an application. Users
+    should review these permissions very carefully as this is the only time that a
+    user is asked for permissions. After this step, the user has no control on the
+    application. The best a user can do is to uninstall the application. Refer to
+    the following screenshot for reference. In this example, the application will
+    track or access the user location, it will use the network, read the user's contact
+    list, read the phone state, and will use some development capabilities. When screening
+    this application for security, the user must evaluate if granting a certain power
+    to this application is required or not. If this is a gaming application, it might
+    not need development tool capabilities. If this is an educational application
+    for kids, it should not need access to the contact list or need to access the
+    user location. Also be mindful of the fact that a developer can add their own
+    permissions especially if they want to communicate with other applications that
+    they have developed as well and may be installed on the device. It is the onus
+    of the developer to provide a clear description of such permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At install time, the framework ensures that all permissions used in the application
+    are declared in the manifest file. The OS at runtime then enforces these permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Installing with care](img/5603OT_01_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Android platform architecture
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android is a modern operating system with a layered software stack. The following
+    figure illustrates the layers in Android's software stack. This software stack
+    runs on top of the device hardware. Android's software stack can run on many different
+    hardware configurations such as smartphones, tablets, televisions, and even embedded
+    devices such as microwaves, refrigerators, watches, and pens. Security is provided
+    at every layer, creating a secure environment for mobile applications to live
+    and execute. In this section, we will discuss the security provided by each layer
+    of the Android stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Android platform architecture](img/5603OT_01_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Linux kernel
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: On top of the device hardware sits the **Linux kernel**. The Linux kernel has
+    been in use for decades as a secure multi-user operating system, isolating one
+    user from the other. Android uses this property of Linux as the basis of Android
+    security. Imagine Android as a multi-user platform where each user is an application
+    and each application is isolated from each other. The Linux kernel hosts the device
+    drivers such as drivers for bluetooth, camera, Wi-Fi, and flash memory. The kernel
+    also provides a mechanism for secure **Remote Procedure Calls** (**RPC**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: As each application is installed on the device, it is given a unique **User
+    Identification** (**UID**) and **Group Identification** (**GID**). This UID is
+    the identity of the application for as long as it is installed on the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Refer to the following screenshot. In the first column are all the application
+    UIDs. Notice the highlighted application. Application `com.paypal.com` has the
+    UID `app_8` and `com.skype.com` has the UID `app_64`. In the Linux kernel, both
+    these applications run in their own processes with this ID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Linux kernel](img/5603OT_01_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Refer to the next screenshot. When we give the `id` command in the shell, the
+    kernel displays the UID, GID, and the groups the shell is associated with. This
+    is the process sandbox model that Android uses to isolate one process from the
+    other. Two processes can share data with each other. The proper mechanics to do
+    so are discussed in [Chapter 4](ch04.html "Chapter 4. Defining the Application's
+    Policy File"), *Defining the Application's Policy File*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Linux kernel](img/5603OT_01_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Although most Android applications are written in Java, it is sometimes required
+    to write native applications. Native applications are more complex as developers
+    need to manage memory and device-specific issues. Developers can use the Android
+    NDK toolset to develop parts of their application in C/C++. All native applications
+    conform to Linux process sandboxing; there is no difference in the security of
+    a native application and Java application. Bear in mind that just as with any
+    Java application, proper security artifacts such as encryption, hashing, and secure
+    communication are required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Middleware
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: On top of the Linux kernel sits the middleware that provides libraries for code
+    execution. Examples of such libraries are `libSSL`, `libc`, `OpenGL`. This layer
+    also provides the runtime environment for Java applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since most users write their apps on Android in Java, the obvious question
+    is: does Android provide a **Java virtual machine**? The answer to this question
+    is no, Android does not provide a Java virtual machine. So a **Java Archive**
+    (**JAR**) file will not execute on Android, as Android does not execute byte code.
+    What Android does provide is a **Dalvik virtual machine**. Android uses a tool
+    called `dx` to convert byte codes to **Dalvik Executable** (**DEX**).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dalvik virtual machine
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Originally developed by Dan Bornstein, who named it after the fishing village
+    of Dalvik in Iceland where some of his ancestors lived, Dalvik is a register-based,
+    highly optimized, open-sourced virtual machine. Dalvik does not align with Java
+    SE or Java ME and its library is based on **Apache Harmony**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each Java application runs in its own VM. When the device boots up, a nascent
+    process called **Zygote** spawns a VM process. This Zygote then forks to create
+    new VMs for processes on request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main motivation behind Dalvik is to reduce memory footprint by increased
+    sharing. The constant pool in Dalvik is thus a shared pool. It also shares core,
+    read only libraries between different VM processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dalvik relies on the Linux platform for all underlying functionality such as
+    threading and memory management. Dalvik does have separate garbage collectors
+    for each VM but takes care of processes that share resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dan Bornstein made a great presentation about Dalvik at Google IO 2008\. You
+    can find it at [http://www.youtube.com/watch?v=ptjedOZEXPM](http://www.youtube.com/watch?v=ptjedOZEXPM).
+    Check it out!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application layer
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Application developers developing Java-based applications interact with the
+    application layer of the Android stack. Unless you are creating a native application,
+    this layer will provide you with all the resources to create your application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can further divide this application layer into the application framework
+    layer and the application layer. The application framework layer provides the
+    classes that are exposed by the Android stack for use by an application. Examples
+    include the Activity manager that manages the life-cycle of an Activity, the package
+    manager that manages the installing and uninstalling of an application, and the
+    notification manager to send out notifications to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The application layer is the layer where applications reside. These could be
+    system applications or user applications. System applications are the ones that
+    come bundled with the device such as mail, calendar, contacts, and browser. Users
+    cannot uninstall these applications. User applications are the third party applications
+    that users install on their device. Users can install and uninstall these applications
+    at their free will.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android application structure
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To understand the security at the application layer, it is important to understand
+    the Android application structure. Each Android application is created as a stack
+    of components. The beauty of this application structure is that each component
+    is a self-contained entity in itself and can be called exclusively even by other
+    applications. This kind of application structure encourages the sharing of components.
+    The following figure shows the anatomy of an Android application that consists
+    of activities, services, broadcast receivers, and content providers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Android application structure](img/5603OT_01_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Android supports four kinds of components:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Activity**: This component is usually the UI part of your application. This
+    is the component that interacts with the user. An example of the Activity component
+    is the login page where the user enters the username and password to authenticate
+    against the server.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Service**: This component takes care of the processes that run in the background.
+    The Service component does not have a UI. An example could be a component that
+    synchronizes with the music player and plays songs that the user has pre-selected.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Broadcast Receiver**: This component is the mailbox for receiving messages
+    from the Android system or other applications. As an example, the Android system
+    fires an Intent called `BOOT_COMPLETED` after it boots up. Application components
+    can register to listen to this broadcast in the manifest file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Content Provider**: This component is the data store for the application.
+    The application can also share this data with other components of the Android
+    system. An example use case of the Content Provider component is an app that stores
+    a list of items that the user has saved in their wish list for shopping.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: All the preceding components are declared in the `AndroidManifest.xml` (manifest)
+    file. In addition to the components, the manifest file also lists other application
+    requirements such as the minimum API level of Android required, user permissions
+    required by the application such as access to the Internet and reading of the
+    contact list, permission to use hardware by the application such as Bluetooth
+    and the camera, and libraries that the application links to, such as the Google
+    Maps API. [Chapter 4](ch04.html "Chapter 4. Defining the Application's Policy
+    File"), *Defining the Application's Policy File*, discusses the manifest file
+    in greater detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Activities, services, content providers, and broadcast receivers all talk to
+    each other using Intents. Intent is Android's mechanism for asynchronous **inter-process
+    communication** (**IPC**). Components fire off Intent to do an action and the
+    receiving component acts upon it. There are separate mechanisms for delivering
+    Intents to each type of components so the Activity Intents are only delivered
+    to activities and the broadcast Intents are only delivered to broadcast receivers.
+    Intent also includes a bundle of information called the `Intent` object that the
+    receiving component uses to take appropriate action. It is important to understand
+    that Intents are not secure. Any snooping application can sniff the Intent, so
+    don't put any sensitive information in there! And imagine the scenario where the
+    Intent is not only sniffed but also altered by the malicious application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As an example, the following figure shows two applications, **Application A**
+    and **Application B**, both with their own stack of components. These components
+    can communicate with each other as long as they have permissions to do so. An
+    **Activity** component in **Application A** can start an **Activity** component
+    in **Application B** using `startActivity()` and it can also start its own **Service**
+    using `startService()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Android application structure](img/5603OT_01_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: At the application level, Android components follow the permission-based model.
+    This means that a component has to have appropriate permission to call the other
+    components. Although Android provides most of the permissions that an application
+    might need, developers have the ability to extend this model. But this case should
+    be rarely used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additional resources such as bitmaps, UI layouts, strings, and so on, are maintained
+    independently in a different directory. For the best user experience, these resources
+    should be localized for different locales, and customized for different device
+    configurations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next three chapters talk about the application structure, the manifest file,
+    and the permission model in detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application signing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the differentiating factors of Android is the way Android applications
+    are signed. All applications in Android are self-signed. There is no requirement
+    to sign the applications using a certificate authority. This is different from
+    traditional application signing where a signature identifies the author and bases
+    trust upon the signature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The signature of the application associates the app with the author. If a user
+    installs multiple applications written by the same author and these applications
+    want to share each other's data, they need to be associated with the same signature
+    and should have a `SHARED_ID` flag set in the manifest file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The application signature is also used during the application upgrade. An application
+    upgrade requires that both applications have the same signature and that there
+    is no permission escalation. This is another mechanism in Android that ensures
+    the security of applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As an application developer, it is important to keep the private key used to
+    sign the application secure. As an application author, your reputation depends
+    on it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data storage on the device
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android provides different solutions for secure data storage on devices. Based
+    on the data type and application use case, developers can choose the solution
+    that fits best.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For primitive data types such as ints, booleans, longs, floats, and strings,
+    which need to persist across user sessions, it is best to use shared data types.
+    Data in shared preferences is stored as a key-value pair that allows developers
+    to `save`, `retrieve`, and `persist` data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All application data is stored along with the application in the sandbox. This
+    means that this data can be accessed only by that application or other applications
+    with the same signature that have been granted the right to share data. It is
+    best to store private data files in this memory. These files will be deleted when
+    the application is uninstalled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For large datasets, developers have an option to use the SQLite database that
+    comes bundled with the Android software stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All Android devices allow users to mount external storage devices such as SD
+    cards. Developers can write their application such that large files can be stored
+    on these external devices. Most of these external storage devices have a VFAT
+    filesystem, and Linux access control does not work here. Sensitive data should
+    be encrypted before storing on these external devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting with Android 2.2 (API 8), APKs can be stored on external devices. Using
+    a randomly generated key, the APK is stored within an encrypted container called
+    the `asec` file. This key is stored on the device. The external devices on Android
+    are mounted with `noexec`. All DEX files, private data, and native shared libraries
+    still reside in the internal memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wherever network connection is possible, developers can store data on their
+    own web servers as well. It is advisable to store data that can compromise the
+    user's privacy on your own servers. An example of such an application is banking
+    applications where user account information and transaction details should be
+    stored on a server rather than user's devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Chapter 7](ch07.html "Chapter 7. Securing Application Data"), *Securing Application
+    Data*, discusses the data storage options on Android devices in great detail.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rights protected content such as video, e-books, and music, can be protected
+    on Android using the DRM framework API. Application developers can use this DRM
+    framework API to register the device with a DRM scheme, acquire licenses associated
+    with content, extract constraints, and associate relevant content with its license.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Crypto APIs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android boasts of a comprehensive crypto API suite that application developers
+    can use to secure data, both at rest and in transit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android provides APIs for symmetric and asymmetric encryption of data, random
+    number generation, hashing, message authentication codes, and different cipher
+    modes. Algorithms supported include DH, DES, Triple DES, RC2, and RC5.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secure communication protocols such as SSL and TLS, in conjunction with the
+    encryption APIs, can be used to secure data in transit. Key management APIs including
+    the management of X.509 certificates are provided as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A system key store has been in use since Android 1.6 for use by VPN. With Android
+    4.0, a new API called `KeyChain` provides applications with access to credentials
+    stored there. This API also enables the installation of credentials from X.509
+    certificates and PKCS#12 key stores. Once the application is given access to a
+    certificate, it can access the private key associated with the certificate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Crypto APIs are discussed in detail in [Chapter 6](ch06.html "Chapter 6. Your
+    Tools – Crypto APIs"), *Your Tools – Crypto APIs*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Device Administration
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With the increased proliferation of mobile devices in the workplace, Android
+    2.2 introduced the **Device Administration API** that lets users and IT professionals
+    manage devices that access enterprise data. Using this API, IT professionals can
+    impose system level security policies on devices such as remote wipe, password
+    enablement, and password specifics. Android 3.0 and Android 4.0 further enhanced
+    this API with polices for password expiration, password restrictions, device encryption
+    requirement, and to disable the camera. If you have an email client and you use
+    it to access company email on your Android phone, you are most probably using
+    the Device Administration API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Device Administration API works by enforcing security policies. The `DevicePolicyManager`
+    lists out all the policies that a Device Administrator can enforce on the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A Device Administrator writes an application that users install on their device.
+    Once installed, users need to activate the policy in order to enforce the security
+    policy on the device. If the user does not install the app, the security policy
+    does not apply but the user cannot access any of the features provided by the
+    app. If there are multiple Device Administration applications on the device, the
+    strictest policy prevails. If the user uninstalls the app, the policy is deactivated.
+    The application may decide to reset the phone to factory settings or delete data
+    based on the permissions it has as it uninstalls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will discuss Device Administration in greater detail in [Chapter 8](ch08.html
+    "Chapter 8. Android in the Enterprise"), *Android in the Enterprise*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android is a modern operating system where security is built in the platform.
+    As we learned in this chapter, the Linux kernel, with its process isolation, provides
+    the basis of Android's security model. Each application, along with its application
+    data, is isolated from other processes. At the application level, components talk
+    to each other using Intents and need to have appropriate privileges to call other
+    components. These permissions are enforced in the Linux kernel that has stood
+    the test of time as a secure multiuser operating system. Developers have a comprehensive
+    set of crypto APIs that secure user data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With this basic knowledge of the Android platform, let's march to the next chapter
+    and understand application components and inter-component communication from a
+    security standpoint. Good luck!
+  prefs: []
+  type: TYPE_NORMAL

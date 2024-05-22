@@ -1,0 +1,471 @@
+- en: Chapter 7. Android Databases in Practice
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapter, we finally looked at ways we could bind our backend
+    database to the user interface. At this point, we know about all the various local
+    storage methods built into the Android OS ([Chapter 1](ch01.html "Chapter 1. Storing
+    Data on Android"), *Storing Data on Android* and [Chapter 2](ch02.html "Chapter 2. Using
+    a SQLite Database"), *Using a SQLite Database)*, most notably the SQLite database,
+    as well as ways to take advantage of the SQLite language to execute powerful queries
+    ([Chapter 3](ch03.html "Chapter 3. SQLite Queries"), *SQLite Queries)*. Furthermore,
+    we know how to expose our custom SQLite databases to external applications through
+    content providers ([Chapter 4](ch04.html "Chapter 4. Using Content Providers"),
+    *Using Content Providers)*, as well as how to query pre-existing content providers
+    such as the `Contacts` content provider ([Chapter 5](ch05.html "Chapter 5. Querying
+    the Contacts Table"), *Querying the Contacts Table*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: And so at this point, we've already equipped ourselves with a lot of tools –
+    enough to start building out full-fledged applications. However, before we do,
+    let's pause and think.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Should we actually be relying on *local* SQLite databases? What if something
+    happens to the user's phone, and their data gets erased? Or more importantly,
+    should each user have to download the *entire* dataset, and store it locally on
+    their phones? Keep in mind that a phone's memory is rather limited and is a fraction
+    of what a desktop computer would have.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All these questions come into play when we start thinking about how we're going
+    to design our application. Therefore, in this chapter, we'll start by looking
+    at some practical use cases for having a localized SQLite database for your Android
+    application, and then move to other, more typical application designs specifically
+    for data-centric applications (if your application is going to be a game then
+    likely this won't apply).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Local database use cases
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So let's start with different ways one would likely see an Android application
+    use a localized SQLite database. To clarify, what I mean when I say a *localized*
+    SQLite database is one that solely exists on the phone's memory, and more specifically
+    within the application's allocated memory, and is not backed up/supported by an
+    external database. This is in contrast to an *external* database, which would
+    exist on a server (or in the cloud), and would serve as either a backup to the
+    localized database, or as a central database, from where all applications would
+    request, insert, update, and delete data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For our first example, consider a puzzle-based application that keeps track
+    of all the user''s high scores for each level. The high scores table would have
+    fields such as the rank of that respective score (that is first, second, third,
+    and so on), the name of the user who obtained that score, as well as the score
+    itself. Let''s go through each form of data storage, and think about whether or
+    not it would be a sensible way to accomplish the task at hand:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SharedPreferences:` Could we use a Map-based class to accomplish this? I guess
+    if we only needed one high scores table (as opposed to one per level) and that
+    table only had a few rows, we could get away with using a simple Map. But this
+    probably isn''t a very natural use of the `SharedPreferences` class, and we could
+    probably do much better with a different type of data storage so let''s pass on
+    this one for now.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**External SD cards:** As you probably recall, writing to SD cards is extremely
+    useful for saving and backing up files. In theory though, we could probably save
+    these tables in a file format particularly by saving them in **Comma Separated
+    Values (CSV)** files (think of these as spreadsheets). Then, we could just have
+    one CSV file per level, and since a CSV file is structured like a spreadsheet,
+    we can very easily read these files in and bind them to something like a `GridView`.
+    Now, one of the nice things about saving stuff to an SD card is that your data
+    is naturally backed up. For instance, if the user had to uninstall and reinstall
+    your application for whatever reason, those CSV files would still exist and the
+    data would be preserved. On the flip side though, if for whatever reason the user
+    removed their SD card or tampered with their SD card, then it''s possible that
+    the data may be missing or corrupted. In any case, using CSV files and external
+    SD cards isn''t a terrible solution, but it may not be the most optimal or natural
+    one.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**SQLite databases:** Given that we''re trying to save a series of tables,
+    naturally we should think about using some kind of database schema. Now, depending
+    on how many levels there are in our game (and subsequently how many tables we
+    would need), we could design a database schema that has one separate table for
+    each level, and for each level we could just point the `Cursor` to the correct
+    table''s URI. However, consider a scenario where we have 50 levels. In that case,
+    it might seem a little silly to create 50 identical tables with 50 unique URIs.
+    And so, what we might do is add an additional field to our table for *level*.
+    Then, when we make our query, we could filter the table by the *level* column,
+    and sort the remaining sub-table by rank. Using a SQLite database in this case
+    would be especially slick because of how we could bind our resulting `Cursor`
+    directly to the UI through a `ListView`. Now, what''s the problem here? Well,
+    if the user has to uninstall your application, then it''s extremely likely that
+    your SQLite database will get wiped out from the phone''s memory.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**External databases:** Using an external database in this case could potentially
+    get very messy. Why? First, let''s think about what our schema would have to look
+    like. Potentially, we could have one giant table that contains fields for the
+    device issuing the request (that is, the phone number or username of the device
+    requesting the data), for the level being requested, and so on, and then just
+    make queries that contain a bunch of filter clauses. Or, a nicer solution might
+    be to have a table per level, and for each table include the additional field
+    of which device that row belongs to. As you can see, in either case the schema
+    is going to look a little messy, but for now let''s stick with the latter schema.
+    Say your game does moderately well and reaches 100,000 active installs. Furthermore,
+    say your game has 50 levels and for each high scores table, you keep the top 10
+    scores. Not unreasonable for a semi-popular game, right? Well, under this sce
+    nario, suddenly your external database has 50 tables with a million rows per table,
+    leaving you with a fairly large and memory-intensive database. Then, you have
+    to take into account that each time the user requests to see a high scores table,
+    he/she will need to issue an HTTP request to your external database in order to
+    retrieve the corresponding table. This HTTP request will be several magnitudes
+    slower than a simple SQLite query to your local database. So what''s the plus
+    side to all this work? This method will allow you to backup every user''s high
+    scores, independent of how many times they uninstall and reinstall your application,
+    or how many times they change phones, and so on. Another nice feature is that
+    once you have all of the data from all of your users, you could potentially create
+    a global high scores table — allowing your users to see not just what the high
+    scores were for their specific Android device, but what the all-time high scores
+    were across all users who p lay your game!'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'And so, even in this scenario there are pros and cons for using a localized
+    database versus an external database. The questions you''d need to ask yourself
+    in this case are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How important is it that I backup the user's high scores?
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How likely/useful would it be to build a global high scores table?
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If your intended game and audience is one that is extremely competitive and
+    you believe users will get extremely upset if reinstalling your application/switching
+    phones means losing their high scores history, then it might be wise to use an
+    external database. However, my best guess is that very few mobile games will cause
+    user's to become *that* competitive, in which case it would be significantly more
+    practical to just have a simple localized database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The conclusion? For a normal puzzle-based game with a simple high scores table,
+    a localized database does the trick. The format of the data (that is, a table)
+    makes this database a natural choice, and the assumption that users won't care
+    about whether or not their high scores are preserved make implementing a localized
+    database much more practical than an external database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's consider one more example before we move on. Say you want to create an
+    application that allows users to better find cafes and coffee shops. Perhaps you
+    want to add features that allow the user to filter cafes and coffee shops by availability
+    of space (too many times I find myself wandering into a nearby Starbucks just
+    to find that all the tables are taken) or by availability of Wi-Fi. Not a bad
+    application – but where would you find your initial cafe/coffee shop database?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Thankfully, you run into a couple of APIs from various services (that is, Yelp,
+    Zagat, and so on) which allow you to query their databases, so the data source
+    is no longer a problem. But now what? How would you design your Android application''s
+    backend? Let''s walk through our options again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SharedPreferences:` This time it is pretty easy to see why a method as simple
+    and lightweight as a `SharedPreferences` class would not be appropriate. We''ll
+    pass on this one.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**External SD cards:** So, like in our previous example, one possible way to
+    use an external SD card is to store your data in CSV files (i.e. spreadsheet format)
+    and then read and write to those files. And so, what we might do here is upon
+    entering our application for the first time, we make a series of API calls to
+    load our initial database of cafe/coffee shops. We then write our data into a
+    CSV file and reference/update this CSV file going forward. So far so good. But
+    what happens when we want to start filtering our data? Say the user only wants
+    to see locations near him/her, or only wants to see locations that have free Wi-Fi.
+    When we''re dealing with CSV files, there doesn''t exist a notion of *querying*
+    this CSV file a file is a file and our only solution would be to open a connection
+    to the file, iterate through each row, and manually pick out the rows that we
+    want. In this example, though it would be slow and burdensome, in theory we could
+    implement our backend with this SD card solution. However, it''s easy to see how
+    once our schema becomes more complicated (requiring multiple tables instead of
+    just one), not being able to execute efficient, complex queries would lead to
+    an extremely poor design decision. And not to mention some of the issues mentioned
+    previously with users removing SD cards, corrupting SD cards, and so on. Maybe
+    it''s best we stay away from SD cards in this situation.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**SQLite databases:** With SQLite databases, again, it''s a natural solution
+    given the inherent table format of our data. We could very easily create a schema
+    that has fields for name, location, Wi-Fi availability, and so on, and then write
+    a slew of queries that would quickly filter our data accordingly. Additionally,
+    with SQLite databases, we would benefit from the ease at which our data could
+    be bound to the UI. However, what would the mechanics of our backend look like?
+    Upon reaching the application for the first time, would we need to hit all APIs
+    and download the entire dataset of all cafes/coffee shops across the entire nation?
+    If we don''t, then we run into the problem of what happens when the user is traveling,
+    or wants to look up locations outside of their current city most likely our only
+    solution would be to call the APIs for every new location that is introduced.
+    If we do download the entire data set at once, then depending on the num ber of
+    cafes/coffee shops in the US, we could run into issues with memory and performance.
+    In both cases, we need to methodically choose how we''re going to sync and update
+    our SQLite database with the newest information available through the APIs, an
+    entirely different problem in and of itself.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**External databases:** With an external database, we can also take advantage
+    of the inherent table format of our data. And just like with localized databases,
+    we can still execute quick queries to filter our data. We benefit from having
+    a centralized database, ensuring that each time a user makes a request for a subset
+    of data, it will be the most up-to-date data. Furthermore, since our database
+    would exist in an external server, we don''t require any additional memory on
+    the application side, and we should also see a big performance gain, as making
+    one request to one external database is much faster than making several requests
+    to several APIs. Where we lose (compared to the SQLite database) is what happens
+    when the user is making the same request *repeatedly*. For instance, say a user
+    opens the search `Activity`, searches for his/her desired list of locations, waits
+    a few seconds for the network request to c ome back, and then accidentally closes
+    that `Activity`. If the user then re-opens the application and goes back to that
+    `Activity`, he/she will need to make the *same* network request and wait another
+    couple of seconds just to get the *same* results back. This can often be a huge
+    nuisance for active users, and given the relatively short attention span of many
+    mobile users, could be lethal to the success of your application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Now that we've run through the list of data storage methods available to us,
+    let's just quickly summarize some of the pros and cons of each. First off, in
+    terms of pure *implementation*, the localized database and the external database
+    were clear winners. Then, in terms of *memory consumption*, the external database
+    was a better choice than the localized database because of how the entire dataset
+    could exist outside of the application. In terms of *performance*, the external
+    database was nice in the sense that instead of hitting multiple APIs, we only
+    need to hit one database (our own). However, the localized database was nice in
+    the sense that a user could maneuver in and out of the search `Activity` without
+    having to make any additional network calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's no clear winner here, but there is a way to *combine* the two methods
+    to design a robust backend that addresses all of the previously discussed issues.
+    This combined method uses an external database as the central storage unit, but
+    then uses a localized database as a *cache* to improve performance. In the next
+    section, let's hone in on what it means to use a localized SQLite database as
+    a cache for an external database instead of a standalone database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Databases as caches
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So what exactly is a cache? A **cache** is often defined as a place in memory
+    that stores duplicate data so that it can be served faster in the future. In our
+    case, this is exactly what we're looking for.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our previous example, we saw that by using an external database, we were
+    able to improve upon memory consumption and, at times, performance, without compromising
+    implementation. Additionally, we could naturally ensure that all users have the
+    same data, and that data is the most up-to-date. The only time relying solely
+    on an external database suffers is when you have users maneuvering around your
+    application, having to make identical (or similar) network requests to your external
+    database each time, and then having to repeatedly wait for those network requests
+    to come back.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One solution is to use a cache and only have to make the network request *once*.
+    Then, when the network request finishes, store a duplicate version of the returned
+    data on a localized database, so that if the user makes the same (or similar)
+    request, our system only needs to make a local query instead of a network query.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To help you better understand the low-level implementation, let's take a closer
+    look at how this cache would work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So the user lands on your search `Activity` and issues a request. Let's say
+    the request is for all cafes and coffee shops within three miles from his/her
+    location that also have free Wi-Fi. One design choice that you'll have to make
+    is how much data should you cache in this case? Of course, you could issue the
+    request with all of the user's desired filters, and only cache those results.
+    But what if the user suddenly decides he/she doesn't care about having free Wi-Fi?
+    Or if the user decides to relax their search criteria and wants to look for all
+    shops within five miles instead?
+  prefs: []
+  type: TYPE_NORMAL
+- en: While having a cache will definitely improve performance, the real gain comes
+    from how often your cache is hit. For those who are familiar with designing caches,
+    the trade-off comes from the frequency at which your cache is hit versus the size
+    of your cache. In other words, in an extreme case, if you designed your cache
+    to contain your *entire* data set, then obviously every request would be a cache
+    hit, and so your cache would be extremely effective in that sense. However, the
+    fact that you have your entire data set stored in memory is sub-optimal (and oftentimes
+    impossible depending on the size of your database), and so your cache would fail
+    on that front. Trying to find a nice blend of the two is the goal, and so in this
+    situation, instead of only requesting for locations within three miles that have
+    free Wi-Fi, why not try requesting for all locations within five miles and exclude
+    the Wi-Fi filter completely?
+  prefs: []
+  type: TYPE_NORMAL
+- en: By caching this request instead, now when the user decides to relax his/her
+    search conditions from three miles to five miles (or downwards to two miles),
+    you'll already have all the results; so instead of issuing another network request
+    you can simply filter your cache for the desired subset of data. Similarly, if
+    your user wants to remove the Wi-Fi filter, you can quickly query your cache for
+    this data, this time with the *Wi-Fi only* filter removed. In both cases, the
+    user hits your cache and saves you from making a time-consuming network request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last leg in designing your caching system would just be determining how
+    often to refresh your cache. Never refreshing your cache is sub-optimal, as it
+    will only consume more memory over time with each new request you cache, and,
+    furthermore, you'll run into the problem of having out-of-date data. For instance,
+    say your user makes a cafe/coffee shop request for their hometown and you cache
+    this result. However, your caching system is one that never refreshes the cache.
+    A lot can happen in a year, and a year later when the user pulls out your application
+    again and makes the same cafe/coffee shop request, he/she will hit the cache and
+    pull the old data instead of making a fresh request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the flip side, by allowing your cache to refresh too frequently, you'll decrease
+    your cache hit frequency and will end up having to make more network requests
+    than desired. And so we again have an optimization problem where we wish to maximize
+    the number of cache hits, while minimizing the amount of memory consumption needed,
+    and also minimizing the frequency at which we pull stale data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This simplified optimization problem sits at the heart of every caching system,
+    and is the one you need to keep in mind when using a localized database to cache
+    your external database network requests. While there is still much that could
+    be discussed regarding caches, the goal of this section (and of this whole chapter
+    in general) was to stir your thought process, and introduce you to one of the
+    many uses for localized databases, and how they can be used in conjunction with
+    external databases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, I'll discuss how a typical data-centric application will
+    look as well as map out the typical flow of data. Again, what I mean by *data-centric*
+    applications are those whose primary functions involve displaying/interacting
+    with some form of data. This could include everything from social networking applications
+    where users can read/write messages to each other (the data in this case includes
+    messages, events, photos — anything that can be shared), to food and dining applications
+    where users can load details of nearby restaurants. This would typically exclude
+    many game-based applications, though even game-based applications will at times
+    need to adopt some kind of external database (for instance, the global high scores
+    table we discussed earlier). With that, let's shift our focus again and start
+    thinking about mobile applications from a more holistic perspective — as extensions
+    of external databases and external applications, rather tha n simple standalone
+    applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Typical application design
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Up until now, we've only talked about and toyed with ideas regarding backend
+    application designs. We first thought about the pros and cons of using a completely
+    localized backend versus a completely external backend, and then thought about
+    ways of using both in applications to try and get the best of both worlds. One
+    of the ways we could do this was through using a cache, and in designing the cache
+    alone, we saw that there were a slew of design decisions that had to be made.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Whether you realized this or not, this whole time you''ve been analyzing the
+    pros and cons of different backend designs for different applications, and now
+    we''re ready to focus on a very general design that is extremely practical and
+    is frequently used in data-centric mobile applications. But enough with words,
+    let''s put a picture to our design:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Typical application design](img/8123OS_07_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'So what exactly is going on here? Let''s break this down:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we have our external, centralized database. This is the heart of our
+    backend. All applications (whether web or mobile) will reference this database,
+    and in this way, we can ensure that all data across all mobile devices will be
+    synced and up-to-date. Furthermore, in this design our application is no longer
+    platform specific. In other words, one could easily create an application that
+    works across all mobile devices, both Android and iOS, since all devices are pointing
+    at the same database.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The external database also separates the client side (that is, the mobile applications
+    and the web applications) from the data gathering/parsing/cleaning side. Here,
+    in the latter, we have all of the processes meant to go and collect, parse, and
+    clean the backend's data. This might involve periodically hitting APIs (assuming
+    the API allows you to store copies of its data), scraping websites (to be discussed
+    later), or, in some cases, manually inserting new data. Then, once the data comes
+    in, it typically needs to be parsed and cleaned to fit the specifications of your
+    database. Furthermore, this whole process of gathering and cleaning data can itself
+    be automated with the use of CRON jobs (discussed in [Chapter 9](ch09.html "Chapter 9. Collecting
+    and Storing Data"), *Collecting and Storing Data)*. So by setting up your application
+    in this way, you are able to conceal all of this behind the scenes data mining
+    from your users.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: On the flip side, you have the web applications and the mobile applications
+    continuously making requests to your external database. These requests will typically
+    be in the form of HTTP GET and POST requests (getting data versus inserting/updating
+    data) and will return results in either XML or JSON format. Again, because these
+    are just standard HTTP network requests, it is independent of the platform making
+    the request, so you can easily port applications from one platform to another.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Lastly, we have the cache, which is a temporary, localized subset of our external
+    database, and which exists on the mobile/web application side. As discussed earlier,
+    these caches are designed to increase performance of the application by saving
+    us from having to make duplicate network requests.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: And there you have it. Again, for the moment this is still very high level,
+    but we've already seen and discussed the components related to part four of our
+    design and in the upcoming chapters, we'll look at the first three parts as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Even though we didn't look at any code in this chapter, we still managed to
+    accomplish a lot. We started the chapter by identifying two very realistic needs
+    (a simple high scores table and then a location/venues database), and worked through
+    the thought process behind how you would choose an appropriate storage method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We saw that for something as simple as a high scores table, a localized SQLite
+    database was both effective and simple to implement. The only real con to this
+    approach was not being able to show global high scores tables, but for most games,
+    this is but a minor feature. However, for our cafe/coffee shop application, we
+    saw that a localized SQLite database was much less effective than having a centralized
+    external database, with the only con for the external database solution being
+    that performance would suffer if repeated, unnecessary network calls were frequently
+    made.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To address this issue, we turned to caching as a solution — using both external
+    and local databases and trying to leverage the pros of each method. However, to
+    build an effective cache requires making several design decisions in order to
+    optimize the cache hit frequency, while minimizing memory consumption and stale
+    data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, we ended the chapter by taking not just a step away from the code, but
+    a step away from the Android application itself, and tried to look at our application
+    from a more holistic view. We looked at what a typical data-centric application
+    would look like, and broke the circulation of data down into four parts. Up to
+    this point, we've already covered enough to be able to implement part four of
+    the design (the local cache), and we'll now devote a chapter to each of the remaining
+    three parts. By the end of this book, the goal is for you to be able to confidently
+    design and implement a full-scaled data-centric application.
+  prefs: []
+  type: TYPE_NORMAL

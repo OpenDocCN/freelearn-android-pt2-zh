@@ -1,0 +1,1408 @@
+- en: Chapter 9. Graphics and Animation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scaling down large images to avoid Out of Memory exceptions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A transition animation – defining scenes and applying a transition
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a Compass using sensor data and RotateAnimation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a slideshow with ViewPager
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a Card Flip Animation with Fragments
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a Zoom Animation with a Custom Transition
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Animations can be both visually appealing and functional, as demonstrated with
+    the simple button press. The graphical representation of the button press brings
+    the app alive, plus it provides a functional value by giving the user a visual
+    response to the event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Android Framework provides several animation systems to make it easier
+    to include animations in your own application. They include the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**View Animation**: (The original animation system.) It usually requires less
+    code but has limited animation options'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Property Animation**: It''s a more flexible system allowing animation of
+    any property of any object'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Drawable Animation**: It uses drawable resources to create frame-by-frame
+    animations (like a movie)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The Property Animation system was introduced in Android 3.0, and it is usually
+    preferred over View Animation because of the flexibility. The main drawbacks to
+    View Animation include:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Limited aspects of what can be animated—such as scale and rotation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Can only animate the contents of the view—it cannot change where on the screen
+    the view is drawn (so it cannot animate moving a ball across the screen)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Can only animate View objects
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Here is a simple example demonstrating a View Animation to "blink" a view (a
+    simple simulation of a button press):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here are the contents for the `blink.xml` resource file, located in the `res/anim`
+    folder:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, it's very simple to create this animation, so if the View Animation
+    accomplishes your goal, use it. When it doesn't meet your needs, turn to the Property
+    Animation system. We'll demonstrate Property Animation using the new `objectAnimator`
+    in the *Creating a Card Flip Animation with Fragments* and *Creating a Zoom Animation
+    with a Custom Transition* recipes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The *A transition animation – defining scenes and applying a transition* recipe
+    will provide additional information on the Android Transition Framework, which
+    we will use in many of the recipes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Interpolator is a function that defines the rate of change for an animation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Interpolators` will be mentioned in several recipes in this chapter and in
+    the previous blink example. The Interpolator defines how the transition is calculated.
+    A Linear Interpolator will calculate the change evenly over the set duration,
+    whereas an `AccelerateInterpolator` function would create a faster movement through
+    the duration. Here is the full list of Interpolators available, along with the
+    XML Identifier:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`AccelerateDecelerateInterpolator (@android:anim/accelerate_decelerate_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AccelerateInterpolator (@android:anim/accelerate_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AnticipateInterpolator (@android:anim/anticipate_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AnticipateOvershootInterpolator (@android:anim/anticipate_overshoot_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BounceInterpolator (@android:anim/bounce_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`CycleInterpolator (@android:anim/cycle_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DecelerateInterpolator (@android:anim/decelerate_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`LinearInterpolator (@android:anim/linear_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`OvershootInterpolator (@android:anim/overshoot_interpolator)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Although animations don't generally require much memory, the graphic resources
+    often do. Many of the images you may want to work with often exceed the available
+    device memory. In the first recipe of this chapter, *Scaling down large images
+    to avoid Out of Memory exceptions*, we'll discuss how to subsample (or scale down)
+    images.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scaling down large images to avoid Out of Memory exceptions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Working with images can be very memory intensive, often resulting in your application
+    crashing with an *Out of Memory* exception. This is especially true with pictures
+    taken with the device camera, as they often have a much higher resolution than
+    the device itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since loading a higher resolution image than the UI supports doesn't provide
+    any visual benefit in this example, this recipe will demonstrate how to take smaller
+    samples of the image for display. We'll use the `BitmapFactory` to first check
+    the image size then load a scaled-down image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s a screenshot from this recipe showing a thumbnail of a very large image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Scaling down large images to avoid Out of Memory exceptions](img/B05057_09_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new project in Android Studio and call it: `LoadLargeImage`. Use the
+    default **Phone & Tablet** options and select **Empty Activity** when prompted
+    for the **Activity Type**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We'll need a large image for this recipe; so we turned to [www.Pixabay.com](http://www.Pixabay.com)
+    for an image. Since the image itself doesn't matter, we downloaded the first image
+    shown at the time. (The full size image is 6000 x 4000 and 3.4MB.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'As stated previously in *Getting ready*, we need a large image to demonstrate
+    the scaling. Once you have the image, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy the image to `res/drawable` as `image_large.jpg` (use the appropriate extension
+    if you choose a different file type).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Open `activity_main.xml` and replace the existing `TextView` with the following
+    `ImageView`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now open `MainActivity.java` and add this method, which we''ll explain shortly:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the existing `onCreate()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The purpose of the `loadSampledResource()` method is to load a smaller image,
+    to reduce the memory consumption of the image. If we attempted to load the full
+    image chosen from [www.Pixabay.Com](http://www.Pixabay.Com) (see the previous
+    *Getting ready* section), the app would require over 3 MB of RAM to load. That's
+    more memory than most devices can handle (at the moment anyway), and even if it
+    could be loaded completely, would provide no visual benefit for our thumbnail
+    view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To avoid an `Out of Memory` situation, we use the `inSampleSize` property of
+    the `BitmapFactory.Options` to reduce, or subsample, the image. (If we set the
+    `inSampleSize=2`, it will reduce the image by half. If we use `inSampleSize=4`,
+    it will reduce the image by one-fourth) To calculate the `inSampleSize`, first
+    we need to know the image size. We can use the `inJustDecodeBounds` property as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This tells the `BitmapFactory` to get the image dimensions without actually
+    storing the image contents. Once we have the image size, we calculate the sample
+    using this code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: The purpose of this code is to determine the largest sample size that does not
+    reduce the image below the target dimensions. To do that, we double the sample
+    size and check whether the size exceeds the target size dimensions. If it doesn't,
+    we save the doubled sample size and repeat. Once the reduced size falls below
+    the target dimensions, we use the last saved `inSampleSize`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: From the `inSampleSize` documentation (link in the following *See also* section),
+    note that the decoder uses a final value based on powers of 2, any other value
+    will be rounded down to the nearest power of 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we have the sample size, we set the `inSampleSize` property and set `inJustDecodeBounds`
+    to `false`, to load normally. Here is the code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It''s important to note, this recipe illustrates the concept for applying the
+    task in your own application. Loading and processing images can be a long operation,
+    which could cause your application to stop responding. This is not a good thing
+    and could cause Android to show the **Application Not Responding** (**ANR**) dialog.
+    It is recommended to perform long tasks on a background thread to keep your UI
+    thread responsive. The `AsyncTask` class is available for doing background network
+    processing, but there are many other libraries available as well (links at the
+    end of the recipe):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Volley**: Perform fast, scalable UI operations over the network (see [Chapter
+    12](ch12.html "Chapter 12. Telephony, Networks, and the Web"), *Telephony, Networks,
+    and the Web*)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Picasso**: A powerful image-downloading and caching library for Android'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Android Universal Image Loader**: Powerful and flexible library for loading,
+    caching, and displaying images'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It's important to note that the `targetHeight` and `targetWidth` parameters
+    we pass to the `loadSampledResource()` method do not actually set the image size.
+    If you run the application using the same size image we used, the sample size
+    will be 32, resulting in a loaded image size of 187 x 125.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If your layout needs a specific size of image, either set the size in the layout
+    file, or you can modify the image size directly using the Bitmap class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Developer Docs: BitmapFactory.inSampleSize()** at [https://developer.android.com/reference/android/graphics/BitmapFactory.Options.html#inSampleSize](https://developer.android.com/reference/android/graphics/BitmapFactory.Options.html#inSampleSize)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the **Android Universal Image Loader** page at [https://github.com/nostra13/Android-Universal-Image-Loader](https://github.com/nostra13/Android-Universal-Image-Loader)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to **Picasso** at [https://square.github.io/picasso/](https://square.github.io/picasso/)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Check the *AsyncTask* task in [Chapter 14](ch14.html "Chapter 14. Getting your
+    app ready for the Play Store"), *Getting Your App Ready for the Play Store*, for
+    processing long-running operations on a background thread.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A transition animation – defining scenes and applying a transition
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The Android Transition Framework offers the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Group-level animations**: Animation applies to all views in a hierarchy'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Transition-based animation**: Animation based on starting and ending property
+    change'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Built-in animations**: Some common transition effects, such as fade-in/out
+    and movement'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Resource file support**: Save animation values to a resource (XML) file to
+    load during runtime'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Lifecycle callbacks**: Receive callback notifications during the animation'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A transition animation consists of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Starting Scene**: The view (or `ViewGroup`) at the start of the animation'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Transition**: The change type (see later on)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Ending Scene**: The ending view (or `ViewGroup`)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Transitions**: Android provides built-in support for the following three
+    transitions:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**AutoTransition (default transition)**: Fade out, move, and resize, then fade
+    in (in that order)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Fade**: Fade in, fade out (default), or both (specify order)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**ChangeBounds**: Move and resize'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Transition Framework will automatically create the frames needed to animate
+    from the start to end scenes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following are some known limitations of the Transition Framework when working
+    with the following classes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**SurfaceView**: Animations may not appear correct since `SurfaceView` animations
+    are performed on a non-UI thread, so they may be out of sync with the application'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**TextView**: Animating text size changes may not work correctly resulting
+    in the text jumping to the final state'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**AdapterView**: Classes that extend the `AdapterView`, such as the `ListView`
+    and `GridView`, may hang'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**TextureView**: Some transitions may not work'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This recipe provides a quick tutorial on using the transition animation system.
+    We'll start by defining the scenes and transition resources, then applying the
+    transition, which creates the animation. The following steps will walk you through
+    creating the resources in XML, as they are generally recommended. Resources can
+    also be created through code, which we'll discuss in the *There's more* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new project in Android Studio and call it: `TransitionAnimation`.
+    On the **Target Android Devices** dialog, select the **Phone & Tablet** option
+    and choose API 19 (or above) for the **Minimum SDK.** Select **Empty Activity**
+    when prompted for the **Activity Type**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here are the steps to create the resource files and apply the transition animation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Change the existing `activity.main.xml` layout file as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new layout file called `activity_main_end.xml` using the following
+    XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Make a new transition resource directory (**File** | **New** | **Android resource
+    directory** and choose **Transition** as the **Resource type**).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create a new file in the `res/transition` folder called `transition_move.xml`
+    using the following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `goAnimate()` method using the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You're ready to run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: You probably find the code itself rather simple. As outlined in the recipe introduction,
+    we just need to create the starting and ending scenes and set the transition type.
+    Here's a detailed breakdown of the code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the start scene
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Running the following line of code will create the start scene:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Creating the transition:'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Running the following line of code will create the transition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Defining the ending scene:'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Running the following line of code will define the ending scene:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Starting the transition:'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Running the following line of code will start the transition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Though simple, most of the work for this recipe was in creating the necessary
+    resource files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now we''ll take a look at creating this same transition animation with a code-only
+    solution (although we''ll still use the initial `activity_main.xml` layout file):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: We still need the starting and ending scene along with the transition; the only
+    difference is how we create the resources. In the previous code, we created the
+    Start Scene using the current layout.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we start modifying the layout through code, we call the `beginDelayedTransition()`
+    method of `TransitionManager` with the transition type. The `TransitionManager`
+    will track the changes for the ending scene. When we call the `go()` method, the
+    `TransitionManager` automatically animates the change.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the Animation resources web page at [https://developer.android.com/guide/topics/resources/animation-resource.html](https://developer.android.com/guide/topics/resources/animation-resource.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a Compass using sensor data and RotateAnimation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapter, we demonstrated reading sensor data from the physical
+    device sensors. In that recipe, we used the Light Sensor since the data from Environment
+    Sensors generally don't require any extra processing. Although it's easy to get
+    the magnetic field strength data, the numbers themselves don't have much meaning
+    and certainly don't create an appealing display.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this recipe, we''ll demonstrate getting the magnetic field data along with
+    the accelerometer data to calculate magnetic north. We''ll use the `SensorManager.getRotationMatrix`
+    to animate the compass while responding to the device movement. Here''s a screenshot
+    of our compass application on a physical device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating a Compass using sensor data and RotateAnimation](img/B05057_09_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new project in Android Studio and call it: `Compass`. Use the default
+    **Phone & Tablet** options and select **Empty Activity** when prompted for the
+    **Activity Type**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will need an image for the compass indicator. Again, we can turn to [www.Pixabay.Com](http://www.Pixabay.Com)
+    for an image. We used the following image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://pixabay.com/en/geography-map-compass-rose-plot-42608/](https://pixabay.com/en/geography-map-compass-rose-plot-42608/)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Though not required, this image has a transparent background, which looks better
+    when rotating the image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'As mentioned in the previous *Getting ready* section, we''ll need an image
+    for the compass. You can download the one previously linked, or use any image
+    you prefer, then follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy your image to the `res/drawable` folder and name it `compass.png`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Open `activity_main.xml` and replace the existing `TextView` with the following
+    `ImageView`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now open `MainActivity.java` and add the following global variable declarations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following `SensorEventListener` class to the `MainActivity` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Override `onResume()` and `onPause()` as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the existing `onCreate()`method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The final code does the actual calculations and animation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You're ready to run the application. Although you can run this application on
+    an emulator, without an accelerometer and magnetometer, you won't see the compass
+    move.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Since we've already covered reading sensor data in *Reading sensor data – using
+    the Android Sensor Framework* (from the previous chapter), we won't repeat explaining
+    the sensor framework, and instead jump right to the `calculateCompassDirection()`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We call this method directly from the `onSensorChanged()` callback. Since we
+    used the same class to handle the sensor callbacks for both the Magnetometer and
+    Accelerometer, we first check which sensor is being reported in the `SensorEvent`.
+    Then we call `SensorManager.getRotationMatrix()`, passing in the last sensor data.
+    If the calculation is successful, it returns a `RotationMatrix,` which we use
+    to call the `SensorManager.getOrientation()` method. `getOrientation()` will return
+    the following data in the `orientationValues` array:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Azimuth**: `value [0]`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Pitch**: `value [1]`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Roll**: `value [2]`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The azimuth is reported in radians, in the opposite direction, so we reverse
+    the sign and convert it to degrees using `Math.toDegrees()`. The azimuth represents
+    the direction of North, so we use it in our `RotateAnimation`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the math already done by the `SensorManager`, the actual compass animation
+    is very simple. We create a `RotateAnimation` using the previous direction, the
+    new direction. We use the `Animation.RELATIVE_TO_SELF` flag and 0.5f (or 50%)
+    to set the center of the image as the rotation point. Before calling `startAnimation()`
+    to update the compass, we set the animation duration using `setDuration()` and
+    `setFillAfter(true)`. (Using `true` indicates we want the image to be left "as
+    is" after the animation completes, otherwise the image would reset back to the
+    original image.) Finally, we save the azimuth for the next sensor update.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It's worth taking some time to experiment with the `RotationAnimation` settings
+    and the sensor update timing. In our call to register the sensor listener, we
+    use `SensorManager.SENSOR_DELAY_FASTEST` along with 50 milliseconds for the `setDuration()`
+    to create a fast animation. You could also try using a slower sensor update and
+    a slower animation, and compare the results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Reading sensor data – using the Android Sensor Framework* in the previous
+    chapter for details on reading the sensor data.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the **getRotationMatrix() Developer Document** at [http://developer.android.com/reference/android/hardware/SensorManager.html#getRotationMatrix(float[],
+    float[], float[], float[])](http://developer.android.com/reference/android/hardware/SensorManager.html#getRotationMatrix(float%5B%5D,%20float%5B%5D,%20float%5B%5D,%20float%5B%5D))
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the **getOrientation() Developer Document** at [http://developer.android.com/reference/android/hardware/SensorManager.html#getOrientation(float[],
+    float[])](http://developer.android.com/reference/android/hardware/SensorManager.html#getOrientation(float%5B%5D,%20float%5B%5D))
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the **RotateAnimation Developer Document** at [http://developer.android.com/reference/android/view/animation/RotateAnimation.html](http://developer.android.com/reference/android/view/animation/RotateAnimation.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a slideshow with ViewPager
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'This recipe will show you how to create a slideshow using the `ViewPager` class.
+    Here is a screenshot showing a transition from one picture to another:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating a slideshow with ViewPager](img/B05057_09_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new project in Android Studio and call it: `SlideShow`. Use the default
+    **Phone & Tablet** options and select **Empty Activity** when prompted for the
+    **Activity Type**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We need several images for the slideshow. For demonstration purposes, we downloaded
+    four images from [www.Pixabay.com](http://www.Pixabay.com) to include in the project
+    source files, but you can use any images.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We''ll create a Fragment to display each image for our slideshow, then set
+    up the `ViewPager` in the Main Activity. Here are the steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy four images to the `/res/drawable` folder and name them `slide_0` through
+    `slide_3`, keeping their original file extensions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create a new layout file called `fragment_slide.xml` using the following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now create a new Java class called `SlideFragment.` It will extend `Fragment`
+    as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Use the following import:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following global declaration:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following empty, default fragment constructor:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following method to save the image resource ID:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Override `onCreateView()` as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Our main activity will display just a `ViewPager`. Open `activity_main.xml`
+    and replace the file contents as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now open `MainActivity.java` and change `MainActivity` to extend `FragmentActivity`
+    as shown:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Use the following import:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following global declarations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Use the following imports:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the following subclass within `MainActivity`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Use the following imports:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Override `onBackPressed()` as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the `onCreate()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The first step is to create a fragment. Since we're doing a slideshow, all we
+    need is an `ImageViewer`. We also change `MainActivity` to extend `FragmentActivity`
+    to load the fragments into the `ViewPager`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `ViewPager` uses a `FragmentStatePagerAdapter` as the source for the fragments
+    to transition. We create the `SlideAdapter` to handle the two callbacks from the
+    `FragmentStatePagerAdapter` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`getCount()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getItem()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getCount()` simply returns the number of pages we have in our slideshow. `getItem()`
+    returns the actual fragment to display. This is where we specify the image we
+    want to display. As you can see, it would be very easy to add or change the slideshow.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handling the *Back* key isn't a requirement for the `ViewPager`, but it does
+    provide a better user experience. `onBackPressed()` decrements the current page
+    until it reaches the first page, then it sends the *Back* key to the super class,
+    which exits the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As you can see from the example, the `ViewPager` takes care of most of the work,
+    including handling the transition animations. We can customize the transition
+    if we want, by implementing the `transformPage()` callback on the `ViewPager.PageTransformer`
+    interface. (See the next recipe for a custom animation.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a Setup Wizard
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `ViewPager` can also be used to create a Setup Wizard. Instead of creating
+    a single fragment to display an image, create a fragment for each step of your
+    wizard and return the appropriate fragment in the `getItem()` callback.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the **Android ViewPager Documentation** at [http://developer.android.com/reference/android/support/v4/view/ViewPager.html](http://developer.android.com/reference/android/support/v4/view/ViewPager.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the *Creating a custom Zoom Animation* recipe for an example on creating
+    a custom animation.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a Card Flip Animation with Fragments
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The card flip is a common animation that we will demonstrate using fragment
+    transitions. We''ll use two different images—one for the front and one for the
+    back, to create the card flip effect. We''ll need four animation resources: two
+    for the front and two for the back transitions, which we will define in XML using
+    `objectAnimator`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s a screenshot of the application we''ll build showing the Card Flip
+    Animation in action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating a Card Flip Animation with Fragments](img/B05057_09_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new project in Android Studio and call it: `CardFlip`. Use the default
+    **Phone & Tablet** options and select **Empty Activity** when prompted for the
+    **Activity Type**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For the front and back images of the playing card, we found the following images
+    on [www.Pixabay.com](http://www.Pixabay.com):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://pixabay.com/en/ace-hearts-playing-cards-poker-28357/](https://pixabay.com/en/ace-hearts-playing-cards-poker-28357/)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[https://pixabay.com/en/card-game-deck-of-cards-card-game-48978/](https://pixabay.com/en/card-game-deck-of-cards-card-game-48978/)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We''ll need two fragments—one for the front of the card and the other for the
+    back. Each fragment will define the image for the card. Then we''ll need four
+    animation files for the full card flip effect. Here are the steps to set up the
+    project structure correctly and to create the resources needed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once you have front and back images for the cards, copy them to the `res/drawable`
+    folder as `card_front.jpg` and `card_back.jpg` (keep the original file extension
+    of your images if different).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create an animator resource directory: `res/animator`. (In Android Studio,
+    go to **File** | **New** | **Android resource directory**. When the **New Android
+    Resource** dialog displays, choose `animator` in the **Resource Type** dropdown.)'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create `card_flip_left_enter.xml` in `res/animator` using the following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create `card_flip_left_exit.xml` in `res/animator` using the following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create `card_flip_right_enter.xml` in `res/animator` using the following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create `card_flip_right_exit.xml`in `res/animator` using the following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new resource file in `res/values` called `timing.xml` using the following
+    XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new file in `res/layout` called `fragment_card_front.xml` using the
+    following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new file in `res/layout` called `fragment_card_back.xml` using the
+    following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new Java class called `CardFrontFragment` using the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new Java class called `CardBackFragment` using the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Replace the existing `activity_main.xml` file with the following XML:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open `MainActivity.java` and add the following global declaration:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the existing `onCreate()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following method, which handles the actual fragment transition:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You're ready to run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Most of the effort to create the card flip is in setting up the resources. Since
+    we want a front and back view of the card, we create two fragments with the appropriate
+    images. We call the `flipCard()` method when the card is pressed. The actual animation
+    is handled by the `setCustomAnimations()`. This is where we pass in the four animation
+    resources we defined in XML. As you can see, Android makes it very easy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's important to note that we did not use the Support Library Fragment Manager,
+    as the support library does not support the `objectAnimator`. If you want support
+    preAndroid 3.0, you'll need to include the old `anim` resources and check the
+    OS version at runtime, or create the animation resources in code. (See the next
+    recipe.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: See the next recipe, *Creating a Zoom Animation with a Custom Transition*, for
+    an example of animation resources created in code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the **Integer Resource Type** web page at [https://developer.android.com/guide/topics/resources/more-resources.html#Integer](https://developer.android.com/guide/topics/resources/more-resources.html#Integer)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a Zoom Animation with a Custom Transition
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipe, *Creating a Card Flip Animation with Fragments*, demonstrated
+    a transition animation using animation resource files. In this recipe, we will
+    create a zoom effect using animation resources created in code. The application
+    shows a thumbnail image then expands to an enlarged image when pressed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following image contains three screenshots showing the zoom animation in
+    action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating a Zoom Animation with a Custom Transition](img/B05057_09_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a new project in Android Studio and call it: `<project name>`. Use the
+    default **Phone & Tablet** options and select **Empty Activity** when prompted
+    for the **Activity Type**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the image needed for this recipe, we downloaded a picture from [www.Pixabay.com](http://www.Pixabay.com)
+    to include in the project source files, but you can use any image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Once you have your image ready as stated previously, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy your image to the `res/drawable` folder and name it `image.jpg` (if not
+    a jpeg image, keep the original file extension).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now open `activity_main.xml` and replace the existing XML with the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now open `MainActivity.java` and declare the following global variables:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `loadSampledResource()` method we created in the *Scaling down large
+    images to avoid Out of Memory exceptions* recipe to scale the image:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to the `onCreate()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following `zoomFromThumbnail()` method, which handles the actual animation
+    and is explained later on:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the application on a device or emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: First, take a look at the layout file we used. There are two parts—the `LinearLayout`
+    with the thumbnail `ImageView`, and the expanded `ImageView`. We control the visibility
+    of both views as the images are clicked. We set the starting thumbnail image using
+    the same `loadSampledResource()` as discussed in the *Scaling down large images
+    to avoid Out of Memory exceptions* recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `zoomFromThumbnail()` is where the real work is being done for this demonstration.
+    There's a lot of code, which breaks down as follows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we store the current animation in `mCurrentAnimator`, so we can cancel
+    if the animation is currently running.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we get the starting position of the image using the `getGlobalVisibleRect()`
+    method. This returns the screen position of the view. When we get the visible
+    bounds of the expanded `ImageView`, we also get the `GlobalOffset` of the view
+    to offset the coordinates from app coordinates to screen coordinates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the starting bounds set, the next step is to calculate the ending bounds.
+    We want to keep the same aspect ratio for the final image to prevent it from being
+    skewed. We need to calculate how the bounds need to be adjusted to keep the aspect
+    ratio within the expanded `ImageView`. The screenshot shown in the introduction
+    shows how this image was sized, but this will vary by image and device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With the starting and ending bounds calculated, we can now create the animation—actually,
+    four animations in this case. One animation for each point of the rectangle, as
+    shown in this code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These two lines of code control how the animation appears:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `setDuration()` method tells the animator object how long it should take
+    to animate the translations set previously. `setInterpolator()` governs how the
+    translation is made. (The Interpolator was mentioned in the *Introduction*, and
+    a link is provided further on.) After starting the animation with the `start()`
+    method, we save the current animation to the `mCurrentAnimator` variable, so the
+    animation can be cancelled, if needed. We create an `AnimatorListenerAdapter`
+    to respond to the animation events, to clear the `mCurrentAnimator` variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When the user presses the Expanded Image, the application just hides the expanded
+    `ImageView` and sets the thumbnail as `visible`. We could create a reverse zoom
+    animation in the `mImageViewExpanded` click event using the expanded bounds as
+    the starting point returning to the thumbnail bounds. (It would probably be easier
+    to create the `mImageViewExpanded` event in the `zoomFromThumbnail()` to avoid
+    having to duplicate calculating the start and stop bounds again.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting the default animation duration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Our code used 1000 milliseconds when setting the duration with `setDuration()`.
+    We purposely used a long duration to make it easier to view the animation. We
+    can get the default Android animation duration using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The first recipe, *Scaling down large images to avoid Out of Memory exceptions*,
+    for a detailed explanation of the `loadSampledResource()` method.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Refer to the **Interpolator Developer Document** at [http://developer.android.com/reference/android/view/animation/Interpolator.html](http://developer.android.com/reference/android/view/animation/Interpolator.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

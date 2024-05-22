@@ -1,0 +1,682 @@
+- en: Chapter 9. Testing for Security
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This is undoubtedly the most important chapter of the book. As developers, we
+    all try our best to write beautiful, usable, and secure code. We have all experienced
+    the thrill of a great idea and the rush to see it working. We also have crazy
+    schedules and deadlines. So bugs happen and testing for bugs is a natural part
+    of any coding lifecycle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Most of the test cases today focus on usability, functionality, and stress testing.
+    In most cases, test engineers are at a loss when it comes to testing for security.
+    When compliance and security is overlooked, sometimes the application needs to
+    be redesigned or implemented again. Take the case of creating a message digest
+    for integrity purposes. A developer may decide to go with SHA-1 that creates a
+    digest of 160 bits. On the server side, the database is designed to accommodate
+    160 bit data. A non-ethical hacker breaks into the application. When the security
+    review is performed, it is decided that SHA-1 was not strong enough for the use
+    case and needs to be updated to SHA-256\. Since the database was designed to accommodate
+    only 160 bits, it becomes a challenge to make a quick fix on the client side,
+    as the entire design has to be changed. Things become serious now. This is such
+    a waste of time specially considering the fact that a mobile ecosystem is fast
+    paced and transient.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter aims to introduce the concept of security-focused testing. The
+    chapter begins with an overview of testing. If you are already familiar with testing,
+    you may easily skip this section. The next section will talk about security testing
+    and ways that you can test your applications for security, namely security review,
+    manual testing, and automated testing with tools. The following sections discuss
+    some sample security test cases that can act as a baseline for writing tests.
+    The chapter closes with a discussion of tools and resources that developers and
+    test engineers can use for development of test cases and for testing for security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing overview
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With a wide array of devices of varying capabilities, form factors, and versions,
+    Android is one of the most challenging operating systems to test. Getting the
+    basic functionality and user experience itself is a challenge. The following figure
+    illustrates tests that are usually performed in the context of an Android application
+    development. As Bruce Schneier, a great cryptographer of our times, aptly states,
+    "Security is not a product but a process", so you will notice that I have added
+    security testing to the entire lifecycle of application testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Testing overview](img/5603OT_09_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Let us spend a little time on what each category, unit testing, integration
+    testing, and system testing means from an Android perspective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Unit testing**: In most cases, developers who code the module develop unit
+    tests. Developers should write and unit test their modules before handing off
+    their code to test engineers. The Android SDK comes bundled with instrumentation
+    APIs for unit test. This framework is implemented on JUnit, a popular framework
+    for Java unit tests. Unit tests can be easily automated. These tests cover boundary
+    tests, input validation tests, and connections with the backend.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Integration testing**: Once unit tests are done and different components
+    are being integrated, integration tests are performed to make sure that different
+    components work together. These are tests that are performed when components are
+    bundled together. Let us consider two teams working separately, one on the login
+    module and the other on the search result page. Once the development of modules
+    is done and they are integrated with each other, tests should be performed which
+    check the two modules together. These days most development environments use continuous
+    integration that perform sanity tests that the two modules compile together.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**System testing**: These are tests that test the whole application and how
+    the application interacts with the Android platform. Some examples of system testing
+    will include testing how search functions on different platforms and how differences
+    in Android-based devices affect the display of search results.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Security tests should be performed at each stage of testing. For example, at
+    the unit test level, developers should test for inconsistent and incorrect input
+    values, buffer overflows, and access level of users.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: At the integration level, engineers can test for secure data transit between
+    two modules and behavior on passing erroneous data.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: In the system testing state, engineers can test how their application looks
+    and behaves on different Android platforms. In the case of Android, this is an
+    especially important testing phase due to variations in the Android device and
+    stack capabilities of different vendors and carriers.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Any of the previously mentioned test suites in the flow usually contain a mix
+    of different kinds of tests. These are illustrated in the following figure. Notice
+    that I have again added security tests in the mix.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Testing overview](img/5603OT_09_02.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: '**Functional tests**: These tests check if an application performs with expected
+    behavior. For example, a functional test for the login function will test the
+    case when a user enters a username and password and presses *Enter*; the user
+    is either logged into the system if the credentials are valid or is shown an error.
+    You may like to validate that correct error messages are generated with different
+    error cases.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Localization tests**: Most of the applications today are global and are available
+    in different countries. To support different locales, an application has to be
+    localized and internationalized. Localized refers to language translation and
+    internationalization refers to adapting the application according to the norms
+    of a particular locale. Consider a case of adapting a view that accepts addresses
+    in Japanese (that is, you want to support Japan as a country). Localization will
+    translate the word Address Line 1, Address Line 2, City, State, Zip, and Country
+    into their Japanese equivalent. However, in Japan the addresses system is different
+    from the Roman system and the view that accepts address will have to be redesigned
+    and some labels might have to be shuffled around.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android has a very user friendly framework to store strings and localized views
+    that developers should take advantage of. It is better to consult with localization
+    experts when opening up an application in new markets.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Usability tests**: Also called UI tests, these tests focus on the look and
+    feel of the user interface and make sure that it is easy for a user to enter input,
+    read information on screen, and change the esthetics and general flow of an application.
+    Usability is very important in a screen space constrained device and devices of
+    different screen sizes.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Hardware compatibility tests**: This suite of tests will be targeted at testing
+    hardware features used in the application on different devices. For example, if
+    an application uses the device camera, tests should be performed to check if the
+    code works properly on different device cameras with different focus capabilities.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Regression tests**: These are usually automated tests that are run after
+    every change in the application to ensure that the application still works as
+    expected. For example, in the bookstore application, you may identify key pieces
+    of functionality as login, logout, searching for books, and adding a book to a
+    wish list. Whenever a new feature is added or an existing feature is updated,
+    these sanity tests are performed to make sure that nothing broke.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Security tests are discussed in detail in the following sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you may have guessed already, most of these test cases work in tandem with
+    each other. For example, to test the address page for a new country, both localization
+    and UI tests have to go hand in hand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Security testing basics
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter is an overview of security testing. We discuss the pillars of security
+    around which security tests can be developed. The second section discusses different
+    kinds of security testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Security tenets
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Any kind of application security testing should follow the six tenets of security,
+    namely authentication, authorization, availability, confidentiality, integrity,
+    and non-repudiation. We have covered most of these concepts and how to implement
+    them in [Chapter 6](ch06.html "Chapter 6. Your Tools – Crypto APIs"), *Your Tools
+    – Crypto APIs*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Security tenets](img/5603OT_09_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '*Authentication* is the measure of identifying the user. You can use authentication
+    APIs from companies such as Facebook, Twitter, LinkedIn, and PayPal. The main
+    protocols used are OAuth and OpenIDConnect. These techniques offload the task
+    of authentication from the application. It is a win-win condition for both application
+    developers and users. Application developers do not have to implement their own
+    schemes and can use built-in mechanisms for authentication. Users do not need
+    to share personal information with applications they do not trust. It is useful
+    for companies that develop such schemes as it drives traffic to their websites.
+    Most of these techniques are based on providing a user with an authentication
+    token.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[Chapter 10](ch10.html "Chapter 10. Looking into the Future"), *Looking into
+    the Future*, discusses some new advances in authentication.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Authorization refers to access control—determining whether the user has appropriate
+    rights to access a resource. In case of Android, this can be achieved by protecting
+    application components with permissions and checking caller identity whenever
+    possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Availability* means that data should be available to authorized users when
+    needed. Using broadcasts and Intents with data can ensure this security measure.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Confidentiality* refers to keeping data secure and only revealing it to intended
+    parties. Encrypting data, using proper permissions, and conforming to the Android
+    sandbox can help with this measure of security.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Integrity* means that the data is not modified in transit or at rest. In case
+    data is tampered with, this tampering can be identified. Adding message digests,
+    digital signatures, and encrypting data, both in transit and at rest, can help
+    with integrity.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Non-repudiation* can be achieved using digital signatures, timestamps, and
+    certificates, and ascertains that the sender cannot deny sending the data. DRM,
+    discussed in [Chapter 6](ch06.html "Chapter 6. Your Tools – Crypto APIs"), *Your
+    Tools – Crypto APIs*, is implemented so that users cannot deny the reception of
+    content.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Security testing categories
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Keeping the security principles just discussed in mind, security testing can
+    be categorized into three buckets: application review, manual testing, and automated
+    testing.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application review
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The first step in security testing is the application review process. This process
+    focuses on understanding the application and identifying hardware, different technologies,
+    and capabilities that an application uses. Once these characteristics are identified,
+    the reviewer tries to access the security holes in these capabilities. The review
+    process identifies the issues that are pronounced in the manifest file, use of
+    broken or weak cryptography, insecure use of protocols, and security issues in
+    technologies and hardware that may have escaped during development. It covers
+    compliance and standards and if they have been appropriately adhered to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Some examples of security issues that can be identified in the manifest file
+    include superfluous permissions in the manifest file that the application does
+    not need but were added for debugging purposes, not protecting components using
+    permissions, forgetting to turn off the debug mode, and log statements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compliance is based on the use case. Different standards are applied based on
+    the use case around which the application is written. For example, a payment and
+    commerce use case application may be looking at PCC-DSS. A geo-location based
+    application will have to be aware of privacy issues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These days there are security-auditing firms that specialize in the mobile application
+    review process. You should use them if in doubt.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Manual testing
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Manual security testing, as the name implies, is done manually during development
+    or by test engineers. Engineers watch the behavior of an application under different
+    scenarios by feeding in different inputs. Examples include looking at the logs
+    to verify no sensitive information is being leaked out, going to the previous
+    Activity several times to see how the application performs, trying to break the
+    authentication scheme of the application, and checking if a user has appropriate
+    access. Scenarios that cannot be also belong to this category. There are some
+    companies such as uTest ([www.utest.com](http://www.utest.com)) that employ manual
+    testers who can perform manual testing for your applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dynamic testing
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Also called automated testing, these tests are ideally performed by writing
+    test scripts. Tests such as input validation, stress testing, fuzzing, and boundary
+    tests can be easily automated. Most of these tests can easily be part of the standard
+    development/test cycle and can act as sanity tests when adding new features. You
+    may decide to use services of security firms such as Device Anywhere ([www.deviceanywhere.com](http://www.deviceanywhere.com))
+    that specialize in this area.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sample test case scenarios
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this section, I have tried to enumerate some sample test cases that are interesting
+    from the security perspective. They are in no particular order and you may use
+    them as a reference when identifying test cases for your particular use case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing on the server
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The mobile ecosystem is very interesting; it is young and still evolving. The
+    application may want to send a piece of data to the server but what is received
+    on the server may be quite different. This could be because of issues in the communication
+    channel where a hacker snoops in and changes the content as it moves or it could
+    be a bad client. No matter what the reason is, it is not enough to test the application
+    only, server testing is critical for the security of your application. These tests
+    focus on whether what was intended is received on the server side, if PII is stored
+    in clear on the server, if business logic is residing on the client then is it
+    working properly. We discussed this in [Chapter 6](ch06.html "Chapter 6. Your
+    Tools – Crypto APIs"), *Your Tools – Crypto APIs*, as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This field of testing is mature and plenty of examples and tools are available
+    for testing on the server. Checking for open ports and firewall can be easily
+    done using port scanning tools such as Nmap.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing the network
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The infrastructure layer is the backbone of mobile devices and makes mobility
+    ubiquitous. It also brings in new challenges and test cases. Devices communicate
+    with the server using different protocols and each brings with it unique bag of
+    security holes. GSM can be easily broken; Wi-Fi is inherently insecure, especially
+    if you are connecting to a rogue hotspot. **Long Term Evolution** (**LTE**) is
+    a new standard for high speed wireless data communication and is IP-based but
+    has not been thoroughly tested, and the proximity technologies such as NFC, Bluetooth,
+    and RFID bring a whole different testing paradigm. It is thus important to test
+    the technology that your application is using and build test cases around it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Securing data in transit
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It is good if your application uses **Transport Layer Security** (**TLS**),
+    but make sure it is implemented correctly, so test it out. Testing that all communication
+    between the client and the server is encrypted and no PII or secret key is being
+    transmitted in clear. Remember serialization is not encryption and obfuscation
+    is not encryption. Make sure that the server is checking for certificate validation
+    and certificate expiry. Check if the encryption algorithms and protocol being
+    used are current and secure enough for your use case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secure storage
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It is always a good idea to not store sensitive data such as private keys, usernames,
+    passwords, and other PII on the client. Ideally, this information should be stored
+    on the server. Storing the key with the data it encrypts defeats the purpose of
+    security. If keys have to be stored on the client, first they should not be stored
+    in clear. Second, they should not be stored in files, cache files, or shared preferences.
+    Keys should be stored in the `keystore`, passwords in `AccountManager`, and all
+    sensitive information should be stored in an encrypted fashion. In most cases,
+    a hash value can be stored instead of a password.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Validating before acting
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Validate the input, the data, and the caller being passed between different
+    components of the application and also from other applications. Any Activity can
+    parcel any type of data in the Intent and it is the responsibility of the receiving
+    component to test and verify before acting on it. We discussed this at great length
+    in [Chapter 2](ch02.html "Chapter 2. Application Building Blocks"), *Application
+    Building Blocks*. The tests in this case will include passing invalid and erroneous
+    data to a component and observing how it behaves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In some cases, you might be able to check the caller identity before acting
+    on a request from them. Use it! Especially before launching sensitive actions,
+    check the caller identity and data that you will be working on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The principle of least privilege
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Tests in this category include testing permissions of different application
+    components and making sure that they have the least privileges possible to function
+    properly. This includes checking files, cache files, and `SharedPrferences` for
+    visibility and accessibility permissions. Check if they really need a `MODE_WORLD_READABLE`
+    or `MODE_WORLD_WRITABLE` permission.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Check the permissions that your application requests. For example, if you do
+    not need fine-grained location access, only ask for coarse-grained permission,
+    and if you only need to read SMS, do not ask for both read and write SMS permissions.
+    As consumers get more aware of security issues in the mobility space, they might
+    be suspicious of your application if it requests permissions that do not make
+    sense. It makes no sense for a book browsing application to have access to the
+    user contact list and device camera.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Managing liability
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Be aware of rules and regulations in your domain. Getting into liability lawsuits
+    is a messy affair and it is best to stay away from them. Also, if it makes sense
+    to use third party tools and services that specialize in these matters then by
+    all means use them. If your application collects user data, make sure that you
+    have taken proper consent from the user and everything that you are collecting
+    is listed out. As an example, the California Online Privacy Protection Act states
+    that if an application collects information in California then it should be disclosed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's take another example use case of an application that processes payments.
+    Instead of trying to do your own, use existing payment solutions such as PayPal.
+    Payments deal with users' money and there are directives such as PCI-DSS that
+    governs how such capabilities can be used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, instead of designing and developing your home-grown security algorithms
+    and protocols, use time tested and industry tested security suites and libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Be aware of how the application will be used in the countries that you support.
+    Different countries have different rules and regulations. The definition of PII
+    is different as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cleaning up
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: First, do not log sensitive information. Before releasing the application in
+    the wild, make sure to turn debugging off. Clean up all sensitive information
+    from files, cookies, and caches; that is, zeroize memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Usability versus security
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Balancing usability and security is a tricky and delicate art. An application
+    may persist username, password, and session tokens for convenience but it also
+    makes security weak. If you have some functionality in your application that remembers
+    user identity, weigh convenience and security. You may decide to limit session
+    lengths and limit how long you want to keep cookies and tokens alive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Authentication scheme
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The question here is whether you want to authenticate the device or the user?
+    Devices do get lost or stolen. Identifying a user based on device characteristics
+    such as IMEI, IMSI, or UDID may not be such a great authentication scheme. These
+    persist remote wipes and resets. You may like to evaluate biometrics-based authentication
+    mechanisms or two factor authentication schemes to authenticate the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thinking like a hacker
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Think like a hacker and test how a hacker will try to hack your application.
+    Use the available tools and exploits already listed on the Internet. Testing the
+    application using tools used by hackers can reveal what hackers will see and what
+    information they will get when they try to crack your application. There are tools
+    such as Fiddler ([www.fiddler2.com](http://www.fiddler2.com)) that you may use
+    to monitor the network traffic through your application. It is important to remember
+    that obfuscating the code is not security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integrating with caution
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Whether you are integrating with hardware (both internally and externally) or
+    third party applications, do it with care.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the application is using some hardware components such as camera, Bluetooth,
+    NFC chip, accelerometer, microphones, or GPS then it is important to test them
+    for security as well. A flaw in any piece of hardware can affect the overall security
+    of the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, a bug in a third party library can result in the application being
+    compromised. When integrating with such an external library, ask for their test
+    results and look them up online and ask for recommendations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Security testing the resources
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This section focuses on tools, techniques, and some other resources that can
+    creatively be used to test applications for security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: OWASP
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**OWASP** (**Open Web Application Security Project**) is an organization committed
+    to mobile security. They provide tools and research in the field of mobile security.
+    Check out their website at [https://www.owasp.org](https://www.owasp.org). It
+    is a good place to look for your security-related questions, contribute to the
+    open source and innovate and participate in the mobile security discussion. OWASP
+    compiles a list of top 10 security vulnerabilities each year and the community
+    is challenged to work on it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android utilities
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Android provides a whole array of utilities that can be creatively used to test
+    applications. Besides testing, these tools can also help developers debug their
+    applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android Debug Bridge
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Android Debug Bridge** (**ADB**) can be used for logs, memory checking, and
+    many other purposes. Check out the full listing of functions provided by ADK on
+    the developer website. The following screenshots show some examples of ADB in
+    action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Android Debug Bridge](img/5603OT_09_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The previous screenshot shows the sample log using the `adb logcat` command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up the device
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To set up advanced settings for monitoring web applications, you may turn on
+    advanced features that can help you get more data during penetration testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Setting up the device](img/5603OT_09_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The previous screenshot shows how you may enable the JavaScript and plugin to
+    check for information leakage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SQlite3
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Using the SQLite3 utility, a user may explore the databases it creates and some
+    other databases that come bundled with the platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The SQLite utility lets the user query databases and check values in the database.
+    Such database interrogation and examination can point out issues such as storing
+    PII in the clear.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dalvik Debug Monitor Service
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Dalvik Debug Monitor Service** (**DDMS**) is another important tool provided
+    by the Android framework. DDMS provides capabilities such as port-forwarding,
+    screen capture, thread and heap information, the `logcat` process, and radio state
+    information, incoming call and SMS spoofing, and location data spoofing. The following
+    screenshot shows the window for DDMS. Check out the details on capabilities on
+    the Android developer website.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Dalvik Debug Monitor Service](img/5603OT_09_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There are some other third party tools as well such as the Intent Sniffer and
+    the Manifest Explorer, both developed by iSecPartners ([https://www.isecpartners.com](https://www.isecpartners.com)).
+    Other Linux tools such as `strace` and `procrank` can also be used as well. You
+    can use BusyBox, as discussed in the following section, for this purpose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: BusyBox
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: BusyBox is called the Swiss Army Knife of embedded Linux and provides several
+    Unix tools such as `vi`, `whoami`, `watchdog`, and so on. These tools can be used
+    for testing without rooting the phone. Installing the BusyBox on Android is pretty
+    simple. Just download it from [www.busybox.net](http://www.busybox.net).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![BusyBox](img/5603OT_09_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As shown in the preceding screenshot, `busybox` can be easily pushed and installed.
+    Once installed, the Linux commands can be easily executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Decompile APK
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It is relatively easy to decompile an APK and read its contents. Doing this
+    exercise will help you understand how a hacker will approach your APK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An APK file is nothing but a ZIP file and renaming the APK file as a ZIP file
+    will let you open it with any ZIP file explorer. These are available under the
+    `/data/app` directory. You can pull it onto your machine using the `adb pull`
+    command. In there, you can see the manifest file, resources, assets, and others.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Decompile APK](img/5603OT_09_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Next, using the `dexdump` utility provided in Android, the classes under the
+    `/data/dalvik-cache` directory can be dumped.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Decompile APK](img/5603OT_09_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'For example, to dump `data@app@com.example.example1-1.apk@classes.dex` into
+    a file called `dump`, the command to be used is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following is a screenshot of the kind of data collected in the dump file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Decompile APK](img/5603OT_09_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This dump will be in the form of the jump statements and is hard to read. A
+    DEX de-compiler such as `baksmali` or `dedexer` can be used to make these files
+    much more readable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Security testing is a relatively young field. Patterns and testing strategies
+    are still developing and security is being recognized as an important benchmark
+    for identifying app weaknesses and improving app quality. In this chapter, we
+    have put together our learning from all the previous chapters and used it to define
+    test cases for our application. This is only a start and you should define test
+    cases, as you deem appropriate for your use case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We began with an overview of testing fundamentals. Then, we discussed the six
+    pillars of security around which we designed our test cases. Some sample test
+    cases were discussed that should provide you with a base for testing your application.
+    And then we closed the chapter with a discussion of resources and tools that you
+    could use for security-focused testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let us now march to the last chapter of the book and see what is new and happening
+    in the Android space that challenges our security basics.
+  prefs: []
+  type: TYPE_NORMAL

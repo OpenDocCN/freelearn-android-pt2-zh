@@ -1,0 +1,473 @@
+- en: Chapter 3. Apps' Auto Backup
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Have you ever taken the time to set up an app on your phone, use it for a while,
+    pour in a lot of content, and switch phones due to a mishap just to discover that
+    your data and settings have gone with the wind?
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the key features of Android Marshmallow is that it supports full automatic
+    data backup and restore for user apps. This improves the user experience, makes
+    the overall engagement more fun, and shortens the boarding time for multiple devices.
+    Like we discussed in the previous chapters, happy users lead to happy developers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can unload the burden of setting up a new device; it doesn't matter whether
+    it's an added device or a replacement. The user will end up with the same app
+    configuration and data, allowing work to be more **device-agnostic**. For this
+    feature to be enabled on your applications, you must target the Android Marshmallow
+    SDK's version 23; no extra code is needed by default even though you can configure
+    the feature and allow specific behavior whenever required. Data is automatically
+    restored when a user changes or upgrades the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will learn how this feature works and configure the information
+    that we want to back up. We''ll cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An overview
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Data backup configuration
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Backup configuration testing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Important bytes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An overview
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The automatic backup feature is created by taking the data created within your
+    app and uploading it to the user's Google Drive account, keeping it encrypted.
+    This doesn't affect the user's drive quota or your quota, for that matter. Each
+    app is limited to 25 MB backup per user, and once you reach that amount, your
+    app will stop backing up. Also, note that it's *completely free*!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Backup is done in cycles of 24 hours, nights only, and it's done automatically,
+    usually when the device is idle, charging, and connected to a Wi-Fi network. These
+    conditions are there for battery efficiency, data charges, and, of course, to
+    keep the user interference to a minimum. Android systems have a **Backup Manager**
+    service, which uploads all the available backup data to the cloud. Switching to
+    a new device or uninstalling and reinstalling the app will trigger the restore
+    operation, which in turn copies the data into the app's data directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This new behavior allows you to keep using your existing backup service calls
+    as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To read more about the **Android Backup Service** that was used prior to Android
+    Marshmallow, head to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://developer.android.com/guide/topics/data/backup.html](https://developer.android.com/guide/topics/data/backup.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data backup configuration
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have a lot of data that we want to back up for our users, but we also don't
+    want to back up all the data. Let's say we all agree not to back up users' passwords
+    or other sensitive data, but what if you have a specific app configuration that
+    is generated based on the device the user is using? This too should be excluded
+    in a manner similar to device tokens such as **Google Cloud Messaging** (**GCM**)
+    and others. I would recommend that you figure out which data your app keeps persistently
+    and whether this data should and can be device-agnostic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can configure what is being backed up besides the automatically excluded
+    files mentioned earlier. This configuration should be declared in your app's manifest
+    via the `android:fullBackupContent` attribute. You will need to create a new XML
+    file that should reside in your `res/xml` folder, and this will have specific
+    rules for the backing up of your app's data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Including or excluding data
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: XML file configuration includes a simple batch of `include`/`exclude` tags,
+    which indicate whether or not you need to back up a directory or a specific file.
+    Keep in mind that by default, the XML is *reductive*, which means that you back
+    up everything possible unless there is an instruction to exclude it in your XML.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another possible configuration is the constructive configuration in which you
+    specify only the things you want to back up, and they will be added to the backup.
+    This configuration behavior is done by adding an `include` tag to your XML, and
+    from then onward, it will remain constructive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we can see in our example, we specify a backup scheme configuration in the
+    app''s manifest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After declaring the file in our manifest, we also need to construct it in our
+    `res/xml` folder; for example, take a look at the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: This example backup configuration excludes only specific data from being backed
+    up. All other files are backed up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The backup configuration syntax
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Although you should''ve sorted out your app''s specific persistent data, we
+    can go over the configuration syntax that should be in the XML. The syntax for
+    the configuration XML file is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Don''t forget to read the explanation for each attribute and element here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`<include>`: You should use this tag whenever you want to specifically add
+    a resource from any of the approved sorts to the backup. Remember that whenever
+    you specify an `<include>` tag, the backup behavior changes to constructive, and
+    the system only backs up resources specified with the `<include>` tags.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`<exclude>`: You should use this tag whenever you want to exclude any of the
+    app''s resources from the backup. As mentioned earlier, you should exclude sensitive
+    data and your app''s device-specific data. Here, the behavior is like this: the
+    system backs up all of your app''s data except the resources specified with the
+    `<exclude>` tag.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`domain`: This appears on `include` as well as `exclude` tags. It allows you
+    to declare the resource type you want to include or exclude from the backup. The
+    domain has specific valid values that you can choose from:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`root`: This implies that the resource should be in the app''s `root` directory'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`file`: This implies that the resource is a file located in the `Files` directory
+    and is accessible via the `getFilesDir()` method'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`database`: This implies that your resource is a database file that can be
+    located via the `getDatabasePath()` method or the `SQLiteOpenHelper` class'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sharedpref`: This implies that your resource is a `SharedPreferences` object
+    that can be accessed via the `getSharedPreferences()` method'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`external`: This implies that your resource is a file in an external storage
+    located in a directory accessed by the `getExternalFilesDir()` method'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`path`: This a `String` path to the resource that you want included in or excluded
+    from backup'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Opting out from app data backup
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: On some occasions, you might decide that you wish not to use the app data backup
+    feature in your app. In such a situation, you will be able to notify the system
+    that your app has opted out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Setting the `android:allowBackup` attribute to `false` in your manifest is
+    done using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Backup configuration testing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: By now, you have created a backup configuration and you might (should) test
+    it and make sure that your app saves the data, restores it, and works without
+    any issues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting backup logs
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before you test your app''s configuration, you might want to enable logging;
+    this is done via `adb`, where you set the parser `log` property to `VERBOSE`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Testing the backup feature can be split into two parts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing the backup phase
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing the restore phase
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing the backup phase
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The backup can be run manually, but first, you must run the Backup Manager
+    via the `adb` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the Backup Manager is up and running, we can trigger the backup phase
+    via `adb` and run our app''s package name as the `<PACKAGE.NAME>` parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Testing the restore phase
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We executed the backup phase and all went well. Now, we want to test the restore
+    phase and verify that all the backed-up data is restored properly and we didn''t
+    miss out on any resource. We manually run a restore (*must* be done after your
+    app data is backed up). This is done via the `adb` shell, specifying the package
+    name for your app as the `<PACKAGE.NAME>` parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `restore` action stops your app and wipes its data before actually performing
+    the restore operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Troubleshooting
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Issues can occur in any place, including our case. If you run into issues,
+    you should try and clear the data by turning backup on and off by navigating to
+    **Settings** | **Backup & reset**, factory resetting the device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Troubleshooting](img/00011.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'You can clear the data using this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `<TRANSPORT>` tag is prefixed by `com.google.android.gms/`. To view the
+    list of transports, you can run following `adb` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following screenshot is the result of the preceding command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Troubleshooting](img/00012.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Important bytes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we jump into the next chapter, let's go through a couple of important
+    subtopics within the Android apps' backup feature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'System backup does not include the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Files located in `CacheDir` via the `getCacheDir()` method (API 1 and above)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Files located in `CodeCacheDir` via the `getCodeCacheDir()` method (API 21 and
+    above)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Files located in the external storage and not in `ExternalFilesDir` via the
+    `getExternalFilesDir(String type)` method, where the type can be as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`null` for the root of the file directory'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Any of these types for a specific subfolder/directory:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.os.Environment.DIRECTORY_MUSIC`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.os.Environment.DIRECTORY_PODCASTS`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.os.Environment.DIRECTORY_RINGTONES`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.os.Environment.DIRECTORY_ALARMS`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.os.Environment.DIRECTORY_NOTIFICATIONS`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.os.Environment.DIRECTORY_PICTURES`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android.os.Environment.DIRECTORY_MOVIES`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Files located in `NoBackupFilesDir` via the `getNoBackupFilesDir()` method (API
+    21 and above)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: What to exclude from the backup
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Though we have discussed this earlier, you may need to revise which app data
+    is eligible for backup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Among the excluded data, you must exclude any device-specific identifiers that
+    are either issued by a server or generated on the device, including the GCM registration
+    token.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You must also add the excluding logic for any account credentials or other sensitive
+    information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: BackupAgent and backup events
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: You can implement your own `BackupAgent` attribute, which allows you to listen
+    to events. `BackupAgent` has several callbacks that you can override, one of which
+    is the `onRestoreFinished()` method, which is called after a successful restore
+    takes place. You should add the `android:fullBackupOnly="true"` attribute to your
+    manifest in addition to `android:backupAgent`; this will indicate that while your
+    application has a `BackupAgent` attribute, Android Marshmallow and other devices
+    will only perform full-data backup operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This technique can come in handy when you want to exclude a few keys from your
+    **SharedPreferences** backup (device-specific tokens, GCM tokens, and so on).
+    Instead of partitioning SharedPreferences into multiple files, you can simply
+    remove the keys at restore time when `onRestoreFinished()` is called.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Keep in mind that other sensitive data is not supposed to be backed up anyway.
+    You can read more about `BackupAgent` at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/reference/android/app/backup/BackupAgent.html](http://developer.android.com/reference/android/app/backup/BackupAgent.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android Marshmallow has brought in a great backup feature for apps, reducing
+    friction for users migrating to new devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a world full of diverse apps, maximizing the benefits from automatic backups
+    leads to better user experience. The goal of this feature is to unload the burden
+    and shorten the time required to set up a new device with the user's favorite
+    apps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Allowing the users to enter your app with merely a password prompt after the
+    new installation can be a great experience; try it yourself! You can check out
+    the sample code that''s included or go to the GitHub repository at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://github.com/MaTriXy/apps_autobackup_example](https://github.com/MaTriXy/apps_autobackup_example)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our next chapter, we will dive into more changes executed in Android Marshmallow
+    as we unfold its awesomeness.
+  prefs: []
+  type: TYPE_NORMAL
