@@ -1,0 +1,973 @@
+- en: Chapter 9. Porting an Existing Application to Android with NDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting a command-line executable to Android with an NDK build system
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Porting a command-line executable to Android with an NDK standalone compiler
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Adding GUI to a ported Android app
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using background threads at porting
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous chaptercovered various techniques of porting a native library to
+    Android with NDK. This chapter discusses the porting of native applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will first introduce how to build a native command-line application for Android
+    with an Android NDK build system and the standalone compiler provided by NDK.
+    We will then add a GUI for the ported application. Finally, we illustrate using
+    a background thread to do the heavy processing and sending the progress update
+    message from the native code to the Java UI thread for GUI updates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will use the open source Fugenschnitzer program throughout this chapter.
+    It is a content-aware image resizing program based on the **Seam Carving** algorithm.
+    The basic idea of this algorithm is to change the size of an image by searching
+    for and manipulating the seams (a **seam** is a path of connected pixels from
+    top to bottom, or left to right) from the original image. The algorithm is able
+    to resize an image while trying to keep the important information. For readers
+    who are interested in the program and the algorithm, refer to the project's main
+    page at [http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html)
+    for more details. Otherwise, we can ignore the algorithm and focus on how the
+    porting is done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting a command-line executable to Android with an NDK build system
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This recipe discusses how to port a command-line executable to Android with
+    an NDK build system. We will use the open source Fugenschnitzer program (`fusch`)
+    as an example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: You should read the *Porting a library as a static library with an Android NDK
+    build system* recipe in [Chapter 8](ch08.html "Chapter 8. Porting and Using the
+    Existing Libraries with Android NDK"), *Porting and Using Existing Libraries with
+    Android NDK*, before going through this one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps describe how to port the `fusch` program to Android with
+    an NDK build system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named **PortingExecutable** with native support.
+    Set the package name as `cookbook.chapter9.portingexecutable`. Refer to the *Loading
+    native libraries and registering native methods* recipe in [Chapter 2](ch02.html
+    "Chapter 2. Java Native Interface"), *Java Native Interface*, if you want more
+    detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remove the existing content under the `jni` folder of the project.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Download the source code of the `fusch` library and command-line application
+    from [http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html).
+    Extract the archive files and put them into the `jni/fusch` and `jni/fusch_lib`
+    folders respectively.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Download `libpng 1.2.50` from [http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/](http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/)
+    and extract the files to the `jni/libpng-1.2.50` folder. The latest version of
+    `libpng` won't work because the interface is different.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add an `Android.mk` file under the `jni/libpng-1.2.50` folder to build `libpng`
+    as a static library module. The file has the following content:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add an `Android.mk` file under the `jni/fusch_lib` folder to build `libseamcarv`
+    as a static library module. The file content is as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add the third `Android.mk` file under the `jni/fusch` folder to build the `fusch`
+    executable, which uses the two static libraries built in the two folders `libpng-1.2.50`
+    and `fusch_lib`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add the fourth `Android.mk` file under the `jni` folder to include the `Android.mk`
+    files under its subfolders.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Build the application and you will see a binary file, `fusch`, under the `libs/armeabi`
+    folder. We can put this binary into a rooted Android device or an emulator with
+    the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note that we will not be able to copy and execute the binary on a non-rooted
+    Android device because we cannot get the permission to execute.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Start the first command line on the console. We can grant the execution permission
+    to the binary and execute it with the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This will print out the help message of the program.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Start the second command-line shell. Push the test PNG file `cookbook_ch9_test.png`
+    (available under the `assets` folder of the sample project''s source code) to
+    the testing device or emulator with the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Get back to the first command-line shell and execute the `fusch` program again
+    with the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The program will take a while to resize the input image from 800 x 600 to 600
+    x 600\. Once it is finished, we can get the processed image with the following
+    command at the second command-line shell:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The following screenshot shows the original image on the left and the processed
+    image on the right:![How to do it...](img/1505_09_12.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The sample project demonstrates how to port the `fusch` program as a command-line
+    executable to Android. We describe the sources to the Android NDK build system
+    in the `Android.mk` file and the NDK build system handles the rest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The steps to port a command-line executable are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Figure out the library dependencies. In our sample program, `fusch` depends
+    on `libseamcarv` (in the `fusch_lib` folder) and `libpng`, and `libpng` subsequently
+    depends on `zlib`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If a library is not available on the Android system, port it as a static library
+    module. This is the case for `libseamcarv` and `libpng` in our sample application.
+    But as `zlib` is available on Android, we simply need to link to it.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Port the executable as a separate module and link it to the library modules.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Understanding the Android.mk files
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We have covered most of the `Android.mk` variables and macros in [Chapter 8](ch08.html
+    "Chapter 8. Porting and Using the Existing Libraries with Android NDK"), *Porting
+    and Using Existing Libraries with Android NDK*. We will introduce two more predefined
+    variables here. You can also refer to the Android NDK file `docs/ANDROID-MK.html`
+    for information on more macros and variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`LOCAL_CFLAGS`: A module description variable. This allows us to specify additional
+    compiler options or macro definitions for building C and C++ source files. Another
+    variable that serves a similar purpose is `LOCAL_CPPFLAGS`, but for C++ source
+    files only. In our sample project, we passed `-std=c99` to the compiler when building
+    `libseamcarv` and `fusch`. This asks the compiler to accept ISO C99 C language
+    standard syntax. Failing to specify the flag will result in compilation errors
+    at the time of building.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It is also possible to specify the include paths with `LOCAL_CFLAGS += I<include
+    path>`. However, it is recommended that we use `LOCAL_C_INCLUDES` because the
+    `LOCAL_C_INCLUDES` path will also be used for `ndk-gdb` native debugging.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`BUILD_EXECUTABLE`: A GNU make variable. It points to a build script that collects
+    all information about the executable that we want to build and determines how
+    to build it. It is similar to `BUILD_SHARED_LIBRARY` and `BUILD_STATIC_LIBRARY`
+    except that it is for executables. It is used when building `fusch` in our sample
+    project.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With this explanation and the knowledge we acquired in [Chapter 8](ch08.html
+    "Chapter 8. Porting and Using the Existing Libraries with Android NDK"), *Porting
+    and Using Existing Libraries with Android NDK*, it is now fairly easy to understand
+    the four `Android.mk` files used in our sample application. We ported `libpng`
+    and `libseamcarv` as two static library modules. We export the dependent libraries
+    (with `LOCAL_EXPORT_LDLIBS`) and header files (with `LOCAL_EXPORT_C_INCLUDES`),
+    so they are automatically included when using the module. When porting `libpng`,
+    we also link to the `zlib` library (with `LOCAL_LDLIBS`) available on the Android
+    system. Finally, we port the `fusch` program by referring to the two library modules
+    (with `LOCAL_STATIC_LIBRARIES`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting a command-line executable to Android with an NDK standalone compiler
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipe covered how to port a command-line executable to Android
+    with an NDK build system. This recipe describes how to do it by using the Android
+    NDK toolchain as a standalone compiler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It is recommended that you read the *Porting a library with its existing build
+    system* recipe in [Chapter 8](ch08.html "Chapter 8. Porting and Using the Existing
+    Libraries with Android NDK"), *Porting and Using Existing Libraries with Android
+    NDK*, before continuing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps describe how to port the `fusch` program to Android by
+    using the NDK toolchain directly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named **PortingExecutableBuildSystem** with native
+    support. Set the package name as `cookbook.chapter9.portingexecutablebuildsystem`.
+    Refer to the *Loading native libraries and registering native methods* recipe
+    of [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native Interface*,
+    if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remove the existing content under the `jni` folder of the project.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Download the source code of the `fusch` library and the command-line application
+    from [http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html).
+    Extract the archive files and put them into the `jni/fusch` and `jni/fusch_lib`
+    folders respectively.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Download `libpng 1.2.50` from [http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/](http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/)
+    and extract the files to the `jni/libpng-1.2.50` folder. The latest version of
+    `libpng` won't work because the interface has changed. Replace the `config.guess`
+    script under `libpng-1.2.50` with the one at [http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.guess](http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.guess)
+    and `config.sub` with the script at [http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.sub](http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.sub).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add a `build_android.sh` file under the `jni/libpng-1.2.50` folder to build
+    `libpng`. The file has the following content:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a `build_android.sh` file under the `jni/fusch_lib` folder to build the
+    library `libseamcarv`. The file content is as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add the third `build_android.sh` file under the `jni/fusch` folder to build
+    the `fusch` executable, which uses the two static libraries built at the two folders
+    `libpng-1.2.50` and `fusch_lib`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build the two libraries `libpng` and `libseamcarv` and the `fusch` executable
+    by executing the `build_android.sh` script in the three subfolders `libpng-1.2.50`,
+    `fusch_lib`, and `fusch`. We shall find `libpng.a` under the `libpng-1.2.50/lib`
+    folder, `libseamcarv.a` under the `fusch_lib` folder, and the `fusch` executable
+    under the `fusch` folder.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We can put the binary file `fusch` to a rooted Android device or an emulator
+    with the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note that we will not be able to copy and execute the binary on a non-rooted
+    Android device because we cannot get the permission.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Start the first command-line shell. We can grant the execution permission to
+    the binary and execute it with the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This will print out the help message of the program.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Start the second command-line shell. Push the test PNG file `cookbook_ch9_test.png`
+    (available under the `assets` folder of the sample project''s source code) to
+    the testing device or emulator with the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Get back to the first command-line shell and execute the `fusch` program again
+    with the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The program will take a while to resize the input image from 800 x 600 to 800
+    x 400\. Once it is finished, we can get the processed image with the following
+    command at the second command-line shell:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The following figure shows the original image on the left and the processed
+    image on the right:![How to do it...](img/1505_09_13.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The sample project shows how to port a command-line executable to Android by
+    using the NDK toolchain as a standalone compiler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The steps to port the executable are similar to those in the previous recipe
+    where we used the Android NDK build system. The key here is to pass proper options
+    to the standalone compiler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting libpng
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`libpng` comes with its own build scripts. We can get a list of options to
+    configure the building process with the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: The compiler command, compiler flags, and linker flags can be configured with
+    the environment variables `CC`, `CFLAGS`, and `LDFLAGS` respectively. In the `build_android.sh`
+    script under the `libpng-1.2.50` folder, we set these variables to use the NDK
+    compiler to build for the ARM architecture. For a detailed explanation of how
+    to port a library, we can refer to the *Porting a library with its existing build
+    system using Android NDK toolchain* recipe in [Chapter 8](ch08.html "Chapter 8. Porting
+    and Using the Existing Libraries with Android NDK"), *Porting a Library with its
+    Existing Build System*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will now cover a few compilation options. Since the Android NDK toolchain
+    is based on GCC, we can refer to [http://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html](http://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html)
+    for a detailed explanation of each option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`-fpic`: It generates position-independent code suitable for building a shared
+    library.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-ffunction-sections`: This option asks the linker to perform optimizations
+    to improve the locality of reference in the code.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-funwind-tables`: It generates static data for unwinding the call stack.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-D__ARM_ARCH_5__``, -D__ARM_ARCH_5T``, -D__ARM_ARCH_5E__``, -D__ARM_ARCH_5TE`,`-DANDROID`
+    defines `__ARM_ARCH_5__`, `__ARM_ARCH_5T`, `__ARM_ARCH_5E__`, `__ARM_ARCH_5TE`,
+    and `ANDROID` as macro, with definition equal to `1`. For example, `-DANDROID`
+    is equivalent to `-D ANDROID=1`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-Wno-psabi`: It suppresses the warning message about `va_list` and so on.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-march=armv5te`: It specifies the target ARM architecture as `ARMv5te`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-mtune=xscale`: It tunes the performance of the code as it will be running
+    on the xscale processor. Note that xscale is a processor name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-msoft-float`: It uses software floating point functions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-mthumb`: It generates code using the Thumb instruction set.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-Os`: It provides optimization for size.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-fomit-frame-pointer`: It helps avoid saving frame pointers in registers if
+    possible.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-fno-strict-aliasing`: No strict aliasing rules can be applied. This prevents
+    the compiler from unwanted optimizations.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-finline-limit=64`: It sets the limit size of functions that can be inlined
+    as `64` pseudo instructions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-std=c99`: It accepts `c99` standard syntax.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When the build executes successfully, we can find the `libpng.a` static library
+    under the `libpng-1.2.50/lib` folder and the header files under the `libpng-1.2.50/include`
+    folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Android NDK build system essentially figures out the proper compilation
+    options for us and invokes the cross compiler for us. Therefore, we can learn
+    the options to pass to the compiler from the NDK build system output. For example,
+    we can invoke the command `ndk-build -B V=1` or `ndk-build -B -n` in the previous
+    recipe to see how the NDK build system handles the building of `libpng`, `libseamcarv`,
+    and `fusch`, and apply similar options in this recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting libseamcarv
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`libseamcarv` comes with a Makefile but no configure file. We can either modify
+    the Makefile or write a build script from scratch. Since the library only contains
+    a few files, we will write the build script directly. There are two steps to be
+    followed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compile all source files to object files. This is done by passing the `"-c`"
+    option at compilation.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Archive the object files into a static library. This step is done with the archiver
+    `arm-linux-androideabi-ar` from the NDK toolchain.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As we have explained in [Chapter 8](ch08.html "Chapter 8. Porting and Using
+    the Existing Libraries with Android NDK"), *Porting and Using Existing Libraries
+    with Android NDK*, a static library is simply an archive of object files, which
+    can be created by the `archiver` program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Porting fusch
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We need to link to the two libraries we built, namely `libpng` and `libseamcarv`.
+    This is done by passing the following options to the linker:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: This "`-L`" option adds `fusch_lib` and `libpng-1.2.50/lib` to the library's
+    search path and "`-l`" tells the linker to link to the `libpng` and `libseamcarv`
+    libraries. The build script will output a binary file named `fusch` under the
+    `fusch` folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `fusch` program is fairly simple. Therefore, we can use either the Android
+    NDK build system or a standalone compiler to port it. If an application has more
+    dependencies, it can be difficult to describe everything in `Android.mk` files.
+    Therefore, it is helpful that we can use the NDK toolchain as a standalone compiler
+    and make use of a library's existing build scripts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding GUI to a ported Android app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous two recipes demonstrate how to port a command-line executable to
+    Android. Needless to say, the biggest disadvantage of such a method is that it
+    cannot be executed on a non-rooted Android device. This recipe discusses how to
+    address the issue by adding a GUI when porting an application to Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps describe how to add a simple UI to the ported app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `PortingExecutableAUI` with native support.
+    Set the package name as `cookbook.chapter9.portingexecutableaui`. Refer to the
+    *Loading native libraries and registering native methods* recipe of [Chapter 2](ch02.html
+    "Chapter 2. Java Native Interface"), *Java Native Interface*, if you want more
+    detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Follow steps 2 to 8 of the *Porting a command line executable to Android with
+    NDK build system* recipe of this chapter.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add a `mylog.h` file under the `jni/fusch` folder. Add the following lines
+    to the `jni/fusch/fusch.c` file at the beginning of the main method, then remove
+    the original main method signature line. The `naMain` method accepts a command
+    from the Java code instead of the command-line shell. The arguments should be
+    separated by a space:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following lines before the `return` statement of the main method to
+    release the native string:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Update the `Android.mk` file under `jni/fusch` as follows. The updated part
+    is highlighted:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add the `MainActivity.java` file under the `cookbook.chapter9.portingexecutableaui`
+    package. The Java code sets up the GUI, loads the shared library `libfusch.so`,
+    and calls the native method `naMain`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add an `activity_main.xml` file under the `res/layout` folder to describe the
+    GUI.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `AndroidManifest.xml` file, add the following line before `<application>...</application>`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build and run the Android app. You should be able to see a GUI similar to the
+    following screenshot:![How to do it...](img/1505_09_04.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We can press either the **Width** or **Height** button to process the default
+    image. Alternatively, we can load another `.png` image and process it. Once we
+    click on either **Width** or **Height**, the GUI will become unresponsive and
+    we will have to wait for the processing to finish. If the famous **Application
+    Not Responding** (**ANR**) dialog box pops out, simply click on **Wait**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When the processing finishes, the processed image will load and its dimensions
+    will be displayed. The screenshot on the left shows the result for hitting the
+    **Width** button, while the right one indicates the result for **Height** processing.
+    Note that the images are scaled to fit into the display:![How to do it...](img/1505_09_14.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The example demonstrates how to add a GUI for the `fusch` program that we ported
+    to Android. The `fusch` source code is modified for the native code to interface
+    with the GUI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In general, the steps can be followed to add a GUI to a command-line executable
+    ported to Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Replace the main method with a native method. In our sample application, we
+    replaced main with `naMain`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Parse the input argument of the native method for command options instead of
+    reading them from the command line. In our sample application, we parsed the third
+    input argument `pCmdStr` for `fusch` command options. This allows the command
+    to be constructed at the Java code and pass it easily to the native code .
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Register the native method with the Java class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the Java code, the GUI can take various argument values specified by user,
+    construct the command, and pass it to the native method for processing.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note that in our modified native code, we didn't remove the original code. We
+    used the C preprocessor macro `ANDROID_BUILD` to control which part of the source
+    code should be included for building Android shared libraries. We pass `-DANDROID_BUILD`
+    to the compiler in the `Android.mk` file (under the `fusch` folder), in order
+    to enable the code specific for Android. This approach allows us to easily add
+    support for Android, without breaking the code for other platforms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are two serious limitations for the sample application in this recipe.
+    Firstly, the main UI thread handles the heavy image processing, which causes the
+    application to become unresponsive. Secondly, there is no progress update when
+    the image processing is going on. The GUI is updated only when the image processing
+    is done. We will address these issues in the next recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using background threads at porting
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipe adds a GUI to the ported `fusch` program with two issues
+    left behind—unresponsiveness of the GUI and no progress update when processing
+    is going on. This recipe discusses how to use a background thread to handle the
+    processing and report the progress to the main UI thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The sample program in this recipe is based on the program we developed in previous
+    recipes of this chapter. You should go through them first. In addition, readers
+    are recommended to reading the following recipes in [Chapter 2](ch02.html "Chapter 2. Java
+    Native Interface"), *Java Native Interface*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Calling static and instance methods from the native code*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Caching jfieldID, jmethodID, and reference data to improve performance*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps describe how to use a background thread for heavy processing
+    and report progress update to the Java UI thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Copy the `PortingExecutableAUI` project that we developed in the previous recipe
+    to a folder named `PortingExecutableAUIAsync`. Open the project in the folder
+    at the Eclipse IDE.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add the following code to `MainActivity.java`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`handler`: An instance of the `handler` class handles the messages sent from
+    background threads. It will update the GUI with the content of the message.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`ImageProcRunnable`: A private class of `MainActivity` implements the `Runnable`
+    interface, which accepts the command string, calls the native method `naMain,`
+    and sends the result message to the handler at the Java UI thread. An instance
+    of this class will be invoked from a background thread:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`updateProgress`: This is a method to be called from native code through JNI.
+    It sends a message to the handler at the Java UI thread:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Update the `fusch.c` source code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We cache the `JavaVM` reference in the `naMain` method, and get a global reference
+    for the `MainAcitvity` object reference `pMainActObj`. The `fusch` program uses
+    more than one background thread. We will need these references to call Java methods
+    from those background threads:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following lines before the `return` statement of the `main` method
+    to release the native string and the cached JavaVM reference to avoid memory leaks:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To update the GUI, we send out a message to the Java code. We need to update
+    the code used to produce output messages at various parts of the source file.
+    The following is an example of this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `seam_progress` and `carve_progress` functions are executed by native threads
+    started at `naMain`. We used the cached `JavaVM` reference `cachedJvm` and `MainActivity`
+    object reference `cachedMainActObj` to get `jmethodID` of the `updateProgress`
+    method defined at `MainActivity.java`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We can then call the `updateProgress` method from `seam_progress` and `carve_progress`.
+    This is shown in the code section extracted from the `carve_progress` function,
+    as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build and run the Android app. You should be able to see a GUI similar to the
+    following screenshot:![How to do it...](img/1505_09_07.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We can hit the **Width** or **Height** button to start the processing. The left
+    and middle screenshots show the processing in progress, while the right screenshot
+    shows the results:![How to do it...](img/1505_09_15.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The preceding example shows how to use a background thread to handle heavy processing,
+    so that the GUI can remain responsive to user inputs. While the background thread
+    is processing the images, it also sends progress updates to the UI thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The details of the `fusch` program are actually a bit more complicated than
+    the core idea described, because it uses heavy concurrent processing. This is
+    illustrated in the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/1505OT_09_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Once we click on either the **Width** or **Height** button in `MainActivity.java`,
+    a new Java thread (**Background Thread 1**) will be created with an instance of
+    the `ImageProcRunnable`. This thread will invoke the `naMain` native method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multiple native threads are created with the `pthread_create` function in the
+    `naMain` method. Two of them, indicated as **Background Thread 2** and **Background
+    Thread 3**, will be running `seam_progress` and `carve_progress` respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We send messages of the `MSG_TYPE_PROG` type to the handler bound to the UI
+    thread in all the three background threads. The handler will process the messages
+    and update the GUI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sending messages from the native code
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Sending messages to a handler in Java is straightforward; we simply call the
+    `handler.sendMessage()` method. But things can be a bit troublesome in the native
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We defined an `updateProgress` method in `MainActivity.java`, which accepts
+    a string and an integer, constructs a message, and sends it to the handler. The
+    native code invokes this Java method through JNI in order to send messages. There
+    are two situations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Native code at Java thread**: This is the case for **Background Thread 1**
+    in the previous diagram. The thread is created at Java code, and it calls the
+    `naMain` native method. At `naMain`, we retrieve `jmethodID` for `updateProgress`,
+    and call the `updateProgress` method through the JNI function `CallVoidMethod`.
+    You can refer back to the *Calling static and instance methods from native code*
+    recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
+    Interface* for more information.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Native code at native thread**: This is what happens at **Background Thread
+    2** and **Background Thread 3**. These threads are created at `naMain` by the
+    `pthread_create` function. We must call `AttachCurrentThread` to attach the native
+    threads to a Java VM before we can make any JNI calls. Note that we used the cached
+    `MainActivity` object reference `cachedMainActObj` for calling the `updateProgress`
+    method. For more details about caching at JNI, we can refer to the *Caching jfieldID,
+    jmethodID, and reference data to improve performance* recipe in [Chapter 2](ch02.html
+    "Chapter 2. Java Native Interface"), *Java Native Interface*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The GUI we have created doesn't look all that good, but it is simple and enough
+    to illustrate how to use a background thread for heavy processing and to send
+    out GUI update messages from the native code.
+  prefs: []
+  type: TYPE_NORMAL

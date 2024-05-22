@@ -1,0 +1,1493 @@
+- en: Chapter 5. Android Native Application API
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a native activity with the native_activity.h interface
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a native activity with the Android native app glue
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Managing native windows at Android NDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Detecting and handling input events at Android NDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Accessing sensors at Android NDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Managing assets at Android NDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Thanks to the Android native application APIs, it is possible to write an Android
+    application with pure native code since Android API level 9 (Android 2.3, Gingerbread).
+    That is, not a single line of Java code is needed. The Android native APIs are
+    defined in several header files under the `<NDK root>/platforms/android-<API level>/arch-arm/usr/include/android/`
+    folder. Based on the features provided by the functions defined in these header
+    files, they can be grouped as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Activity lifecycle management:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`native_activity.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`looper.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Windows management:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`rect.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`window.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`native_window.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`native_window_jni.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Input (including key and motion events) and sensor events:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`input.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`keycodes.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sensor.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Assets, configuration, and storage management:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`configuration.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`asset_manager.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`asset_manager_jni.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`storage_manager.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`obb.h`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In addition, Android NDK also provides a static library named **native app glue**
+    to help create and manage native activities. The source code of this library can
+    be found under the `sources/android/native_app_glue/` directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will first introduce the creation of a native activity with
+    the simple callback model provided by `native_acitivity.h`, and the more complicated
+    but flexible two-threaded model enabled by the native app glue library. We will
+    then discuss window management at Android NDK, where we will draw something on
+    the screen from the native code. Input events handling and sensor accessing are
+    introduced next. Lastly, we will introduce asset management, which manages the
+    files under the `assets` folder of our project. Note that the APIs covered in
+    this chapter can be used to get rid of the Java code completely, but we don't
+    have to do so. The *Managing assets at Android NDK* recipe provides an example
+    of using the asset management API in a mixed-code Android project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we start, it is important to keep in mind that although no Java code
+    is needed in a native activity, the Android application still runs on Dalvik VM,
+    and a lot of Android platform features are accessed through JNI. The Android native
+    application API just hides the Java world for us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a native activity with the native_activity.h interface
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Android native application API allows us to create a native activity, which
+    makes writing Android apps in pure native code possible. This recipe introduces
+    how to write a simple Android application with pure C/C++ code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Readers are expected to have basic understanding of how to invoke JNI functions.
+    [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native Interface*,
+    covers JNI in detail and readers are recommended to read the chapter or at least
+    the following recipes before going through the current one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Manipulating strings in Android NDK*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Calling instance and static methods in NDK*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps to create a simple Android NDK application without a single
+    line of Java code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `NativeActivityOne`. Set the package name
+    as `cookbook.chapter5.nativeactivityone`. Please refer to the *Loading native
+    libraries and registering native methods* recipe of [Chapter 2](ch02.html "Chapter 2. Java
+    Native Interface"), *Java Native Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the `NativeActivityOne` project, select **Android Tools** | **Add
+    Native Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Change the `AndroidManifest.xml` file as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We should ensure that the following are set correctly in the preceding file:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The activity name must be set to `android.app.NativeActivity`.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The value of the `android.app.lib_name` metadata must be set to the native module
+    name without the `lib` prefix and `.so` suffix.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:hasCode` needs to be set to `true`, which indicates that the application
+    contains code. Note that the documentation in `<NDK root>/docs/NATIVE-ACTIVITY.HTML`
+    gives an example of the `AndroidManifest.xml` file with `android:hasCode` set
+    to `false`, which will not allow the application to start.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Add two files named `NativeActivityOne.cpp` and `mylog.h` under the `jni` folder.
+    The `ANativeActivity_onCreate` method should be implemented in `NativeActivityOne.cpp`.
+    The following is an example of the implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `Android.mk` file under the `jni` folder:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Build the Android application and run it on an emulator or a device. Start
+    a terminal and display the logcat output using the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Alternatively, you can use the logcat view at Eclipse to see the logcat output.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'When the application starts, you should be able to see the following logcat
+    output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/1505_05_01.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As shown in the screenshot, a few Android activity lifecycle callback functions
+    are executed. We can manipulate the phone to cause other callbacks being executed.
+    For example, long pressing the home button and then pressing the back button will
+    cause the `onWindowFocusChanged` callback to be executed.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In our example, we created a simple, "pure" native application to output logs
+    when the Android framework calls into the callback functions defined by us. The
+    "pure" native application is not really pure native. Although we did not write
+    a single line of Java code, the Android framework still runs some Java code on
+    Dalvik VM.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android framework provides an `android.app.NativeActivity.java` class to help
+    us create a "native" activity. In a typical Java activity, we extend `android.app.Activity`
+    and overwrite the activity lifecycle methods. `NativeActivity` is also a subclass
+    of `android.app.Activity` and does similar things. At the start of a native activity,
+    `NativeActivity.java` will call `ANativeActivity_onCreate`, which is declared
+    in `native_activity.h` and implemented by us. In the `ANativeActivity_onCreate`
+    method, we can register our callback methods to handle activity lifecycle events
+    and user inputs. At runtime, `NativeActivity` will invoke these native callback
+    methods when the corresponding events occurred.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a word, `NativeActivity` is a wrapper that hides the managed Android Java
+    world for our native code, and exposes the native interfaces defined in `native_activity.h`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**The ANativeActivity data structure**: Every callback method in the native
+    code accepts an instance of the `ANativeActivity` structure. Android NDK defines
+    the `ANativeActivity` data structure in `native_acitivity.h` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The various attributes of the preceding code are explained as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`callbacks`: It is a data structure that defines all the callbacks that the
+    Android framework will invoke with the main UI thread.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`vm`: It is the application process'' global Java VM handle. It is used in
+    some JNI functions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`env`: It is a `JNIEnv` interface pointer. `JNIEnv` is used through local storage
+    data (refer to the *Manipulating strings in Android NDK* recipe in [Chapter 2](ch02.html
+    "Chapter 2. Java Native Interface"), *Java Native Interface*, for more details),
+    so this field is only accessible through the main UI thread.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`clazz`: It is a reference to the `android.app.NativeActivity` object created
+    by the Android framework. It can be used to access fields and methods in the `android.app.NativeActivity`
+    Java class. In our code, we accessed the `toString` method of `android.app.NativeActivity`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`internalDataPath`: It is the internal data directory path for the application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`externalDataPath`: It is the external data directory path for the application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`internalDataPath` and `externalDataPath` are `NULL` at Android 2.3.x. This
+    is a known bug and has been fixed since Android 3.0\. If we are targeting devices
+    lower than Android 3.0, then we need to find other ways to get the internal and
+    external data directories.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`sdkVersion`: It is the Android platform''s SDK version code. Note that this
+    refers to the version of the device/emulator that runs the app, not the SDK version
+    used in our development.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`instance`: It is not used by the framework. We can use it to store user-defined
+    data and pass it around.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assetManager`: It is the a pointer to the app''s instance of the asset manager.
+    We will need it to access `assets` data. We will discuss it in more detail in
+    the *Managing assets at Android NDK* recipe of this chapter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `native_activity.h` interface provides a simple single thread callback mechanism,
+    which allows us to write an activity without Java code. However, this single thread
+    approach infers that we must quickly return from our native callback methods.
+    Otherwise, the application will become unresponsive to user actions (for example,
+    when we touch the screen or press the **Menu** button, the app does not respond
+    because the GUI thread is busy executing the callback function).
+  prefs: []
+  type: TYPE_NORMAL
+- en: A way to solve this issue is to use multiple threads. For example, many games
+    take a few seconds to load. We will need to offload the loading to a background
+    thread, so that the UI can display the loading progress and be responsive to user
+    inputs. Android NDK comes with a static library named `android_native_app_glue`
+    to help us in handling such cases. The details of this library are covered in
+    the *Creating a native activity with the Android native app glue* recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A similar problem exists at Java activity. For example, if we write a Java activity
+    that searches the entire device for pictures at `onCreate`, the application will
+    become unresponsive. We can use `AsyncTask` to search and load pictures in the
+    background, and let the main UI thread display a progress bar and respond to user
+    inputs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a native activity with the Android native app glue
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipe described how the interface defined in `native_activity.h`
+    allows us to create native activity. However, all the callbacks defined are invoked
+    with the main UI thread, which means we cannot do heavy processing in the callbacks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android SDK provides `AsyncTask`, `Handler`, `Runnable`, `Thread`, and so on,
+    to help us handle things in the background and communicate with the main UI thread.
+    Android NDK provides a static library named `android_native_app_glue` to help
+    us execute callback functions and handle user inputs in a separate thread. This
+    recipe will discuss the `android_native_app_glue` library in detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `android_native_app_glue` library is built on top of the `native_activity.h`
+    interface. Therefore, readers are recommended to read the *Creating a native activity
+    with the native_activity.h interface* recipe before going through this one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create a simple Android NDK application based on the `android_native_app_glue`
+    library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `NativeActivityTwo`. Set the package name
+    as `cookbook.chapter5.nativeactivitytwo`. Please refer to the *Loading native
+    libraries and registering native methods* recipe of [Chapter 2](ch02.html "Chapter 2. Java
+    Native Interface"), *Java Native Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the `NativeActivityTwo` project, select **Android Tools** | **Add
+    Native Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Change the `AndroidManifest.xml` file as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add two files named `NativeActivityTwo.cpp` and `mylog.h` under the `jni` folder.
+    `NativeActivityTwo.cpp` is shown as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `Android.mk` file under the `jni` folder:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Build the Android application and run it on an emulator or device. Start a
+    terminal and display the logcat output by using the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'When the application starts, you should be able to see the following logcat
+    output and the device screen will shows a black screen:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/1505_05_02.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'On pressing the back button, the following output will be shown:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/1505_05_03.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe demonstrates how the `android_native_app_glue` library is used to
+    create a native activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following steps should be followed to use the `android_native_app_glue`
+    library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implement a function named `android_main`. This function should implement an
+    event loop, which will poll for events continuously. This method will run in the
+    background thread created by the library.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Two event queues are attached to the background thread by default, including
+    the activity lifecycle event queue and the input event queue. When polling events
+    using the looper created by the library, you can identify where the event is coming
+    from, by checking the returned identifier (either `LOOPER_ID_MAIN` or `LOOPER_ID_INPUT`).
+    It is also possible to attach additional event queues to the background thread.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When an event is returned, the data pointer will point to an `android_poll_source`
+    data structure. We can call the process function of this structure. The process
+    is a function pointer, which points to `android_app->onAppCmd` for activity lifecycle
+    events, and `android_app->onInputEvent` for input events. We can provide our own
+    processing functions and direct the corresponding function pointers to these functions.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In our example, we implement a simple function named `handle_activity_lifecycle_events`
+    and point the `android_app->onAppCmd` function pointer to it. This function simply
+    prints the `cmd` value and the user data passed along with the `android_app` data
+    structure. `cmd` is defined in `android_native_app_glue.h` as an `enum`. For example,
+    when the app starts, the `cmd` values are `10`, `11`, `0`, `1`, and `6`, which
+    correspond to `APP_CMD_START`, `APP_CMD_RESUME`, `APP_CMD_INPUT_CHANGED`, `APP_CMD_INIT_WINDOW`,
+    and `APP_CMD_GAINED_FOCUS` respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**android_native_app_glue Library Internals**: The source code of the `android_native_app_glue`
+    library can be found under the `sources/android/native_app_glue` folder of Android
+    NDK. It only consists of two files, namely `android_native_app_glue.c` and `android_native_app_glue.h`.
+    Let''s first describe the flow of the code and then discuss some important aspects
+    in detail.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Since the source code for `native_app_glue` is provided, we can modify it if
+    necessary, although in most cases it won't be necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`android_native_app_glue` is built on top of the `native_activity.h` interface.
+    As shown in the following code (extracted from `sources/android/native_app_glue/android_native_app_glue.c`).
+    It implements the `ANativeActivity_onCreate` function, where it registers the
+    callback functions and calls the `android_app_create` function. Note that the
+    returned `android_app` instance is pointed by the `instance` field of the native
+    activity, which can be passed to various callback functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `android_app_create` function (shown in the following code snippet) initializes
+    an instance of the `android_app` data structure, which is defined in `android_native_app_glue.h`.
+    This function creates a unidirectional pipe for inter-thread communication. After
+    that, it spawns a new thread (let''s call it **background thread** thereafter)
+    to run the `android_app_entry` function with the initialized `android_app` data
+    as the input argument. The main thread will wait for the background thread to
+    start and then return:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The background thread starts with the `android_app_entry` function (as shown
+    in the following code snippet), where a looper is created. Two event queues will
+    be attached to the looper. The activity lifecycle events queue is attached to
+    the `android_app_entry` function. When the activity''s input queue is created,
+    the input queue is attached (to the `android_app_pre_exec_cmd` function of `android_native_app_glue.c`).
+    After attaching the activity lifecycle event queue, the background thread signals
+    the main thread it is already running. It then calls a function named `android_main`
+    with the `android_app` data. `android_main` is the function we need to implement,
+    as shown in our sample code. It must run in a loop until the activity exits:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following diagram indicates how the main and background thread work together
+    to create the multi-threaded native activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505OT_05_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We use the activity lifecycle event queue as an example. The main thread invokes
+    the callback functions, which simply writes to the write end of the pipe, while
+    true loop implemented in the `android_main` function will poll for events. Once
+    an event is detected, the function calls the event handler, which reads the exact
+    command from the read end of the pipe and handles it. The `android_native_app_glue`
+    library implements all the `main thread` stuff and part of the `background thread`
+    stuff for us. We only need to supply the polling loop and the event handler as
+    illustrated in our sample code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Pipe**: The main thread creates a unidirectional pipe in the `android_app_create`
+    function by calling the `pipe` method. This method accepts an array of two integers.
+    After the function is returned, the first integer will be set as the file descriptor
+    referring to the read end of the pipe, while the second integer will be set as
+    the file descriptor referring to the write end of the pipe.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A pipe is usually used for **Inter-process Communication** (**IPC**), but here
+    it is used for communication between the main UI thread and the background thread
+    created at `android_app_entry`. When an activity lifecycle event occurs, the main
+    thread will execute the corresponding callback function registered at `ANativeActivity_onCreate`.
+    The callback function simply writes a command to the write end of the pipe and
+    then waits for a signal from the background thread. The background thread is supposed
+    to poll for events continuously and once it detects a lifecycle event, it will
+    read the exact event from the read end of the pipe, signal the main thread to
+    unblock and handle the events. Because the signal is sent right after receiving
+    the command and before actual processing of the events, the main thread can return
+    from the callback function quickly without worrying about the possible long processing
+    of the events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Different operating systems have different implementations for the pipe. The
+    pipe implemented by Android system is "half-duplex", where communication is unidirectional.
+    That is, one file descriptor can only write, and the other file descriptor can
+    only read. Pipes in some operating system is "full-duplex", where the two file
+    descriptors can both read and write.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Looper** is an event tracking facility, which allows us to attach one or
+    more event queues for an event loop of a thread. Each event queue has an associated
+    file descriptor. An **event** is data available on a file descriptor. In order
+    to use a looper, we need to include the `android/looper.h` header file.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The library attaches two event queues for the event loop to be created by us
+    in the background thread, including the activity lifecycle event queue and the
+    input event queue. The following steps should be performed in order to use a looper:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Create or obtain a looper associated with the current thread**: This is done
+    by the `ALooper_prepare` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This function prepares a looper associated with the calling thread and returns
+    it. If the looper doesn't exist, it creates one, associates it with the thread,
+    and returns it.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Attach an event queue**: This is done by `ALooper_addFd`. The function has
+    the following prototype:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The function can be used in two ways. Firstly, if `callback` is set to `NULL`,
+    the `ident` set will be returned by `ALooper_pollOnce` and `ALooper_pollAll`.
+    Secondly, if `callback` is non-NULL, then the callback function will be executed
+    and `ident` is ignored. The `android_native_app_glue` library uses the first approach
+    to attach a new event queue to the looper. The input argument `fd` indicates the
+    file descriptor associated with the event queue. `ident` is the identifier for
+    the events from the event queue, which can be used to classify the event. The
+    identifier must be bigger than zero when `callback` is set to `NULL`. `callback`
+    is set to `NULL` in the library source code, and `data` points to the private
+    data that will be returned along with the identifier at polling.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: In the library, this function is called to attach the activity lifecycle event
+    queue to the background thread. The input event queue is attached using the input
+    queue specific function `AInputQueue_attachLooper`, which we will discuss in the
+    *Detecting and handling input events at NDK* recipe.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Poll for events**: This can be done by either one of the following two functions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: These two methods are equivalent when `callback` is set to `NULL` in `ALooper_addFd`.
+    They have the same input arguments. `timeoutMillis` specifies the timeout for
+    polling. If it is set to zero, then the functions return immediately; if it is
+    set to negative, they will wait indefinitely until an event occurs. The functions
+    return the identifier (greater than zero) when an event occurs from any input
+    queues attached to the looper. In this case, `outFd`, `outEvents`, and `outData`
+    will be set to the file descriptor, poll events, and data associated with the
+    event. Otherwise, they will be set to `NULL`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Detach event queues**: This is done by the following function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: It accepts the looper and file descriptor associated with the event queue, and
+    detaches the queue from the looper.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Managing native windows at Android NDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipes in this chapter provided simple examples with the logcat
+    output only. This recipe will discuss how to manage the native window at Android
+    NDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Readers are recommended to read the following recipes before going through
+    this one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Creating a native activity with the native_activity.h interface*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Creating a native activity with the Android native app glue*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Also recall that native window management has been introduced briefly in the
+    *Displaying graphics with EGL* recipe in [Chapter 4](ch04.html "Chapter 4. Android
+    NDK OpenGL ES API"), *Android NDK OpenGL ES API*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create the sample application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `NativeWindowManagement`. Set the package
+    name as `cookbook.chapter5.nativewindowmanagement`. Please refer to the *Loading
+    native libraries and registering native methods* recipe of [Chapter 2](ch02.html
+    "Chapter 2. Java Native Interface"), *Java Native Interface*, if you want more
+    detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the `NativeWindowManagement` project, select **Android Tools**
+    | **Add Native Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Update `AndroidManifest.xml`. Please refer to previous recipe or the downloaded
+    code for details. Note that the metadata `android.app.lib_name` must have its
+    value as `NativeWindowManagement`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add two files named `NativeWindowManagement.cpp` and `mylog.h` under the `jni`
+    folder. `NativeWindowManagement.cpp` is modified based on previous recipe. The
+    following code snippet shows the updated part:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add the `Android.mk` file under the `jni` folder, which is similar to the one
+    used in the previous recipe. You just need to replace the module name as `NativeWindowManagement`
+    and the source file as `NativeWindowManagement.cpp`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Build the Android application and run it on an emulator or device. Start a
+    terminal and display the logcat output by using the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'When the application starts, we will see the following logcat:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/1505_05_05.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'The device screen will display a red rectangle at the center of the screen,
+    as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/1505_05_06.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The NDK interface for native window management is defined in the `window.h`,
+    `rect.h`, `native_window_jni.h`, and `native_window.h` header files. The first
+    two simply define some constants and data structures. `native_window_jni.h` defines
+    a single function named `ANativeWindow_fromSurface`, which helps us to obtain
+    a native window from a Java surface object. We have illustrated this function
+    in the *Displaying graphics with EGL* recipe in [Chapter 4](ch04.html "Chapter 4. Android
+    NDK OpenGL ES API"), *Android NDK OpenGL ES API*. Here, we focus on the functions
+    provided in `native_window.h`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Perform the following steps to draw a square on the phone screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Set the window buffer format and size**:This is done by the `ANativeWindow_setBuffersGeometry`
+    function`:`'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This function updates the native window buffer associated with the native window
+    referred by the window input argument. The window size and format are changed
+    according to the rest of the input arguments. Three formats are defined in `native_window.h`,
+    including `WINDOW_FORMAT_RGBA_8888`, `WINDOW_FORMAT_RGBX_8888`, and `WINDOW_FORMAT_RGB_565`.
+    If the size or the format is set to `0`, then the native window's base value will
+    be used.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Lock the window''s next drawing surface**: This is done by the `ANativeWindow_lock`
+    function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: After this call is returned, the input argument `outBuffer` will refer to the
+    window buffer for drawing.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Clear the buffer**: This is optional. Sometimes we may just want to overwrite
+    a part of the window buffer. In our example, we called `memset` to set all the
+    data to `0`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Draw something to the buffer**: In our example, we first calculate the start
+    and end width and height of the rectangle, and then set the red and alpha bytes
+    of the rectangle area as `255`. This will show us a red rectangle.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Unlock the window''s drawing surface and post the new buffer to display**:
+    This is done with the `ANativeWindow_unlockAndPost` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Detecting and handling input events at Android NDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Input events are essential for user interaction in Android apps. This recipe
+    discusses how to detect and handle input events in Android NDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We will further develop the example in last recipe. Please read the *Managing
+    native windows at Android NDK* recipe before going through this one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create a sample application, which detects and handles
+    input events at the native code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `NativeInputs`. Set the package name as
+    `cookbook.chapter5.nativeinputs`. Please refer to the *Loading native libraries
+    and registering native methods* recipe of [Chapter 2](ch02.html "Chapter 2. Java
+    Native Interface"), *Java Native Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the `NativeInputs` project, select **Android Tools** | **Add
+    Native Support.**
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Update `AndroidManifest.xml`. Please refer to previous recipe or the downloaded
+    code for details. Note that the metadata `android.app.lib_name` must have a value
+    as `NativeInputs`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add two files named `NativeInputs.cpp` and `mylog.h` under the `jni` folder.
+    `NativeInputs.cpp` is modified based on the previous recipe. Let us see a part
+    of its code here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`handle_input_events`: This is the event handler method for input events. Note
+    that when a motion event with move action (`AINPUT_EVENT_TYPE_MOTION`) is detected,
+    we update `app->userData` and set `app->redrawNeeded` to `1`:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`android_main`: We update the while true loop. When `app->redrawNeeded` is
+    set, we redraw the rectangle:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add the `Android.mk` file under the `jni` folder, which is similar to previous
+    recipe. We just need to replace the module name as `NativeInputs` and the source
+    file as `NativeInputs.cpp`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Build the Android application and run it on an emulator or device. We can move
+    a figure across the screen to see the rectangle moving horizontally:![How to do
+    it…](img/1505_05_14.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe discusses input events handling with the `android_native_app_glue`
+    library at Android NDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Input event queue in android_native_app_glue**: `android_native_app_glue`
+    attaches the input event queue for us by default.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the input queue is created for an activity, the `onInputQueueCreated` callback
+    is called on the main thread, which writes `APP_CMD_INPUT_CHANGED` to the write
+    end of the pipe we described in previous recipe. The background thread will receive
+    the command and call `AInputQueue_attachLooper` the function to attach the input
+    queue to the background thread looper.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When an input event occurs, it will be handled by `process_input` (the function
+    pointer `source->process` in the while true loop we called points to `process_input`
+    if the event is an input event). Inside `process_input`, `AInputQueue_getEvent`
+    is firstly called to retrieve the event. Then, `AInputQueue_preDispatchEvent`
+    is called to send the key for pre-dispatching. This could possibly result in it
+    being consumed by the current **Input Method Editor** (**IME**) before the app.
+    Followed by this is the `android_app->onInputEvent`, which is a function pointer-pointing
+    to an event handler provided by us. If no event handler is provided by us, it's
+    set to `NULL`. After that, `AInputQueue_finishEvent` is called to indicate that
+    event handling is over.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Lastly, when the input queue is destroyed, the `onInputQueueDestroyed` callback
+    is called on the main thread, which also writes `APP_CMD_INPUT_CHANGED`. The background
+    thread will read the command and call a function named `AInputQueue_detachLooper`
+    to detach the input queue from the thread looper.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Event handler**: In the `handle_input_events` function, we first called `AInputEvent_getType`
+    to get the input event type. The `android/input.h` header file defines two input
+    event types, namely `AINPUT_EVENT_TYPE_KEY` and `AINPUT_EVENT_TYPE_MOTION`. The
+    first event type indicates that the input event is a key event, while the second
+    one indicates that it is a motion event.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We called `AKeyEvent_getAction`, `AKeyEvent_getFlags`, and `AKeyEvent_getKeyCode`
+    to get the action, flags, and key code of a key event and printed a string to
+    describe it. On the other hand, we called `AMotionEvent_getAction` and `AMotionEvent_getX`
+    to get the action and the `x` position of a motion event. Note that the `AMotionEvent_getX`
+    function requires the second input argument as the pointer index. The pointer
+    index is obtained by using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are a lot more input event functions, which can be found at `andoid/input.h`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing sensors at Android NDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Many Android devices have built-in sensors to detect and measure motion, orientation,
+    and other environmental conditions. It is possible to access sensors in Android
+    NDK. This recipe will discuss how to do it in detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The example provided in this recipe is based on the sample code in the previous
+    two recipes. Readers are recommended to read them first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Managing native windows at Android NDK*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Detecting and handling input events at Android NDK*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps develop the sample Android application, which demonstrates
+    how to access sensors from Android NDK:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `nativesensors`. Set the package name as
+    `cookbook.chapter5.nativesensors`. Please refer to the *Loading native libraries
+    and registering native methods* recipe of [Chapter 2](ch02.html "Chapter 2. Java
+    Native Interface"), *Java Native Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the `nativesensors` project, select **Android Tools** | **Add
+    Native Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Update `AndroidManifest.xml`. Please refer to previous recipe or the downloaded
+    code for details. Note that the metadata `android.app.lib_name` must have a value
+    as `nativesensors`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add two files named `nativesensors.cpp` and `mylog.h` under the `jni` folder.
+    Let's show a part of the code in `nativesensors.cpp`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`handle_activity_lifecycle_events`: This function handles activity lifecycle
+    events. We enable the sensor when the activity is in focus and disable it when
+    the activity loses its focus. This saves the battery life by avoiding reading
+    sensors when our activity is not in focus:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`android_main`: We continuously poll for events and handle the sensor events
+    identified by the `LOOPER_ID_USER` identifier:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add the `Android.mk` file under the `jni` folder, which is similar to the one
+    used in the previous recipe. We just need to replace the module name as `nativesensors`
+    and the source file as `nativesensors.cpp`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Build the Android application and run it on an emulator or device. We can shake
+    the device to see the rectangle moving horizontally:![How to do it…](img/1505_05_14.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In our example, we used the accelerometer sensor to detect phone shaking. Then,
+    based on the phone shaking speed, we move the red rectangle to one side of the
+    phone screen. Once the rectangle reaches an edge of the phone screen, it starts
+    to move to the other edge.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The example code provides a simple algorithm to determine whether a shake has
+    happened or not. More complex and accurate algorithms exist and can be implemented.
+    We can also adjust the `SHAKE_TIMEOUT` and `SHAKE_COUNT_THRESHOLD` constants to
+    fine tune the algorithm.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The important part of the example is how to access sensors. Let''s summarize
+    the steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Get a reference to the sensor manager**: This is done by using the following
+    function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '**Get the default sensor of a given type**: We can also get a list of all available
+    sensors. This is done by using the following two functions respectively:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The available types are defined in `android/sensor.h`. In our example, we print
+    all sensor names and types but only use `ASENSOR_TYPE_ACCELEROMETER`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Create a new sensor queue and attach it to the looper of the thread**: This
+    is done by using the `ASensorManager_createEventQueue` function as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The usage of this function is similar to the usagw of the `ALooper_addFd` function
+    in the *Creating a native activity with the Android native app glue* recipe and
+    `AInputQueue_attachLooper` in the *Detecting and handling input events at Android
+    NDK* recipe. In our example, we set the `ident` as `LOOPER_ID_USER`. Note that
+    we may also define a new looper ID by changing the code of `android_native_app_glue.h`
+    and setting it here.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Enable and configure the sensor**:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The first function enables the sensor referred by the sensor input argument.
+    The second function sets the delivery rate of the events, in microseconds, for
+    the sensor referred by the sensor input argument. In our example, we called these
+    two functions when the activity gained focus.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Poll for events and get the available events from the queue**: The polling
+    is done by calling `ALooper_pollOnce`, as shown in the previous recipe. If the
+    event identifier returned is `LOOPER_ID_USER`, we know that it is a sensor event
+    and we can use the following function to get it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`count` indicates the maximum number of available events we want to get. In
+    our example, we set it to `1`. It is also possible to define an array of `ASensorEvent`
+    and get multiple events at one time.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Handle sensor events**: The sensor event is represented by the `ASensorEvent`
+    data structure, which can be found at `android/sensor.h` (the exact path to the
+    file is `<Android NDK root dir>/platforms/android-<version>/arch-arm/usr/include/android/sensor.h`).
+    In our example, we accessed the acceleration readings at the x, y, and z axes,
+    and used the readings to determine if a phone shake has happened.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Disable the sensor**: After you are done accessing the sensors, you can disable
+    it with the following function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '**Destroy the sensor event queue and free all resources associated with it**:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Managing assets at Android NDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Assets provide a way for Android apps to include various types of files, including
+    text, image, audio, video, and so on. This recipe discusses how to load asset
+    files from Android NDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We will modify the example we developed in the *Mapping texture in OpenGL ES
+    1.x* recipe in [Chapter 4](ch04.html "Chapter 4. Android NDK OpenGL ES API"),
+    *Android NDK OpenGL ES API*. Readers are suggested to read through the recipe
+    or take a look at the code first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps describe how the sample application is developed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `NativeAssets`. Set the package name as
+    `cookbook.chapter5.nativeassets`. Please refer to the *Loading native libraries
+    and registering native methods* recipe of [Chapter 2](ch02.html "Chapter 2. Java
+    Native Interface"), *Java Native Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the `NativeAssets` project, select **Android Tools** | **Add
+    Native Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add three Java files, namely `MyActivity.java`, `MySurfaceView.java`, and `MyRenderer.java`
+    under the `cookbook.chapter5.nativeassets` package. The first two files are identical
+    to the corresponding files in the *Mapping texture in OpenGL ES 1.x* recipe in
+    [Chapter 4](ch04.html "Chapter 4. Android NDK OpenGL ES API"), *Android NDK OpenGL
+    ES API*. The last file is slightly changed, where the `naLoadTexture` native method
+    signature is updated as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `onSurfaceCreated` method, we called the native method by passing a
+    Java `AssetManager` instance:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Create two folders under the `jni` folder, namely `dice` and `libpng-1.5.`12\.
+    In the `libpng-1.5.12` folder, we place the source files of libpng, which can
+    be downloaded from [http://sourceforge.net/projects/libpng/files/](http://sourceforge.net/projects/libpng/files/).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the `dice` folder, we add the `Cube.cpp`, `Cube.h`, `mylog.h`, and `DiceG1.cpp`
+    files. The first three files are the same as the example in the *Mapping texture
+    in OpenGL ES 1.x* recipe in [Chapter 4](ch04.html "Chapter 4. Android NDK OpenGL
+    ES API"), *Android NDK OpenGL ES API*. The `DiceG1.cpp` file is updated by adding
+    procedures to read `.png` assets files from the `assets` folder. Let''s show a
+    part of the updated code:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`readPng`: It is the callback function used at `png_set_read_fn`. It reads
+    the data from the `asset` file:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`naLoadTexture`: It reads all the `.png` files under the `assets` top-level
+    directory and loads the data to OpenGL for texture mapping:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add an `Android.mk` file under `jni`, `jni/dice`, `and jni/libpng-1.5.12` respectively.
+    The `Android.mk` file under the `jni` top-level folder is as follows. This simply
+    instructs the Android build system to include the `Android.mk` files under each
+    sub-directory under the `jni` folder:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Android.mk` file under the `jni/libpng-1.5.12` folder is as follows. This
+    compiles `libpng` as a local static library:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Android.mk` file under the `jni/dice` folder is as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build the Android NDK application and run it on an Android device. The app will
+    display a cube textured as a dice; this is the same as what we have seen in [Chapter
+    4](ch04.html "Chapter 4. Android NDK OpenGL ES API"), *Android NDK OpenGL ES API*.![How
+    to do it…](img/1505_05_15.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In the example, we load the `.png` files from the `assets` folder and used
+    them as OpenGL textures. You can use the following steps to read `assets`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Get a native AAssetManager object from the Java AssetManager object**: This
+    is done by the `AAssetManager_fromJava` function, which is defined in `asset_manager_jni.h`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Open an asset directory**: This is done by AAssetManager_openDir.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: To open the top-level directory "assets", we set dirName to "". For the subdirectories,
+    we will need to supply the directory name.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Get an asset file name**:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Iterate over the files under the `asset` directory referred by the input argument
+    `assetDir`. If all files have been returned or there are no files, `NULL` is returned.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Open an asset file**: This is done by using `AAssetManager_open`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The filename should be set to the `asset` file name, where `mode` can be one
+    of the following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`AASSET_MODE_UNKNOWN`: Not known how the data is to be accessed'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AASSET_MODE_RANDOM`: Read chunks, and seek forward and backward'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AASSET_MODE_STREAMING`: Read sequentially, with an occasional forward seek'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AASSET_MODE_BUFFER`: Attempt to load contents into memory, for fast small
+    reads'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Read the asset file**: This is done by using `AAsset_read`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The input argument `buf` refers to the location where the data is placed after
+    reading, and `count` indicates the number of bytes we want to read. The actual
+    number of bytes read is returned and may differ from `count`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Close the asset file**: This is done by using the `AAsset_close` function.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Close the asset directory**: This is done by using the `AAssetDir_close`
+    function.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this example, we built `libpng` as a local static library. This is necessary
+    to read the `.png` files, because Android NDK does not provide APIs to access
+    `.png` files. We will discuss how to develop Android NDK applications with existing
+    libraries in [Chapter 8](ch08.html "Chapter 8. Porting and Using the Existing
+    Libraries with Android NDK"), *Porting and Using the Existing*.
+  prefs: []
+  type: TYPE_NORMAL

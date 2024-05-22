@@ -1,0 +1,779 @@
+- en: Chapter 5. Structural Patterns
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far in this book, we have looked at patterns for holding and returning data
+    and for combining objects into larger ones, but we have not yet considered how
+    we offer a selection of choices to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In planning our sandwich builder app, we would ideally like to offer the customer
+    a wide range of possible ingredients. Probably the best way to present such choices
+    is through a list or, for large collections of data, a series of lists. Android
+    manages these processes very nicely with the **RecyclerView**, which is a list
+    container and manager that replaced the previous ListView. This is not to say
+    that the plain, old list view should never be used, and in cases where all we
+    want is a short, simple text list of a few items, using a recycler view could
+    be considered overkill, and list views are often the way to go. Saying that, the
+    recycler view is far superior particularly when it comes to managing data, keeping
+    the memory footprint small and scrolling smooth, and when contained within a CoordinatorLayout,
+    allows users to drag and drop or swipe and dismiss list items.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To see how all this is done, we will construct an interface, which will consist
+    of a list of ingredients for the user to select from. This will require the RecyclerView
+    for holding the list, which will in turn introduce us to the adapter pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, you will learn how to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Apply a RecyclerView
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Apply a CoordinatorLayout
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generate lists
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Translate string resources
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Apply a ViewHolder
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Use a RecyclerView adapter
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Create an adapter design pattern
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Construct bridge design pattern
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Apply facade patterns
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Use patterns to filter data
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating lists
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The RecyclerView is a relatively recent addition and replaces the ListView
+    on older versions. It performs the same functions but manages data far more efficiently,
+    particularly very long lists. The RecyclerView is part of the v7 support library
+    and needs to be compiled in the `build.gradle` file, along with the others shown
+    here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The coordinator layout will form the root layout of the main activity and will
+    look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The Recycler view can then be placed inside the layout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![Generating lists](img/image_05_001.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The RecyclerView provides a dummy list for us, but we will create our list from
+    card views.
+  prefs: []
+  type: TYPE_NORMAL
+- en: List item layouts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: It is very tempting to use a card view to display individual items in a list,
+    and one can find many examples of it being used like this. However This practice
+    is not recommended by Google and for good reason. Cards are designed to display
+    content of non-uniform size and the rounded edges and shadows only serve to clutter
+    up the screen. When list items are all the same size and conform to the same layout,
+    then they should appear as simple rectangular layouts, sometimes with a simple
+    divider separating them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will be creating complex, interactive list items later in the book, so for
+    now we will just have an image and a string as our item view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a layout file with a horizontal linear layout as its root and place
+    these two views inside it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have used the `tools` namespace here, that should be removed later, just
+    so we can see what our layout looks like without having to compile the entire
+    project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![List item layouts](img/image_05_002.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You may have noticed that some margins and padding look different on CardViews
+    when tested on older devices. Rather than resort to creating alternative layout
+    resources, the `card_view:cardUseCompatPadding="true"` property will often resolve
+    this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The text sizes and margins we applied here are not arbitrary, but those specified
+    by material design guidelines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Material font sizes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Text size is very important when it comes to material design and only certain
+    sizes are permitted in certain contexts. In the current example, we selected 24sp
+    for the name and 16 for the description. Generally speaking, nearly all the text
+    we will ever display in a material design application will be 12, 14, 16, 20,
+    24, or 34sp. There is a certain level of flexibility when it comes to selecting
+    which size to use and when, but the following list should provide a good guide:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Material font sizes](img/image_05_003.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Connecting data
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android comes equipped with the **SQLite** library, which is a powerful tool
+    for creating and managing complex databases. One could easily fill an entire chapter
+    or even a whole book on the subject. Here we are not dealing with a large collection
+    and it will be simpler and hopefully clearer to create our own data class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you would like to learn more about SQLite, comprehensive documentation can
+    be found at: [http://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html](http://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Later we will create complex data structures, but for now we only need to see
+    how the setup works, so we will create just three items. To add these, create
+    a new Java class called `Filling` and complete like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These can be defined in the main activity like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can see, we have defined our string resources in the `strings.xml` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This has two great advantages. Firstly, it allows us to keep view and model
+    separate and secondly, if we were ever to translate our app into other languages
+    this now only requires only an alternative `strings` file. In fact, Android Studio
+    makes this process so simple it is worth taking a moment here to see how it is
+    done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Translating string resources
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Android Studio provides a **translation editor** to simplify the process of
+    providing alternative resources. In exactly the same way that we create designated
+    folders for different screen sizes, we create alternative values directories for
+    different languages. The editor manages this for us and we do not really need
+    to know much about it but it is useful to know that, if we wished to translate
+    our app into Italian, say, then the editor would create a folder named `values-it`
+    and place the alternative `strings.xml` file within it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Translating string resources](img/image_05_004.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: To access the translations editor, simply right-click on the extant `strings.xml`
+    file in the project explorer and select it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although the RecyclerView is a fantastic tool for managing and binding data
+    in an efficient manner, it does require quite a bit of setting up. Apart from
+    the view and the data, there are two other elements required to bind the data
+    to our activity, the **LayoutManager** and the **data adapter**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adapters and layout managers
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'RecyclerViews manage their data by using a `RecyclerView.LayoutManager` and
+    a `RecyclerView.Adapter`. The LayoutManager can be thought of as belonging to
+    the RecyclerView and it is this that communicates with the adapter, which in turn
+    is bound to our data in a fashion depicted in the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Adapters and layout managers](img/image_05_005.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Creating a layout manager is very straightforward. Simply follow these two steps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open the `MainActivity.Java` file and include the following fields:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then add the following lines to the `onCreate()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This code is simple to understand but the purpose of the `RecyclerView.setHasFixedSize(true)`
+    command my need some explanation. If we know in advance that our list is always
+    going to be the same length, then this call will make the management of the list
+    far more efficient.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To create the adapter, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a new Java class called `DataAdapter` and have it extend `RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder.`
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: This will generate and error, click on the red quick-fix icon and implement
+    the methods suggested.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'These three methods should be filled out as seen here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'And finally, the ViewHolder:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The **ViewHolder** speeds up long lists by only making one call to `findViewById()`,
+    which is a resource hungry process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The example can now be run on an emulator or handset and will have an output
+    similar to that seen here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Adapters and layout managers](img/image_05_006.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Obviously, we would want far more than three fillings but it is easy to see
+    from this example how we could add as many more as we wished.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The example we have worked through here explains enough of how the RecyclerView
+    works to be able to implement one in a variety of situations. We used a LinearLayoutManager
+    with one here to create our list, but there is also a **GridLayoutManager** and
+    a **StaggeredGridLayoutManager** that work in a very similar fashion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The adapter pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the example we have been studying here, we used an adapter pattern to connect
+    our data with our layout in the form of our `DataAdapter`. This is a ready-made
+    adapter and although it is clear how it works, it teaches us nothing about the
+    structure of the adapter or how to construct one ourselves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are many cases where Android provides built in patterns, which is very
+    useful, but there will often be times when we need an adapter for classes we have
+    created ourselves, and we will now see how this is done and also how to create
+    the associated design pattern, the bridge. It is best to begin by looking at these
+    patterns conceptually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The purpose of the adapter is perhaps the easiest to understand. A good analogy
+    would be the physical adapters we use when we take electronic devices to other
+    countries where their power outlets work on different voltages and frequencies.
+    The adapter has two faces, one to accept our plug and one to fit the socket. Some
+    adapters are even smart enough to accept more than one configuration, and this
+    is exactly how software adapters work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The adapter pattern](img/image_05_007.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There are many occasions when we have interfaces that do not match up in the
+    same way as plugs do not line up with foreign sockets and the adapter is one of
+    the most widely relied on design patterns. We saw earlier that Android APIs themselves
+    make use of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One way to solve the problem of incompatible interfaces is to change the interfaces
+    themselves, but this can result in some very messy code and spaghetti-like connections
+    between classes. Adapters solve this problem and also allow for us to make wide
+    scale changes to our software without really disrupting overall structures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Imagine that our sandwich app has launched and is doing fine, but then the offices
+    we deliver to change their floor plans and go from small offices to an open plan
+    structure. Previously we had used fields for building, floor, office, and desk
+    to locate customers, but now the office field makes no sense and we have to redesign
+    accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If our application is at all complex, there will no doubt be many references
+    and uses of location classes and rewriting them all could be a time-consuming
+    business. Fortunately, the adapter pattern means we can adapt to this change with
+    very little fuss.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is the original location interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here is how it would be implemented:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Assuming that these classes already exist and it is these that we wish to adapt,
+    it takes just the adapter class and some test code to convert a whole app from
+    the old system to the new:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The adapter class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The test code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Despite its usefulness, the adapter pattern has a very simple structure, as
+    can be seen in the diagram here:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![The adapter pattern](img/image_05_008.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: The key to the adapter pattern is the way that the adapter class implements
+    the new interface and wraps the old one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is easy to see how this pattern can be applied in many other circumstances
+    where we need to convert one kind of interface into another. The adapter is one
+    of the most useful and frequently applied structural patterns. In some ways, it
+    is similar to the next pattern we will encounter, the bridge, in that they both
+    have a class that is used to convert interfaces. However, the bridge pattern serves
+    a very different function, as we shall see next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The bridge pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The main difference between adapters and bridges is that adapters are built
+    to correct incompatibilities that arise from our design, whereas a bridge is constructed
+    before, and its purpose is to separate an interface from its implementation, so
+    that we can modify and even replace the implementation without changing client
+    code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the following example, we will assume that users of our sandwich builder
+    app will have a choice of open or closed sandwiches. Apart from this one factor,
+    these sandwiches are identical in that they can contain any combination of fillings,
+    although to simplify matters, there will only be a maximum of two ingredients.
+    This will demonstrate how we can decouple an abstract class from its implementations
+    so that they be modified independently.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following steps explain how to construct a simple bridge pattern:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Begin by creating an interface like the one seen here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, create an abstract class like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now extend this class like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'And then create two concrete classes to represent our choice of sandwich:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This pattern can now be tested by adding these lines to the client code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The output in the debug screen will then match this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: What this demonstrates is how the pattern allows us to make our sandwich in
+    different ways using the same abstract class method but different bridge implementer
+    classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Both adapters and bridges work by creating clean structures that we can use
+    to unify or separate classes and interfaces to solve structural incompatibilities
+    as they arise, or anticipate them during planning. When viewed diagrammatically,
+    the differences between the two become more apparent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The bridge pattern](img/image_05_009.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Most structural patterns (and design patterns in general) rely on creating these
+    extra layers to clarify code. Simplifying complex structure is without doubt a
+    design pattern's greatest asset, and very few patterns help us simplify code more
+    than the facade pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The facade pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The facade pattern is perhaps one of the simplest of the structural pattern
+    to understand and create. As its name suggests, it act as a face that sits in
+    front of a complex system. When programming client code, we never have to concern
+    ourselves with the complex logic of the rest of our system, if we have a facade
+    to represent it. All we have to do is deal with the facade itself, and this means
+    we can devise facades to maximize simplicity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Think of the facade pattern like the simple keypad you might find on a typical
+    vending machine. Vending machines are very complex systems, combining all manner
+    of mechanical and physical components. However, to operate one, all we need is
+    to know how to punch in a number or two on its keypad. The keypad is the facade
+    and it hides all the complexity behind it. We can demonstrate this by considering
+    the imaginary vending machine, outlined in the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Start by creating the following interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, add three concrete implementations of this, like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now add the facade class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Place suitable images in the appropriate drawable directories.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create a simple layout file with an image view similar to this one:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add an `ImageView` to the activity class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a facade:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then test output with calls like the one here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This constitutes our facade pattern. It is pretty simple to visualize:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![The facade pattern](img/image_05_010.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Of course, the facade pattern in this example might seem pointless. The `dispense()`
+    method does nothing more than display an image, and requires no simplification.
+    However, in a more realistic simulation, the dispensing process would involve
+    all manner of calls and checks, change has to be calculated, stock availability
+    checked, and any number of servos need setting into action. The beauty of the
+    facade pattern is that if we were to put all these procedures into place, we would
+    not have to change a single line in our client code or facade class. A single
+    call to `dispenseDrink()` will have the correct result, no matter how complex
+    the logic behind it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Despite being very simple, the facade pattern is immensely useful in many situations
+    where we want to present a simple and orderly interface for a complicated system.
+    Far less simple but equally useful is the criteria (or filter) pattern, which
+    allows us to interrogate complex data structures.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The criteria pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The criteria design pattern provides a clear and concise technique for filtering
+    objects according to set criteria. It can be a very powerful tool as this next
+    exercise will demonstrate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this example, we will apply a filter pattern to sort through a list of ingredients
+    and filter them according to whether they are vegetarian and where they are produced:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Begin by creating the filter interface, like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next add the ingredient class, like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now implement the filter to meet the vegetarian criteria:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then, add a filter to test for local produce:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'And one for non-local ingredients:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now we need to include an `AND` criteria filter:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Followed by an `OR` criteria:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, add a small data set along these lines:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the main activity, create the following filters:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Create a simple layout with a basic text view.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add the following method to the main activity:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The pattern can now be tested with calls like those here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Testing the pattern on a device should produce this output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The criteria pattern](img/image_05_011.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We only applied a few simple criteria here, but we could easily have included
+    information regarding allergies, calories, price, and any others we chose, along
+    with the appropriate filters. It is this ability to create a single criterion
+    from multiple ones that makes this pattern so useful and versatile. It can be
+    viewed visually like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The criteria pattern](img/image_05_012.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The filter pattern, like many others, does not do anything that we have not
+    done before. Instead it shows another way to perform familiar and common tasks,
+    such as filtering data according to specific criteria. Providing we pick the right
+    pattern for the right task, these tried and tested structures make best practice
+    almost inevitable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have covered some of the most frequently applied and most
+    useful of the structural patterns. We began by seeing how the framework separates
+    model from view and then how to manage data structures with the RecyclerView and
+    its adapter and how this is similar to the adapter design pattern. With this connection
+    established, we then went on to create an example of how we use adapters to counter
+    the inevitable incompatibilities between objects, unlike the bridge pattern we
+    built next, which is designed beforehand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having started the chapter on quite a practical note, it concludes by taking
+    a close look at two other important structural patterns, the facade, for simplifying
+    structures apparent functionality and the criteria pattern, which works on sets
+    of data, returning filtered sets of objects, applying multiple criteria as simply
+    as we might one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will explore user interfaces and how to apply the design
+    library to provide swipe and dismiss behavior. We will also revisit the factory
+    pattern and apply it to our layout, using a customized dialog box to display its
+    output.
+  prefs: []
+  type: TYPE_NORMAL

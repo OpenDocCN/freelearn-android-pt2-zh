@@ -1,0 +1,1604 @@
+- en: Chapter 4. Android NDK OpenGL ES API
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing 2D Graphics and applying transforms with OpenGL ES 1.x API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing 3D graphics and lighting up the scene with the OpenGL ES 1.x API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Mapping texture to 3D objects with the OpenGL ES 1.x API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing 3D graphics with the OpenGL ES 2.0 API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Displaying graphics with EGL
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Open Graphics Library** (**OpenGL**) is a cross-platform industry standard
+    API for producing 2D and 3D graphics. It specifies a language-independent software
+    interface for graphics hardware or software graphics engines. **OpenGL ES** is
+    a flavor of OpenGL for embedded devices. It consists of a subset of OpenGL specifications
+    and some additional extensions that are specific to OpenGL ES .'
+  prefs: []
+  type: TYPE_NORMAL
+- en: OpenGL ES does not require dedicated graphics hardware to work. Different devices
+    can come with graphics hardware with different processing capabilities. The workload
+    of the OpenGL ES calls is divided between the CPU and graphics hardware. It is
+    possible to support OpenGL ES entirely from the CPU. However, graphics hardware
+    can improve performance at different levels, based on its processing capabilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we dive into Android NDK OpenGL ES, a little introduction of the **Graphics
+    Rendering Pipeline** (**GRP**) in the OpenGL context is necessary. GRP refers
+    to a series of processing stages, which the graphics hardware takes to produce
+    graphics. It accepts objects description in terms of vertices of primitives (
+    **primitives** refer to simple geometric shapes such as point, line, and triangle)
+    and output color values for the pixels on the display. It can be roughly divided
+    into the following four main stages:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Vertex processing**: It accepts the graphics model description, processes
+    and transforms the individual vertices to project then onto the screen, and combines
+    their information for further processing of **primitives**.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Rasterization**: It converts primitives into fragments. A **fragment** contains
+    the data that is necessary to generate a pixel''s data in the frame buffer. Note
+    that only the pixels affected by one or more primitives will have a fragment.
+    A fragment contains information, such as raster position, depth, interpolated
+    color, and texture coordinates.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Fragment processing**: It processes each fragment. A series of operations
+    are applied to each fragment, including alpha test, texture mapping, and so on.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Output merging**: It combines all fragments to produce the color values (including
+    alpha) for the 2D display.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the modern computer graphics hardware, vertex processing and fragment processing
+    are programmable. We can write programs to perform custom transform and processing
+    of vertices and fragments. In contrast, rasterization and output merging are configurable,
+    but not programmable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each of the preceding stages can consist of one or more steps. OpenGL ES 1.x
+    and OpenGL ES 2.0 provide different GRPs. Specifically, OpenGL ES 1.x provides
+    a fixed function pipeline, where we input primitive and texture data, set up lighting,
+    and OpenGL ES will handle the rest. In contrast, OpenGL ES 2.0 provides a programmable
+    pipeline, which allows us to write vertex and fragment shaders in **OpenGL ES
+    Shading Language** (**GLSL**) to handle the specifics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following diagram indicaties the fixed function pipeline of OpenGL ES 1.x:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introduction](img/1505_04_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following is another diagram that illustrates the programmable pipeline
+    of OpenGL ES 2.0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introduction](img/1505_04_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As shown in the preceding diagram, the fixed pipeline in OpenGL ES 1.x has been
+    replaced by the programmable shaders in OpenGL ES 2.0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this introduction of computer graphics, we''re now ready to start our
+    journey to Android NDK OpenGL ES programming. Android NDK provides both OpenGL
+    ES 1.x (version 1.0 and version 1.1) and OpenGL ES 2.0 libraries, which differ
+    significantly. The following table summarizes the factors to consider when considering
+    the OpenGL ES version to use in our Android applications:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '|   | OpenGL 1.x | OpenGL 2.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Performance** | Fast 2D and 3D graphics. | Depending upon the Android device,
+    but in general it provides faster 2D and 3D graphics. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Device compatibility** | Almost all Android devices. | Majority of Android
+    devices, and increasing. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Coding convenience** | Fixed pipeline with convenient functions. Easy to
+    use for simple 3D applications. | No built-in basic functions and more effort
+    may be required for simple 3-D applications. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Graphics control** | Fixed pipeline. Difficult or impossible to create
+    some effects (for example, cartoon shading). | Programmable pipeline. More direct
+    control of the graphics processing pipeline to create certain effects. |'
+  prefs: []
+  type: TYPE_TB
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: OpenGL ES 1.0 is supported on all Android devices because Android comes with
+    a 1.0-capable software graphics engine, which can be used on devices without corresponding
+    graphics hardware. OpenGL ES 1.1 and OpenGL ES 2.0 are supported only on devices
+    with corresponding **Graphics Processing Unit** (**GPU**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter will cover both the OpenGL 1.x and OpenGL ES 2.0 APIs in Android
+    NDK. We first demonstrated how to draw 2D and 3D graphics using the OpenGL 1.x
+    API. Transforms, lighting, and texture mapping are also covered. We then introduce
+    the OpenGL 2.0 API in NDK. Lastly, we describe how to display graphics with EGL.
+    This chapter introduces a few basics of computer graphics and principles of OpenGL.
+    Readers who are already familiar with OpenGL ES can skip those parts and focus
+    on how to invoke the OpenGL ES API from Android NDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will provide a sample Android application for every recipe covered in this
+    chapter. Due to space constraints, we cannot show all the source code in the book.
+    Readers are strongly recommended to download the code and refer to to it when
+    going through this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing 2D Graphics and applying transforms with the OpenGL ES 1.x API
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This recipe covers 2D drawing in OpenGL ES 1.x by example. In order to draw
+    2D objects, we'll also describe the OpenGL rendering display through `GLSurfaceView`,
+    adding colors to them, and transformation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Readers are recommended to read the introduction of this chapter, which is essential
+    to understand some of the content in this recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create our sample Android NDK project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `TwoDG1`. Set the package name as `cookbook.chapter4.gl1x`.
+    Please refer to the *Loading native libraries and registering native methods*
+    recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
+    Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the `TwoDG1` project in Eclipse, select **Android Tools** | **Add
+    Native Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add the following three Java files under the `cookbook.chapter4.gl1x` package:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`MyActivity.java`: It creates the activity of this project:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`MySurfaceView.java`: It extends `GLSurfaceView`, which provides a dedicated
+    surface for displaying OpenGL rendering:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`MyRenderer.java`: It implements `Renderer` and calls the native methods:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `TwoDG1.cpp`, `Triangle.cpp`, `Square.cpp`, `Triangle.h`, and `Square.h`
+    files under the `jni` folder. Please refer to the downloaded project for the complete
+    content. Here, we only list some important parts of the code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`TwoDG1.cpp`: It consists of the code to set up the OpenGL ES 1.x environment
+    and perform the transforms:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`Triangle.cpp`: It draws a 2D triangle:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`Square.cpp`: It draws a 2D square:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `Android.mk` file under the `jni` folder with following content :'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build the Android NDK application and run it on an Android device. The following
+    is a screenshot of the display:![How to do it...](img/1505_04_03.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe demonstrates basic 2D drawing with OpenGL ES.
+  prefs: []
+  type: TYPE_NORMAL
+- en: OpenGL ES rendering display through GLSurfaceView
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`GLSurfaceView` and `GLSurfaceView.Renderer` are the two foundational classes
+    provided by Android SDK to display OpenGL ES graphics.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GLSurfaceView` accepts a user defined `Renderer` object that does the actual
+    rendering. It is often extended to handle touch events, which is illustrated in
+    the next recipe. It supports both on-demand and continuous rendering. In our sample
+    code, we simply set the `Renderer` object and configure the rendering mode to
+    on-demand.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GLSurfaceView.Renderer` is the interface for renderer. Three methods need
+    to be implemented with it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`onSurfaceCreated`: It''s called once when setting up the OpenGL ES environment.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onSurfaceChanged`: It''s called if the geometry of the view changes; most
+    common examples are device screen orientation changes.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onDrawFrame`: It''s called at each redraw of the view.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In our sample project, `MyRenderer.java` is a simple wrapper, while the actual
+    work is done in native C++ code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing objects at OpenGL ES
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Two methods are commonly used to draw objects in OpenGL ES, including `glDrawArrays`
+    and `glDrawElements`. We demonstrate the usage of these two methods in `Triangle.cpp`
+    and `Square.cpp` respectively. Note that both the methods require `GL_VERTEX_ARRAY`
+    to be enabled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first argument is the mode of drawing, which indicates the primitive to
+    use. In our sample code, we used `GL_TRIANGLES`, which means we're actually drawing
+    two triangles to form the square. Other valid values in Android NDK OpenGL ES
+    include `GL_POINTS`, `GL_LINES`, `GL_LINE_LOOP`, `GL_LINE_STRIP`, `GL_TRIANGLE_STRIP`,
+    and `GL_TRIANGLE_FAN`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Colors at OpenGL ES
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We also demonstrate two methods to add colors to the objects. In `Triangle.cpp`,
+    we set the current color by the `glColor4f` API call. In `Square.cpp`, we enable
+    `GL_COLOR_ARRAY`, and define an array of color by using `glColorPointer`. The
+    array of colors will be used by the `glDrawElements` (it's also OK to use `glDrawArrays`)
+    API call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: OpenGL ES transformation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The following diagram illustrates different transformation stages in OpenGL
+    ES 1.0:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![OpenGL ES transformation](img/1505_04_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'As illustrated in the diagram, vertex data are transformed before rasterization.
+    The transforms are analogous to taking a photograph with a camera:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**ModelView transform**: Arrange the scene and place the camera'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Projection transform**: Choose a camera lens and adjust zoom factor'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Viewpoint transform**: Determine how large the final photograph is'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**ModelView transform** actually refers to two different transforms, namely
+    Model Transform and View Transform. **Model Transform** refers to the process
+    of converting all objects from its object space (also known as local space or
+    model space) to a world space, which is shared among all objects. This transform
+    is done through a series of scaling (`glScalef`), rotation (`glRotatef`) and translation
+    (`glTranslatef`).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`glScalef`: It stretches, shrinks, or reflects an object. The x-, y- and z-axis
+    values are multiplied by the corresponding x, y, and z scaling factor. In our
+    sample code, we called `glScalef(0.2f, 0.2f, 0.2f)` to scale down both the triangle
+    and the square, so that they can fit into the screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glRotatef`: It rotates an object in a counter clockwise manner in the direction
+    from the origin through specified point (x, y, z). The rotation angle is measured
+    in degrees. In our sample code, we called `glRotatef(45.0, 0.0, 0.0, 1.0)` to
+    rotate the square about the z-axis by 45 degrees.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glTranslatef`: It moves an object by the given values along each axis. In
+    our sample code, we called `glTranslatef(0.3f, 0.0f, 0.0f)` to move the triangle
+    to the right and `glTranslatef(-0.3f, 0.0f, 0.0f)` to move the square to the left,
+    so that they won''t overlap.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Model transform arranges the objects in a scene, while View transform changes
+    the position of the viewing camera. To produce a specific image, we can either
+    move the objects or change our camera position. Therefore, OpenGL ES internally
+    performs the two transforms using a single matrix – the + `GL_MODELVIEW` matrix.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: OpenGL ES defines that the camera is default at the origin (0, 0, 0) of eye
+    coordinates space and aims into the negative z-axis. It is possible to change
+    the position by `GLU.gluLookAt` at the Android SDK. However, the corresponding
+    API is not available at Android NDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Projection transform** determines what can be seen (analogous to choosing
+    camera lens and zoom factor) and how vertex data are projected onto the screen.
+    OpenGL ES supports two modes of projection, namely perspective projection (`glFrustum`)
+    and orthographic projection (`glOrtho`). **Perspective projection** makes objects
+    that are farther away smaller, which matches with a normal camera. On the other
+    hand, **Orthographic projection** is analogous to the telescope, which maps objects
+    directly without affecting their size. OpenGL ES manipulates the transform through
+    the `GL_PROJECTION` matrix. After a project transform, objects which are outside
+    of the clipping volume are clipped out and not drawn in the final scene. In our
+    sample project, we called `glOrthof(-ratio, ratio, -1, 1, 0, 10)` to specify the
+    viewing volume, where `ratio` refers to the width to height ratio of the screen.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After projection transform, perspective division is done by dividing the clip
+    coordinates by the transformed `w` value of the input vertex. The values the for
+    x-, y-, and z-axes will be normalized to the range between `-1.0` to `1.0`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The final stage of the OpenGL ES transform pipeline is the viewport transform,
+    which maps the normalized device coordinates to window coordinates (in pixels,
+    with the origin at the upper-left corner). Note that a viewpoint also includes
+    a z component, which is needed for situations, such as ordering of two overlapping
+    OpenGL scenes, and can be set with the `glDepthRange` API call. Applications usually
+    need to set viewport when the display size changes through the `glViewport` API
+    call. In our example, we set the viewport as the entire screen by calling `glViewport(0,
+    0, width, height)`. This setting, together with the `glOrthof` call, will keep
+    the objects in proportion after projection transform, as shown in the following
+    diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![OpenGL ES transformation](img/1505_04_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'As shown in the diagram, the clipping volume is set to (-width/height, width/height,
+    -1, 1, 0, 1). At perspective division, the vertex is divided by `w`. At viewpoint
+    transform, both the x and y coordinates ranges are scaled up by `w*height/2`.
+    Therefore, the objects will be in proportion as shown in the *How to do it...*
+    section of this recipe. The left-had side of the following screenshot shows the
+    output, if we set clipping volume by calling `glOrthof(-1, 1, -1, 1, 0, 1)`, and
+    the right one indicates what the graphics look like if viewport is set by calling
+    `glViewport(0, 0, width/2, height/5)`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![OpenGL ES transformation](img/1505_04_06_new.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Drawing 3D graphics and lighting up the scene with the OpenGL ES 1.x API
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This recipe covers how to draw 3D objects, handle touch events, and lighten
+    up the objects in OpenGL ES.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Readers are recommended to read the introduction and the *Drawing 2D Graphics
+    and Apply Transforms with OpenGL ES 1.x API* recipies below before going through
+    this one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps show how to develop our sample Android project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `CubeG1`. Set the package name as `cookbook.chapter4.gl1x`.
+    Please refer to the *Loading native libraries and registering native methods*
+    recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
+    Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the project CubeG1, select **Android Tools** | **Add Native Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add three Java files, namely `MyActivity.java`, `MySurfaceView`, and `MyRenderer.java`,
+    under the `cookbook.chapter4.gl1x` package. `MyActivity.java` is the same as used
+    in the previous recipe.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`MySurfaceView.java` extends `GLSurfaceView` with the code to handle touch
+    events:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`MyRenderer.java` implements a render to invoke the native methods to render
+    the graphics:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `CubeG1.cpp`, `Cube.cpp`, and `Cube.h` files under the `jni` folder.
+    Please refer to downloaded project for the complete content. Let''s list out the
+    code for the `naInitGL1x`, `naSurfaceChanged`, and `naDrawGraphics` native methods
+    in `CubeG1.cpp`, and draw and lighting methods in `Cube.cpp`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`CubeG1.cpp` sets up the OpenGL ES environment and lighting:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`Cube.cpp` draws a 3D cube and lightens it up:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `Android.mk` file under the `jni` folder with the following content:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build the Android NDK application and run it on an Android device. The app will
+    display a cube, which we can touch to rotate:![How to do it...](img/1505_04_08_new.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe discusses how to use the OpenGL ES 1.x API to draw 3D graphics.
+    Note that we will need to load the OpenGL ES library `GLESv1_CM` in the `Andorid.mk`
+    file, and include the header file `GLES/gl.h` in the native source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Drawing 3D objects in OpenGL ES**: Drawing 3D objects is similar to drawing
+    2D objects. In the `Cube::draw` method, we first set up the vertex buffer and
+    then called `glDrawElements` to draw the six faces of the cube. We used `GL_TRIANGLES`
+    as a primitive. Since each face contains two triangles, there are 12 triangles
+    and 36 vertices.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Touch event handling**: In `MySurfaceView.java`, we override the `onTouchEvent`
+    method to detect the figure movement on screen and change the rotation angle attributes
+    of `MyRenderer`. We call the `requestRender` method to request the renderer to
+    redraw the graphics.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Lighting and material in OpenGL ES**: There are classes of lighting models,
+    namely local illumination and global illumination. **Local illumination** only
+    considers direct lighting, and therefore lighting calculation can be performed
+    on individual objects. In contrast to this, **global illumination** takes indirect
+    lighting reflected from other objects and the environment, and therefore is more
+    computation-expensive. Local illumination is used in OpenGL ES 1.x, while the
+    global illumination can be programmed using the **OpenGL Shading Language** (**GLSL**)
+    in OpenGL ES 2.0\. Here, we discuss lighting in OpenGL ES 1.x only.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Three parties are involved in OpenGL ES when lighting is considered, including
+    camera position, light sources, and the material of the objects. Camera position
+    is always at a default position `(0, 0, 0)` and aims into the negative z-axis,
+    as discussed in the previous recipe. Light sources can provide separate ambient,
+    diffuse, and specular lights. Materials can reflect different amounts of ambient,
+    diffuse, and specular lights. In addition, materials may also emit light. Each
+    of the light consists of RGB components:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Ambient light**: It approximates the constant amount of light present everywhere
+    in the scene.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Diffuse light**: It approximates the light from distant directional light
+    source (for example, sunlight). When the reflected light strikes a surface, it
+    is scattered equally in all directions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Specular light**: It approximates the lights reflected by a smooth surface.
+    Its intensity depends on the angle between the viewer and the direction of the
+    ray reflected from the surface.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Emission light**: Some materials can emit lights.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note that RGB values in light sources indicate the intensity of the color component,
+    while they refer to the reflected proportions of those colors in the material.
+    To understand how both the light sources and material can affect the viewer perception
+    of the object, think of a white light that strikes on a surface, which only reflects
+    blue component of the light, then the surface will appear as blue for the viewer.
+    If the light is pure red, the surface will be black for the viewer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following steps can be performed to set up simple lighting in OpenGL ES:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Set the lighting model parameters. This is done through `glLightModelfv`. Android
+    NDK OpenGL ES supports two parameters, including `GL_LIGHT_MODEL_AMBIENT` and
+    `GL_LIGHT_MODEL_TWO_SIDE`. The first one allows us to specify the global ambient
+    light, and the second one allows us to specify whether we want to calculate lighting
+    at the back of the surface.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Enable, configure, and place one or more light sources. This is done through
+    the `glLightfv` method. We can configure ambient, diffuse, and specular light
+    separately. The light source position is also configured through `glLightfv` with
+    `GL_POSITION`. In `CubeG1.cpp`, we used the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The fourth value of the position indicates whether the light source is positional
+    or directional. When the value is set to `0`, the light is directional, which
+    simulates a light source that is far away (sunlight). The light rays are parallel
+    when hitting the surface, and the (x, y, z) values of the position refer to the
+    direction of the light. If the fourth value is set to `1`, the light is positional,
+    which is similar to a light bulb. The (x, y, z) values refer to the position of
+    the light source and the light rays hit the surface from different angles. Note
+    that the light source emits light at equal intensities to all directions. The
+    two kinds of lighting sources are illustrated in the following image:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works...](img/1505_04_22.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Besides positional and directional light sources, there''s also spotlight:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We shall enable lighting and the light sources also by calling
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: and
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Define the normal vectors for each vertex of all objects. The orientation of
+    the object relative to the light sources is determined by these normals. In our
+    code, we rely on OpenGL ES's default normals.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Define the material. This is done by the `glMaterialf` or `glMaterialfv` method.
+    In our sample code, we specify the red component of the diffuse light to be `0.8`,
+    while keeping the green and blue components 0\. Therefore, the final cube appears
+    to be red.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Mapping texture to 3D objects with the OpenGL ES 1.x API
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Texture mapping** is a technique that overlays an image onto an object''s
+    surface to create a more realistic scene. This recipe covers how to add texture
+    in OpenGL ES 1.x.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Readers are recommended to read the *Drawing 3D graphics and lighting up the
+    scene with OpenGL ES 1.x API* recipe before going through this one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create an Android project that demonstrates mapping texture
+    to 3D objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `DiceG1`. Set the package name as `cookbook.chapter4.gl1x`.
+    Please refer to the *Loading native libraries and registering native methods*
+    recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
+    Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the project `CubeG1`, select **Android Tools** | **Add Native
+    Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add three Java files, namely `MyActivity.java`, `MySurfaceView.java`, and `MyRenderer.java`
+    under the `cookbook.chapter4.diceg1` package. `MyActivity.java` and `MySurfaceView.java`
+    are similar to the previous recipe.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`MyRenderer.java` is listed as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `DiceG1.cpp`, `Cube.cpp`, `Cube.h`, and `mylog.h` files under the `jni`
+    folder. Please refer to the downloaded project for the complete content. Here,
+    we list out the code the `fornaLoadTexture` and `naInitGL1x` native methods in
+    `DiceG1.cpp`, and the `draw` method in `Cube.cpp`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `Android.mk` file under the `jni` folder with the following content:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build the Android NDK application and run it on an Android device. The app will
+    display a cube textured as a dice:![How to do it...](img/1505_04_10_new.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe adds a texture to the 3D cube to make it look like a dice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Texture coordinates**: A texture is typically a 2D image. Texture coordinates
+    `(s, t)` are usually normalized to `[0.0, 1.0]` as shown in the following diagram.
+    Texture image is mapped to `[0, 1]` in both the `s` and `t` axes:![How it works...](img/1505_04_12.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Loading textures**: The first step of mapping texture in OpenGL ES is to
+    load them. In our example, we used Android SDK to read image files from drawable
+    resources and pass the bitmaps to native code. The native method `naLoadTexture`
+    locks the bitmap image and performs the following OpenGL operations.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Create the glGenTexture texture**: This generates texture IDs.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Bind texture: glBindTexture. This tells OpenGL which texture id we''re working
+    with.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Set the texture filtering**: `glTexParameter` with `GL_TEXTURE_MIN_FILTER`
+    or `GL_TEXTURE_MAG_FILTER` (this is discussed later).'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Set the texture wrapping**: `glTexParameter` with `GL_TEXTURE_WRAP_S` or
+    `GL_TEXTURE_WRAP_T` (this is discussed later).'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Load the images data to OpenGL**: (`glTexImage2D`) we need to specify image
+    data, width, height, color format, and so on.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Texture wrapping**: texture is mapped to `[0, 1]` in both the s and t axes.
+    However, we can specify the texture coordinates beyond the range. Wrapping will
+    be applied once that happens. Typical settings for texture wrapping are as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GL_CLAMP`: Clamp the texture coordinates to `[0.0, 1.0]`.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GL_REPEAT`: Repeat the texture. This creates a repeating pattern.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Texture filtering**: It is common that the texture image has a different
+    resolution than the object. If the texture is smaller, magnification is performed;
+    if the texture is larger, minification is performed. The following two methods
+    are used generally:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GL_NEAREST`: Use the texture element that is nearest to the center of the
+    pixel being textured.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GL_LINEAR`: Apply interpolation to calculate the color values based on the
+    four texture elements closest to the pixel being textured.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Set the texture environment**: Before we map textures to objects, we can
+    call `glTexEnvf` to control how texture values are interpreted when a fragment
+    is textured. We can configure `GL_TEXTURE_ENV_COLOR` and `GL_TEXTURE_ENV_MODE`.
+    In our sample project, we used the `GL_REPLACE` for `GL_TEXTURE_ENV_MODE`, which
+    simply replaces the cube fragments with texture values.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Mapping the texture**: We draw each face of the 3D cube and map the texture
+    by `glDrawElement`. `GL_TEXTURE_COORD_ARRAY` must be enabled by calling `glEnableClientState`.
+    Before drawing each interface, we bind to the corresponding texture by calling
+    `glBindTexture`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In our native code, we used the Android native bitmap API to receive texture
+    bitmap object from Java code. More details of this API will be covered in [Chapter
+    7](ch07.html "Chapter 7. Other Android NDK API"), *Other Android NDK API*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing 3D graphics with the OpenGL ES 2.0 API
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipes describe OpenGL ES 1.x on the Android NDK. This recipe
+    covers how to use OpenGL ES 2.0 in Android NDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Readers are recommended to read the introduction of this chapter before going
+    through this recipe. A lot of graphic basics are covered in the following recipes;
+    it is suggested that we go through them first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Drawing 2D graphics and applying transforms with OpenGL ES 1.x API*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Drawing 3D graphics and lighting up the scene with OpenGL ES 1.x API*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create an Android project that renders a 3D cube with OpenGL
+    ES 2.0 API in Android NDK:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `CubeG2`. Set the package name as `cookbook.chapter4.cubeg2`.
+    Please refer to the *Loading native libraries and registering native methods*
+    recipe of [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
+    Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the project `CubeG2`, select **Android Tools** | **Add Native
+    Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add three Java files, namely `MyActivity.java`, `MyRenderer.java`, and `MySurfaceView.java`.
+    We only list a part of `MyRenderer.java` here, since the other two files—`MyActivity.java`
+    and `MySurfaceView.java`—are similar to the files in the previous recipe:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `Cube.cpp`, `matrix.cpp`, `CubeG2.cpp`, `Cube.h`, `matrix.h`, and `mylog.h`
+    files under the `jni` folder. The content of the files are summarized as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Cube.cpp and Cube.h**: They define a `Cube` object and method to draw a 3D
+    cube.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**matrix.cpp and matrix.h**: These matrix operations, including creating translation,
+    scale and rotation matrices, and matrix multiplication.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**CubeG2.cpp**: They create and load shaders. They also create, link, and use
+    programs and apply transformations to the 3D cube.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**mylog.h**: They define macros for Android NDK logging.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Here, we list a part of `Cube.cpp` and `CubeG2.cpp`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`Cube.cpp`:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`CubeG2.cpp`: It includes the `loadShader`, `createProgram`, `naInitGL20`,
+    and `naDrawGraphics` methods, which are explained as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`loadShader`: This method creates a shader, attaches a source, and compiles
+    the shader:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`createProgram`: This method creates a program object, attaches shaders, and
+    links the program:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`naInitGL20`: This method sets up the OpenGL ES 2.0 environment, gets the shader
+    source string, and gets the shader attribute and uniform positions:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`naDrawGraphics`: This method applies model transforms (rotate, scale, and
+    translate) and the projection transform:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a folder named `raw` under the `res` folder, and add the following two
+    files to it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`vshader`: This is the vertex shader source:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`fshader`: This is the fragment shader source:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `Android.mk` file under the `jni` folder as follows. Note that we must
+    link to OpenGL ES 2.0 by `LOCAL_LDLIBS := -lGLESv2`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following line before `<application>...</application>` in the `AndroidManifest.xml`
+    file, which indicates that the Android application uses the OpenGL ES 2.0 feature:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build the Android NDK application and run it on an Android device. The app will
+    display a cube and we can touch to rotate the cube:![How to do it...](img/1505_04_13_new.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The sample project renders a 3D cube using OpenGL ES 2.0\. OpenGL ES 2.0 provides
+    a programmable pipeline, where a vertex shader and fragment shader can be supplied
+    to control how the vertex and fragment are processed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Vertex shader**: It''s executed for every vertex. Transforms, lighting, texture
+    mapping, and so on are usually performed using it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Fragment shader**: It''s executed for every fragment produced by the rasterizer.
+    A typical processing is to adding colors to every fragment.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Shaders are programmed using OpenGL Shading Language, which is discussed next.
+  prefs: []
+  type: TYPE_NORMAL
+- en: OpenGL Shading Language (GLSL)
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Here, we briefly introduce GLSL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Data types**: They are of four main types, including `bool`, `int`, `float`,
+    and `sampler`. There are also vector types for the first three types—`bvec2`,
+    `bvec3`, `bvec4` refer to 2D, 3D, and 4D boolean vectors. `ivec2`, `ivec3`, and
+    `ivec4` represent integer vectors. `vec2`, `vec3`, and `vec4` refer to floating
+    point vectors. **Samplers** are used for texture sampling and have to be uniform.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Attributes, uniforms, and varyings**: A shader includes three types of inputs
+    and outputs, including uniforms, attributes, and varyings. All three types have
+    to be global:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Uniform**: It is of read-only type and doesn''t need to be changed during
+    rendering. For example, light position.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Attribute**: It is of read-only type and is only available as an input to
+    the vertex shader. It changes for every vertex. For example, vertex position.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Varying**: It is used to pass data from the vertex shader to the fragment
+    shader. It is readable and writable in the vertex shader, but only readable in
+    the fragment shader.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Built-in types**: GLSL has various built-in attributes, uniforms, and varyings
+    for shaders. We highlight a few of them as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gl_Vertex`: It is an attribute—a 4D vector representing the vertex position.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gl_Color`: It is an attribute—a 4D vector representing the vertex color.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gl_ModelViewMatrix`: It is an uniform—the 4x4 model view matrix.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gl_ModelViewProjectionMatrix`: It is a uniform. The 4x4 model view projection
+    matrix.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gl_Position`: It is only available as vertex shader output. It''s a 4D vector
+    representing the final processed vertex position.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gl_FragColor`: It is only available as fragment shader output. It''s a 4D
+    vector representing the final color to be written to the frame buffer.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'How to use shader:'
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'In our sample project, the vertex shader program simply multiplies every cube
+    vertex with the model-view-projection matrix, and the fragment shader sets green
+    color to every fragment. The following steps should be followed to use the shader
+    source code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Create Shaders**: The following OpenGL ES 2.0 methods are called:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`glCreateShader`: It creates a `GL_VERTEX_SHADER` or `GL_FRAGMENT_SHADER` shader.
+    A non-zero value is returned by it, by which the shader can be referenced.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glShaderSource`: It puts the source code in a shader object. The source code
+    stored previously will be completely replaced.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glCompileShader`: It compiles the source code of the shader object.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Create a program and attach the shaders**: The following methods are called:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`glCreateProgram`: It creates an empty program object to which shaders can
+    be attached. Program objects essentially provide a mechanism to link everything
+    needed to be executed together.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glAttachShader`: It attaches a shader to a program object.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glLinkProgram`: It links a program object. If any `GL_VERTEX_SHADER` objects
+    are attached to the program object, they will be used to create an executable
+    running on the vertex processor. If any `GL_FRAGMENT_SHADER` shaders are attached,
+    they will be used to create an executable running on the fragment processor.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Use the program**: We use the following calls to pass data to shaders and
+    perform OpenGL operations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`glUseProgram`: A program object as part of current rendering state is installed'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glGetAttribLocation`: It returns an attribute variable''s location'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glVertexAttribPointer`: It specifies the location and data format of the array
+    of generic vertex attributes to use at rendering'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glEnableVertexAttribArray`: It enables a vertex attribute array'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glGetUniformLocation`: It returns a uniform variable''s location'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glUniform`: It specifies the value of a uniform variable'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`glDrawArrays`: It renders primitives from the array data.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The sample project performs model-view transform and projection transform through
+    **matrix operations**. The details of these transforms are tedious and not within
+    the scope of this book, therefore we won't cover them here. However, detailed
+    comments are provided along with the code. Interested readers could also easily
+    find online resources about these operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Displaying graphics with EGL
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Besides the `GLSurfaceView` display mechanism we described in the previous recipe,
+    it is also possible to display OpenGL graphics using EGL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Readers are recommended to read the *Drawing 3D Graphics and Lighting up the
+    Scene with OpenGL ES 1.x API* recipe before going through this one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps describe how to create an Android project that demonstrates
+    the usage of EGL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an Android application named `EGLDemo`. Set the package name as `cookbook.chapter4.egl`.
+    Please refer to the *Loading native libraries and registering native methods*
+    recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
+    Interface*, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the project `EGLDemo`, select **Android Tools** | **Add Native
+    Support**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add two Java files, namely `EGLDemoActivity.java` and `MySurfaceView.java`.
+    `EGLDemoActivity.java` sets `ContentView` as an instance of `MySurfaceView`, and
+    starts and stops rendering at the Android activity callback functions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`MySurfaceView.java` performs role similar to `GLSurfaceView`. It interacts
+    with the the native renderer to manage the display surface and handle touch events:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The following code should be added to the `jni` folder:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Cube.cpp and Cube.h**: Use the OpenGL 1.x API to draw a 3D cube.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**OldRenderMethods.cpp and OldRenderMethods.h**: Initialize OpenGL 1.x, perform
+    transforms, draw graphics, and so on. This is similar to the corresponding methods
+    in *the Drawing 3D Graphics in OpenGL 1.x* recipe.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Renderer.cpp and Renderer.h**: Simulate `android.opengl.GLSurfaceView.Renderer`.
+    It sets up the EGL context, manages the display, and so on.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`renderAFrame`: It sets the event type, and then signals the rendering thread
+    to handle the event:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`renderThreadRun`: It runs in a separate thread to handle various events, including
+    surface change, draw a frame, and so on:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`initDisplay`: It sets up the EGL context:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`EGLDemo.cpp`: It registers the native methods and wraps the native code. The
+    following two methods are used:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`naSurfaceChanged`: It gets the native window associated with a Java `Surface`
+    object and initializes EGL and OpenGL:'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`naRequestRenderer`: It renders a frame, which is called by the `touch` event
+    handler in `MySurfaceView`:'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `Android.mk` file under the `jni` folder with the following content:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Build the Android NDK application and run it on an Android device. The app will
+    display a cube, which we can touch to rotate it:![How to do it...](img/1505_04_15_new.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: EGL is an interface between OpenGL ES and the underlying native window system.
+    According to Khronos EGL web page ([http://www.khronos.org/egl](http://www.khronos.org/egl)),
+    graphics context management, surface binding, and rendering synchronization for
+    rendering with other Khronos 2D and 3D APIs, including OpenGL ES are handled by
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**EGL** is a cross-platform API widely used in embedded systems, including
+    Android and iPhone (the EGL implementation from Apple is called **EAGL**). Many
+    desktop platforms also support EGL. Different implementations may not be 100 percent
+    compatible, but the porting effort will usually not be substantial for the EGL
+    code.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following steps describe how to set up and manipulate EGL and its integration
+    with OpenGL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Get and initialize the display connection**: EGL needs to know where the
+    content should be displayed, therefore we will need to get a display connection
+    and initialize it. This is done using the following two methods:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`eglGetDisplay`: It obtains the EGL display connection for the native display.
+    If the input argument is `EGL_DEFAULT_DISPLAY`, a default display connection is
+    returned.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`eglInitialize`: It initializes an EGL display connection obtained by `eglGetDisplay`.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Configure EGL**: This is done through `eglChooseConfig`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`eglChooseConfig` returns a list of EGL frame buffer configurations that match
+    the requirements specified by the `attrib_list` argument. The attribute is an
+    array with pairs of attributes and corresponding desired values, and it is terminated
+    by `EGL_NONE`. In our code, we simply specify `EGL_SURFACE_TYPE` as `EGL_WINDOW_BIT`,
+    and color components sizes as 8 bit.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Create a render surface where the display content will be placed**: This
+    is done through `eglCreateWindowSurface`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`eglCreateWindowSurface`, given the EGL display connection, the EGL frame buffer
+    configuration and native window returns a new EGL window surface.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: In our code, we start from `SurfaceView` and pass its associated `android.view.Surface`
+    value to the native code. In the native code, we obtain its native window, and
+    finally create the EGL window surface for OpenGL drawing.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Create the EGL rendering context and make it the current**: This is done
+    by `eglCreateContext` and `eglMakeCurrent`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`eglCreateContext`: It creates a new EGL rendering context, which is used to
+    render into the EGL draw surface.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`eglMakeCurrent`: It attaches an EGL context to the EGL draw and read surfaces.
+    In our code, the created window surface is used as both the read and draw surface.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**OpenGL drawing**: This is covered in previous recipes.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Swap the EGL surface internal buffers to display the content**: This is done
+    by the `eglSwapBuffers` call.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`eglSwapBuffers` posts the EGL surface color buffer to a native window. This
+    effectively displays the drawing content on the screen.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: EGL internally maintains two buffers. The content of the front buffer is displayed,
+    while the drawing can be done on the back buffer. At the time we decided to display
+    the new drawing, we swap the two buffers.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'At time we want to stop rendering. Release the EGL context, destroy the EGL
+    surface, and terminate the EGL display connection:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`eglMakeCurrent` with `EGL_NO_SURFACE` and `EGL_NO_CONTEXT` releases the current
+    context'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`eglDestroySurface` destroys an EGL surface'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`eglTerminate` terminates the EGL display connection'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Window management
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Our code uses the Android native window management API calls to obtain a native
+    window and configure it. The following methods are called:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ANativeWindow_fromSurface`: It returns a native window associated with the
+    Java surface object. The returned reference should be passed to `ANativeWindow_release`
+    to ensure there''s no leaking.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ANativeWindow_setBuffersGeometry`: It sets the size and format of window buffers.
+    In our code, we specified width and height as `0`, in which case the window''s
+    base value will be used.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note that we'll need to link to the Android library in the `Android.mk` file
+    (`LOCAL_LDLIBS := -landroid`), because it is a part of the Android native application
+    API, which we will cover more in the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The renderer runs an event loop in a separate thread. We used the **POSIX thread**
+    (`pthreads`) calls to create a native thread, synchronize it with the main thread,
+    and so on. We'll cover `pthread` in detail in [Chapter 6](ch06.html "Chapter 6. Android
+    NDK Multithreading"), *Android NDK Multithreading*.
+  prefs: []
+  type: TYPE_NORMAL

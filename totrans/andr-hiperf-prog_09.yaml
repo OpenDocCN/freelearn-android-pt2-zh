@@ -1,0 +1,1007 @@
+- en: Chapter 9. Native Coding in Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The **Native Development Kit** (from now on, **NDK**) is a toolset provided
+    by Google to allow developers using native code languages (typically, C and C++)
+    on the application. This can allow us to perform tasks that are computationally
+    intense with a more optimized language, or to access third-party libraries to
+    better operate in some tasks (for example, we could use OpenCV to access and operate
+    with images, instead of the native and not very efficient Java API).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The NDK can be a powerful tool, but we advise the reader to evaluate whether
+    it will add a benefit to your project. In many cases, NDK is not required, and
+    a developer should never choose the toolset just because he/she feels more comfortable
+    using it. Besides, using NDK will certainly add complexity to our project in terms
+    of the structure and files to be handled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using NDK in Android can certainly bring benefits, but some pitfalls must be
+    considered:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Code complexity increases. In addition to our Java (or Kotlin, or the language
+    of choice) framework, now we have another language that needs to be debugged.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There is no more automatic garbage collector when NDK is being used. The responsibility
+    of performing all the memory management is now entirely reliant on the native
+    code.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If we are developing Java code that needs to be at some point ported into other
+    platforms, this will be harder with NDK. One solution being used is to compile
+    the files into all the possible operating systems, and then choose them depending
+    on compilation time. As you might imagine, this increases the complexity of our
+    code dramatically.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Getting started – setting up NDK in our system
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android Studio supports, from version 1.3 RC1, the Native Development Kit. Although
+    still limited, it is still functional and will provide most of its users enough
+    features and stability to carry on using it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To set up NDK, we first need to download it into our system. At the time of
+    writing this book, the latest version of NDK can be downloaded from [http://developer.android.com/ndk/downloads/index.html](http://developer.android.com/ndk/downloads/index.html).
+    If a prospective reader cannot find NDK in this location, we encourage them to
+    search Google for the location of its latest version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When NDK has been downloaded, uncompress the ZIP file and move it to a location
+    of your choice. The folder will contain something similar to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting started – setting up NDK in our system](img/4666_09_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Each package here contains some different data files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `build` folder contains all the tools and packages that are necessary to
+    actually build with the NDK toolset.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `ndk-build` is the script we will call to use NDK.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`platforms` include the required tools that we will use for each different
+    version of the Android SDK.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`python-packages` includes the source in Python scripts.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `sources` folder includes the source files.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In `toolchains`, we will find the toolchains required to build already existing
+    programs. More on this later in this chapter.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It is generally recommended to add the location of the NDK folder to the `PATH`
+    environmental variable, so it can be easily accessed later on. This can be done
+    easily, depending on the operating system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On Mac, type `sudo nano /etc/paths` in the console. You will see something
+    similar to what appears in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting started – setting up NDK in our system](img/4666_09_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: You need to add to this screen the location where NDK has been downloaded. After
+    adding it, close the console and open it again. If you type `echo $PATH`, the
+    content of the line you added will be also written, in addition to the previously
+    existing ones.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Windows, you need to add it via a control panel or system settings. Additionally,
+    it is also possible to add it directly from the console by typing `set PATH=%PATH%;C:\new\folder`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to use NDK, we also need the standard Android SDK. If the reader has
+    reached this chapter, we assume that this point is in order, and the Android SDK
+    has already been successfully installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**JNI** stands for **Java Native Interface**. JNI allows libraries and software
+    written in other languages to access the Java code that is running in the **Java
+    Virtual Machine** (**JVM**). This is not something Android-related, but a programming
+    framework that has existed and been used previously in the Java world.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'JNI needs files to be declared into either C or C++—it can even connect to
+    Objective-C files. This is what an example in C looks like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Observing the file, we can see that after the return type, `jstring`, which
+    is equivalent to a string, there is structure with the word `Java`, the package
+    name, the class name, and the method name. An object, `JNIEnv`, is always passed
+    as a parameter, as well as `jobject`—this is required to make the framework interface
+    with Java. The function, written in C, just returns a string. This will be very
+    useful to store tokens or keys that we want to hide from the eyes of a prospective
+    cracker.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initial concepts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before we start creating our first native application, we would like to introduce
+    some initial concepts to the reader, to ensure easier understanding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**ndk-build**: This file is the shell script in charge of invoking the NDK
+    build. Automatically, this script checks that the system and the application is
+    right, is generating the binaries that will be used, and copying them to our project
+    structure. Being a shell script, it can be called with a few extra parameters:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`clean`: This parameter makes the script clean all the binaries that have been
+    previously generated'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`–B`: Using the `–B` option, we force the system to perform a rebuild'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`V=1`: This releases the build and also displays build commands'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`NDK_DEBUG=X`: If we use `1`, the build will be debuggable; if we use `0`,
+    we will be forcing a release build'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`NDK_LOG=X`: Using `1`, NDK will log all the messages that are generated during
+    the build'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Keep in mind that all the parameters can be partially combined (for instance,
+    you could use `B V=1` if you want to force a rebuild and display all the build
+    commands). This scripting comes in very handy when we are automating our builds
+    to be done from a CI server, since we will not need to manually specify any build
+    type anymore.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Application Binary Interface** (**ABI**): An ABI definition specifies how
+    the code will interact against the system. When the compiled files are generated,
+    you will see that there are different files per architecture created. Each file
+    is created against one of those definitions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating our first HelloWorld-JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let´s create a project with Android Studio with a minimal setup. In order to
+    do so, navigate to **Project** | **New** | **New Project**. Create the most minimalistic
+    setup available—typically just a project; do not add `Activity` from the beginning.
+    This adds a lot of boilerplate code that we do not need at this moment. When the
+    project has been created, add a new `Activity` by right-clicking on your source
+    folder, and clicking on **New** | **Java Class**. Name the class `Main Activity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating our first HelloWorld-JNI](img/4666_09_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'When the file has been created, add this very basic code for `Activity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And remember to add it to the `AndroidManifest.xml` as well as your default
+    activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next step is to create the JNI files. This will be comprised of two main
+    files. Create a folder called `jni` in the root level of the application. We are
+    going to add the following files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It's important that the activity matches the name of the native method. The
+    opposite case can lead to problems when NDK is being used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`HelloWorld-jni.c`:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`Android.mk`:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: What is the `Android.mk` file? This file specifies to Android the location and
+    naming of our resources. Here we specify the modules and the files we are going
+    to use, as well as where we can locate them. This file must be in all the projects
+    using NDK in order to work.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`Application.mk`:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This file specifies against which architecture we are building. In this example,
+    we build for all of them, but we could decide to build only against certain architectures
+    (armeabi, armeabi-v7a, mips, x86, and so on). We could eventually add the API
+    level we are using:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As the prospective reader has probably started to guess, the purpose is to read
+    some information provided by our C file and paint it into the screen by using
+    NDK and JNI. With all those things set up, let's make some changes in our `MainActivity`
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s add the following lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will statically load the library we specify in the function, `loadLibrary()`.
+    It must be exactly the one that has been provided in the `Android.mk` file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we need to create our native method that has been defined in our `.c` file.
+    This needs to be a public method declared within `Activity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As a last step, and in order to display the value that has been read using
+    JNI, we will create a simple `TextView` and inflate it in our application. This
+    `TextView` field will read the value using the function, `stringFromJNI()`, and
+    display it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When all these steps have been performed, go to the root folder of your project
+    and type `ndk-build`. You should get an output similar to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There is a common problem when using NDK, and it is a message similar to `Android
+    NDK: Your APP_BUILD_SCRIPT points to an unknown file: /route/to/Android.mk`. This
+    can be easily solved by exporting into the environmental variable, `NDK_PROJECT_PATH`,
+    the path where your project is located:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Please keep this in mind if you need to do it programmatically.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is one last step to be performed: when `ndk-build` finishes, it creates
+    a folder called `libs` in the root folder. You need to manually move the content
+    of this folder into a new directory in your app module, `src/main/jniLibs`. You
+    can also achieve this easily using some scripting in your Gradle file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating our first HelloWorld-JNI](img/4666_09_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If you have correctly followed all the steps of the chapter until now and you
+    compile the application, you should be able to display a screen similar to the
+    following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating our first HelloWorld-JNI](img/4666_09_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Congratulations! You have created your first application with JNI and NDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a native activity with Android NDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the following section, we are going to study how an application can be done
+    entirely using native C code, without any Java code being required at all. Please
+    note that this is done more for study purposes, as there are not many practical
+    cases where developing a purely native application will be useful. However, it
+    will serve as a good example of interaction between the different layers and the
+    Android operational system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since we are not using Java code, we need to specify in the `AndroidManifest.xml`
+    file that our project will contain no Java code. This is done using the following
+    lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Applications using only native code are first supported from the API level
+    9 onwards. At the time of writing this book, this should not be a problem, since
+    the versions comprising under API Level 9 ranked under 0.1% of the total. However,
+    due to the nature of the NDK, you might be using this only for legacy or old devices:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Lastly, we need to include a metadata value in the `AndroidManifest.xml` file
+    called `android.app.lib_name`. This value needs to be equal to the `LOCAL MODULE`
+    value you include in the `Android.mk` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Android.mk` file will look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`Android.mk` in this file has been extended compared with the one we used in
+    the previous version. Note the following fields:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`LOCAL_LDLIBS`: This is a list of additional linker flags to be used within
+    the current NDK application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`LOCAL_STATIC_LIBRARIES`: This is a list of the local static libraries needed
+    to be called. In this case, we will call the `android_native_app_glue`. This special
+    library is required every time we are trying to create a native activity in order
+    to manage its life cycle and the rest of the properties.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The `.c` file we will be using in this example is slightly more complex than
+    the one we have used previously. First, there are a few more includes that need
+    to be added to the application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There is a main function that serves as an entry point to the native application.
+    This function receives, by default, an object of the type `android_app`, which
+    reflects the status of the application at a given instant. Based on this state,
+    the application handles it as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The application provides a main loop as well. It will check the current and
+    previous state and the output of the sensors, and paint on the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you compile, you will paint on the screen a purely native activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Debugging NDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Debugging source code developed with NDK is not as straightforward as debugging
+    code that has been developed with the standard Android Java DK, but there are
+    tools available for this platform. Android Studio provides, since version 1.3,
+    some built-in tools to debug applications with JNI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to prepare an application to be debugged, we need to modify our `build.gradle`
+    script. As an example, take the `HelloWorldJNI` we have written previously. Open
+    the `build.gradle` file of the `app` module and add the following lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A new configuration for debugging needs to be created. In order to achieve
+    it, navigate to **Edit Configurations**, and select **New Android Native** in
+    the drop-down menu:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging NDK](img/4666_09_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'When the configuration is released in the Android Native setup, Android Studio
+    will automatically identify the application as a native (or hybrid) application,
+    and start the native debugger automatically. To check this out, go to the C file
+    you are using to paint content on the screen, and establish a breakpoint in this
+    function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging NDK](img/4666_09_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This will stop the application when the content is going to be painted. Now
+    execute the application by clicking on the **Debug** icon, ![Debugging NDK](img/4666_09_08.jpg),
+    rather than the start icon. Now a few things will vary in comparison with the
+    execution of a normal application. First, you will see that the environment is
+    trying to connect a native debugger rather than the standard one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging NDK](img/4666_09_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'And when the application has finally been started, the execution will stop
+    at the breakpoint, and a new screen will be available in the debugging section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging NDK](img/4666_09_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The new debugging screen is really interesting. Here we have access to all the
+    native variables that are being declared or instantiated (for instance, the `JNIEnv`
+    variable that we are using in the function conveys a lot of information about
+    our environment and the debugging section that can be used).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have already seen some basic possibilities that the `Android.mk` file offers
+    us. In reality, this file is similar to a GNU makefile: it describes the sources
+    and shared libraries to the build system.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `Android.mk` file, we can group all our resources into modules. Modules
+    are static libraries, standalone executables, or shared libraries. The concept
+    is also similar to the modules within Android Studio, which should be familiar
+    to the reader by now. The same source can be used in different modules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have seen the following line in the previous script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: This value is automatically provided by the build system. This points to an
+    internal makefile that it is in charge of cleaning many of the locals variables
+    used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to add the modules later on:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: For the file to work properly, modules need to have a unique name and not have
+    special characters or spaces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: NDK will automatically append the prefix `lib` to your module when it is being
+    compiled, and add the extension `.so`. In the proposed example, the resulting
+    file will be `libexample-module.so`. However, if you add the prefix `lib` to the
+    `Android.mk` file, this prefix will not be added when the `.so` file is generated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Specifying the files to be included within the module is always done with the
+    following line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you need to include different files within the same module, you should delimitate
+    them using spaces, exactly as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: More variables in NDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: NDK defines a few variables that can be automatically used in the `Android.mk`
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: TARGET_PLATFORM
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This variable defines the target platform to be used by the build system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The target is always used in the format `android-xx`. Not all the platform
+    types are supported by NDK. It''s a good idea to check on the NDK website which
+    ones are supported. At the time of writing this book (1Q2016), this is the list
+    of the supported platforms:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Supported NDK API level | Equivalent Android release |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 3 | 1.5 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 4 | 1.6 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 5 | 2.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 8 | 2.2 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 9 | 2.3 to 3.0.x |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 12 | 3.1.x |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 13 | 3.2 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 14 | 4.0 to 4.0.2 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 15 | 4.0.3 to 4.0.4 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 16 | 4.1 and 4.1.1 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 17 | 4.2 and 4.2.2 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 18 | 4.3 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 19 | 4.4 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 21 | 4.4W and 5.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: TARGET_ARCH
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This variable specifies the architecture that will be used to build NDK. It
+    could contain values such as `x86` or `arm`. The value of this variable is taken
+    from the `APP_ABI` file, which is specified in the `Android.mk` file. At the time
+    of writing this book, this is the list of supported architectures and their names:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Architecture | Name to be used |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| ARMv5TE | armeabi |'
+  prefs: []
+  type: TYPE_TB
+- en: '| ARMv7 | armeabi-v7a |'
+  prefs: []
+  type: TYPE_TB
+- en: '| ARMv8 AArch64 | arm64-v8a |'
+  prefs: []
+  type: TYPE_TB
+- en: '| i686 | x86 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| x86-64 | x86_64 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| mips32 (r1) | mips |'
+  prefs: []
+  type: TYPE_TB
+- en: '| mips64 (r6) | mips64 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| All of them | all |'
+  prefs: []
+  type: TYPE_TB
+- en: TARGET_ABI
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This variable can be very handy when we want to specify at the same time the
+    Android API level and the ABI. We can easily do it, as for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: NDK macros
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Macros are small functions that contain a particular functionality. A few of
+    them are defined by default by NDK. To call them, you must use the following syntax:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here are a few of the default macros specified in the NDK:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`my-dir`: This macro returns the current path of the `Android.mk` file. It
+    can be very useful when, initially, you want to set up `LOCAL_PATH` in the script:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: When this macro is executed, it returns as a list all the `Android.mk` makefiles
+    that have been found in the folder returned by `my-dir`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: By using this command, we can provide a better line of sub hierarchies and a
+    better organization of the package structure.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`parent-makefile`: This returns the path where the parent makefile can be found.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The command `grand-parent-makefile` also exists, and it returns, as obviously
+    inferred, the path of the grandparent.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`this-makefile`: This macro returns the path of the current makefile.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Application.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The `Application.mk` file is also an existing file in our sample project. It
+    describes the native modules required by the app, and is generally located under
+    the `yourProject/jni` folder. As with the `Android.mk` file, there are a few variables
+    that we can include here and will increase the functionality of this file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`APP_OPTIM`: This is a very useful variable that can be used to decide the
+    optimization level when the application modules are being built. It can be defined
+    as `release` or `debug`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Basically, when the modules are compiled in the `release` mode, they are very
+    efficient and provide little information for debugging. The `debug` mode, on the
+    other hand, contains a bunch of useful information for debugging but is not very
+    efficient for being distributed. The default mode is `release`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Some of the optimization that takes place in the release mode is the naming
+    of variables. They can be renamed and shortened (here you can think of the same
+    optimization taking place when applying ProGuard to our APKs), but obviously it
+    will not be possible to debug them later when the application is running. There
+    is additionally some code reordering and reorganization that will make the code
+    more efficient but lead to incorrect information when the application is being
+    debugged.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you include the `android:debuggable` tag in your `AndroidManifest.xml`, the
+    default value of this variable will set to `debug` rather than `release`. You
+    will need to override this value to change its default value.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`APP_CFLAGS`: C/C++ compilers can use special values when the applications
+    are being compiled, in order to change procedures or to specify particular values
+    that need to be considered within the app. This can be handled in NDK with this
+    variable. For example, see the following line:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This will add the `mcpu` flag with the value `cortex-a9` to the compilation
+    of the module.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`APP_CPPFLAGS:` This value is only specified for C++ files. The previous one,
+    `APP_CFLAGS`, works for both languages.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`APP_LDFLAGS`: This variable contains a set of linker flags that are passed
+    to the linker each time this is executed. This will obviously only make sense
+    each time the linker is being executed, so it will only affect the shared libraries.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`APP_BUILD_SCRIPT:` We have already seen that, by default, the build script
+    used is the `Android.mk` file, located in the `/jni` folder. This can be changed
+    by defining this variable to point to the location of the right build script.
+    This is always understood as a relative location to the absolute NDK path.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`APP_PLATFORM`: With this variable, we can specify the Android version to be
+    used, with the format `android-n` (analogous to the table that has been previously
+    introduced for the `Android.mk` file).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`APP_ABI:` In this variable, we specify the ABI against which the application
+    is building. By default, NDK will build our application against `armeabi`. But
+    this can be changed to another value, according to the following table:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '| Set of instructions | Value |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| ARMv7 based devices | `APP_ABI := armeabi-v7a` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| ARMv8 64 Arch | `APP_ABI := armeabi-v7a` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| Intel-32 | `APP_ABI := x86` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| Intel64 | `APP_ABI := x86_64` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| MIPS32 | `APP_ABI := mips` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| MIPS64 | `APP_ABI := mips64` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| All the supported sets | `APP_ABI := all` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The value to include all the different architectures is only supported from
+    NDK version 7 onwards.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'This can also be combined when required. For example, the following command
+    will combine different sets of instructions:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Including existing libraries
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the main reasons why NDK is extensively used is to include other already
+    existing libraries that provide some set of functionalities in C/C++. Maybe the
+    most obvious example is OpenCV, which was originally written in C/C++. Rewriting
+    it in Java will not only take time, but on top of that it will not be as efficient
+    as its native counterpart.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alternatively, you might want to create your own libraries and distribute them
+    to third-party developers. It could even be possible to create a prebuilt version
+    of the libraries that can be directly included in our project, so we speed up
+    the build time rather than compiling the library with each build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are a set of steps we must follow in order to achieve this. First, each
+    prebuilt library being used must be declared as a single independent module. This
+    is how we achieve it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The module must have a name. It does not strictly need to be the same as the
+    prebuilt library, but it needs to contain a name:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Go to the `Android.mk` file and set `LOCAL_SRC_FILES` as the path pointing to
+    the library that you will be delivering.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Make sure that the version of the prebuilt library is appropriate for the ABI
+    you will be using.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If you are using a `.so` file, you will need to include `PREBUILT_SHARED_LIBRARY`.
+    If you are using a `.a` file, you will need to include `PREBUILT_STATIC_LIBRARY`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To put everything together, let''s see an example of what this file would look
+    like:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: That's it. The process is fairly simple and from now on you can pass your own
+    application as a library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You are probably wondering how this library, once it has been exported, can
+    be referenced from another project. The process is also fairly simple: it just
+    needs to be specified as the value of `LOCAL_STATIC_LIBRARIES` or `LOCAL_SHARED_LIBRARIES`.
+    For example, let''s say we want to include `libmylibrary.so` in another project.
+    We need to use the following `Android.mk` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Exporting header files
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'When dealing with third-party native libraries, it is very common to be able
+    to access headers. For example, in a file using our shared library, we will find
+    includes requiring access to our header files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this case, we will need to provide the headers to all the modules. Probably
+    the easiest way to achieve this is to use exports in the `Android.mk` file. Look
+    at the following code example, taken from an `Android.mk` file requiring some
+    headers. As long as the `file.h` file, from the preceding line is within the `include`
+    folder, the module will work properly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: After reading this chapter, the reader will be able to construct applications
+    using NDK natively or as a hybrid within an Android application. In addition,
+    we recommend the reader checks out some other frameworks, particularly OpenCV.
+    Learning OpenCV itself can be the subject of an entire book. However, if the reader
+    is dealing with heavy image processing, he/she will find this framework very useful.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the key points when using NDK is to decide where the correct trade-off
+    between complexity and performance lies. Using NDK can be tempting to solve complex
+    computational problems, and it should be a clear decision when we are dealing
+    with image processing, OpenGL, computer graphics, or animation. It is in fact
+    proven that NDK learners tend to overuse it, and include it in most single tasks.
+    From an efficiency point of view, this could look like a great idea, but software
+    engineering is about handling growing complexity more than anything else. If the
+    software keeps growing without any control, future problems of scalability and
+    software efficiency will appear.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember, not everybody is familiar with NDK, so you are also forcing developers
+    to learn a relatively complex technology to deal with mundane issues. The only
+    way to acquire knowledge and the trade-offs required in NDK is, in this case,
+    experience, since there are no unique cases and they can only be learned from
+    previous mistakes and failures. So we encourage you to try it—we are sure you
+    will be satisfied.
+  prefs: []
+  type: TYPE_NORMAL

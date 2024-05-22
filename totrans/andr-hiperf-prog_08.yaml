@@ -1,0 +1,477 @@
+- en: Chapter 8. Optimizing Battery Consumption
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Battery consumption and usage are a crucial part of developing high-performance
+    applications in a mobile platform. Whereas in a desktop we do not need to particularly
+    care about the amount of energy being used, since there is a permanent connection
+    to a source of energy, in mobile devices the situation is different and we need
+    to keep an eye on this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A battery lasts on average on a mobile device up to 36 hours and this time span
+    decreases as the phone starts getting older. This is a particularly reduced amount
+    of time, which makes our devices dependent on being close to an electricity source.
+    Whereas Moore's law is almost still being accomplished and the processing power/unit
+    cost relationship is roughly doubled every 18 months, the improvement speed in
+    battery technology is always stepping forward on the order of 5% each year. There
+    is some ongoing research with supercapacitors and this is the most promising hope
+    for the near future, but we are approaching the theoretical limit of electrochemistry.
+    Either way, it seems like battery restrictions are here to stay with us, and learning
+    to deal and operate with them seems like the wisest thing to do.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Battery drains are a frequent cause of user dissatisfaction and generally turn
+    into bad reviews of our application on Google Play Store. It is said that "good
+    things are written in sand, whereas bad ones are written in stone." If your application
+    is continuously draining device resources, it will end up uninstalled and contributing
+    to a bad online fingerprint. We do not know if the user will leave you a good
+    fingerprint in the sand by using the battery and energy responsibly, but we know
+    that the user will be happier and you will contribute to a healthier ecosystem
+    of applications by following the indications provided in this chapter about battery
+    usage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analysis
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Before we start to find a solution to a problem, we need to perform an analysis
+    step. In your Android device head to **Settings** and then click on **Battery**.
+    A screen similar to the following will open:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Analysis](img/4666_08_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This is a helpful analysis tool to determine which application(s) is (are)
+    making an incorrect or excessive usage of the battery. The first section, **Battery
+    mode**, contains three different modes to use with the battery:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Power safe**: This mode understands that your device does not have a pressing
+    need to economize on battery use. Therefore, its usage will not be reduced.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Balanced**: An intermediate level, activated by default.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Performance**: This level activates a scarcity mode in your device. The battery
+    will last for less time, at the cost of energy performance.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The next section, battery usage, can help us determine what the status of the
+    device was in the last 24 hours. Let''s click on it in order to display the next
+    screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Analysis](img/4666_08_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This screen already contains very useful information. In it, we can see a graph
+    with the evolution of the battery level in the previous 24 hours and a prediction
+    for the upcoming hours based on the previous performance. More interesting are
+    the colored bars at the bottom of the graph: they represent graphically which
+    components of the device were at that moment active: the mobile network signal,
+    the GPS, the Wi-Fi, if the device was awake or not, if the screen was on or not,
+    and whether the device was charging. This is particularly useful to debug third-party
+    applications when we do not have access to the source code, and analyze whether
+    they often start a component we do not require.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The last section shows a comprehensive list of the applications installed on
+    the device. If we click on a concrete application, a new screen with detailed
+    information will be displayed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Analysis](img/4666_08_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This screen includes all the detailed usage of the application, which, again,
+    provides us with useful information for analysis. Is the application consuming
+    much data? Is it keeping the device awake for a long period of time? How many
+    CPU calculations are being performed? Based on this information, we can proceed
+    to determine action points.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Monitoring battery level and charging status
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Our device performs continuous background operations that are battery-consuming:
+    updates from the network, GPS requests, or computationally intense data operations.
+    Based on the battery status, we might want to avoid costly operations when the
+    battery is almost drained. Checking the current battery status is always a good
+    place to start.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to check the current status of the battery we need to capture an `Intent`
+    that is regularly being sent by the `BatteryManager` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When this intent has been retrieved, we can inquire whether the device is being
+    charged or not:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And if the device is being charged, it is also possible to determine if the
+    charging is being conducted through the USB, or through an AC charger:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As a rule of thumb: if the device is being charged we should maximize all the
+    operations to be performed, since it will not have a significant negative impact
+    on the user experience. If the device has a low battery level and is not being
+    charged, we should consider deactivating our computationally costly operations.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to identify changes in the charging status
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We have seen how we can analyze the current charging status, but how can we
+    react to changes? The aforementioned class, `BatteryManager`, is broadcasting
+    every time the device is plugged or unplugged from a charging source. In order
+    to identify it, we need to register a `BroadcastReceiver` in our manifest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With the methods that we have created previously, it is now easy to identify
+    and react to any change in the charging status:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Determining and reacting to changes in the battery level
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Similarly to the previous determination of the charging status, accessing the
+    battery level of a device at a particular moment will be useful in order to determine
+    actions to be taken on our device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Accessing the element `intentBatteryStatus` that we have previously collected,
+    we can inquire about our battery level with the following lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The variable `batteryPercentage` contains the percentage of battery that is
+    remaining on the device, as accurate as possible. Please note that there can always
+    be small deviations from the real value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Similarly to the previous case, we can notify our application when the battery
+    is running out on our device. In order to do so, we need to register the following
+    `BroadcastReceiver` in our Android manifest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This `BroadcastReceiver` will be triggered every time the device enters low-battery
+    mode (or exits from it because it is charging).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The particular strategies to be taken when the battery is critical are to be
+    taken by the reader. Generally, the authors of this book recommend deactivating
+    non-essential operations when the battery is critical.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Doze feature and App Standby
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Android 6.0 Marshmallow (API Version 23) introduced for the first time two
+    kick-ass features to save battery levels on our devices: Doze and App Standby.
+    The first one reduces battery consumption when a device has not been used for
+    a long time, and the last one does the equivalent for network requests when a
+    particular app has not been used for a long time.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding Doze
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Doze mode is activated by default in devices with an API bigger than level
+    23\. When the device is left unplugged and without activity for a period of time,
+    it will then enter into Doze mode. Entering into Doze mode has some significant
+    consequences for your device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There will be no network operations from your device, with the exception of
+    receiving a high priority message from **Google Cloud Messaging** (**GCM**)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: WakeLocks will be ignored
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Alarm schedules with the class `AlarmManager` will be ignored
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: No Wi-Fi scans will be performed from your application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: No Sync Adapters or Job Schedulers will be allowed to run
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'After reading the first point you might have thought "Then nothing prevents
+    me from using GCM messages continuously, and achieving an application with high
+    priority if everybody else is following this pattern?" Well, bad news: Google
+    already thought of that. Dianne Hackborne already stated in her official Google
+    Plus profile that all high-priority messages are sent through Google GCM servers,
+    and they might be subject to monitorization. If Google realizes that a particular
+    platform is abusing the system, GCM high priority messages might be stopped without
+    the need to modify any software on the device. Our recommendation is: if you are
+    implementing a system with high-priority GCM messages, keep the functionality
+    as Google recommends it; only ping and notify important and relevant information.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Doze mode can be deactivated for an application. In order to do so, you need
+    to go to the **Settings** menu, **Battery**, and then **Battery Optimization**
+    at the top-right corner of the screen. Select whether you want to optimize the
+    application or not:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Understanding Doze](img/4666_08_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We have previously mentioned that alarms will not be triggered in Doze mode.
+    To help with adapting our application, Android 6.0 provides us with some extra
+    functionality: the functions `setAndAllowWhileIdle()` and `setExactAndAllowWhileIdle()`.
+    With these methods we can decide if a particular alarm must also be fired in Doze
+    mode. We do encourage you, however, to use these methods rarely and mainly for
+    debugging purposes. Doze tries to establish a pattern of low battery consumption,
+    and it should be our main guide to follow it. Please note too that even using
+    this method and alarm it cannot be fired more than once every 15 minutes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Avoiding useless network requests
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Developers barely check the network status in the real world. Many of the alarms,
+    broadcasts, and repetitive tasks we perform have to deal with an Internet connection.
+    But if there is no active Internet connection, what is the purpose of performing
+    all those operations? It would be more efficient to ignore all those operations
+    until the Internet connection is back on track and working.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Determining the current Internet connection can be easily done with the following
+    code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Before performing any request, we should enable our application to check whether
+    the Internet connection is active or not. This is not only a measure that contributes
+    to a low-battery consumption application, but it also makes for good architecture
+    and error handling in our application: it is easier to prevent performing an HTTP
+    request rather than triggering it and having to deal with a time-out or any exception
+    due to the lack of an active Internet connection. Any network requests should
+    be deactivated by default when this is the condition on a device.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Another useful technique is to avoid downloading big data chunks when the Internet
+    connection is not using Wi-Fi. The following snippet will let us know our current
+    connection type:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can generally assume that a Wi-Fi network will always be faster than a 3G/4G
+    connection. This is not an absolute truth, and we can find the opposite scenario
+    is true. But as a rule of thumb, it will work in most cases. Additionally, most
+    of the network operators in a majority of countries do limit their network connection
+    to a certain amount of data per month, incurring additional fees or reduced speed
+    if this limit is passed. You will mostly be on the safe side if costly network
+    operations are performed only under Wi-Fi.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Additionally, a check of the current Wi-Fi speed can be easily performed to
+    determine whether the speed is enough to perform a download of a big data chunk:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is unfortunately no direct method to check the 3G/4G speed provided natively
+    by Android. Downloading some data from the Internet and then establishing the
+    relationship between the time taken and the amount of data being downloaded could
+    give you an approximation. This would be, however, rather an indirect method that
+    also requires some bandwidth usage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Similarly to our explanation in previous parts of this chapter, we can also
+    notify our application if there is a sudden change of connectivity in our device
+    by registering `BroadcastReceiver`. The receiver would look as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our custom `BroadcastReceiver` would operate as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Dealing with BroadcastReceivers on demand
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A side effect of using BroadcastReceivers is that each time one of the events
+    is actually happening, the device will wake up. This means that a small amount
+    of energy is not to be despised if we consider the long term.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can use an auxiliary technique here to make our application more efficient:
+    activating or deactivating BroadcastReceivers on demand, based on the current
+    status of the cell phone. That means: if, for example, the Internet connectivity
+    has been lost, we might only want to wait until the Internet connection is active
+    and dismiss the other BroadcastReceivers, since they will not be useful anymore.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following code snippet shows how to activate or deactivate components that
+    have been defined in the `PackageManager` class programmatically:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Networking
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 2](ch02.html "Chapter 2. Efficient Debugging"), *Efficient Debugging*,
+    the network tool was introduced, a tool we can use to perform an analysis of the
+    network traffic from our device. We explained how the network connection could
+    be tagged. This ensures that the analysis can be done easily.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The question of how to execute an interpretation of the data in the network
+    tool does not have a single answer, since this interpretation lies in the different
+    requirements an application may have based on its functionality and purpose. However,
+    there are a few golden rules that do generally provide value to our own application
+    if they are well executed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Prefetch data**: We tend to have a bias towards prefetching information and
+    do this only on demand. This might be an easier solution, but in the long-term
+    prefetching information can be beneficial. Perform a network analysis, and if
+    you identify a situation where the data could be fetched in a previous situation
+    while being beneficial for the app (for example, downloading some user-relevant
+    information while on Wi-Fi, or when the application is being idle) then do give
+    it a try. This also has an impact on the user experience, since information will
+    be loaded faster without affecting it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Reduce the number of connections**: Instead of performing many connections
+    downloading small data, it is generally more optimal to perform a single connection
+    and download a big chunk of data. Each connection being established pays for additional
+    traffic, and handling different connections in a pool can increase the complexity
+    of your application exponentially. This is not something that can be performed
+    every time, especially if you do not have access to the web services your application
+    is working with. But if you have the chance, it''s worth giving it a try and conducting
+    network tests before and after.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Batch and schedule**: as mentioned, processing individual requests will drain
+    your battery faster. Instead, and using as few connections as possible, you could
+    make use of one of the batching/scheduling APIs available for Android. These APIs
+    create a schedule with your available requests and perform them all at once, saving
+    precious time and energy.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There are three available APIs to batch and schedule, formally: GCM Network
+    Manager, Job Scheduler, and Sync Adapter. There are a few requirements and implementation
+    is complex for each of them. However, Google and the authors of this book advocate
+    using the first two over Sync Adapter. Sync Adapter has been available since Android
+    2.0, and its implementation belongs to a different era; also, it''s complex to
+    implement.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Use GCM**: It''s a well-known truism, but it does not happen that often:
+    do use a push system such as GCM instead of a polling system for your application.
+    Pulling data from a server is a perfect battery drainer and brings no benefits
+    to your application. The complexity of implementing a push solution over pulling
+    the data will pay off immediately.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Use a caching mechanism**: There are several mechanisms and libraries in
+    Android to cache HTTP requests. Spice provides a good and comprehensive library,
+    and the authors of this book can explicitly recommend it. However, new libraries
+    and approaches rise and fall every year. Keep an eye on the latest mechanism to
+    cache information, and always apply them when you can.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Compress information**: Information can be compressed before being sent,
+    saving an important amount of bandwidth and energy. The object `HttpUrlConnection`,
+    starting from Android Gingerbread, automatically adds compression to the JSONs
+    being sent with an `HttpUrlConnection` object. Always keep in mind that compressing
+    information on the client, sending it to the server, and then decompressing it
+    there to handle it will generally be more efficient than sending the information
+    plain, without any compression.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Battery performance is an exciting field that can provide many improvements
+    to our application. It is widely underused, and even the most experienced developers
+    dismiss it and do not take it into account. The authors of this book greatly encourage
+    any developer to take as many of the actions described in this book as possible,
+    and continuously check the improvement in performance and user experience from
+    the application. We cannot say it often and loud enough: it pays off.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Google has promised to put all their efforts into providing a better battery
+    and energy experience, and an extended API for developers. It will not be a surprise
+    if upcoming Android versions start to provide new techniques to increase battery
+    lifespan and improve energy consumption. We advise the reader to keep an eye on
+    future Android versions (at the time of writing, 1Q2016, there is still no fixed
+    release date for Android N).
+  prefs: []
+  type: TYPE_NORMAL
+- en: After reading this chapter, the reader should feel comfortable knowing the main
+    battery and energy holes in Android development. If any of the advice provided
+    here is being applied, we recommend tracking the evolution of the improvements
+    over time. This can be eventually used as a good convincing argument for other
+    developers on why those measures are important to apply.
+  prefs: []
+  type: TYPE_NORMAL

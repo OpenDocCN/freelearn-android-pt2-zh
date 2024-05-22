@@ -1,0 +1,1624 @@
+- en: Chapter 5. Multithreading
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When the mobile phone market started falling and the smartphones one boomed,
+    it was clear that users needed a large computing capacity on a mobile device.
+    The growing demand for calculation and the availability of suitable hardware has
+    led to multicore CPUs on the devices, allowing parallel execution of multiple
+    tasks. Android engineers knew this before it happened. Moreover, that is why we
+    have many options to execute different tasks at the same time, with great flexibility
+    and a lot of different components to choose to apply to our multithreading strategy.
+    However, are we doing well? To answer this question, we will see all the threading
+    facets, from the basics of threading Java framework inherited by the Android platform
+    to all of the classes Android provides for this aim. We will also see how Android
+    handles its processes and how we can correctly choose the right component to use
+    in different situations, because not all of them are interchangeable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It might seem easy to deal with multithreading, but there are many pitfalls,
+    especially in communication between multiple threads. So, we will see how the
+    Android platform helps us to handle this kind of problem, providing some useful
+    classes that we will use in lots of cases. Our goal is to know how to use them
+    and how to handle them properly to improve the performance of our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As developers, our aim is to measure the performance of the application. So,
+    in the last part of this chapter, we will introduce an instrument to be used to
+    detect if some code is being executed in the main thread, slowing down the responsiveness
+    of the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Walkthrough
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will define here all we need to know to deal with a multithreading environment
+    like Android. It is crucial to understand what a thread is and what problems can
+    occur while dealing with one. That is why we are focusing on the Java framework
+    for a while, because every Android developer should know those notions, and then
+    we will focus on how that platform is defined in Android and integrated with more
+    objects. This provides multiple ways to separate execution at all levels, from
+    the multithreading inside an application to the communication between different
+    processes, defining a particular language to reach the target. So, let's see what
+    we are talking about.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Threading basics
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We could think of a thread as a portion of instructions executed sequentially.
+    These instructions are translated to be performed by the hardware of the device.
+    When there are multiple portions of instructions to be executed, then the environment
+    is called **multithreaded**. This technique is helpful to speed up any system
+    because the parallel execution is always faster than the serial one. Moreover,
+    this improves responsiveness in all of the application with a user interface and
+    can lead to better management of resources and the system in general.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Java provides the `java.lang.Thread` package with lots of classes used to handle
+    concurrency among multiple threads. This is a wrapper for the actual background
+    execution that is not visible to the developer. That is why we need to understand
+    the Java framework before deepening the Android one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multicore CPUs
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Until a few years ago, processors could only execute one instruction at a time.
+    Nevertheless, the threading framework already existed. Then, code from multiple
+    threads were executed sequentially using a time-slicing technique, and multithreading
+    was just a fiction. In this case, we cannot know which order the virtual machine
+    will follow to execute code from multiple threads. However, processors with multicore
+    technology have been available for some years. They can execute multiple codes
+    simultaneously, making multithreading a reality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Threads
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To create a thread, you can use the `Thread` object and then call the `Thread.start()`
+    method to start its execution in parallel with respect to the current one. This
+    way, the calling thread notifies the virtual machine that a new thread is needed,
+    then the virtual machine creates a new thread and executes the bytecode related
+    to the code inside the `Thread.run()` method. However, the default implementation
+    of that method does nothing. It has to be pointed out that the direct call to
+    the `Thread.run()` method instead of `Thread.start()` will call the method without
+    creating a new thread, hence it''s just the wrong way to start a new thread. There
+    are two ways to add code to the thread''s execution:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Extending the** `Thread` **class:** This way you create a class that extends
+    the `Thread` class and then you need to override the `Thread.run()` method to
+    specify what to execute when the `Thread.start()` is called:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '**Implementing the** `Runnable` **interface**: This way, when the `Thread.start()`
+    will be called, the code to be executed will be the `Runnable.run()` method one:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A thread is always started by another one, so there is always a special thread
+    called main thread, and it is the thread where the application is first started
+    and executed. Every time we launch a new thread, the execution of this main thread
+    is split into two independent lines, as shown in *Figure 1*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Threads](img/4666_05_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 1: Thread operations'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In *Figure 1*, different operations on threads are shown:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Thread-1** is just created and executed. It terminates and then it is destroyed
+    because there is no more execution in the queue.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Thread-2**, as **Thread-1**, is created and executed, but during its lifetime
+    is paused for an amount of time. This is possible using the `Thread.sleep()` method,
+    specifying the milliseconds to wait. For that amount of time the thread has stopped
+    waiting for the timeout to be reached and then it resumes its running operations.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Thread-3** is created and executed, and during its life, it starts a new
+    thread and waits for it. This means that it cannot know how much time it should
+    be waiting. That is why, if you do not know the time to wait, but you are waiting
+    for another thread to finish its work, you can call the `Thread.join()` method.
+    When the created thread has finished its task, **Thread-3** can resume its execution
+    until its end. It is also possible to specify a timeout for the waiting; when
+    it''s reached, **Thread-3** will be resumed anyway.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Java provides a priority system to threads. This means we can change a thread
+    priority to let it execute faster or slower in respect to other threads. There
+    are 10 levels of priority. Java also defines three constants for max, min, or
+    normal priorities. We can use the following to change the thread priority:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Multithreaded applications
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Applications and systems that use multithreading need to face some problems
+    that involve the developer and that force them to be careful about how objects
+    are accessed from different threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The order of execution of multiple threads in an application is unpredictable.
+    There are no guarantees which thread will be executed first or which one will
+    finish first. Moreover, we are referring not only to blocks of code but to single
+    lines of code as well. This is worrying in some critical situation where there
+    is the need for a predefined sequence of accesses to a single object. Think about
+    what could happen in a laundry if washers and dryers could work on loads with
+    no predefined order. No problem if the washer starts first, but what if the dryer
+    works first? Or worse, what if they can work alternatively for small periods of
+    time? We want the load to be first washed and then dried. Then the load should
+    be accessed by one at a time and in the right order. In other words, we need to
+    prevent a thread to access the object while it's being accessed by another one.
+    This means that the access to the load is synchronized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thread safety
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The concept of thread safety is strictly related to the multithreaded environment.
+    It refers to the safe execution of code that cannot change shared data in a concurrent
+    way. While the reading access of an object may not be a problem for safety, the
+    writing one is. A multithreaded application is thread safe if there are no concurrent
+    operations on shared objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see what this means in the Java framework. Java uses the concepts of
+    monitor: every object has got a monitor, and the thread can lock and unlock it.
+    The monitor makes sure that there is only one lock at a time. Any other lock attempt
+    is queued. These operations are at a low-level code and can be done using special
+    classes to call the lock, or the unlock on an object explicitly, but Java provides
+    a particular keyword to do the same: `synchronized`. It can be used as a statement
+    or to declare a synchronized method in its signature. In the first case, you need
+    to specify what object needs to be locked and which code is affected by the lock:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: This way, the object cannot be accessed by other threads until the end of the
+    execution of the code inside the brackets. Developers have to be aware of what
+    is called deadlock. This situation happens when two or more Threads are locked
+    waiting for each other, then those threads are blocked forever. This can happen
+    using the `synchronized` keyword with cross-referenced locks; this condition has
+    to be avoided.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The synchronized methods'' aim is to lock the object the method refers to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Android multithreading environment
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The Android platform inherits from Linux the process and threading system.
+    The system generates, at least, one process for different applications, and every
+    process has its threads. We have already talked about processes when dealing with
+    memory. Let''s analyze what they are and how they are managed: this is helpful
+    to understand how to handle application''s threads and components.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Processes
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A **process** in Android is the container for main components such as activities,
+    services, BroadcastReceivers, and ContentProviders. Hence, every process affects
+    memory and, then, if the system is in a critical state with that, it starts destroying
+    them. The system does this using a **Least Recently Used** (**LRU**) strategy:
+    when needed, the least recently used object is destroyed first to free memory.
+    A priority system is designed for this: a process can be in one of the following
+    states during its lifetime:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Foreground**: A process is a foreground one if it is hosting a component
+    that the user is interacting with. Then the process is at the top of the stack.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Visible**: A process is visible if it is not a foreground one, but it can
+    still be visible to the user.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Service**: This is a process that holds just-started services.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Background**: This contains components no longer visible to the user.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Empty**: Such a process does not include any component. It''s used for caching
+    purposes to speed up future application resumptions. It is at the bottom of the
+    stack; then it is discarded first when the system reclaims memory.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'When an application is first started, a default process is created and all
+    of its components are executed there. However, we can handle our application''s
+    components forcing the creation of a new process for every one of them, or letting
+    them join the same custom process. This can be done using a particular attribute
+    inside the manifest file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is just the need to specify the name of the process. When the name starts
+    with a colon, the process is private to the application. When it starts with a
+    lowercase, the process can be shared with other applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android application thread
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'What we discussed earlier in this chapter about threads, is the same in the
+    Android system: when an application is started a new main thread is created, and
+    its code is executed sequentially. From that thread, we can start new threads
+    to do background operations. Any other thread created for an application is called
+    **background thread** or **worker thread**. Another kind of thread is the binder
+    one, used for communication between processes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The UI thread
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It is critical to understand that the main thread is the only one that can manage
+    the user interface. That is why it is also called UI thread. The UI thread's lifetime
+    is the same as the application one's and the process's one because there is the
+    need to have a thread able to let the user interact at any time. However, why
+    is this such a strict requirement? Why isn't there a way to access views from
+    outside the UI thread? The Android UI is not thread safe, and if a view could
+    be accessed and modified by different threads, there might be unexpected behaviors
+    and concurrent errors during the execution of our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This choice has been made to speed up the UI, because lock and unlock operations
+    on an object are expensive and would have affected the Android user experience,
+    just to let the developer access views from multiple threads. Then, the platform
+    forces the access to the UI from just the main thread. This means that there is
+    no need to synchronize views because they can be accessed only by the UI thread.
+    So, it would be just a useless addition to the code structure. In fact, every
+    time a background thread tries to access a view instance, the following exception
+    is thrown:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Worker threads
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The other aspect to see in the Android platform is that the main thread is
+    not only responsible for the UI, but it should only do that: any unnecessary UI
+    operation must be done in different threads to have a fluid UI and, then, a good
+    UX, that is the primary aim of worker threads. They are used to execute long-running
+    operations that may affect the UI. More than this, those operations can freeze
+    the UI until their ends if executed in the UI thread. This can cause what is also
+    known as *Application Not Responding* dialog. When something is blocking the UI,
+    the system shows the user this dialog saying that the application is not responding
+    and asking the user if it should be closed. This is awful for user experience
+    and a disaster for performance. We will see what kind of structures Android provides
+    to reach the responsiveness we want for our application.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The binder thread
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When we need different threads from different processes to communicate, we cannot
+    use the standard code, but we need some more advanced techniques to do so. The
+    Android platform uses binder threads to let threads from different processes communicate.
+    These kind of threads simplify this inter-process communication, as we will see
+    in the following pages. Regardless, we do not need to deal with binder threads
+    directly. There is a particular language that allows us to exchange data between
+    processes, called **Android Interface Definition Language** (**AIDL**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android thread messaging
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s have a look at the framework that handles communication between threads
+    in an application. Some objects are involved in the message passing operation.
+    They are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `Message` or `Runnable` objects: They are the objects to communicate and
+    send across threads.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MessageQueue`: This is a container of ordered messages and runnables to be
+    processed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Looper`: This is the object that dispatches the `Message` and `Runnable` objects
+    to the right `Handler` object.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Handler`: This is the source of the `Message` and `Runnable` objects and the
+    recipient of `Looper`. So, it has the dual responsibility of putting messages
+    and runnables into `MessageQueue` and to execute them once the `Looper` sends
+    them back. The magic is right here: the sending operation is made on the sending
+    thread while the execution one is made in the receiving one. Hence, the communication
+    between different threads.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Figure 2* shows what the primary relationships between those objects are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Android thread messaging](img/4666_05_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2: The messaging process between two threads'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Not all threads have `Looper`. On the contrary, just the main thread has its
+    own `Looper`. This means that if you want to let two threads communicate, a `Looper`
+    object needs to be assigned to that communication and `MessageQueue` needs to
+    be created. This can be done by calling the static `Looper.prepare()` method inside
+    `Thread.run()` one. Now that we have `MessageQueue` and `Looper`, we need this
+    `Looper` to start dispatching messages and runnables to the `Handler`. This can
+    be done by calling the static `Looper.loop()` method. The following is a code
+    snippet to show what is said:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, let''s have a look at how the `Handler` object works and can send messages
+    and runnables. The `Handler` object needs to be associated with a `Looper` from
+    construction. Then the empty `Handler` constructor will get the association with
+    the `Looper` of the thread in which it''s created. Then the following instantiation
+    of the handler is possible only if it is done in the main thread or after calling
+    the `Looper.prepare()` method of the background thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That is why, if you do not do so, a `RuntimeException` will be thrown, and
+    the application will crash with the following message in the stack trace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'From an operation point of view, the `Handler` uses the following methods to
+    send messages and runnables to `MessageQueue`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`post(Runnable r)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sendEmptyMessage(int what)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sendMessage(Message m)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'All three have the possibility to specify a particular time for execution or
+    a delay and the `Handler` can remove them from the `MessageQueue` using the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`removeCallbacks(Runnable r)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`removeMessages(int what)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`removeCallbacksAndMessages(Object token)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: While the `Runnable` object contains the code to be executed, messages should
+    be handled by the `Handler` using the `Handler.handleMessage()` method, which
+    provides the `Message` itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Best practices
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With the threading concepts in mind, let's go through the code to understand
+    how Google has improved the multithreading framework inherited from Java and which
+    API the Android platform provides to the developer to deal with the main problem
+    of separation between UI thread and worker threads. We will also see what problems
+    may derive from this and which solutions Android introduced during its development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will then deal with advanced techniques to manage main components and the
+    AIDL and messenger for inter-process communications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Threads
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The standard Java threads are the base for the other frameworks we will see
+    in the following pages. They wrap threads or runnables to achieve some platform
+    requirements like the communication with the UI thread. They are still the lightweight
+    solution for brief background operations that don't need to be notified to the
+    UI thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As a general rule to observe, when using threads, avoid the synchronization
+    inside loops because acquiring and releasing a lock is an expensive operation.
+    Then, this can lead to increased timings and useless consumption of resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: HandlerThread
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In typical application development, we deal with threads and handlers, and
+    sometimes we forget to prepare what is needed to work with messaging on background
+    threads. This is the reason why Android provides a helpful `Thread` subclass that
+    wraps the thread itself, the `Looper`, and the `MessageQueue`. This is the `HandlerThread`
+    that prepares the `Looper` by itself. Then the developer does not need to do it.
+    Moreover, if more initializations are required, we can do them in the `HandlerThread.onLooperPrepared()`
+    method: this way we know that the `Looper.prepare()` has already been called and
+    the result of `HandlerThread.getLooper()` won''t be null.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s go through the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Unlike a classic thread, `HandlerThread` can be reused because it remains active
+    until the `HandlerThread.quit()` method is called. This particular method terminates
+    `Looper` that cannot process messages and runnables anymore. Then any further
+    `Message` or `Runnable` sent will fail, and the `MessageQueue` is emptied. That
+    method will force the pending messages and runnables to quit, and they will not
+    be dispatched to the `Handler`. To ensure that no pending messages will be terminated
+    and dispatched, use the `HandlerThread.quitSafely()` method. When one of those
+    methods is called, the `HandlerThread` object cannot be used anymore, as the thread
+    is at the end of its execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When to use
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `HandlerThread` keeps a thread alive with `Looper` and `MessageQueue`. Moreover,
+    it provides a controlled message processing. Hence, this is good to use when we
+    need an always available thread to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When dealing with multiple threads and messaging between them, a `HandlerThread`
+    is a good choice to delegate the `Looper` management to. It can also be reused
+    for multiple messages and runnables. Remember, however, to quit when it is not
+    needed anymore to free resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AsyncTask
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As discussed earlier, the primary goal as a developer from a multithreading
+    perspective is to free the UI thread from operations, as much as possible, that
+    could be executed in a parallel thread to maintain a fluid user interface. The
+    primary tool available to the developer from the beginning of the platform is
+    `AsyncTask`. It is not a threading framework, but just a helper class used to
+    let worker threads communicate with the UI thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `AsyncTask` object can be started only one time, just like the `Thread`
+    one. It can be created, loaded, and started from the UI thread. An `AsyncTask`
+    subclass can override the following methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: With this in mind, let's go through the explanation of what this means.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Methods
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Among the preceding methods, only the `AsyncTask.doInBackground()` one is abstract
+    and executed in the worker thread. The other ones can be overridden if needed
+    and have the following purposes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`onPreExecute()`: This is called before starting the background work. It is
+    used to notify the user that something is happening in the background.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onProgressUpdate()`: This is used to update the UI after some updates from
+    the worker thread.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onPostExecute()`: This handles the result coming from the worker thread.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onCancelled()`: This is used to handle the `AsyncTask` cancelation on the
+    UI thread.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generics parameters
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The generics in the class signature are needed to specify the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Params`: This is the type of input expected by the `AsyncTask.doInBackground()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Progress`: This is the type used to notify of an update to `AsyncTask.onProgressUpdate()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Result`: This is the result of the `AsyncTask`, `doInBackground()` method,
+    and the input of the `AsyncTask.onPostExecute()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: States management
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'An `AsyncTask` object can pass through three subsequent `AsyncTask.Status`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`PENDING`: Before starting'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`RUNNING`: While executing'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`FINISHED`: After `AsyncTask.onPostExecute()` is complete'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Executor
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Every time `AsyncTask` needs to be executed, an `Executor` object must be supplied.
+    There are two types of default execution for `AsyncTask`. They are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SERIAL_EXECUTOR`: This completes all the tasks one at a time and in sequential
+    order'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`THREAD_POOL_EXECUTOR`: This performs tasks in parallel'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'There are three methods to start the execution of `AsyncTask`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`execute(Params)`: This adds the task to the queue of the `SERIAL_EXECUTOR`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`execute(Runnable)`: This is a static method to execute a `Runnable` object
+    with the `SERIAL_EXECUTOR`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`executeOnExecutor(Executor, Params)`: This allows you to specify the `Executor`
+    object you want to use'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This is the crucial part for performance because the execution of the worker
+    thread depends on the particular executor used; the serial execution can lead
+    to unexpected delays if the queue is full and the tasks are long-running ones.
+    The default parallel execution, on the other hand, is global: hence, the threads
+    inside the thread pool are shared between multiple applications. As an alternative,
+    we can create our executor to be used in the `AsyncTask.executeOnExecutor()` method.
+    To do this, there is a `Factory` class that creates an executor. This class is
+    called `Executors`, and its methods are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`newCachedThreadPool()`: This checks, first if there are available threads
+    to be used, then, if there aren''t, it creates a new one and caches it for future
+    requests'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`newFixedThreadPool()`: This is the same as the cached case, but with a fixed
+    number of threads'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`newScheduledThreadPool()`: This creates an executor that can schedule the
+    threads to execute the task at a defined time'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`newSingleThreadExecutor()`: This creates a single thread executor'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`newSingleThreadScheduledExecutor()`: This creates an executor with a single
+    thread that can be scheduled to execute at a defined time'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This way, we can create and reuse our private thread pool as a singleton or
+    in the `Application` class. For example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: When to use
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The aim of `AsyncTask` is to let the worker thread communicate with the UI
+    one. Then, if our background operation does not need to notify the user, or, in
+    general, doesn''t need to update the UI, then there is no need to use `AsyncTask`:
+    a thread is enough and more performant than the `AsyncTask`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you are using `AsyncTask` with all void parameters or you are implementing
+    just the `AsyncTask.doInBackground()` method, then you do not need an `AsyncTask`.
+    Change the implementation to a classical thread because the UI is not changed
+    by `AsyncTask`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Besides this case, the `AsyncTask` implementation faces a couple of problems
+    due to `Activity` lifecycle. It is used many times as an inner class inside the
+    `Activity`. Then, the memory leak, as discussed in [Chapter 4](ch04.html "Chapter 4. Memory"),
+    *Memory* is so easy to occur. Apart from that, it is used inside an `Activity,`
+    and when the instance of the `Activity` is destroyed due to a configuration change
+    the `AsyncTask` is still active and operating, but the UI references are no longer
+    available. Then, when the `Activity` is destroyed and recreated, the result data
+    from the `AsyncTask` needs to be cached somewhere. Otherwise, the `AsyncTask`
+    must be executed again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loaders
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Knowing the limits of an `AsyncTask`, Android started providing the loader framework
+    to have a valid alternative to the `AsyncTask` in a couple of situations. Let's
+    have a look at what the loader offers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'They handle asynchronous operations useful to retrieve data from a remote server,
+    for example, and, then, they trigger callbacks to notify the caller that new data
+    is available. The callers may be activities or fragments. Loaders are life cycle
+    independent: it does not matter if the `Activity` or the `Fragment` is destroyed
+    and recreated after a configuration changed. It still operates in the background
+    and notifies the newly created instance of `Activity` or `Fragment`. Moreover,
+    if the background work is completed before the configuration change, the loader
+    caches the data resulting from the background to notify the new instance anyway.
+    This particular feature of activity life cycle independence means that there is
+    no connection between the loader and activity itself: hence, the loader uses the
+    application context, reducing the risk of an activity leak.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: LoaderManager
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Every `Activity` or `Fragment` has one and only one `LoaderManager`. It can
+    be retrieved using the following method of `Activity` and `Fragment`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A `LoaderManager` class deals with some operations on loaders, as described
+    in the following methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`initLoader(int id, Bundle args, LoaderCallbacks<D> cb)`: This initializes
+    a loader assigning it an ID, passing extra arguments, and specifying how to handle
+    the callback. If a loader with the same ID already exists, it is used instead
+    of creating another one.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`restartLoader(int id, Bundle args, LoaderCallbacks<D> cb)`: This starts a
+    loader again or creates a new one if no loaders are associated with the specified
+    ID, passing the extra arguments and the callback instance to handle the response.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`getLoader(int id)`: This returns the loader with the specified ID.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`destroyLoader(int id)`: This stops the loader with the specified ID.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: LoaderCallbacks<D>
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The callback interface used to handle the result of the loader operation is
+    made by the following methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`onCreateLoader(int id, Bundle args)`: This returns a new loader'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onLoadFinished(Loader<D> loader, D data)`: This notifies that the loader finished
+    its background operation and then passes the result'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onLoaderReset(Loader<D> loader)`: This notifies the loader has been reset
+    and then data is no longer available'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Provided loaders
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When using loaders, we need to use `CursorLoader` or create subclasses of loader
+    or some other loader specializations like `AsyncTaskLoader`. Let's see these options
+    and the differences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AsyncTaskLoader
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'This loader is used to do background work using a wrapped `AsyncTask` that
+    handles, as we know, the data passing through the worker thread and the UI thread.
+    However, it''s an abstract class because we need to override the `AsyncTaskLoader.loadInBackground()`
+    method to tell the class which operations have to be executed inside the worker
+    thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then, `AsyncTaskLoader` can be used for every background operation needed by
+    an `Activity` or a `Fragment` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: CursorLoader
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'CursorLoader is a specialized tool to retrieve data from a `ContentProvider`,
+    hence, if you do not have a `ContentProvider` to store data, this is not the right
+    choice of loader to use. However, it is an implementation of the `AsyncTaskLoader<Cursor>`.
+    Then, it is helpful to query the `ContentProvider` in a worker thread without
+    affecting the UI. It''s designed for the use with `CursorAdapter` or `SimpleCursorAdapter`,
+    to simplify the development of the activity: look, for example, at the following
+    snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: When to use
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The loader framework improves the features of an `AsyncTask` allowing us not
+    to worry about the activities or fragment life cycles and caching data for us.
+    For these reasons, it is a valid alternative to the use of `AsyncTask`. Nevertheless,
+    multiple loader management is easier than the `AsyncTask` one. Then, its specialization
+    in the cursor case is easy to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'When we need to fetch data, an `AsyncTaskLoader` is a right choice: it offers
+    the same features of an `AsyncTask` plus the activity life cycle independence
+    and data caching. Hence the performance improvement regarding responsiveness and
+    stability of the application.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Services
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A service is one of the main components the Android platform provides and then
+    you need to declare it inside the manifest file. Contrary to the activity, a service
+    has no UI to handle. Then, its primary aim is to execute long-running operations
+    in the background. However, do we need another way to create and control worker
+    threads?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Think about all the other ways we saw in the previous pages: they depend on
+    the activity life cycle of the UI update. Moreover, here comes the service. It
+    is a separate object that can be used in the background with no restriction and
+    without the user interaction and, then, without user interface. Hence, extensive
+    operations that don''t need the interaction with the user can be executed in a
+    service.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The most important thing to remember when dealing with services is that they
+    are not threads and, on the contrary, they are executed on the UI thread by default.
+    Hence, never start a long-running operation in a service without creating a new
+    thread: it would affect all the UI of the application. Then an *Application Not
+    Responding* dialog could be showed to the user while doing something different
+    on the UI.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Life cycle
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'As an activity, a service has two methods to identify its creation and destruction.
+    Moreover, those methods have the same name as for the activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Service` class is abstract, and the only method to be overridden is the
+    `Service.onBind()` one. However, what is it for? Let''s define two types of service
+    from the life cycle point of view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Started Service**: The service is started using the `Context.startService()`
+    method or using an `Intent` and it is active until it has called the `Context.stopService()`
+    or the `Service.stopSelf()` method.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Bound Service**: The service is started when another component asks for a
+    binding with it and it remains active until it is bound to at least one external
+    component. When no longer bound to other components, it is destroyed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There is not a clear separation between the two because a started service can
+    be bound at any point in its lifetime. However, it will still be active after
+    all of the other bound components are gone.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Started Service
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'When we want to create a Started Service, we have to override the `Service.onBind()`
+    method anyway because it is an abstract one. Hence, if we do not want it to be
+    bound, we can leave it, returning null. We will see next what to do to bind a
+    service. Instead, what we need to override, is the `Service.onStartCommand()`
+    method. This has three parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Intent intent`: This is the way to provide extra information to the service
+    when calling the `Context.startService()` method.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`int flags`: This is used to determine what kind of intent is passed. We will
+    see it later in this section.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`int startId`: This is the ID of the caller. It can be used to know if it is
+    started again from the same component or restarted after termination.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We already know that the system can start destroying processes with a policy
+    based on the process''s priority. In this case, our service can be terminated
+    and the background operation it was executing would not be completed. This is
+    the reason the `Service.onStartCommand()` method needs to return an integer value.
+    This way we can specify the way we want the system to deal with unexpected termination
+    of the service itself. The possible values to be returned by the method are as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`START_STICKY`: Using this, the service will be created again after a termination
+    occurs. To be recreated, the system sends it a null `Intent`. Then, check if it
+    is null in the `Service.onStartCommand()` method before using it. Consider using
+    it when the service needs to be restarted after an unexpected termination to complete
+    some work.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`START_NOT_STICKY`: The service will not be recreated until a new `Intent`
+    class, delivered by a normal `Context.startService()` method is called or a new
+    `Intent` matches the `Service IntentFilter`. Then, no null intents will be triggered
+    to the method. This is to be used when there is no need to start the service again
+    to complete some work when it is terminated unexpectedly.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`START_REDELIVER_INTENT`: When the service is terminated for a different cause
+    than the call to the `Service.stopSelf()` method or the `Context.stopService()`
+    one, then, the service is restarted using the last intent used to call the `Service.onStartCommand()`
+    method again. To be used when we need to know which operation was interrupted
+    with the termination.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Depending on the strategy adopted to restart the service using the preceding
+    constants, the `Intent` passed as a parameter of the `Service.onStartCommand()`
+    can have a different meaning. Let''s look at the possible values:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`0`: This is the default value, and the intent is just passed generally, as
+    the first time.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`START_FLAG_REDELIVERY`: The `Intent` class has been redelivered due to the
+    redelivery strategy. It has already been given previously, but after having handled
+    that, the service has been stopped unexpectedly. Hence, the intent is delivered
+    again, and this flag is useful for knowing this fact.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`START_FLAG_RETRY`: The intent was about to be delivered to the service, but
+    it has been terminated and, then, the intent is delivered again with this flag.
+    This time, we can know that the service has never processed the intent, contrary
+    to the previous case.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Let''s see an example of implementation of a Started Service. Remember that
+    it''s executed on the UI thread and, then, we need to create the necessary threads
+    to run long-running operations without affecting the UI and without forgetting
+    the lesson learned from [Chapter 4](ch04.html "Chapter 4. Memory"), *Memory* about
+    inner classes and memory implications:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this example, we used a classic thread, but for communications between different
+    threads, we could have used a `Handler` or `HandlerThread` object or the `Executor`
+    framework or an `AsyncTask`, depending on our needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When to use
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: A Started Service is helpful to handle multiple simultaneous requests. You will
+    have to design your multithreading strategy because it's executed in the UI thread,
+    but it is the more flexible component because of this from a threading perspective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bound Service
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: While talking about Bound Service, we need to define a client side and a server
+    one. The service is the server of this client server architecture, while an activity
+    or another service is the client. Hence, we need an interface to let them communicate
+    properly. The platform provides the `Context.bindService()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As mentioned, the Bound Service holds a reference to the clients and, when no
+    more clients are referenced, the service is automatically terminated. This behavior
+    is helpful when we need to share a background operation between multiple activities
+    without the need to close the service because it is terminated automatically.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Bound Service life cycle from a server client perspective is made of just
+    two methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Service.onBind()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Service.onUnbind()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Contrary to popular belief, the preceding methods are not called every time
+    the service is bound to a client or unbound to the same; the `Service.onBind()`
+    method is called just for the first client and the `Service.onUnbind()` method
+    is called when the last client is unbound. Hence, these methods are used to initialize
+    and release the `Service` objects or variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The interface created to let the client and server communicate, uses an instance
+    of the `ServiceConnection` interface in the client and a binder in the server.
+    Let''s see what this means in the code of both. This is the `Service` class code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Returning our `ServiceBinder` object that has a method to get a reference to
+    the `Service` class itself, we allow the client to get a reference to that and
+    then call its methods. Let''s see the client code now:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `ServiceConnection.onServiceConnected()` method has an `IBinder` as parameter,
+    then, we can cast it to the `ServiceBinder` we defined in the `Service` class
+    and use it to retrieve the service itself through the `ServiceBinder.getService()`
+    method we defined.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This way we can use the `myService` object inside the activity to call the service's
+    methods. Remember to call the `Context.unbindService()` method when the reference
+    to that is no longer needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When to use
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: If you need a direct communication between a component and the service, the
+    Bound Service is the right choice, because it extends the flexibility of a Started
+    Service to the other component, keeping separated the two bound components implementations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: IntentService
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A particular implementation of a service provided by the platform is the `IntentService`
+    class. It is useful in some situations for the reasons we are going to find out.
+    This class wraps a single background thread to execute different requests related
+    to intents in its queue. When the queue becomes empty, the `IntentService` class
+    is automatically destroyed. Hence, it has a different life cycle than the `Service`
+    class. It is active only while operating in the background thread. Knowing this,
+    let''s see the differences between `Service` and `IntentService`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The implementation of the `Service.onStartCommand()` method returns `Service.START_NOT_STICKY`
+    by default. Hence, no intents will be redelivered if the service is terminated
+    unexpectedly. Anyway, we can use the `Service.setIntentRedelivery()` method to
+    change this behavior.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Due to its life cycle, there is no possibility to bind such a service. Hence,
+    there is no possibility to create a binder for this and the default implementation
+    of the `Service.onBind()` method is returning null.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Instead of using the `System.onStartCommand()` method to handle the incoming
+    intents, the class provides the `IntentService.handleIntent()` method. This method
+    is executed in the background thread; then, there is no need to create worker
+    threads in this case. The class handles the thread creation and management for
+    us. This thread management is done using a `HandlerThread`; this is why there
+    is a queue with a sequential execution of the messages and runnables.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: As mentioned, an `IntentService` class cannot be bound, hence, the way to start
+    it is just with the `Context.startService()` method.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The code for an `IntentService` class looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: When to use
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'When you need to execute a sequential operation in the background in a separate
+    thread, and you do not need to handle the life cycle of `Service`, the `IntentService`
+    class is the right choice: it provides all that is required to do asynchronous
+    operations without affecting the UI.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inter-process communication
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The communication between two threads from two different processes is not so
+    simple as in the previous case because two separate processes cannot share memory,
+    and then, there is no way for a `Handler` object to be executed on both threads.
+    In this situation, the binder thread we discussed earlier helps us let threads,
+    in different processes, communicate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remote Procedure Call
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The framework lets us define **Remote Procedure Call** (**RPC**), which allows
+    the client thread in the local process to call remote methods as if they are local.
+    *Figure 3* shows what this means:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Remote Procedure Call](img/4666_05_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3: Remote Procedure Call scheme'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The appropriate process is the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The client calls a server method.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Data and methods are converted to a format suitable for transmission. This operation
+    is also known as **marshaling**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Through a binder thread, data and methods are transmitted.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Data and methods are converted back into the original format through demarshaling.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The server executes the method with the data and prepares the result for the
+    same process backwards to the client.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The data that needs to be passed through processes must implement the Parcelable
+    interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AIDL
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The RPC can be defined using a special language called **Android Interface
+    Definition Language** (**AIDL**). The interface between client and server is defined
+    inside an `.aidl` file, and its content is replicated in both client and server
+    processes. The marshaling and demarshaling operations are delegated to two particular
+    inner classes called **Proxy** for the client side and **Stub** for the server
+    one. In this case, the scheme in *Figure 3* is turned into that in *Figure 4*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![AIDL](img/4666_05_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4: Android Interface Definition Language scheme'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use this language, you need to define the interface with a method signature
+    in the `.aidl` file. For example, look at the following declaration inside the
+    `.aidl` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, this is converted to a `.java` file and shared between processes. So,
+    the `RemoteService` class can have an instance of its stub this way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Moreover, finally, the client activity can bind the remote service and call
+    the method of the interface as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Messenger
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Another way to send methods and data to a remote process is the use of a `Messenger`
+    object. It is easier but single-threaded, hence slower. A `Messenger` object has
+    a reference to a `Handler` object in one process and, then, another process handles
+    it. Let''s start with the code of the remote service:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, the `Messenger` object is used by the client `Activity` to send messages:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Advanced techniques
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We saw until here an overview of the main techniques to handle multithreading
+    in an Android application. We now want to have a look at advanced techniques helpful
+    to improve performance, in particular, situations where a developer is not always
+    aware of how multithreading strategy works, moving expensive operations from the
+    UI thread to a worker thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: BroadcastReceiver asynchronous techniques
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A `BroadcastReceiver` class is another Android platform main component. It
+    differs from the other main components because of its short life cycle. The `BroadcastReceiver`
+    class is active just for the execution of the `BroadcastReceiver.onReceive()`
+    method. Its main use is to receive messages. Hence, it has a short lifetime. Then,
+    this component was not created to execute long-running operations. However, it
+    is the perfect candidate to be used to start a background task starting, for example,
+    `IntentService`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Starting from Android Honeycomb (API Level 11), the platform provides a particular
+    way to extend the `BroadcastReceiver` class lifetime and wait until a background
+    thread ends: calling the `BroadcastReceiver.goAsync()` method, a `PendingResult`
+    object is returned. This object is used to handle the state of the background
+    thread. The lifetime of the receiver endures until the `PendingResult.finish()`
+    method is called. This is crucial to remember: if you are going to use this particular
+    technique when the thread has completed its task, call the `PendingResult.finish()`
+    method to free the `BroadcastReceiver` class. Otherwise, the receiver will not
+    be closed, leading to a memory leak and unexpected results in the next receiving
+    broadcast events. Let''s have a look at the code to use this technique:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: ContentProvider asynchronous techniques
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A `ContentProvider` class is another main component used to share data across
+    other main components, processes, and applications. Its primary purpose is to
+    hold a database for information to be shared. Most of the time, the provider is
+    a remote object in a different process. Then, the provider is not accessed directly,
+    but a `ContentResolver` object is used to query, insert, delete, and update the
+    provider. This way the inter-process communication is handled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `ContentProvider` class cannot know how many concurrent modifications are
+    occurring at the same time. Then, thread safety is needed, because there is the
+    need for consistency of queried data. Luckily, an SQLite database is locked and,
+    then, it is thread-safe. Moreover, the SQLiteDatabase class has a method called
+    `SQLiteDatabase.setLockingEnabled()` to change the thread-safety behavior of the
+    database. Its default value is `true`, and it has even been deprecated and, more
+    than this, disabled starting from Android JellyBean (API Level 16) so you cannot
+    remove locks and thread safety from the database accesses. You can enable the
+    parallel writing of data in the SQLiteDatabase anyway using the `SQLiteDatabase.enableWriteAheadLogging()`
+    method. This way, writing operations are done while reading ones are executed
+    in a different log file to enable parallel read/write executions. Hence, the readers
+    will read the value as it was before the writing operation started. This way of
+    getting access at the same time as multiple threads is expensive from a memory
+    perspective because of the duplication of data in the background while writing.
+    Then, use it only if you strictly need multiple threads to access the database.
+    In all of the other use cases, the default implementation of lock for the database
+    accesses is enough.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we need to make operations on `ContentProvider`, we should avoid making
+    them on the UI thread; they can be long and block the UI. We already discussed
+    the database querying in the background when we dealt with `CursorLoader`: the
+    `CursorLoader` object is used just to read from a database. However, now we are
+    dealing with `ContentProvider`, and we do not have direct access to them. Moreover,
+    we want to write to them as well as read from them. Android provides a particular
+    API to do this: we are talking about the `AsyncQueryHandler` class. It wraps the
+    `ContentResolver` to start asynchronous operations on the `ContentProvider`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `AsyncQueryHandler` is an abstract subclass of `Handler`. It has no abstract
+    methods, but we can define what to do to handle different writing and/or reading
+    operations completions. Here are the `AsyncQueryHandler` callbacks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The methods to start the execution of a particular request to the `ContentResolver`
+    object are shown in the following snippet. When the operation is done, the corresponding
+    callback method indicated above is called:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`startQuery(int token, Object cookie, Uri uri, String[]projection, String selection,
+    String[] selectionArgs, String orderBy)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`startInsert(int token, Object cookie, Uri uri, ContentValues initialValues)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`startUpdate(int token, Object cookie, Uri uri, ContentValues values, String
+    selection, String[] selectionArgs)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`startDelete(int token, Object cookie, Uri uri, String selection, String[]
+    selectionArgs)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The token to be passed to the preceding methods is the same that will be passed
+    as a parameter in the related callback method. This way we can know who the caller
+    is and then do some particular action instead of another one. It is useful if
+    we want to cancel a particular operation: we can do it by calling the `AsyncQueryHandler.cancelOperation()`
+    method. Now let''s see how to use it in `Activity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `AsyncQueryHandler` class is just a handler, and its callback methods are
+    called from the thread that created the `AsyncQueryHandler` object, while the
+    operations are done in a worker thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Every time you are dealing with `ContentProvider`, the choice of the `AsyncQueryHandler`
+    is the right one to free the UI thread from unnecessary operations, delegating
+    a worker thread to deal with `ContentResolver`. This way, you can improve the
+    UI performance of your application. Moreover, it is easy to use and frees us to
+    deal with `Looper` and `MessageQueue`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Repeating tasks
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Many times we have needed to start a recurring task in our development experience.
+    However, is the adopted strategy the right way to do it? Can it be improved from
+    a performance point of view? Let's check which options we have to create a recurring
+    timer to start background operations without affecting the UI thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Timer
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The `Timer` class is the most used method to create a recurring task:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `Timer` object creates a thread used to execute the code of the recurring
+    task. Hence, the `TimerTask` is not executed on the main thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When done, the `Timer` must be canceled using the `Timer.cancel()` method to
+    free resources that otherwise can be held indefinitely. This API can be used for
+    short period recurring tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ScheduledExecutorService
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'This particular implementation of the `Executor` framework allows us to schedule
+    a repeating task at regular intervals. It can be done in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the execution is no longer needed, call `ScheduledExecutorService.shutdown()`
+    or `ScheduledExecutorService.shutdownNow()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This one is more flexible and capable than the `Timer` API. Therefore, it should
+    be preferred to that for short period recurring tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AlarmManager
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'An `AlarmManager` object can be used to start recurring operations by starting
+    a new component at particular times:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can use two methods to start a new repeating alarm:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`setRepeating()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setInexactRepeating()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The `AlarmManager` class is much more efficient than the other ones because
+    of its internal checks of the system status, but it is not suitable for short
+    period tasks. Hence, use it when possible instead of the `Timer` and the `Executor`
+    framework, considering its limits. Remember to restore the alarms once a reboot
+    is completed: you can use a `BroadcastReceiver` to be used with `Intent.ACTION_BOOT_COMPLETED`
+    to be notified about this event.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Debugging tools
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have seen different techniques to create our multithreaded application and
+    when to use them. The right structure to use depends on a lot of various factors;
+    it's up to the developer to treasure what we said and apply the appropriate framework
+    in each case. However, our primary goal is to provide a fluid UI to the user,
+    avoiding the *Application Not Responding* dialog, lags, and any obstacle to the
+    correct execution of the UI thread. For this, Android provides some tools that
+    we are about to see in the following pages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: StrictMode
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We already dealt with this tool in [Chapter 4](ch04.html "Chapter 4. Memory"),
+    *Memory*, while talking about memory leaks. However, this tool can also help us
+    find and notify threading problems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use it we need to know what we are searching for and how to be informed
+    that a threading problem is occurring. For this, we need to set `ThreadPolicy`
+    to the `StrictMode` class, using a `ThreadPolicy.Builder` class. This way we can
+    be notified of the following occurring problems:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`detectCustomSlowCalls()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`detectDiskReads()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`detectDiskWrites()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`detectNetwork()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`detectResourceMismatches()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`detectAll()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The way we are notified depends on what method we call. We can choose among
+    the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`penaltyDeath()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`penaltyDeathOnNetwork()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`penaltyDialog()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`penaltyDropBox()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`penaltyFlashScreen()     `'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`penaltyLog()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Hence, the following code snippet is a good example of what we should do to
+    check any threading problem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Starting from the basic definition of thread, through the Java threading framework,
+    we got to talk about Android process management, thread types, and the messaging
+    framework. We analyzed pitfalls in multithreading environments, defining thread
+    safety. Indicating what we can do with multiple threads in an application, we
+    described the primary goal for an Android developer from a multithreading performance
+    point of view. The UI thread should just deal with the UI, and any other operation
+    should be executed in the background using a worker thread. Because of this, we
+    evaluated a lot of different solutions provided by the platform for various situations,
+    defining when they can or shouldn't be used. Anyway, the choice of the right framework
+    depends on the particular situation the developer is dealing with, but, knowing
+    all the possibilities, he has more chances to improve the performance of the application.
+    At the end of the chapter, we saw which tools we have for the detection of threading
+    anomalies to keep the application responsive.
+  prefs: []
+  type: TYPE_NORMAL

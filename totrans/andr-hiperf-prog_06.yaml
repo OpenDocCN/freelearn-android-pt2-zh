@@ -1,0 +1,1754 @@
+- en: Chapter 6. Networking
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'While talking about performance in a mobile application, the main concern is
+    how our application behaves in poor connectivity conditions. No developer wants
+    his users to give negative feedback because the application is too slow while
+    uploading or downloading data, or it is not synchronized with other platforms
+    versions of the same application. How many times do we change the networking strategy
+    of our application because a client or users said it is too slow? Networking is
+    not completely controllable from the client side because too many external factors
+    are involved in the process: proxies, web servers, service providers, DNSs, and
+    so on. We cannot know if there is a problem in one or more of the elements of
+    that chain.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moreover, the user does not know where the problem is, but he will think the
+    application is not good. Then he will uninstall it. Nevertheless, we can control
+    the application behavior and improve the user-perceived performance of our application
+    by using some advanced techniques to reduce the network load, by using a couple
+    of network patterns in particular situations, and by identifying some libraries
+    that simplify our development. As usual, we will go through some theory to master
+    the topic and understand best practices to improve the networking approach of
+    the applications and then we will look at a couple of different, but both helpful,
+    official and third-party tools to profile our code and check how our application
+    is behaving in lots of different connectivity conditions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Walkthrough
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we get into the code, studying different techniques to improve our strategy,
+    we want to give a general overview of networking and the possibilities the Android
+    platform provides. So, let's think about what a client needs to do before retrieving
+    the expected response from a server instance. When a client needs a server response,
+    it is routed in a high-level architecture that contains many actors, such as Wi-Fi
+    access points, LANs, proxies, servers, and DNS servers, with multiple instances
+    of them and multiple requests to be fulfilled before getting back the desired
+    response. Then, when the server receives the request, it needs to elaborate the
+    response that has to be routed back to the client. The time it takes to do all
+    of these operations needs to be reasonable for the user. Furthermore, one of the
+    links between any two actors of the chain may be interrupted and then no response
+    can be given back to the client. In the meantime, the user is waiting for a result
+    on the application and the application instead won't receive it, and it will show
+    an error when the timeout is reached.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Figure 1* shows an example of a possible flow:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Walkthrough](img/4666_06_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 1: Example of an external networking architecture'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We do not want this to happen to our users, but we have no way to predict what
+    will happen in such a high-complexity architecture. What we can do, instead, is
+    to apply a couple of enhancements in the way we handle external communications
+    from our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Anyway, before starting, let''s check how those external requests work to understand
+    better how to improve networking performance. Let''s break down what happens in
+    the client when it makes a request and handles the server response. To do this,
+    have a look at *Figure 2*. It shows both requests and responses from the client
+    perspective, ignoring possible errors or delays: they are just possible parameters
+    to be set in the request and information and operations relating to the response:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Walkthrough](img/4666_06_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2: Overview of request and response client items'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To handle them, Android provides two main APIs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`HttpClient`: The `DefaultHttpClient` and `AndroidHttpClient` classes are the
+    main classes to use for this HTTP implementation.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`URLConnection`: This is a more flexible and performant API to connect to a
+    URL. It can use different protocols.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `URLConnection` API was so preferable to the `HttpClient` API that the latter
+    was first deprecated and then removed, starting from Android MarshMallow (API
+    Level 23). From now on, we will therefore refer only to the `URLConnection` API
+    unless specified otherwise.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are external libraries we can import to our projects to use different
+    APIs, but there is one, in particular, that, besides integrating some of the patterns
+    we are going to see in the following sections, also handles the requests in a
+    worker thread, freeing us from having to create a background thread for this.
+    We are talking about the HTTP Client library for Java by Google. We will also
+    refer to this in the following sections when specified.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we are dealing with Internet access, we must always ask the user for permission.
+    Then, we need to add the following inside the manifest file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Let's look in more detail at every one of the items illustrated in *Figure 2*
+    from an Android perspective. This will give us a better understanding of them
+    before we come to the *Best practices* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Protocols
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'What we are interested in is communication using the HTTP protocol. The `URLConnection`
+    subclass-supported network protocols include the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**HTTP and HTTPS**: `HttpUrlConnection` is the main class, and it is what we
+    will deal with in the rest of the chapter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**FTP**: There is no specific class for **File Transfer Protocol** (**FTP**)
+    communications. You can simply use the default `URLConnection` class because it
+    provides everything you need.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**File**: Local files from the filesystem can be retrieved using the `URLConnection`
+    class. It is based on the URI of the file; you therefore need to call a URL starting
+    with the file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**JAR**: This protocol is used to deal with JAR files. `JarUrlConnection` is
+    the appropriate class to get this kind of file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The class also allows the developer to add additional protocols using a `URLStreamHandlerFactory`
+    object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Methods
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The main request methods provided in the `HttpURLConnection` class are the
+    following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GET`: This is the default method used, so you do not need to set anything
+    else to use it'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`POST`: This can be used by calling the `URLConnection.setDoInput()` method'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Other methods can be used by setting them using the `URLConnection.setRequestMethod()`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Headers
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While preparing the request, it may be necessary to add some additional metadata
+    to let the server know the particular status of the application, or information
+    about the user and the session, and so on. Headers are key/value pairs to be added
+    to the request. They are also used to change, for example, the response format,
+    to enable compression, or to ask for particular HTTP features.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are two particular methods to add headers to the request and to get headers
+    from the response:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`URLConnection.setRequestProperty()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`URLConnection.getHeaderFields()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We will look more closely at some headers in the following pages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Timeout
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `URLConnection` class supports two types of timeout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Connect timeout**: This can be set using the `URLConnection.setConnectTimeout()`
+    method. The client will be waiting for a successful connection with the server
+    for the value set. If no connection has been established after a set amount of
+    time, a `SocketTimeoutException` is thrown.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Read timeout**: This is the maximum time to wait until an input stream is
+    completely read, otherwise, a `SocketTimeoutException` is thrown. To set it, use
+    the `URLConnection.setReadTimeout()` method.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: For both, the default is `0`, where there is no timeout from the client. Hence,
+    the timeout is handled by the TCP transport layer. We do not have control of this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Content
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'When we start a new connection with the server, we want a response; we can
+    get back the content from the response as an `InputStream` by using the `URLConnection.getContent()`
+    method. The content has some parameters to be read, and there are three headers
+    in the response that control how to read it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Content length**: This is the byte length of the response specified by the
+    relative header and retrieved using the `URLConnection.getContentLength()` method.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Content type**: This is the MIME-type of the content coming from the `URLConnection.getContentType()`
+    method.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Content encoding**: This is the type of encoding used for the response content.
+    Use the `URLConnection.getContentEncoding()` method to know which one to use.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Compression
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The content-encoding value is used to specify the type of compression of the
+    content inside the response. The client can ask for a particular encoding of the
+    response by using the `Accept-Encoding` header and by specifying one of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`null` or `identity`: These are used to ask for no encoding for the response
+    content'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gzip`: This is the default value; the client will always ask for gzip-compressed
+    content.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Despite the client request for compressed content, the server may not have enabled
+    gzip compression. We can tell if the content is compressed by checking the result
+    of the `URLConnection.getContentEncoding()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is important to know that every time we add the `Accept-Encoding` headers
+    in the request, automatic decompression of the response is disabled. We need to
+    use the `GZIPInputStream` if the response content is compressed, instead of a
+    classic `InputStream`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Response code
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The response is crucial to creating our strategy because the application needs
+    to behave in different ways depending on the response code. The `HttpURLConnection.getResponseCode()`
+    method returns the response code, and we can use it to switch the application''s
+    behaviors. Let''s see their macro groups:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`2xx: Success`: The server has received the request and sent back the response.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`3xx: Redirections`: The client needs to take action to go on with the request.
+    This is made automatically; we do not need to deal with actions most of the time.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`4xx: Client Error`: A response code such as this means there was something
+    wrong with the request. Bad syntax in the request, an authorization is needed
+    before the request, the resource requested cannot be found, and so on.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`5xx: Server Error`: The server can send back a response with this code if
+    there was an internal problem, or something is overloaded.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Connection types
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In addition to request and response parameters, from the client point of view
+    we can change the behavior of the application when a request is needed depending
+    on the enabled connection type. The `ConnectionManager` API can be used to tell
+    which connection is active at a particular time. Call `ConnectionManager.getActiveNetworkInfo()`
+    to retrieve the `NetworkInfo` data. It is useful to know which connection is active
+    and if it is connected. Call the `NetworkInfo.getType()` method to get the `ConnectionManager`
+    constant value and to compare the following types:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`TYPE_MOBILE`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TYPE_WIFI`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TYPE_WIMAX`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TYPE_ETHERNET`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`TYPE_BLUETOOTH`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If we need the user to download big files, we should avoid doing this while
+    a mobile network is active because it can be much slower than a Wi-Fi connection
+    and it can lead to unexpected costs for the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Checking the active network is not enough to know if we can start a new request
+    over the network: we should also call the `NetworkInfo.isConnected()` method to
+    receive a response.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can even listen to network changes by using `BroadcastReceiver` and registering
+    it for `ConnectivityManager.CONNECTIVITY_ACTION` events. This way we can know
+    when a change on the active network occurred and, then, for example, start a new
+    request if the Wi-Fi has been turned on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For all of these operations to access the network state, we need further permission
+    from the user, and then we need to add the following inside the manifest file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Best practices
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The networking theory we discussed in the previous section is the starting point
+    for the best practices we are going to overview in the following pages. We will
+    go through networking software architectures and patterns to follow to improve
+    the client-server communication of our application to enhance the user's understanding
+    of the speed of our applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Latency gauging
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We said initially that there is no way to predict the timings for a remote request
+    to the server. This is always true, but we can somewhat estimate its duration
+    by tracing our requests' timings and by calculating the average value. This particular
+    process can be helpful to define different strategies depending on latencies.
+    For example, if the response for a particular remote resource is fast, we can
+    expect that, in the same connectivity conditions, this will still be fast.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Moreover, we can then change the request and ask for more than in a slower
+    response case. The classic example is image resolution: if the response is fast
+    enough, we can ask the server for a higher resolution image. On the other hand,
+    if we are expecting a slow response, it is better to request a lower resolution
+    image. This way, we can balance the time and get the same responsiveness.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hence, there is the need to set a particular amount of latency, considering
+    whether the response is fast or slow. We may even consider more than one level
+    of latency to create our strategy. Then, there will be a more accurate estimation
+    of response times and a better implementation of this pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, consider a case with three levels of latency: the standard one
+    is for a Wi-Fi connection, the higher one for LTE, and a lower one for the GPRS.
+    The following code snippet shows how to check the connection and apply the strategy:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Batching connections
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Every time the radio is turned on for a connection, it draws power for about
+    20 seconds, resulting in battery draining and a low-performance perception from
+    the user's point of view. Hence, it is very important to reduce the number of
+    connections as much as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the possible strategies to apply in our application is to gather all
+    the data to be exchanged between the client and the server and set it aside for
+    future connections when the amount of data to transfer is enough. The idea is
+    to reduce connections and to increase data to be transferred during every connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An example of this is a classic analytics library. It can execute a connection
+    when an event to be tracked occurs, or it can collect events to be transferred
+    to the server when some events have been reached or when a time has passed. The
+    second choice is preferable because it reduces communications and increases the
+    data transferred for individual connections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When designing a client/server architecture, reducing the communications should
+    always be a crucial point. Keeping this in mind could increase the application
+    performance more than expected because, if well designed, this architecture can
+    lead to populated screens and reduced communications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are two main aspects of this pattern to use in our applications: we can
+    execute a single request for more data, asking the server for information about
+    multiple sections of our application to reduce requests, or we can batch multiple
+    connections to avoid unnecessary radio operations that could drain the battery.
+    Let''s go through them in the following pages.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Prefetching
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A special technique to reduce connections and avoid empty screens on our applications
+    is **prefetching**. The idea behind this is to download as much data as possible
+    when a connection is available for different requests and sections of our application.
+    So, when it is possible, we should let our application download data in the background
+    to populate sections and anticipate user requests that could lead to the perception
+    of low performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It has to be designed because, if not well used, it can lead to battery drain
+    and oversized bandwidth usage just for unused data downloads. Then, a good strategy
+    is to use this pattern with latency gauging. Once we estimate the latency, as
+    described in the *Latency gauging* section, we could use a different prefetching
+    strategy with different levels of resources to request to the server, demanding
+    the higher prefetching strategy for better connection opportunities in the future.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Queuing connections
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There is a particular case for reducing the amount of time while the radio
+    is turned on: if the requests will not be executed immediately, they can be queued
+    for future batch connections. An example of this is the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Caching responses
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As mentioned before, the best way to save time, bandwidth, and battery charge
+    is not to execute a network request at all. This is not always possible, but we
+    can use caching techniques to reduce these requests. For this purpose, there are
+    a couple of choices in terms of strategies to apply.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Refer to [Chapter 10](ch10.html "Chapter 10. Performance Tips"), *Performance
+    Tips*, for more in -depth techniques for file and bitmap caching.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cache control
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Android Ice Cream Sandwich (API Level 14) provides a helpful API to save responses
+    into the filesystem as a cache. We are talking about the `HttpResponseCache` class.
+    It can be used to save and reuse responses when we are using the `HttpURLConnection`
+    and the `HttpsURLConnection` classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first thing to do to use it is to design the right cache size: it needs
+    to have an upper limit to start deleting unnecessary entries to free disk space.
+    Then, we need to find the right amount so as to have few deletions without wasting
+    disk space. It depends on the type of request the application executes and the
+    amount of data downloaded for every request. When you have chosen the cache size,
+    you need to install the cache as follows at the start of the application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This way, the response of every network request will be cached inside the application
+    memory for future needs. We also need to flush the cache to let it be available
+    on the next application start. Let''s do it inside the `Activity.onStop()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next step is to decide whether each request must be cached or not. Depending
+    on our need for every request, we will have to specify the expected behavior inside
+    the request headers using the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `POLICY` value can be one of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`no-cache`: This way a complete refresh is requested. The whole data is downloaded.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`max-age=SECONDS`: The client will accept the response if its age is less than
+    the value specified by `SECONDS`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`max-stale=SECONDS`: The client will accept the response if its expiration
+    is no more than the specified `SECONDS`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`only-if-cached`: The client is forced to use the cached response. The `URLConnection.getInputStream()`
+    method can throw a `FileNotFoundException` if no cached response is available.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Network request caching is disabled by default. We can use the `HttpResponseCache`
+    API to enable it. Once the `HttpResponseCache` API is enabled, it will be used
+    for every network request from our application. Then, it is up to us to decide
+    how to handle every single request cache.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you have access to the server implementation, the best choice is to delegate
+    the server side to handle the expiration time of the requests using the `cache-control`
+    header of the response. This way, you can change your strategy from remote, simply
+    modifying the response header. Instead, if you do not have access to the server-side
+    code, a strategy is required to handle the expiration date of the cached response,
+    depending on the actual response header from the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Last-Modified
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When dealing with static remote resources, we can get the date of the last change
+    on a particular resource. This can be done by reading the `Last-Modified` header
+    in the response. In addition to that, we can also read the `Expire` header to
+    know if the content is still valid or not. A good practice is to cache the resource
+    together with the date of the last change and compare this date with the one coming
+    from the server side. Hence, we apply our caching strategy to update the cached
+    resource and to update the graphical layout.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following snippet is an example of this header usage:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this case, the caching strategy must be chosen and implemented separately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If-Modified-Since
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There is another clever way to achieve the same result as the `Last-Modified`
+    header case: it is the `If-Modified-Since` header. If the request contains the
+    `If-Modified-Since` header with the date of the last time the client checked the
+    resource, the server will respond with a different status code depending on the
+    `Last-Modified` header:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`200`: The remote resource has been modified after the last time the client
+    checked. The response contains the resource expected.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`304`: The remote resource has not been modified. The response does not contain
+    the content.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The smart thing here is that if the content has not been updated, it is not
+    in the response and the payload is reduced, speeding up this kind of client/server
+    communication. And more than this, if the server does not implement this HTTP
+    1.1 policy, the client can ask for it anyway, always receiving a `200 OK` response.
+    Hence, we could implement this logic in the client for future `If-Modified-Since`
+    header reception of our backend.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s check how we can use this header. It can be used in an explicit way
+    as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Otherwise, there is a particular method for the `HttpURLConnection` class to
+    be used to enable the `If-Modified-Since` header in the request. It is in the
+    following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Exponential back-off
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There are cases in which we cannot avoid polling. In those situations, we should
+    take care of server issues when they occur and use a different strategy. When
+    the server side is overloaded because of too many requests or the network traffic
+    is too high to be handled, it starts responding with errors. For these cases,
+    an exponential back-off strategy is the right choice to free the server from lots
+    of unhelpful requests that would be rejected anyway. This pattern consists of
+    an incremental pause time between subsequent requests if the server responds with
+    an error. This way, we give the server the chance to dispose of excessive requests
+    and turn back into a normal state. Then, when the server is back to normal, we
+    can resume the right polling interval.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s go through some code to understand better how to implement such a network
+    pattern:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There is also an implementation of this pattern in the HTTP Client library
+    for Java by Google. We can add an `UnsuccesfulResponseHandler` to the `HttpRequest`
+    object passing an `HttpBackOffUnsuccessfulResponseHandler` object. Moreover, an
+    `ExponentialBackOff` object before execution can be implemented in the following
+    way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Remember not to use this pattern for server response codes that indicate a developing
+    error. It does not make sense to apply it for a `400 (InvalidParameters)` or `404
+    (NotFound)` response code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Polling versus pushing
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We discussed the importance of reducing the number of connections due to their
+    effect on the battery and the overall performance of the application. There are
+    many situations where we need to synchronize data from the server, and the first
+    thing that comes to mind is creating a polling system to have an always updated
+    application. And then, clients, product owners, project managers, and so on ask
+    us to improve the user experience and we reduce the polling interval, causing
+    the application to ask the server constantly for updates and, especially, never
+    to close connections, thus steadily overloading the CPU. Further, if we do not
+    care about the type of connection used by the user, we could let him finish the
+    available bandwidth in his contract, just to check if new data is available on
+    the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The opposite situation is the best one: when something changes in the server,
+    it contacts the client to tell it what''s happened. This way, no unnecessary connections
+    are made, and the client is always up-to-date. For this purpose, Google provides
+    the Google Cloud Messaging framework.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, sometimes we cannot change the server implementation because we do
+    not have access to the backend code. Anyway, we can improve the polling mechanism
+    we designed by using a few clever tips:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let the user decide which interval to use: this way the user is aware of how
+    the application is behaving and can change that value if it is draining the battery
+    or if a more accurate update is required.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When using the `AlarmManager`, use an inexact repeating alarm to execute networking
+    operations. The system will automatically batch multiple connections reducing
+    the activity time of the radio.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When polling is active, we can check the frequency of new data from the server
+    and apply an exponential back-off pattern to wait for fresh data from the server,
+    reducing the number of unnecessary connections. For example, if our application
+    asks for updates and none of them are available, we can let the next request wait
+    twice the time before execution and so on until a maximum is reached. When new
+    data is available, then we can restore the default value and go on this way.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Provided APIs
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the following pages, we want to deal with a couple of APIs provided by Google
+    to improve the networking sector of our application and to help us develop what
+    we discussed earlier in a better way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SyncManager
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `SyncManager` API is provided to help developers design a good synchronization
+    system between the server and the client in both directions. It is useful in those
+    situations where we want to transfer data from the client to the server or vice
+    versa, but we do not need it to be done immediately. The framework provides many
+    advantages we have to consider when we design our application because it can be
+    the right choice and free us from developing all of the necessary code to do this.
+    The framework expects your application to use `ContentProvider` to store data
+    locally, ready to be synchronized with the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It can add our tasks to a queue and execute them when the right conditions are
+    satisfied depending on the requirement we want, such as delays or when data is
+    changed, and so on. It can check if the connectivity is available and batch connections
+    to reduce the radio activity time. It also handles login information for the user
+    to synchronize data to a server with login credentials. This is not mandatory
+    because you can handle the login management yourself, but you need to define the
+    object that deals with authentication anyway.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once the framework is implemented in our application, a synchronization operation
+    can be performed in several ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the server notifies the client that something has changed. This is the
+    best way to avoid polling methods, as discussed earlier. The best way to do this
+    is by using Google Cloud Messaging: when a message has been received, simply call
+    the `ContentResolver.performSync()` method to start a new synchronization.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When something changes in the client and then a synchronization is needed to
+    have updated information in the remote service. As with the previous case, call
+    the `ContentResolver.performSync()` method.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When the system notifies that it is the right moment to do it because there
+    is a connection open for many other connections. This time, we need to use the
+    `ContentResolver.setSyncAutomatically()` method.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When an interval expires due to the required recurring synchronization operations.
+    Use the `ContentResolver.addPeriodicSync()` method, specifying the interval.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When we want to start a new synchronization without any particular condition.
+    In this case, call the `ContentResolver.performSync()` method.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Let's go through the framework implementation in the following paragraphs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Authenticator
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The `Authenticator` class can be created by extending the `AbstractAccountAuthenticator`
+    class and implementing every abstract method you need to provide the correct authentication
+    on the server. The following snippet shows what method we need to implement (if
+    you do not have authentication, you can use this default implementation and employ
+    it as a mock-up):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For our `Authenticator` to work, we need to create a bound service to provide
+    access to the `Authenticator`. It can be just a simple service such as the one
+    in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The authenticator parameters need to be declared inside an XML file in the
+    following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And, finally we need to add the `service` to the manifest file specifying the
+    recently created authenticator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: SyncAdapter
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'The `SyncAdapter` class performs the synchronization between server and the
+    client. It can be created by extending the `AbstractThreadedSyncAdapter` class
+    as in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `ContentResolver` class is used to query `ContentProvider` in the `SyncAdapter.onPerformSync()`
+    method. The framework doesn't download or upload data, nor does it deal with `ContentProvider`.
+    We need to do it as we need it, but the `SyncAdapter.onPerformSync()` method is
+    executed in a background thread, so we don't need to create a new one for this
+    purpose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As for the `Authenticator` class, we need a bound service for this `SyncAdapter`
+    too: this way we can have a reference to `SyncAdapter` from the bound component
+    to start a new synchronization whenever we want. To do this, we can create the
+    following service, being careful to instantiate the `SyncAdapter` in the `Service.onCreate()`
+    method to use it as a singleton:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `SyncAdapter` parameters must be declared inside an XML file in the following
+    way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we need to declare the service inside the manifest file with the information
+    about the provided `SyncAdapter`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Android N changes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Android N introduced a couple of changes into the system behavior from a networking
+    perspective. We need to be aware of these because they lead to unwanted results
+    if not well understood. They are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Data Saver**: This is a new mode that user can enable to save expensive data
+    usage in the background and the `ConnectivityManager` class provides a new way
+    to access those settings'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Background optimizations**: A broadcast to notify the application that something
+    changed in the connectivity will no longer be sent'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Let's go through these changes in the following pages to understand what we
+    can do if we target our application with the new Android N SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Data Saver
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'With the new **Data Saver** feature, introduced in Android N, the user can
+    save data traffic to prevent unexpected expenses on his/her data plan. How can
+    the user apply these policies? Inside the **Device settings** option, the user
+    can check single applications to access data while in the background. The applications
+    not allowed to receive data in background are allowed to read the user preferences
+    and their changes. *Figure 3* shows what the new **Data Saver** feature looks
+    like on a device with the new Android N:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Data Saver](img/4666_06_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3: Data Saver feature inside Device settings and its details'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see how it works. The Android N SDK provides new methods in the `ConnectionManager`
+    API to check user preferences. The main method to do this is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It returns one of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`RESTRICT_BACKGROUND_STATUS_DISABLED`: Returned when **Data Saver** is disabled.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`RESTRICT_BACKGROUND_STATUS_ENABLED`: Returned when **Data Saver** is enabled;
+    now the application shouldn''t use the network in the background.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`RESTRICT_BACKGROUND_STATUS_WHITELISTED`: Returned when **Data Saver** is enabled,
+    but the application is whitelisted. The application should limit network requests
+    while **Data Saver** is enabled even if the application is whitelisted.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The application should meet user-expected performance in every context. That
+    is the reason why we should use this API to check user preferences, and then change
+    the application behavior depending on that.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we have checked the user preference for **Data Saver**, we should check
+    if the current connection type is a metered one. A **metered connection** is a
+    connection that shouldn't be used to download big amounts of data because of cost
+    issues and data plans. To know if the current connection is a metered one, we
+    can use the `ConnectivityManager.isActiveNetworkMetered()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Check the following code to understand how to handle this situation while dealing
+    with both **Data Saver** settings and metered networks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: The new API also provides a way to listen to changes in the user preferences
+    related to **Data Saver**. To do this, we just need to register `BroadcastReceiver`
+    to listen to the newly added `ConnectionManager.ACTION_RESTRICT_BACKGROUND_CHANGE`
+    action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When such an action is received by our `BroadcastReceiver`, we should check
+    both the active network and the **Data Saver** option''s new preference as described
+    in the previous paragraph and then, as a consequence, operate so as to let the
+    application have the proper behavior as expected by the user:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: This particular event won't be delivered to applications that declared an implicit
+    `BroadcastReceiver` to listen to it. This particular policy limits background
+    work; we will explain this in the following pages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Background optimization
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We already explored this topic in [Chapter 4](ch04.html "Chapter 4. Memory"),
+    *Memory*, while discussing the memory impact of connection changes on background
+    processes. We want to go through this in a networking perspective to understand
+    how to change the way our application works in the background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What has really changed with Android N? There is a particular action that can
+    be delivered to the application using the Android `BroadcastReceiver` class''s
+    main components. As we know, `BroadcastReceiver`, with its intent, can be registered
+    in two main ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Implicitly**: You can declare an intent filter object for the component inside
+    the manifest file'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Explicitly**: You can register `BroadcastReceiver` by using the `Context.registerReceiver()`
+    method inside the component itself'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The difference between them from a component status perspective is that if,
+    you use the explicit method, the component is already created, while, using the
+    implicit one, you start a new instance of the component. This behavior leads to
+    background operations being executed and then extra effort is required by the
+    system; this affects resources, memory, and the battery.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For this reason, Google decided to change this behavior for a particular action:
+    `ConnectionManager.CONNECTIVITY_ACTION`. Hence, if the application is targeting
+    Android N, this action will be received just by the components that registered
+    a receiver and then in an explicit way; however, if the implicit way is used,
+    the component will no longer receive it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we will see in the following pages, this could be really useful to know
+    when a new connectivity status is active on the device to start a new request
+    in the background and then update some data to prefetch content. This won''t be
+    possible when starting from Android N, but there are a couple of alternatives
+    Google provides to reach this target in other ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`JobScheduler`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GcmNetworkManager`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: These frameworks use particular mechanisms to check if the required network
+    conditions are met before starting a new communication with an external resource.
+    Then, we can schedule operations to prefetch data as we were doing before, without
+    taking note of certain conditions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: GcmNetworkManager
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Google provides a helpful API called `GcmNetworkManager`. It is available inside
+    the Google Cloud Messaging package of the Google Services API. It encapsulates
+    the patterns discussed earlier and adds more features. It provides for:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Scheduling one-off tasks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Scheduling periodic tasks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Exponential back-off retry implementation: in the case of errors, the task
+    can be scheduled again using an exponential back-off retry strategy'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Service implementation: the state of the task is independent of the application
+    implementation and can be persisted over restarts and reboots'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Network state-dependant task schedulation: a task can be scheduled to be executed
+    only if a particular network state is required'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Device charging state task schedulation: a task can be scheduled to be executed
+    only if the device is in charging mode'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The service implementation
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'This is an easy to use API and its flexibility allows us to use it in lots
+    of different situations. Let''s go through its implementation with the following
+    code. First of all, we need to create our service by extending the `GcmTaskService`
+    class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `GcmTaskService.onRunTask()` method is where we should develop our request.
+    The `TaskParameter` object used as a parameter is useful in order to identify
+    which request has been asked for inside the `TaskParams.getTag()` method and optionally
+    additional parameters inside the `TaskParams.getExtras()` method. A new thread
+    is created for every new request: hence, the `GcmTaskService.onRunTask()` method
+    is executed in a worker thread and we don''t need to worry about the creation
+    of a new thread for this purpose.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the request code is executed we need to return the integer value indicating
+    what to do next:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`GcmNetworkManager.RESULT_SUCCESS`: The task has been executed with no errors
+    and can be removed from the queue'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GcmNetworkManager.RESULT_FAILURE`: The task encountered some errors and failed,
+    but it has to be removed from the queue anyway'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GcmNetworkManager.RESULT_RESCHEDULE`: The task failed, but we want it to be
+    executed again later with the back-off strategy'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'As it is a `service`, we must declare it inside the manifest file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Task scheduling
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Let''s see how to schedule a task. First, we need to get the `GcmNetworkManager`
+    instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we need to create a task by using one of the `Task` subclasses:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`OneoffTask`:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`PeriodicTask`:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, we need to schedule the task using the `GcmNetworkManager` instance
+    in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: Task features
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Both these `Task` types have some particular parameters that need to be looked
+    at more closely because most of the flexibility of this API lies in those parameters.
+    They inherit common parameters from the `Task` class: hence, we will look at them
+    in the following pages.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Task
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: 'Every `Task` contains the following parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`string tag`: This is the identifier of the task used to start the correct
+    code to be executed inside the implementation of `GcmTaskService`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`bundle extras`: This is used to pass extras to `Service` and execute the task
+    correctly.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`class service`: It is the identifier of the `GcmTaskService` to be used to
+    handle the scheduling.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`boolean isPersisted`: If set to `true`, the task will be persisted and will
+    be executed after reboots. It will work only if the caller holds the right permission
+    to receive the boot completed event:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`int requiredNetworkState`: This is used to specify the particular behavior
+    needed depending on the network connection state at the moment of the execution.
+    This means that the connection is checked just before starting the execution,
+    but the connection can be lost shortly depending on the network state. Hence,
+    we should always handle the case of absence of connectivity, no matter what value
+    we choose. The possible values are the following:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Task.NETWORK_STATE_ANY`: The task is executed anyway, regardless of the connection
+    state.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Task.NETWORK_STATE_CONNECTED`: The task is executed only if a data connection
+    is active. Otherwise, the task is delayed until a connection is available. This
+    is the default value.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Task.NETWORK_STATE_UNMETERED`: The task is executed only if an unmetered connection
+    is available. Otherwise, the task will be pending until an unmetered connection
+    is available.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`boolean requiresCharging`: This is used to specify the device charging state
+    needed to execute the task. It can be useful to wait for a charging operation
+    to execute particularly expensive operations. As for the network state, if the
+    value set is `true` and charging is `off`, the task will not be executed until
+    charging is on.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`boolean updateCurrent`: This is useful to correct an older scheduled task
+    and override it with a new task. The default is `false`; hence, a new task is
+    scheduled every time.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: OneoffTask
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '`OneoffTask` allows us to specify an execution window to schedule the task.
+    It has the following parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`long windowStartDelay`: This indicates the execution starting point for the
+    task. This means it can be delayed in the future.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`long windowEndDelay`: This specifies the execution ending point for the task.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: PeriodicTask
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+- en: '`PeriodicTask` adds the following parameters to the task:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`long flex`: This sets a flexibility when calculating the right moment to execute
+    the task. For example, if the period is 60 seconds and the flex value is 10 seconds,
+    the right moment to execute the task will be set by the scheduler to be between
+    the 50 and 60 seconds. This is useful to let the scheduler choose the best network
+    conditions to execute the task.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`long period`: This specifies the recurring period to execute the task in the
+    future.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Debugging tools
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When in the debug phase, from the networking point of view, we need flexible
+    tools let us test our application in different connectivity conditions, checking
+    what we are transmitting over the network, how we are doing it, how we handle
+    and cache responses, and if the communications are safe and secure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the following sections we want to discuss the new `adb` command introduced
+    to support the changes inside the new Android N SDK. And, then, besides the Android
+    tools we discussed previously in [Chapter 2](ch02.html "Chapter 2. Efficient Debugging"),
+    *Efficient Debugging*, such as the Network Statistics tool and the `TrafficStats`
+    API, we want to briefly introduce a couple of helpful tools. These will let us
+    analyze the networking performance of the application and intercept the network
+    communication to be analyzed in detail, to improve it by using the patterns we
+    discussed earlier in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android N Networking ADB tool
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As discussed in the previous pages, Android N introduced new restrictions on
+    data network background usage. Consequently, it provides commands inside `adb`
+    to properly debug and check our implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The new commands are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`adb shell dumpsys netpolicy`: This is used to generate a report regarding
+    the restriction setting on the network'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`adb shell cmd netpolicy`: This is used to check all the commands related to
+    the netpolicy'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`adb shell cmd netpolicy set restrict-background <boolean>`: This is used to
+    enable or disable the **Data Saver** feature'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`adb shell cmd netpolicy add restrict-background-whitelist <UID>`: This is
+    used to add a specific package to the whitelisted applications'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`adb shell cmd netpolicy remove restrict-background-whitelist <UID>`: This
+    is used to remove a specific application package from the list of the whitelisted
+    ones'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Fiddler
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Fiddler is a debugging tool used as a proxy server as it is able to capture
+    HTTP and HTTPS requests on the network acting as a **Man-in-the Middle** (**MITM**).
+    Besides this, it can intercept requests and change responses to test different
+    use case of our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This tool is used in a lot of different contexts, but for our Android application
+    we need to configure the device to pass through the Fiddler network and use it
+    as a proxy server: hence, follow the steps given here to configure the proxy:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open the device Wi-Fi settings
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tap and hold on the network where Fiddler is
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Click on **Modify network** on the dialog
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Enable the advanced options by checking the **Show advanced options** checkbox
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Set **Proxy Settings** as **Manual**
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Enter the IP address of the Fiddler PC in the **Proxy hostname**
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Enter the Fiddler port **Proxy port**
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The graphical interface of Fiddler is illustrated in *Figure 3*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Fiddler](img/4666_06_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3: The Fiddler interface'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using this tool, we have access to many features to debug our application communication
+    and many extensions to add to the tool to improve its functionality and do what
+    we need to improve our networking debugging skills.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wireshark
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Wireshark is a free multiplatform tool designed to analyze data packets collected
+    from a connection. It acts like a man-in-the-middle. You need to connect your
+    device to the desktop network in order to get the information. You can connect
+    the device with a USB port, via Bluetooth, or by creating a Wi-Fi hotspot. There
+    are lots of different tools to do this, even inside the Wireshark package itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The capture of every single packet from WireShark is shown in *Figure 4*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Wireshark](img/4666_06_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4: Collected packets in Wireshark'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The content of a capture can be filtered in several ways to find the particular
+    packet type we are interested in. For this reason, this tool is one of the most
+    flexible and appreciated packet analyzers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Application Resource Optimizer
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The AT&T **Application Resource Optimizer** (called **ARO** in the following
+    pages) is a great tool for desktops to find improvements in our networking strategy.
+    It checks a list of defined points of improvement and suggests what to do. There''s
+    no need for root permissions. It can be used on every device and uses two consecutive
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Data collection**: It collects data by registering a video and tracing the
+    network requests'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Data analysis**: It analyzes the networking of the application by checking
+    25 best practices'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A VPN is required to collect data, but the application will automatically install
+    what is needed to create one on the device. Then, to start the collection, click
+    on **Data Collector** and then on **Start Collector**. Navigate your application
+    on the device and, when done, click on **Data Collector** and **Stop Collector**
+    on the ARO application on the desktop. ARO will analyze data and then it will
+    show the results in a graphical way, as shown in *Figure 5*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Application Resource Optimizer](img/4666_06_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 5: AT&T Application Resource Optimizer results'
+  prefs: []
+  type: TYPE_NORMAL
+- en: ARO shows the result for every one of the analyzed best practices and we can
+    check each in detail to understand what went wrong and how to fix it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Its Waterfall view can also be used to understand the timings of every single
+    connection and check what is slowing down the responses, as shown in *Figure 6*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Application Resource Optimizer](img/4666_06_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7: ARO Waterfall view'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network attenuation
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The main test we want to execute in our application is related to the network
+    conditions of the device. This is not straightforward because there are just a
+    few tools to do that, especially on real devices. However, we want to explore
+    a couple of options to choose from. That is why, in the following, we will go
+    with tools that can let us change those values for locally connected devices and
+    then we will deal with the advanced management of emulator speed and delay.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Speed and delay emulation
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The graphical emulator controller allows us to set only pre-set values for both
+    speed and latency. Anyhow, the command-line emulator controller has the possibility
+    to set and change them using custom values, even if the emulator is running.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To set a speed and start an emulator, we can run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Where `<speed>` can be one of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`gsm`: Upload speed: 14.4 kbps, download speed: 14.4 kbps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`hscsd`: Upload speed: 14.4 kbps, download speed: 43.2 kbps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gprs`: Upload speed: 40.0 kbps, download speed: 80.0 kbps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`edge`: Upload speed: 118.4 kbps, download speed: 236.8 kbps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`umts`: Upload speed: 128.0 kbps, download speed: 1920.0 kbps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`hsdpa`: Upload speed: 348.0 kbps, download speed: 14400.0 kbps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`full`: Max Upload speed, max download speed'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`<link>`: Upload speed: link value in kbps, download speed: link value in kbps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`<up>:<down>`: Upload speed: up value in kbps, download speed: down value in
+    kbps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The last two values, in particular, let us decide any value for the network
+    speed. Then, if we want to change the speed while the emulator is still running,
+    we can use the following command with the same values mentioned previously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It is similar to the delay values. The command to start an emulator with a
+    selected delay, this time, is the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Where `<delay>` can be one of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`gprs`: Min delay: 150 ms, max delay: 550 ms'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`edge`: Min delay: 80 ms, max delay: 400 ms'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`umts`: Min delay: 35 ms, max delay: 200 ms'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`none`: Min delay: 0 ms, max delay: 0 ms'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`<latency>`: Min delay: latency value in ms, max delay: latency value in ms'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`<min>:<max>`: Min delay: min value in ms, max delay: max value in ms'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'As for the speed, we can change the delay of the network for our running emulator.
+    Just execute the following command with the particular delay value from those
+    above:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Fiddler
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We covered this tool earlier in this chapter, but here we want to know that
+    Fiddler allows us to change the delays of a network by adding a particular plugin
+    to do this. This is the Fiddler Delayed Responses Extension and looks like the
+    screenshot in *Figure 7*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Fiddler](img/4666_06_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8: The Fiddler Delayed Responses Extension'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we know, Fiddler is working as a proxy and every request passes through it.
+    Hence, we can add every session with a specific remote resource to the plugin
+    shown in the screenshot in *Figure 7* and set a particular delay in milliseconds
+    for it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network Link Conditioner
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Apple devices have a service called **Network Link Conditioner**, which is
+    helpful to set a particular network profile on the device. Hence, we can use it
+    in tethering to take advantage of this tool and test our application on real devices.
+    It looks like the screenshot in *Figure 8*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Network Link Conditioner](img/4666_06_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 9: The Network Link Conditioner'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network Attenuator
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The AT&T Network Attenuator is an Android application that can change the connectivity
+    conditions of a device to test our application in real-world situations. The project
+    is still in beta mode and can only be used on a Samsung Galaxy S3 with root permissions,
+    but hopefully, it will be improved in the future to support more devices. Let''s
+    have a brief overview about it to understand how it can be helpful:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When it is installed on the device, Network Attenuator can do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change the upload and download network speed
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Change network efficiency by setting a packet loss percentage
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Block remote resource access by domain or IP address
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'With this tool, there is no need to connect the device to particular networks
+    that are controlled and limited by other applications. It looks like the screenshot
+    in *Figure 9*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Network Attenuator](img/4666_06_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 10: The AT&T Network Attenuator'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The networking aspects of an application are the most challenging to face. Looking
+    at the networking strategy of an application, you can find something that can
+    be optimized from this point of view. For this purpose, we dealt with the `UrlConnection`
+    API on Android to better understand what we can do with that, analyzing how we
+    can use different network protocols, set different types of request methods, add
+    extra parameters to requests such as headers and cookies, and handle compression
+    in communications. Then, we went through an overview of the connection types available
+    on the platform to know which speeds our application can reach in networking transmissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Then, the patterns discussed in the *Best practices* section are really useful
+    when it comes to improving networking performance. The general principles to follow
+    are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change what to transmit depending on the connectivity speed to speed up application.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Prefetch data to speed up navigation and reduce remote requests. It is even
+    better to measure the latency to define the correct strategy for prefetching to
+    reach the right compromise between speed and transmission savings.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Enable the response cache to save data transmitted on a single connection. Consider
+    the `If-Modified-Since` header to reduce the load of a request when you need a
+    static remote resource and it is already cached and not modified on the server.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Consider using the pushing pattern instead of a polling one whenever it is possible
+    to save bandwidth and battery and not to activate the radio when it is not needed.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It could be helpful to limit requests when there is a temporary error on the
+    backend. For this purpose, the exponential back-off pattern is the right choice
+    to let the server recover time and resources when overloaded.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'After having defined the best practices, we went through a couple of helpful
+    APIs provided by the platform to put into practice what we discussed in the chapter.
+    These are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `SyncManager` API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `GCMNetworkManager` API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To verify we are doing well with what we studied, we discussed the right tools
+    in the *Debugging tools* section to check three main targets:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Test the application in different networking conditions, changing speeds, and
+    latencies
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Analyze request properties from an external point of view to check they are
+    correct for our needs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Check we are not executing unneeded transmissions during the application life
+    cycle
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'With these aims, we introduced Fiddler, WireShark, and ARO: three tools to
+    profile our application and to let us know how to improve it. Finally, we discussed
+    a couple of methods to simulate poor connectivity conditions both on emulators
+    and on real devices.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here we dealt with everything related to networking architecture and strategies
+    to improve connection time and reduce battery drain due to radio usage, but we
+    have not yet discussed caching. Please refer to [Chapter 10](ch10.html "Chapter 10. Performance
+    Tips"), *Performance Tips* for a detailed discussion of how to cache data correctly
+    for future reuse, to use serialization techniques, and then to improve performance
+    from both the CPU and networking perspectives, speeding up the overall responsiveness
+    of the application.
+  prefs: []
+  type: TYPE_NORMAL

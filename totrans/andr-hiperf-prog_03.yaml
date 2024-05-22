@@ -1,0 +1,2083 @@
+- en: Chapter 3. Building Layouts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The graphical design of an application and its navigation define its look and
+    feel and can be the key to success, but it's really important to build a stable,
+    fast-loading, and efficient UI while dealing with the Android screen size and
+    SDK level fragmentation of your target users. A slow, unresponsive, or unusable
+    graphical UI can lead to bad reviews, no matter how it looks. That's why you have
+    to keep in mind the importance of creating efficient layouts and views during
+    the development process of every application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter we will go through optimization details of your UI, and then
+    useful tools to understand how to improve the screen performance and efficiency
+    in order to meet the expectations of the users of your app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Walkthrough
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: It's extremely important to understand some key concepts behind the device screen
+    and the code that can be very useful to improve stability and performance while
+    developing Android applications. Let's start by understanding how devices refresh
+    content on the screen and how they are perceived by the human eye. We will go
+    through the limits and common problems developers can face, discovering what solutions
+    the Google team introduced during Android's evolution and what solutions developers
+    can use to maximize the output of their developing process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rendering performance
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s have a general overview of what''s inside the human brain while watching
+    our application in order to better understand what to do to improve how the user
+    experiences the performance of our app. The human brain receives analogue continuous
+    images from our eyes to be processed. But the digital world is made up of a discreet
+    number of subsequent frames that simulate the real world. The fundamental mechanism
+    behind this tricky system is based on one main physical law: the more frames are
+    processed in a unit of time, the more efficiently motion is perceived by the human
+    brain. The minimum number of frames per second for our brain to perceive motion
+    is between 10 and 12.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, what is the most appropriate number of frames per second for a device to
+    create the most fluid application? To give an answer to this question, we will
+    just have a look at how different industries approach this matter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**TV and theatrical movies**: There are three standard frame rates used in
+    this field for TV broadcasts and cinema movies. They are 24 FPS (for American
+    NTSC and cinemas), 25 FPS (for European PAL/SECAM), and 30 FPS (for home movies
+    and camcorders). Using these frame rates, motion blur can occur: this is a loss
+    of visual acuity when the brain is processing subsequent images too fast.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Slow motion and new movie makers**: The most used frame rate for these purposes
+    is 48 FPS—that is twice that of movies. This is the path taken by new movie makers
+    to improve action movie fluidity. This frame rate is also used to slow down a
+    scene because a 48 FPS recorder scene played at 24 FPS has the same perception
+    level of a movie but at half the speed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: What about an application frame rate? Our goal to achieve is to keep our apps
+    at 60 FPS for all of their life cycle. This means that the screen should be refreshed
+    60 times in a second, or every 16.6667 ms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are a lot of things that can cause this 16 ms deadline to not be respected;
+    for example, this can happen when the view hierarchy is redrawn too many times,
+    taking up too many CPU cycles. If this happens, the frame is dropped and the UI
+    is not refreshed, showing the user the same graphic longer till the next frame
+    is drawn. This is what you need to avoid to have a smooth and fluid user experience
+    to offer to your users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is a trick to speed up UI drawing and hit 60 FPS: when you build your
+    layout and you add it to the activity using the `Activity.setContentView()` method,
+    a lot of other views are added to the hierarchy to create the desired UI. In *Figure
+    1*, there is a full view hierarchy, but the only view we added to the XML layout
+    file of our activity falls in the two lower levels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Rendering performance](img/8951_03_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 1: An example of full hierarchy view'
+  prefs: []
+  type: TYPE_NORMAL
+- en: What we are interested in now is the view on the top level of the hierarchy;
+    that view is called **DecorView** and it holds the background of the activity
+    defined by the theme. However, this default background is quite often covered
+    by the background of your layout. This means that it affects the GPU effort, reducing
+    the rendering speed and thus the frame rate. So the trick is just to avoid drawing
+    this background, thereby improving the performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The way to remove this `drawable` background is to add the attribute to the
+    activity''s theme or use the following theme (the same attribute is available
+    even for compatibility themes):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is helpful every time you are dealing with fullscreen activities that
+    cover the whole DecorView screen with opaque children views. Nevertheless, it''s
+    a good practice to move the activity layout background to the window DecorView.
+    The main reason for this is that the background of the DecorView is drawn before
+    any other layout: this means that the user will see the background immediately,
+    no matter how long the other UI component loading operations take and without
+    giving the wrong perception that the application isn''t loading. To do this, just
+    put the background `drawable` as the `windowBackground` attribute of the previous
+    theme XML file and remove it from the root layout of the activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: On balance, this second change is not a proper improvement, but just a trick
+    to give the user the perception of a smoother application; background drawing
+    corresponds with the GPU consumption whether it's in the DecorView or the activity
+    layout root.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Screen tearing and VSYNC
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'There are two main aspects to be considered when we talk about refreshing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Frame rate**: This is about how many times the device GPU is able to draw
+    a whole frame on the screen and it''s specified in frames per second. Our goal
+    is to maintain 60 FPS, the standard in Android devices, and we will learn why.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Refresh rate**: This refers to how many times the screen is updated in a
+    second and it''s specified in Hertz. Most Android device screens have a 60 Hz
+    refresh rate.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: While the second is fixed and unchangeable, the first one, as mentioned, depends
+    on a lot of factors, but first of all on the developer's skills.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It could happen that those values are not synced. So, the display is about
+    to be updated, but what to be drawn is decided by two different and subsequent
+    frames in a single screen draw, causing a noticeable cut on the screen until the
+    next screen draw, as shown in *Figure 2*. This event is also known as **screen
+    tearing**, and it can affect every display with a GPU system. Discontinuous lines
+    on the image are called **tear points**, and they are the result of this **screen
+    tearing**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Screen tearing and VSYNC](img/8951_03_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2: An example of screen tearing'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The main cause of this phenomenon can be found in the single flow of data used
+    to draw the frames: every new frame overwrites the previous one in such a way
+    that there is only one buffer to read to draw on the screen. This way, when the
+    screen is about to refresh, it reads from the buffer the state of the frame to
+    be drawn, but it could be still finishing and not completed yet. Hence, the cut
+    screen of *Figure 2*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The most frequently used solution to this problem is double-buffering the frames.
+    This solution has the following implementations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All the drawing operations are saved in a back buffer
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When those operations are completed, the whole back buffer is copied in another
+    memory location, called the front buffer
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The copying operation is synchronized with the screen rate. The screen reads
+    just from the front buffer in order to avoid screen tearing and all the background
+    drawing operations can be executed without affecting the screen ones. But, what
+    prevents the screen from being updated while in the middle of the copying operation
+    from the back buffer to the front buffer? This is called **VSYNC**. This stands
+    for **Vertical SYNChronization**, and was first introduced in Android 4.1 Jelly
+    Bean (API Level 16).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'VSYNC is not the solution to the problem: it works fine if the frame rate is
+    at least equal to the refresh rate. Let''s have a look at *Figure 3*; the frame
+    rate is 80 FPS, while the refresh rate is 60 Hz. A new frame is always available
+    for drawing and then there will be no lag on the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Screen tearing and VSYNC](img/8951_03_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3: VSYNC example with frame rate higher than the refresh rate'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'But, what happens if the frame rate is lower than the refresh rate? Let''s
+    have a look at the following example, describing step by step what is happening
+    with a 40 FPS GPU and a 60 Hz refresh rate screen: namely, the frame rate is 2/3
+    of the refresh rate, causing a frame to be updated every 1.5 screen refreshes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At instant 0, the screen refreshes for the first time, frame 1 falls into the
+    front buffer, and the GPU starts preparing the second frame in the back buffer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The second time the screen refreshes, frame 1 is drawn onto the screen while
+    the second frame cannot be copied into the front buffer because the GPU is still
+    completing the drawing operation for it: it''s still at 2/3 of the operation on
+    that.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: On the third refresh, the second frame has been copied into the front buffer,
+    so it has to wait for the next refresh to be displayed on the screen. The GPU
+    starts preparing the third frame.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the fourth step, frame 2 is drawn on the screen because it's on the front
+    buffer and the GPU is still preparing the third frame.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The fifth refresh is similar to the second one: the third frame cannot be displayed
+    because a new refresh is needed, so the second one is shown for the second time
+    in a row.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'What is described here is shown in *Figure 4*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Screen tearing and VSYNC](img/8951_03_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4: VSYNC example with frame rate lower than the refresh rate'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After all, just two frames have been drawn out of four screen refreshes. But
+    this happens every time the frame rate is lower than the refresh rate: even if
+    the frame rate is 59 FPS, the actual frames shown on the screen are 30 a second,
+    because the GPU needs to wait for a new refresh to happen before starting a new
+    drawing operation in the back buffer. This leads to lags and jank, and nullifies
+    any graphical designing effort. This behavior is transparent to developers and
+    there is no API to control or change it, hence the extreme importance of maintaining
+    a high frame rate in our application and following performance tips and tricks
+    to achieve the 60 FPS goal.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hardware acceleration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The evolving history of the Android platform also has incremental improvements
+    in graphics rendering. The biggest improvement in this area was the introduction
+    of hardware acceleration in Android 3.0 Honeycomb (API Level 11). Device screens
+    were getting bigger and the average device pixel density was growing, so the CPU
+    and software were no longer enough to manage the increasing needs in UI and performance.
+    With this change in the behavior of the platform, the view and all of its drawing
+    operations made by a `Canvas` object use the GPU instead of the CPU.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Hardware acceleration was initially optional and should have been declared
+    in the manifest file to be enabled, but with the next major release (Android 4.0
+    Ice Cream Sandwich, API Level 14), it was enabled by default. Its introduction
+    in the platform brought in a new drawing model. The software-based drawing model
+    is based on the following two steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Invalidation**: When the `View.invalidate()` method is called due to a needed
+    update on the view hierarchy or just to a change a view property, the invalidation
+    is propagated through the whole hierarchy. This step can be also called by a non-main
+    thread using the `View.postInvalidate()` method and the invalidation happens on
+    the next loop cycle.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Redrawing**: Every view is redrawn with a high drain on the CPU.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'With the new hardware-accelerated drawing model, the redrawing is not executed
+    immediately because the views are stored. So, the steps become the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Invalidation**: As in the software-based drawing model, a view needs to be
+    updated, so the `View.invalidate()` method is propagated through all the hierarchy.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Storing**: In this case, just the views affected by invalidation are redrawn
+    and stored for future reuse, decreasing runtime computation.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Redrawing**: Every view is updated using the stored drawing, so the views
+    not affected by invalidation are updated using their last stored drawing.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Every view can be rendered and saved into an off-screen bitmap for future use.
+    It can be done by using the `Canvas.saveLayer()` method and then `Canvas.restore()`
+    is used to draw back the saved bitmap to the canvas. It should be used with caution
+    because it draws off-screen an unneeded bitmap, increasing the computational drawing
+    costs based on the dimension of the provided bounds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Starting with Android 3.0 Honeycomb (API Level 11), it is possible to choose
+    which type of layer is to be used while creating the off-screen bitmap for every
+    view using the `View.setLayerType()` method. This method expects one of the following
+    as a first parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`View.LAYER_TYPE_NONE`: No layers are applied, so the view cannot be saved
+    into an off-screen bitmap. This is the default behavior.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`View.LAYER_TYPE_SOFTWARE`: This forces the software-based drawing model to
+    render the desired view even if hardware acceleration is enabled. It can be used
+    when:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A color filter, blending mode, or transparency needs to be applied to the view
+    and the application doesn't use hardware acceleration
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Hardware acceleration is enabled, but it cannot apply the render drawing primitives
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`View.LAYER_TYPE_HARDWARE`: The hardware-specific pipeline renders the layer
+    if the hardware acceleration is enabled for the view hierarchy; otherwise the
+    behavior will be the same as per `View.LAYER_TYPE_SOFTWARE`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The right layer type to use for performance purposes is the hardware one: the
+    view doesn''t need to be redrawn until its `View.invalidate()` method is called;
+    otherwise, the layer bitmap is used with no additional costs.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What we have discussed in this section can be helpful to keep to the 60 FPS
+    target while dealing with animations; hardware acceleration layers can use textures
+    to avoid the view being invalidated and redrawn every time one of its properties
+    is changed. This is possible because what is changed is not the view''s property,
+    but just the layer''s one. The properties that can be changed without involving
+    the whole hierarchy invalidation are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`alpha`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`x`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`y`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`translationX`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`translationY`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`scaleX`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`scaleY`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`rotation`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`rotationX`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`rotationY`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`pivotX`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`pivotY`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: These are the same properties involved in the property animation released by
+    Google with Android 3.0 Honeycomb (API Level 11), just as the support to hardware
+    acceleration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A good practice to improve the performance of animations and decrease unnecessary
+    computation is to enable the hardware layer just before starting the animation
+    and disable it as soon as the animation finishes to free used video memory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Consider using `View.LAYER_TYPE_HARDWARE` every time you are animating a view,
+    changing its alpha, or just setting a different alpha. This is so important that
+    Google changed the behavior of the `View.setAlpha()` method, automatically applying
+    the hardware layer from Android 6.0 Marshmallow (API Level 23) on, so you don't
+    need to do it if the target SDK of your application is 23 or more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Overdraw
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Layout construction to meet UI requirements is often a misleading task: once
+    finished with our layouts, simply checking that what we have just done is in line
+    with what the graphical designers thought is not enough. Our goal is to verify
+    that the user interface doesn''t affect our application performance. It''s a common
+    practice to ignore how we construct our views inside the layout, but there is
+    a really important point to keep in mind: the system doesn''t know which views
+    will be visible to the user and which others won''t. This means that every view
+    is drawn anyway, no matter if it''s covered, hidden, or invisible.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Remember that a view life cycle is not terminated if the view is invisible,
+    hidden, or covered by another view or layout: its computation effort continues
+    to impact the final layout performance even if it''s not displayed, from the calculation
+    and memory perspectives. So, a good practice is to limit the number of used views
+    during the UI design step in order to prevent a significant deterioration in performance.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the system perspective, every single pixel on the screen needs to be updated
+    a number of times equal to the number of overlapping views for every frame update.
+    This phenomenon is called **overdraw**. The developer's goal is to limit overdraw
+    as much as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'How can we reduce the number of views being drawn on the screen? The answer
+    to this question depends on how our application UI is designed. But there are
+    some simple rules to follow in order to accomplish this goal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The window background adds a layer to be drawn every update. Background removal
+    can free one level from the overdrawing amount. This can be done for the DecorView,
+    as discussed earlier in this chapter, by deleting it from the used theme of our
+    activity directly in the XML style file. Otherwise, it can be done at runtime
+    by adding the following to the activity code:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This can be applied to every view of the hierarchy; the idea behind this is
+    to eliminate unnecessary backgrounds to limit the number of levels that the system
+    must handle and draw every time.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Flattening the view hierarchy is a good way to reduce the risk of overdraw;
+    the use of **Hierarchy Viewer** and **On device GPU overdraw**, described in the
+    following pages, is the crucial step to achieve this goal. In this operation of
+    flattening, you may inadvertently stumble into overdrawing problems due to RelativeLayout
+    management: views can overlap, making this task inefficient.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Android manages bitmaps and 9-patches in different ways: a special optimization
+    on 9-patches lets the system avoid drawing their transparent pixels, so they don''t
+    continue overdrawing while every bitmap pixel does. So the use of 9-patches for
+    the background can help limit the overdrawing surface.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Multi-window mode
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: One of the new features added in the new Android N version, in preview at the
+    time of the writing of this book, is called **multi-window mode**. This is about
+    enabling the user to make two activities visible side by side on the screen at
+    the same time. Let's have a quick overview of this feature before analyzing its
+    performance-perspective effects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Overview
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'This split-mode is available in both portrait and landscape mode. You can see
+    how it looks in *Figure 5* for the portrait mode and in *Figure 6* for the landscape
+    mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Overview](img/8951_03_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 5: Android N Split mode in portrait'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Overview](img/8951_03_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6: Android N split mode in landscape'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the user perspective, this is the way to interact with multiple applications
+    or activities without leaving the current screen and opening the recent application
+    screen. The dividing bar in the center can be moved to close the split mode. This
+    behavior is for smartphones, while manufacturers can enable the **free-form**
+    mode in bigger devices to let the user choose the right percentage of the screen
+    for both the activities with a simple swipe gesture. It is also possible to drag
+    and drop objects from one activity to the other.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On TV devices, this is done by using a **picture-in-picture** mode, as shown
+    in *Figure 7*. In this case, video content keeps being played, while the user
+    can navigate the application. Then, video activity is still visible, but in a
+    smaller portion of the screen: it''s a 240 x 135 dp window placed in the top-right
+    corner of the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Overview](img/8951_03_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7: Android N picture-in-picture mode'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Due to the small dimension of the window, the activity should show just the
+    video content and avoid showing anything else. Apart from that, be sure the picture-in-picture
+    window doesn't obscure anything from the background activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's now check what is different from the typical activity life cycle and how
+    the system deals with two activities on the screen at the same time. While the
+    multi-window mode is active, the latest used activity is in its resumed state
+    while the other one is in the paused state. When the user interacts with the second
+    one, this will enter the resumed state and the first one will enter the paused
+    state. That is why there is no need to modify the activity life cycle, and then
+    the states are the same as before in the new SDK. But keep in mind that the activity
+    in the paused state should continue not limiting the user experience of the application
+    while multi-window mode is on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Configuration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Developers can choose to set activities to support multi-window or picture-in-picture
+    modes by using new attributes to be added inside the manifest file of the application.
+    The new attributes are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Their defaults are true, so there is no need to specify them if we are targeting
+    Android N in our application and we want to support the multi-window or picture-in-picture
+    modes. The picture-in-picture mode is considered a special case on multi-window
+    mode: then, its attribute is considered only if `android:resizableActivity` is
+    set to `true`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Those attributes can be put inside the `<activity>` or `<application>` nodes
+    in the manifest file as shown in following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Developers can also add more configuration information to the manifest file
+    to define the desired behavior while in these particular new modes. For this purpose,
+    there is a new node that we can add to the `<activity>` node, called `<layout>`.
+    This new node supports four attributes, listed here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`defaultWidth`: Default width for the activity in free-form mode'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`defaultHeight`: Default height for the activity in free-form mode'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`gravity`: Gravity for the activity when first placed on the screen in free-form
+    mode'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`minimalSize`: This specifies the minimum desired height or width to be used
+    for the activity in split-screen and free-form mode'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Hence, the previous activity declaration inside the manifest file becomes the
+    following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Management
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The new SDK provides new methods for the `Activity` class to know if one of
+    the modes is enabled and to handle the switch between different states. These
+    methods are listed as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Activity.isMultiWindow()`: This returns whether the activity is currently
+    in multi-window mode.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Activity.inPictureInPicture()`: This returns whether the activity is currently
+    in picture-in-picture mode. As mentioned, this is a special case of multi-window
+    mode; so, if this is returning `true`, the `Activity.isMultiWindow()` method is
+    returning `true`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Activity.onMultiWindowChanged()`: This is a new callback invoked when the
+    activity is entering or leaving the multi-window mode.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Activity.onPictureInPictureChanged()`: This is a new callback invoked when
+    the activity is entering or leaving the picture-in-picture mode.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The methods with the same signatures are also defined for the `Fragment` class
+    to provide the same flexibility to this component too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Developers can also start a new activity in one of these particular modes.
+    This can be done by using a new intent flag added just for this purpose; this
+    is `Intent.FLAG_ACTIVITY_LAUNCH_TO_ADJACENT` and it can be used in the following
+    way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The effect of this depends on the current state of the activity on the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Split mode active**: The activity is created and placed next to the old one
+    and they share the screen. If in addition to the multi-window mode being enabled
+    (the free-form mode is also enabled), we can specify the initial dimensions using
+    the `ActivityOptions.setLaunchBounds()` method for both defined dimensions or
+    fullscreen (passing a null object instead of a `Rect` one) in the following:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '**Split mode not active**: The flag has no effect and the activity is open
+    in fullscreen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drag and drop
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As mentioned, the new multi-window mode enables the drag and drop functionality
+    to pass views between the two activities that share the screen. This is possible
+    by using the following new methods, added purposely for this feature. We need
+    to ask for permissions to start a drag and drop gesture by using the `Activity.requestDropPermissions()`
+    method, and then get the `DropPermission` object associated with the `DragEvent`
+    one we want to deliver. Once done, the `View.startDragAndDrop()` method should
+    be called, passing `View.DRAG_FLAG_GLOBAL` flag as a parameter to enable the drag
+    and drop feature between multiple applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performance impact
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'How does all of this change the behavior of the system from a performance perspective?
+    The paused activity on the screen corresponds with the process of creation of
+    the final frame as before. Think about a visible activity covered by a dialog:
+    it''s still on the screen and it cannot be killed by the system when a memory
+    issue occurs. However, in the multi-window mode case, as said before, the activity
+    needs to keep doing what it was doing before the interaction with the other activity.
+    Hence, the system will have to handle two view hierarchies at the same time, leading
+    to a higher effort to prepare every single frame. And we need to be even more
+    careful about creating the activity layout if we are planning to enable this new
+    mode. For this reason, it will be good to pay close attention to the concepts
+    expressed in the next *Best practices* section and even the one after that.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Best practices
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will explain some useful approaches to achieve the previously set goals directly
+    within the code to limit as much as possible the reasons why applications lag,
+    exploring how to reduce overdrawing of our views, how to flatten our layouts,
+    and how to improve the user experience—in particular, common situations and how
+    to properly develop our own custom views and layouts to build high-performance
+    UIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Provided layout overview
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Every time the `Activity.setContentView(int layoutRes)` method is called or
+    a view is inflated using the `LayoutInflater` object, the related layout XML file
+    is loaded and parsed and every capitalized XML node corresponds to a `View` object
+    that must be instantiated by the system, and that will be part of the UI hierarchy
+    for all the `Activity` or `Fragment` life cycle. This affects memory allocation
+    during the application usage. Let's go through the key concepts of the Android
+    platform UI system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As mentioned, every capitalized XML node in a layout resource will be instantiated
+    using its name and its attributes. The `ViewGroup` class defines a special kind
+    of view that can manage other `View` or `ViewGroup` classes as a container, describing
+    how to measure and position the children views. So, we will refer to layouts as
+    every class that extends the `ViewGroup` class. The Android platform provides
+    different `ViewGroup` subclasses to be used in our layouts. The following is a
+    brief overview of the main direct subclasses, typically used while building a
+    layout XML resource file, just to explain how they manage nested views:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`LinearLayout`: Every child is drawn next to the previously added one in a
+    row or in a column while horizontal or vertical, respectively.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`RelativeLayout`: Every child is positioned in relation to other sibling views
+    or to the parent.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`FrameLayout`: This is used to block a screen area to manage a stack of views
+    with the most recently added one drawn on top.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AbsoluteLayout`: This was deprecated in API level 3 because of its poor flexibility.
+    As a matter of fact, you have to provide the exact location (by specifying the
+    *x* or *y* coordinates of all its children). Its only direct subclass is `WebView`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GridLayout`: This places its children in a grid, so its use is limited to
+    certain cases where you are supposed to put children inside cells.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Hierarchical layout management
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s have an overview of what happens every time the system is asked to draw
+    a layout. This process is made by two subsequent top-down steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Measurement**:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The root layout measures itself
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The root layout requests all its children to measure themselves
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Any child layout needs to do the same with its children recursively until the
+    end of the hierarchy
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Positioning**:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When all of the views in the layout have their own measurements stored the root
+    layout positions all of its children
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Any child layout needs to do the same with its children recursively until the
+    end of the hierarchy
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Whenever a `View` property is changed (such as the image of an `ImageView`
+    or the text or the appearance of a `TextView`), the view itself calls the `View.invalidate()`
+    method, which propagates its request in a bottom-up way until the root layout:
+    the preceding process can be reiterated again and again because a view needs to
+    measure itself again (for example, just to change a text). This affects the loading
+    time to draw the UI. The more complex your hierarchy is, the slower the UI loading.
+    Hence the importance of developing layouts as flat as possible.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While `AbsoluteLayout` is no longer used and `FrameLayout` and `GridLayout`
+    have their own specific use, `LinearLayout` and `RelativeLayout` are interchangeable:
+    this means the developer can choose to use one or the other. But both have strengths
+    and weaknesses. When you are developing a simple layout such as that in *Figure
+    8*, you can choose to build the layout creation using different types of approach:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Hierarchical layout management](img/8951_03_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8: Layout example'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first one is based on `LinearLayout` and it''s good for readability but
+    bad for performance, as you need to nest `LinearLayout` every time there is a
+    change of orientation in positioning the children:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The view hierarchy of this layout is as in *Figure 9*:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Hierarchical layout management](img/8951_03_09.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Figure 9: View hierarchy example built using LinearLayout'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The second one is based on `RelativeLayout` and in this particular case you
+    don''t need to nest any other `ViewGroup`, as every child position can be related
+    to others or to the parent:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The hierarchy of this alternative layout is in *Figure 10*:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Hierarchical layout management](img/8951_03_10.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Figure 10: View hierarchy example built using RelativeLayout'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Comparing the two approaches, it's easy to see that there are six views in three
+    hierarchical levels in the first and five in only two levels in the second case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The typical situation is that of a mixed approach as it's not always possible
+    to position views relatively to others.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In order to achieve performance goals while creating every sort of layout and
+    to avoid overdraw, the hierarchy should be as flat as possible to let the system
+    draw every view again in the shortest time when needed. So, the use of RelativeLayouts
+    when possible, instead of LinearLayouts, is recommended.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A common bad approach in long application development processes is to leave
+    redundant layouts in our XML files after deleting no more necessary views. This
+    increases complexity in the view hierarchy in vain. As discussed in [Chapter 2](ch02.html
+    "Chapter 2. Efficient Debugging"), *Efficient Debugging* and in the following
+    pages of this chapter, there are convenient ways to avoid this by using LINT and
+    Hierarchy Viewer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Unfortunately, the most used ViewGroup is LinearLayout, just because it''s
+    quite simple to understand and to manage. So, new Android developers approach
+    it first. For this reason, Google decided to provide a new ViewGroup, starting
+    from Android 4.0 Ice Cream Sandwich, which if used correctly, can reduce redundancy
+    in particular situations when dealing with grids. We are talking about GridLayouts.
+    Obviously, a grid can be created using LinearLayouts, but the resulting layout
+    has at least three levels of hierarchy. It could also be created using RelativeLayouts
+    with just two levels of hierarchy, but the resulting layout is not so manageable,
+    with too many references between views. A GridLayout manages its space just by
+    defining its own rows and columns, and so its cells. The following XML layout
+    shows how it is possible to create the same layout as in *Figure 11*, using a
+    GridLayout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Hierarchical layout management](img/8951_03_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 11: View hierarchy example built using GridLayout'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: It can be noticed that there is no need to specify the `android:layout_height`
+    and `android:layout_width` tag attributes if you want them to be `LayoutParams.WRAP_CONTENT`,
+    just because it's the default value for both. The `GridLayout` is very similar
+    to `LinearLayout`, so converting from that is pretty simple.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reusing layouts
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Android SDK provides a useful tag to use in particular situations when you
+    want to reuse a portion of your UI in other layouts or when you want to change
+    just that portion of the UI in different device configurations. This `<include/>`
+    tag lets you add another layout file, simply specifying its reference ID. If you
+    want to reuse the header of the previous example, just create the reusable layout
+    XML file like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then put the `<include/>` tag inside the layouts where you want it to be, replacing
+    the exported views:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This way, you don''t need to copy/paste the same views in all the layouts for
+    different configurations; you will just define the `@layout/content_building_layout`
+    file for the needed configurations and you can do it in every needed layout. But
+    doing this, you may introduce a layout redundancy by adding a `ViewGroup` as a
+    root node of the reusable layout as in the preceding example. Its view hierarchy
+    is the same as in *Figure 9*, with three levels and six views. That''s why Android
+    SDK provides another useful tag that helps remove the redundant layout and keep
+    a flatter hierarchy. Simply replace the reusable root layout with a `<merge />`
+    tag. The reusable layout becomes the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This way, the whole final layout has a two-level hierarchy with no redundant
+    layouts, as the system includes the views inside the `<merge />` tag directly
+    inside the others in place of the `<include />` one. Indeed, the correspondent
+    layout hierarchy is the same as in *Figure 10*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When dealing with this tag, you need to keep in mind that it has two main limitations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It can only be used as root in an XML layout file
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'You must supply a view as parent and attach it to that every time you call
+    the `LayoutInflater.inflate()` method:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: ViewStub
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `ViewStub` class can be added as a node inside the layout hierarchy specifying
+    a layout reference, but no views are drawn for it until its layout is inflated
+    at runtime using the `ViewStub.inflate()` or `View.setVisibility()` methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The layout pointed by the `ViewStub` won''t be inflated until the following
+    methods are called during runtime:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The inflated layout takes the place of `ViewStub` inside the hierarchy and the
+    `ViewStub` is no longer available. After one of the above methods calls this,
+    the `ViewStub` cannot be accessed anymore; instead, use the ID in the `android:inflatedId`
+    attribute.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This class is useful, particularly when you are dealing with a complex layout
+    hierarchy, but you can defer the loading of some views to a later time and as
+    and when needed, reducing the first loading time and freeing memory from unnecessary
+    allocations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: AdapterViews and view recycling
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'There is a special `ViewGroup` subclass that needs an `Adapter` class to manage
+    all of its children: this class is called `AdapterView`. Commonly used specializations
+    of `AdapterView` are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ListView`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ExpandableListView`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`GridView`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Gallery`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Spinner`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`StackView`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `Adapter` class is responsible for defining the number of children of the
+    `AdapterView` and inflating every single child view within its `Adapter.getView()`
+    method, while the `AdapterView` defines how the children are positioned on the
+    screen and how to react to user interactions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The platform provides different implementations of `Adapter` depending on how
+    the developer chooses to handle the model:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ArrayAdapter`: Used to map the `toString()` method result to every single
+    row'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`CursorAdapter`: Used to handle data from a database'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`SimpleAdapter`: Used to bind CheckBoxes, TextViews, and ImageViews'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Every one of these extends `BaseAdapter`, which is also widely used to create
+    custom adapters. The following is an example of `BaseAdapter` implementation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The layout describing every row is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To use this `Adapter`, just set it to a `ListView` in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: The most common use of this is for a `ListView`. Let's go through what happens
+    when a user scrolls a `ListView`; the `Adapter.getView()` method is called for
+    every new row that needs to be added. A new view is inflated and every view of
+    the row layout is referenced with the `View.findViewById()` method every time.
+    These operations can be performed only by the main thread, as it's the only one
+    that can handle the UI. This affects the computation during runtime and often
+    results in lagged scrolling, degrading performance. Then, the complexity of the
+    row layout hierarchy may involve and emphasize this behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ViewHolder pattern
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To avoid this computationally expensive amount of calls to the `View.findViewById()`
+    method inside `Adapter.getView()`, it's a good practice to use the ViewHolder
+    design pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `ViewHolder` is a static class with the purpose of storing layout component
+    views to make them available for subsequent calls; the same view is reused and
+    there is no need to call the `View.findViewById()` method for every single view
+    of the layout.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The previous `SampleObjectAdapter` becomes as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is possible because the `Adapter.getView()` method makes available an
+    old referenced view as the `convertView` parameter, just to be reused. And therein
+    lies the magic: when it''s null, a view is inflated and every contained view is
+    stored inside the `ViewHolder` object for later reuse, and the `ViewHolder` object
+    is set as a tag for the just-initialized `convertView`. This way, when it''s not
+    null, the `Adapter` class gives us the same previous instance so we can retrieve
+    `ViewHolder` from `convertView` and use its property views.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When dealing with `BaseAdapter`, the use of the `ViewHolder` pattern is highly
+    recommended in order to avoid frequent calls to the `View.findViewById()` method,
+    which can affect computation during runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The use of the pattern is at the discretion of the developer; new Android developers
+    have tended not to use it for years, increasing the bad reputation of Android
+    platform performance because of lags while scrolling a `ListView` or a `GridView`.
+    This is one of the reasons why Google introduced a new view for creating lists
+    and grids that manages the recycling of the children views itself, hence its name,
+    `RecyclerView`; it can be used from Android 2.1 Éclair onwards because it's available
+    inside the support package library v7\. While using this new highly flexible object,
+    the developer cannot skip the use of the `ViewHolder` object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In both situations it's really important to display images with the right dimensions
+    for the `ImageView` lying in the row layout as a placeholder, and not their original
+    one, in order to avoid CPU and GPU processing, which can usually turn in to an
+    `OutOfMemoryError`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the computation perspective, this pattern cannot be enough to create a
+    smooth application; as mentioned before, only the main thread is responsible for
+    touching views and dealing with the UI. Furthermore, every processing task should
+    be executed in a worker thread in order to give the main thread quick access to
+    the views. Read [Chapter 5](ch05.html "Chapter 5. Multithreading"), *Multithreading*
+    for more on this topic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Custom views and layouts
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In our UI application development, we often face a lack of views that have the
+    feature we need for a layout, or we need to create a view with some great features
+    from scratch. Luckily, the Android platform lets us develop every kind of view
+    that allows us to build the desired UI. There are many degrees of freedom to do
+    this, so if you are not careful enough about how you develop a custom view, you
+    could likely damage memory and GPU, with disastrous results. Based on what we
+    have said so far, let's understand how a view works in Android, how it's measured
+    and drawn, and how to optimize this process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Despite the fact that you can add as many attributes to your custom view as
+    you want to improve its appearance, what matters most is how you draw everything
+    on the screen. There are two main option to do this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can wrap up a layout with all the needed views to have a reusable object,
+    where every held view is handled by the view hierarchy. No need to specify what
+    and how to be drawn, but just a classical layout with the desired views arranged
+    as needed.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: You can create your own view specifying what to be drawn, and how, overriding
+    the `View.onDraw()` method that is executed every time the view is invalidated
+    with the call to the `View.invalidate()` method, which notifies the system that
+    the view needs to be drawn again.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'With this second approach you will deal with two main objects to draw with:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Canvas`: This is the object that draws something. With this you can specify
+    what to draw; what a `Canvas` object can draw is indicated by the invoked method
+    on it. These are the main `Canvas` methods used to draw:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawARGB()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawArc()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawBitmap()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawCircle()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawColor()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawLine()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawOval()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawPaint()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawPath()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawPicture()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawPoints()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawRect()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawText()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Paint`: This is the object used to tell the `Canvas` how to draw what is about
+    to be drawn. The following are some `Paint` methods used to change an object property:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setARGB()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setAlpha()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setColor()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setLetterSpacing()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setShader()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setStrikeThruText()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setTextAlign()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setTextSize()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setTypeFace()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setUnderlineText()`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When you override the `View.onDraw()` method, you will have to use the `Canvas`
+    object made available as a parameter of the method to let your drawing appear
+    on the screen (or in your view bounds). The `Paint` objects used to customize
+    the drawings need to be handled separately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every view needs to be able to be added to `ViewGroups` that take care of placing
+    their children after having measured them. Then, the method to tell the parent
+    view which size has the view is the `View.onMeasure()` method. This is a crucial
+    step in a custom view development because every one of them must have its own
+    width and height; indeed, forgetting to call the `View.setMeasuredDimension()`
+    inside `View.onMeasure()` leads to an exception being thrown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Every time the view needs to be measured again because its bounds are changed
+    or because it needs more or less space than it had, you need to call the `View.requestLayout()`
+    method: instead of invalidating just the view itself, it asks the parent to calculate
+    again the position of all of its children and redraw them again. It amounts to
+    the invalidation of the whole view hierarchy. As mentioned earlier, this can be
+    very expensive and should be avoided as much as possible.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Thanks to the capabilities of the platform, the custom view creation can lead
+    to really interesting results, but all this freedom must be controlled, and above
+    all, measured. It's a good practice to verify your view timings by checking the
+    GPU performance with just the view in the layout, and then, in a broader context,
+    to control its behavior while it stands with other views.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Knowing how this works, let''s identify and classify performance errors a developer
+    can make while developing a custom view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Refreshing the view drawing when unneeded
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Drawing pixels that won''t be visible: this is what we previously called overdraw'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Consuming memory resources during the drawing by doing unnecessary operations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Every one of those can prevent the GPU from reaching the 60 FPS goal. Let''s
+    explore them on more depth:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: View invalidation is widely used among newcomers just because this is the fastest
+    way to have a refreshed and updated view at any time.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: While developing custom views, be careful not to invoke unnecessary methods
+    that force the entire hierarchy to be redrawn again and again, consuming precious
+    frame drawing cycles. Always check when and where the calls to `View.invalidate()`
+    and `View.requestLayout()` are made, just because this can affect the entire UI,
+    slowing down the GPU and its frame rate.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: To avoid overdraw in a custom view, you could use a Canvas API that lets you
+    draw just a desired portion of the custom view. This can be very helpful while
+    designing a stack view or any other view with overlapping portions. The API we
+    are referring to is the `Canvas.clipRect()` method. For example, if your view
+    needs to draw multiple overlapping objects on the screen, our goal is to properly
+    clip each view to avoid unnecessary overdraw and draw just the visible part of
+    each one of them.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'For instance, *Figure 12* shows a stack view where the overlapped cards don''t
+    need to be entirely drawn:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Custom views and layouts](img/8951_03_12.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Figure 12: Custom view example with overlapping parts'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The following code snippet shows how to avoid overdraw:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In our `View.onDraw()` method implementation, we shouldn't place any allocation,
+    nor in any method called by `View.onDraw()`. This is because, when an allocation
+    is done inside that method, the object needs to be created and initialized. Then,
+    when the execution of `View.onDraw()` is over, the garbage collector frees memory
+    because no one is using that. Furthermore, the view is redrawing 60 times a second
+    if it's animated. Hence, the importance of avoiding allocations in `View.onDraw()`
+    method.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Never allocate objects inside the `View.onDraw()` method (or inside other methods
+    called by it) in order not to burden the execution of this method, which can be
+    invoked many times during the view life cycle; the garbage collector could free
+    memory too many times, causing a stutter. Better to instantiate them as the view
+    is first created.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Screen zoom
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The new Android N preview introduces a special feature for accessibility that
+    can put a strain on our application if we don''t observe the best practices introduced
+    earlier. We are talking about **Display size**, which can be changed from inside
+    the **Accessibility** section of the device **Settings**, as shown in *Figure
+    13*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Screen zoom](img/8951_03_13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 13: Display size settings in Accessibility'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the user changes the settings, a preview is shown and it looks like *Figure
+    14*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Screen zoom](img/8951_03_14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 14: Display size change effect for the default and largest sizes'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now let's have a quick overview of what happens when the user sets this new
+    feature on the device. If the application is compiled using the new Android N
+    version as the target, the application processes are notified by the typical runtime
+    change framework. Otherwise, all the processes are killed and the activities are
+    recreated, as in the case of a change of orientation. But the recreation is made
+    with a different screen width, expressed in dp. For this reason, we should test
+    this particular use case to check that our application performance is not affected
+    by this new feature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is a further incentive not to use the px measurement and to opt for the
+    better-suited dp one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition to this, as explained in [Chapter 6](ch06.html "Chapter 6. Networking"),
+    *Networking*, we should change any density-dependent behavior of our application,
+    such as image format caching or requests to the backend side.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Debugging tools
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We now know the problems behind the creation of a flexible and efficient UI
+    and how to solve them. But, how can we know if we are doing well? Moreover, how
+    can we measure the output quality of our hard work? Let's go through the various
+    tools you can use to not only measure our product, but also to find other problems,
+    to fix them, and to improve the performance of our application during its whole
+    life cycle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Design view
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'During the development process, the creation of XML layout files is an underestimated
+    activity: if the layout is well-designed in the development step, the application
+    won''t need any particular effort to improve performance. While writing XML files,
+    the IDE allows us to watch what we are designing in a preview mode inside the
+    layout editor. This contains the **Text** and the **Design** view, as in *Figure
+    15*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Design view](img/8951_03_15.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 15: The Design view'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Design view contains a special view called **Component Tree** that shows
+    the view hierarchy while we are making it. In *Figure 16*, the hierarchy view
+    corresponds to the one in *Figure 19*. This is a practical visual way to evaluate
+    the depth of our layout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Design view](img/8951_03_16.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 16: View hierarchy preview in the Design view'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As discussed in this chapter, our target is to flatten the hierarchy depth to
+    limit the calculation and speed up the creation of views to be shown on screen
+    as fast as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The design view is the right tool to highlight cases where we can limit the
+    hierarchy depth during the development process; if we pay attention to details
+    during the analysis and development processes, we can significantly reduce the
+    effort to recover the lost performance of our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Hierarchy Viewer
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The main tool to analyze the view hierarchy, debug the UI, and profile our
+    layouts, is the **Hierarchy Viewer**. It''s in the Android Device Monitor and
+    it provides a complete visual tool. As in *Figure 17*, the tool contains a lot
+    of views to help us profile our UI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Hierarchy Viewer](img/8951_03_17.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 17: Hierarchy Viewer'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tree View
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The center panel contains the **Tree View** with a zoomed part of the view
+    hierarchy. Every view can be selected to open the detail with the following information
+    related to the selected view and all the others hierarchically lower:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The number of contained views
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Measure time
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Layout time
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Draw time
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This means that the times in the leftmost view in the **Tree View** tell us
+    how long it took for the entire UI creation process, because it''s the root of
+    our layout. This is the parameter that must always be considered; as discussed
+    in the previous pages, our goal is to keep this value below 16 ms. *Figure 18*
+    shows an example of **Tree View** with an **ImageView** selected:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Tree View](img/8951_03_18.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 18: Tree View inside the Hierarchy Viewer'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Checking the layout-creation time should be part of the testing process every
+    time. The measure, layout, and draw steps must be completed in 16.67 ms at the
+    most. The **Tree View** inside the **Hierarchy Viewer** helps us measure the timings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using the **Tree View**, the depth of our layout is straightforward: this is
+    very helpful to understand where we overloaded the layout of our activity and
+    where we could accidentally add overdraw.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: View properties
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The left panel contains two views:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Windows**: Here you can find a list of all connected devices and emulators
+    with the subsidiary list of all debuggable processes, with the selected one in
+    bold. One of them can be selected and, after click on the icon, the related view
+    is loaded into the tree view and the whole panel switches to the **View Properties**.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**View Properties**: This contains a list of view properties useful to debug
+    the view:![View properties](img/8951_03_19.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Figure 19: View properties inside the Hierarchy Viewer'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tree overview
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'On the right-hand side of the Android Device Monitor, the **Tree Overview**
+    shows the view hierarchy as a whole, and the zoomed part standing in the **Tree
+    View** is grayed in order to be highlighted. This view shows us the complexity
+    of the view hierarchy we built. See *Figure 20* to understand how the **Tree Overview**
+    looks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Tree overview](img/8951_03_20.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 20: Tree Overview inside the Hierarchy Viewer'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Layout View
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Under the **Tree Overview**, there is a view called **Layout View** that shows
+    the area covered by every view simulating the layout shown on the device screen,
+    so you can select a particular view inside the **Tree View** and simplify the
+    search for a single view in your layout. *Figure 21* shows the **Layout View**,
+    as per the example used for this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Layout View](img/8951_03_21.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 21: Layout View inside the Hierarchy Viewer'
+  prefs: []
+  type: TYPE_NORMAL
+- en: On device tools
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When you want to debug and profile your UI, it is important to do this on real
+    devices. The Android system provides a lot of flexible tools to be used on the
+    device inside the **Developer options** settings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Debugging GPU overdraw
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To debug the overdraw on the device, Android provides a helpful tool that can
+    be enabled inside the **Developer options**. Inside the **Hardware accelerated
+    rendering** section, there is the **Debug GPU overdraw** option. When enabled,
+    the screen is colored differently, based on the level of overdraw for every single
+    pixel on the screen, by adding an overlay color, if there is overdraw, as indicated
+    here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**True color**: No overdraw'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Blue**: 1X overdraw'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Green**: 2X overdraw'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Pink**: 3X overdraw'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Red**: 4X+ overdraw'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'For example, let''s look at *Figure 22*. The left-hand screen is not optimized,
+    but the right-hand one is. So, this tool is really helpful for finding overdraw
+    in our layouts. Our goal as developers is to reduce overlays as much as possible
+    in order to reduce overdraw and improve GPU timings and rendering speed. The main
+    actions to be done are checking background of our layouts and overlapping views
+    inside RelativeLayouts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging GPU overdraw](img/8951_03_22.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 22: Overdraw comparison, respectively before and after the optimizations'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Profile GPU rendering
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This tool shows the developer how long the frame rendering operations take,
+    defining if they are completed in respect of the 16 ms limit or if they aren't.
+    It's a good way to benchmark our application from a rendering perspective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Despite the name, all of the observed processes are executed by the CPU: the
+    GPU works in an asynchronous way, after the rendering operations are submitted
+    by the CPU.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To enable it, simply select the **Profile GPU rendering** inside the **Monitoring
+    section** of the **Developer settings** of the device. There are two options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**On screen as bars**: This shows the result on the screen and it''s useful
+    to have a quick glance at the rendering performance of our application against
+    the 16 ms per frame target'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**In adb shell dumpsys gfxinfo**: This stores benchmark results to be read
+    by using the `adb` command'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Figure 23* shows how it''s shown on the screen. Every vertical bar corresponds
+    to the time for a frame to be rendered on the screen. Every new line takes place
+    to the right of the previous one. The horizontal green line indicates the 16 ms
+    target: if this is crossed, there is something that is slowing down our frame-rendering
+    operations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Profile GPU rendering](img/8951_03_23.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 23: The GPU rendering tool'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This tool provides more information about what happens while rendering every
+    single frame. The vertical bar is divided in to four colored segments. Each one
+    of them represents the time spent while completing a different sub rendering operation,
+    described in the following from bottom to top:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Blue bar – draw**: This represents the time spent drawing the views. This
+    gets longer when too much work is needed in the `View.onDraw()` method.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Purple bar – prepare**: This represents the time spent preparing and transfering
+    to the rendering thread the resources to be displayed on the screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Red bar – process**: This is the time spent processing OpenGL operations.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Orange bar – execute**: This is the time spent by the CPU waiting for the
+    GPU to finish its work. This gets longer when the GPU is overloaded.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The `adb shell dumbsys` method is useful to compare the results of our optimization
+    and prove whether we are doing well or not. The result is printed in the Terminal
+    when called with the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The trace looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: This kind of rendering performance benchmarking provides more information than
+    the visual one, such as display list operations, the memory usage, the exact time
+    of every rendering operation (this would have been shown in the visual benchmarking
+    as a bar), and information about the view hierarchy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'New helpful information has been added in Android Marshmallow (API Level 23)
+    to the previous print trace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: This more effectively explains the real performance of our application frame
+    rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is another useful advanced feature added in Android Marshmallow, and
+    it''s called **framestats**. It lists detailed frame timings and adds data to
+    the previous print (the amount of rows has been reduced to limit the used space).
+    The Terminal adds the names of the columns as the first row and then it lists
+    all the other column values so the first one corresponds to the first name, the
+    second values to the second name, and so on:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s explain what those values stand for. Every timestamp is indicated in
+    nanoseconds and the added columns are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Flags`: If it''s `0`, the frame timing related to the row should be considered;
+    otherwise, it shouldn''t. It can be non-zero if the frame is an exception from
+    the normal performance.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`IntendedVsync`: This is the starting point. It can be different from the `Vsync`
+    value if the UI thread is occupied.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Vsync`: The time value for VSYNC.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`OldestInputEvent`: The timestamp of the oldest input event.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`NewestInputEvent`: The timestamp of the newest input event.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`HandleInputStart`: The timestamp of the dispatch of the input events to the
+    application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`AnimationStart`: The timestamp at which the animation started.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PerformTrasversalsStart`: The timestamp at which `DrawStart` is subtracted
+    to obtain the layout and measure timing.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DrawStart`: The timestamp at which the drawing started.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`SyncQueued`: The timestamp at which a sync request has been sent to `RenderThread`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`SyncStart`: The timestamp at which the drawing sync has started.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`IssueDrawCommandsStart`: The timestamp at which the drawing operations are
+    started by the GPU.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`SwapBuffers`: The time at which the front and back buffers are swapped.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`FrameCompleted`: The time at which the frame has been completed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This data reports timestamps, so the timings need to be calculated by subtracting
+    two timestamps. The results can show us important information about rendering
+    performance. For example, if `IntendedVsync` is different from `Vsync`, then a
+    frame was missed and jank could occur.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This new `dumbsys` command can be executed by running the following on the
+    Terminal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Systrace
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The Systrace tool is helpful to analyze rendering execution timings. It''s
+    part of the Android Device Monitor and it''s accessible by selecting the related
+    icon inside the **Devices** tab. After that, a dialog with **Systrace** options
+    is shown, as in *Figure 24*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Systrace](img/8951_03_24.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 24: Systrace options'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This tool collects information from all the processes on the device to be traced
+    and saves the trace into an HTML file, where a graphical UI highlights observed
+    problems, providing important information about how to fix them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The result is something like what is in *Figure 25*. The perspective is divided
+    into three main views: the upper side contains the trace itself, the lower one
+    contains the detail of the highlighted object on the other part, while the right
+    view, called **Alert Area**, contains a summary of the alerts reported in the
+    current trace. The main upper part describes details about the kernel, containing
+    all CPU information; about **SurfaceFlinger**, the Android compositor process;
+    and then about every single process that was active during the information gathering,
+    even if the process is a system one. Every process contains details about every
+    thread running during evaluation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Systrace](img/8951_03_25.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 25: Systrace example'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s understand how to analyze the trace: every drawn frame of a single process
+    is indicated in the **Frames** row with a circled **F**, as in *Figure 26*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Green frames indicate there were no problems for them
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Yellow and red frames indicate the drawing time exceeded the 16 ms target, producing
+    a lag:![Systrace](img/8951_03_26.jpg)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Figure 26: Frame details'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Every wrong **F** is selectable to see a detailed description of the event.
+    The following is an example of what Systrace reports for a red frame:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Alert | Scheduling delay |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Running | 6.401 ms |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Not scheduled, but runnable | 16.546 ms |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Uninterruptible Sleep &#124; Waking | 19.402 ms |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Sleeping | 27.143 ms |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Blocking I/O delay | 1.165 ms |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Frame |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Description | Work to produce this frame was descheduled for several milliseconds,
+    contributing to jank. Ensure that code on the UI thread doesn''t block work being
+    done on other threads, and that background threads (doing for example, network
+    or bitmap loading) are running at `android.os.Process#THREAD_PRIORITY_BACKGROUND`
+    or lower so they are less likely to interrupt the UI thread. These background
+    threads should show up with a priority number of 130 or higher in the scheduling
+    section under the kernel process. |'
+  prefs: []
+  type: TYPE_TB
+- en: 'As mentioned, this tool gets information about every process and thread running
+    on the device, but if we want to detail a limited portion of the execution of
+    our application to understand what work it is doing at a certain time, we can
+    use an API to tell the system where to start and end tracing. This API can be
+    used from Android Jelly Bean (API Level 18) on, and it''s based on the `Trace`
+    class. Simply call static methods to start and end tracing as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this way, the new trace will contain a new row with the name of your section
+    and its detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember to call the `Trace.beginSection()` and `Trace.endSection()` methods
+    on the same thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the contemporary idea of mobile devices, an application is the main way to
+    let the user access our remote services and thus it should be the main means of
+    obtaining them. Then, the way our users perceive our application is the fundamental
+    way to succeed, and its user experience and user interface are the key indicators
+    for that. Therefore, it's really important to be sure that there are no lags in
+    our application rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What we have done in this chapter is to understand how a device renders our
+    applications, defining the 16 ms per frame target and overviewing hardware acceleration
+    as the major performance rendering improvement in the Android system. Then we
+    analyzed the main mistakes a developer can make while building an application
+    UI, exploring in greater detail how to improve the rendering speed in our code
+    by flattening the hierarchy view, reusing row views in `listview`, and defining
+    best practices for developing custom views and layouts. Finally, we walked through
+    the helpful tools the platform provides to help us find improvement optimizations
+    and measure our app-rendering performance.
+  prefs: []
+  type: TYPE_NORMAL

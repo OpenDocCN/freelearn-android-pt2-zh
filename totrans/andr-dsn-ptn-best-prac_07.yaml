@@ -1,0 +1,855 @@
+- en: Chapter 7. Combining Patterns
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have seen how patterns can help us organize our code and how this can be
+    applied specifically to Android apps, but we have only applied one pattern at
+    a time. As the tasks we need to perform become more complex, we will need to apply
+    several patterns, such as decorators and builders, at once and even combine them
+    into **hybrid patterns**, and this is what we will do in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will begin by considering a more complex user interface (UI) and the code
+    behind it. This will require us to think a little more precisely about what we
+    actually want our application to do. This in turn will lead us to look at the
+    **prototype pattern**, which provides a very efficient method for creating objects
+    from an original, clone, object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The **decorator pattern** is explored next, and we see how it can be used to
+    add extra functionality to existing classes. Often referred to as a wrapper, the
+    decorator is used to provide additional functionality to existing code. This is
+    particularly useful to our sandwich builder app as it allows us to include options
+    such as ordering an open sandwich or having the bread toasted. These are not in
+    themselves ingredients, but nevertheless something a sandwich vendor would wish
+    to provide. The decorator pattern is ideal for this task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having looked briefly at the alternatives, we construct a builder pattern to
+    form the basis of our system, connecting it to a UI so that a simple sandwich,
+    with a choice of options and ingredients, can be put together by the user. We
+    then connect a decorator to this builder to provide further options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter you will learn how to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a prototype pattern
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Create a decorator pattern
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Extend a decorator
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Connect a builder to a UI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manage compound buttons
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Combine patterns
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We are now in a position to start thinking more about the details of our app
+    and what it can and should do. We need to think about the potential customer and
+    design something that is simple and pleasant to use. Features need to be easily
+    accessed and obvious in their nature and most of all, they need to be able to
+    construct their desired sandwich with a minimum number of clicks. Later on, we
+    will see how users can store favorites and how we can provide partially built
+    sandwiches for the user to customize rather than build from the ground up. For
+    now, we will take a look at how to classify our sandwich-related objects and classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Outlining specifications
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapter, we created a simple list of sandwich ingredient objects
+    using a factory pattern and connected it to a layout. However, we only represented
+    a single type of filling. Before we can create a more sophisticated system, we
+    need to plan our data structure, and to do that we need to consider the choices
+    we present the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Firstly, what options can we offer the user to make the process simple, fun,
+    and intuitive? Here is a list of functions a potential user may want from such
+    an app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Order an off-the-shelf sandwich, with no customization
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Customize an off-the-shelf sandwich
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Start with some basic ingredients and build from there
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Order or customize a sandwich they have had before
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Build a sandwich from scratch
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Review and edit their sandwich at any time
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Previously, we created an individual menu for cheeses, but a category for each
+    food type may offer a clumsy solution: a user wanting a bacon, lettuce, and tomato
+    sandwich may have to visit three separate menus. There are many different ways
+    we could solve this problem, and it is largely a matter of personal choice. Here,
+    we will try to follow the course we might take when making a sandwich for ourselves,
+    which could be described by the following list:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bread
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Butter
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Fillings
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Toppings
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'By toppings, I mean mayonnaise, pepper, mustard, and so on. We will use these
+    categories as the basis for our class structure. It would be nice if they could
+    all belong to the same class type, but there are one or two subtle differences
+    that forbid that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Bread**: No one is going to order a sandwich without bread; it wouldn''t
+    be a sandwich, and we would be forgiven for thinking that it could be treated
+    like any other ingredient. However, we are going to offer the choice of an open
+    sandwich, and to complicate things for ourselves, the option of having it toasted.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Butter**: Again, it would be easy to think that adding butter goes without
+    saying, but some customers will want a low-fat spread, or even none at all. Fortunately,
+    there is a pattern that suits this purpose very well: the decorator pattern.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Fillings and toppings**: Although these classes could very easily share identical
+    properties and instances if both extend from the same class, we will treat them
+    separately as this will make constructing menus far clearer.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With these specifications in place, we can start to think about how the top-level
+    menu will look. We will use a sliding drawer navigation view and offer the following
+    options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Outlining specifications](img/image_07_001.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This gives us a rough idea of what we are aiming at. One of the advantages of
+    using patterns is that the ease at which they can be modified means we can take
+    a more intuitive approach to development, safe in the knowledge that even large-scale
+    changes often only require editing a minimum of code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our next step is to select a suitable pattern for the outlined task. We are
+    familiar with both factories and builders and how they could both accomplish what
+    we want, but there is another creational pattern, the prototype, which is also
+    very handy, and although we will not be using it in this situation there will
+    be times when we might, and certainly times when you will.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The prototype pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The prototype design pattern performs similar tasks to other creational patterns,
+    such as builders and factories, but it takes a very different approach. Rather
+    than rely heavily on a number of hard-coded sub-classes, the prototype, as its
+    name suggests, makes copies from an original, vastly reducing the number of sub-classes
+    required and any lengthy creation processes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up a prototype
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The prototype is at its most useful when the creation of an instance is expensive
+    in some way. This could be the loading of a large file, a detailed cross-examination
+    of a database, or some other computationally expensive operation. Furthermore,
+    it allows us to decouple cloned objects from their originals, allowing us to make
+    modifications without having to re-instantiate each time. In the following example,
+    we will demonstrate this using functions that take some considerable time to calculate
+    when first created: the nth prime number and the nth Fibonacci number.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Viewed diagrammatically, our prototype will look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Setting up a prototype](img/image_07_002.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We will not need the prototype pattern in our main app as there are very few
+    expensive creations. However, it is vitally important in many situations and should
+    not be neglected. Follow these steps to apply a prototype pattern:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will start with the the following abstract class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, add this cloneable concrete class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add another `Sequence` class, for the Fibonacci numbers, like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, create the cache class, like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add three TextViews to your layout, and then add the code to your MainActivity's
+    `onCreate()` method.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add these lines to the client code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As you can see, the preceding code creates the pattern but does not demonstrate
+    it. Once loaded, the cache can create instant copies of our previously expensive
+    output. Furthermore, we can modify the copy, making the prototype very useful
+    when we have a complex object and want to modify just one or two properties.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Applying the prototype
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Consider a detailed user profile such as you might find on a social media site.
+    Users modify details such as images and text, but the overall structure is the
+    same for all profiles, making it an ideal candidate for a prototype pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To put this principle into practice, include the following code in your client
+    source code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![Applying the prototype](img/image_07_003.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The prototype is a very useful pattern in many occasions where we have expensive
+    objects to create or when we face a proliferation of sub-classes. However, this
+    is not the only pattern that helps reduce excessive sub-classing, and this leads
+    us on to another design pattern: the **decorator**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The decorator design pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Regardless of object creation expense, there are still times when the nature
+    of our model will necessitate an unreasonable number of sub-classes, and this
+    is where the decorator comes in extremely handy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Take the bread in our sandwich app, for example. We would like to offer several
+    types of bread, but in addition, we want to offer the choice of having the bread
+    toasted, the sandwich open, and a selection of spreads. By creating toasted and
+    open versions for each bread type, the project would very soon become unmanageable.
+    The decorator allows us to add functionality and properties to an object during
+    runtime without having to make any changes to the original class structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up a decorator
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: One might think that properties such as *toasted* and *open* could be included
+    as part of the *bread* class, but this itself can lead to increasingly unwieldy
+    code. Say that we want *bread* and *filling* to inherit from the same class, say
+    *ingredient*. This would make sense as they have properties in common, such as
+    price and calorific value, and we want them both to be displayed through the same
+    layout structures. However, properties such as toasted and spread make no sense
+    when applied to fillings, and this would lead to redundancy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The decorator solves both these issues. To see how it is applied, follow these
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Start by creating this abstract class to represent all breads:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, create concrete instances, like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now we need an abstract decorator. It looks like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We need four extensions of this decorator to represent two types of spread
+    and both open and toasted sandwiches. First, the `Butter` decorator:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Only the values returned by the getters differ in the other three classes.
+    They are as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: That is all that is required to set up our decorator pattern. All we need to
+    do now is connect it to a working interface of some sort. Later, we will use a
+    menu for selecting the bread and then a dialog to add the *decoration*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Applying the decorator
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The user will have to choose between butter and low-fat spread (although a *no
+    spread* option could be included by adding another decorator), but can choose
+    to have their sandwich both toasted and open.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For now, we will use the debugger to test various combinations by adding lines
+    such as the following to the governing activity''s `onCreate()` method. Note how
+    the objects are chained:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This should produce outputs like these:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Diagrammatically, our decorator pattern can be expressed like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Applying the decorator](img/image_07_004.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The decorator design pattern is an extremely useful development tool and can
+    be applied to a multitude of situations. As well as helping us maintain a manageable
+    number of concrete classes, we could also have our bread super class inherit from
+    the same interface as the filling class and still behave differently.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extending the decorator
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'It would be quite a simple task to extend the preceding pattern to cater for
+    fillings as well. We could create an abstract class called `Fillings`, which would
+    be identical to Bread, except for the name, with concrete extensions along the
+    lines of this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We could even create decorators that were specific for fillings such as ordering
+    a double portion. The `FillingDecorator` class would extend from `Filling` but
+    otherwise be identical to `BreadDecorator`, and the concrete example would look
+    like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The way that we chained our decorators together to produce a compound string
+    is very similar to the way a builder works, and we could indeed use this pattern
+    to generate an entire sandwich along with all its trimmings. However, as is often
+    the case, there is more than one candidate for this task. As we saw earlier in
+    the book, builders and abstract factories are both capable of producing complex
+    objects. Before we decide on our model, we need to find the most suitable pattern
+    or, better still, a combination of patterns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The builder pattern would seem the most obvious choice, so we will take a look
+    at that first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A sandwich builder pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The builder pattern is purpose-built for combining simple objects to form one
+    complex object, and this forms a perfect analogy of making a sandwich. We encountered
+    a generalized builder pattern earlier in the book, but now we need to adapt it
+    for a specific function. Furthermore, we will be connecting the pattern to a working
+    UI so that a sandwich can be constructed according to user selections rather than
+    the set meal demonstrated in previous builder examples.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Applying the pattern
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To keep the code short and simple, we will only create two concrete classes
+    of each ingredient type, and we will use buttons and a text view to display the
+    output rather than a recycler view. Simply follow these steps to create our sandwich
+    builder pattern:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Begin with the following interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create these two abstract implementations of `Ingredient`. They are empty for
+    now, but we will need them later:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will need just two concrete examples of each ingredient type. Here is one,
+    the `Bagel` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Create another `Bread` called `Bun` and two `Filling` classes called `Egg` and
+    `Cress`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Provide these classes with any description and calorific values you like.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now we can create the sandwich class itself, like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The sandwich builder class does not build set meals, as in previous examples,
+    but is used to add ingredients as requested. It is as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This completes the pattern itself, but before we move on to create the UI, we
+    need to address the empty abstract classes `Bread` and `Filling`. They appear
+    to be utterly superfluous but there are two reasons why we have done this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Firstly, by defining their methods, `description()` and `kcal()`, in a common
+    interface we can more easily create ingredients that are neither filling or bread
+    by implementing the interface itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To see how, add the following class to the project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This gives us the following class structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Applying the pattern](img/image_07_005.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The second reason for including these abstract classes is more interesting.
+    The `BreadDecorator` class in the previous example worked directly with the abstract
+    `Bread` class and by maintaining that structure we can easily connect decorators
+    to our ingredient types. We will move on to this shortly, but first we are going
+    to build a UI to run our sandwich builder on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Connecting to a UI
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this demonstration, we have two types of filling and two breads. They can
+    select as many or as few fillings as they wish, but only one type of bread, which
+    makes the selection a good candidate for the use of **check boxes** and **radio
+    buttons** respectively. There is also an option to add salt, and this is the kind
+    of binary choice that perfectly suits the **switch widget**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To begin with we need a layout. Here are the steps required:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Begin with a vertical linear layout.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Then include the radio button group, like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, include the check boxes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then add the switch:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This is an inner relative layout containing the following action buttons:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note the use of `android:onClick="onActionOkClicked"` in the OK button. This
+    can be used in lieu of a click listener and identifies the method on the owning
+    activity to be called when the view is clicked on. This is a very convenient technique,
+    although it does rather blur the lines between model and view and can be prone
+    to bugs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we add this method, we need to declare and instantiate one or two fields
+    and views. Follow these steps to complete the exercise:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Include the following field declarations in the class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Instantiate the widgets like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now we can add the `onActionOkClicked()` method we declared in the XML layout:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We can now test this code on a device, and despite the small number of ingredients,
+    it should be clear how this works to allow users to build sandwiches of their
+    choice:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Connecting to a UI](img/image_07_006.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Multiple widgets
+  prefs: []
+  type: TYPE_NORMAL
+- en: We only need to include more ingredients and a more sophisticated UI to handle
+    this. Nevertheless, the principle will remain the same and the same structure
+    and logic can be applied.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Despite the potential, the preceding example lacks the decorative features we
+    saw earlier, such as offering toasted varieties and low-fat spread. Fortunately,
+    it is a simple task to attach decorators to both our bread and filling classes.
+    Before we do so, we will take a quick look at why a builder is not the only candidate
+    pattern capable of performing this task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Selecting patterns
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Examine the following figure comparing a builder and an abstract factory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Selecting patterns](img/image_07_007.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Comparison between the builder and abstract factory patterns
+  prefs: []
+  type: TYPE_NORMAL
+- en: Despite the differences in approach, there are striking similarities between
+    the builder and abstract factory patterns, and they both perform similar functions.
+    We could quite easily use abstract factories for this task. Factories are more
+    flexible when it comes to adding or modifying products, and are structurally a
+    little simpler, but there is one important difference between the two patterns
+    that really determines our choice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Both factories and builders manufacture objects, but the major difference is
+    that factories return their products as each of them are requested. This would
+    be like having a sandwich delivered one ingredient at a time. The builder, on
+    the other hand, only constructs its output once all the products have been selected,
+    and this is far more like the behavior of making and delivering a sandwich. This
+    is the reason why the builder pattern provides the best solution in this case.
+    With this decision taken, we can stick with the preceding code and get down to
+    adding a little extra functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding a decorator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we know, one of the best ways to add further functionality is with decorator
+    patterns. We have already seen how these work, and now we can add one to our simple
+    sandwich builder. Individual decorations are almost identical in structure, differing
+    only in the values they return, so we need to create only one here, by way of
+    example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Attaching the pattern
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Follow these steps to add the option to offer a toasted sandwich:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open the empty `Bread` class and complete it like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a `BreadDecorator` class like the one found here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now add the concrete decorator itself:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Not only does the use of a decorator keep the number of sub-classes we need
+    to a minimum, it also serves a perhaps more useful function, in that it allows
+    us to include options such as toasted and/or open, which are not ingredients,
+    strictly speaking, and this helps keep our classes meaningful.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It should be clear that we can now add as many such decorations as we like,
+    but first there are, of course, one or two changes we need to make to our main
+    source code to see our decoration in action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Connecting the pattern to the UI
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Edit the main XML layout and Java activity to achieve this by following these
+    simple steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the following switch, just below the radio button group:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open the `MainActivity` class and provide it these two fields:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Instantiate the widget like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following method variables to the `onActionOkClicked()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now add this code underneath the radio buttons:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, modify the text output code like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: That is all that is needed to add a decorator to our existing pattern and provide
+    it as a working part of our UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Connecting the pattern to the UI](img/image_07_008.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Note that although the filling classes have been refactored here to something
+    tastier, the code, however, remains the same. Everything from variables to classes
+    and packages can be refactored with **Shift + F6**. This will also rename all
+    occurrences, calls, and even getters and setters. To rename an entire project,
+    rename the directory in your Android Studio projects folder and then open it from
+    the File menu.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As a UML class diagram, we can express this new structure like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Connecting the pattern to the UI](img/image_07_009.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This covers the basic processes behind connecting model and view using simple
+    design patterns. Our work, however, has left our main activity looking rather
+    messy and complicated, and this is something we would like to avoid. It is not
+    necessary to implement this here, as this is still a very simple program. However,
+    there will be times when client code can become very cluttered with listeners
+    and various other callbacks, and it is useful to know how best to square things
+    away using a pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The facade is the most useful pattern for this kind of thing, and is quick
+    and easy to implement. We have come across this pattern before, and implementing
+    it here is left as an exercise for the reader. The class structure would look
+    something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Connecting the pattern to the UI](img/image_07_010.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have seen how to combine design patterns to perform complex
+    tasks. We created a builder to allow users to construct a sandwich of their choice
+    and to customize it with a decorator pattern. We also explored another vital pattern,
+    the prototype, and saw how vital it can be whenever we have large files or slow
+    processes to contend with.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As well as delving into the concepts of pattern design, the chapter included
+    the more practical aspects of setting, reading, and responding to compound buttons
+    such as switches and checkboxes, and this formed a significant step on the way
+    to developing more sophisticated systems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will look more closely at communicating with the user
+    through the use of various Android notification tools, such as the snack bar and
+    how services and broadcasts play a part in Android development.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,1360 @@
+- en: Chapter 10. Performance Tips
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter is about techniques and hints and tips about topics not covered
+    in the previous chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Therefore, we want to define here best practices for image handling: images
+    are widely used in many applications in the store. For this, we want to know how
+    to manage images in an Android application to improve overall performance. For
+    this topic, concepts from various previous chapters are needed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Beyond bitmap management, we will go through alternatives to largely used, but
+    not performant, serialization formats such as XML and JSON in order to find a
+    better way to speed up client/server communications and limit encoding/decoding
+    time and resource consumption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In conclusion, the last part of the chapter will discuss a couple of measures
+    to improve the application before the building process. These include the reduction
+    of resources and how to clean the APK so as to have a smaller APK file to distribute
+    through the store in order to be compliant with store limitations and users' expectations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bitmaps
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'One of the biggest challenges with our application is to handle images in an
+    efficient way because there are a lot of different perspectives that impact the
+    resulting application. This is a particular topic that covers almost everything
+    we discussed in previous chapters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bitmaps need to be in a layout to be displayed correctly. Hence, what we discussed
+    in [Chapter 2](ch02.html "Chapter 2. Efficient Debugging"), *Efficient Debugging*,
+    is particularly important here.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Bad bitmap handling can lead to memory issues due to leaks or because bitmaps
+    are used badly as variables instead of being read when needed. Hence, [Chapter
+    4](ch04.html "Chapter 4. Memory"), *Memory*, can be helpful to keep in mind key
+    concepts while saving and reading large images.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Too many times, we try to process significant amounts of data coming from images
+    on the main thread; we will use the topics discussed in [Chapter 5](ch05.html
+    "Chapter 5. Multithreading"), *Multithreading*, to understand how to handle bitmaps
+    efficiently with no impact on user experience.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Most of the time, images come from a remote resource. We will discuss how to
+    retrieve images from a server and how to cache them for future reuse to limit
+    networking requests and save battery, as examined in [Chapter 6](ch06.html "Chapter 6. Networking"),
+    *Networking*.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Bitmaps are handled in many applications. We will discuss in more detail every
+    aspect of the matter, trying to define what to do with them by using best practices
+    introduced in the chapters mentioned previously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A displayed image is read as a whole, no matter what the screen resolution is
+    or if it is hidden or invisible; its weight is the biggest in its memory. As we
+    will see next, every pixel of the image keeps 32 bits of memory occupied by default.
+    Hence, multiplying the resolution of the image by 32, we find the number of bits
+    the image uses inside the memory. The main problem with this is, of course, the
+    high probability of incurring an `OutOfMemoryException` due to the saturation
+    of the memory available to the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Usually, we use images as they are, without considering performance problems
+    that may occur. However, for example, if we are displaying **1920x1080** pixels
+    in a **384x216** pixels placeholder, we are adding 8.2 MB into the memory, while
+    332 KB is enough. See *Figure 1* to understand the overhead of the unscaled image
+    compared with the required one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Loading](img/4666_10_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 1: Example of overhead of a non-scaled image in a smaller placeholder'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Things get worse if we are dealing with lists or galleries or other widgets
+    that show more images at a time. Moreover, Android suffers from high fragmentation
+    for screen resolutions and memory availability. Hence, there is no way to evade
+    the issue: bitmaps need to be pre-scaled when read. So, how can we pre-scale them
+    efficiently? Let''s find out in the following paragraphs.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Bitmap class is not so helpful; the `Bitmap.createScaledBitmap()` method
+    needs a `Bitmap` object as an input to be scaled. Hence, it forces us to read
+    the whole image anyway before creating the new small image, with the evident problem
+    of unnecessarily large memory allocation for the entire source image. However,
+    there is a way to reduce the weight on the memory of the image while reading it.
+    This is the aim of the `BitmapFactory` API. Once we know what the suitable resolution
+    for our image to be scaled is, we can use the `BitmapFactory.Options` class to
+    set the right parameters and scale the image efficiently from a memory perspective.
+    Let''s look at the parameters we can use to reach the right result. The `BitmapFactory`
+    class provides different methods to load an image depending on the source:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`decodeByteArray()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`decodeFile()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`decodeFileDescriptor()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`decodeResource()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`decodeStream()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Every one of them is overloaded with the corresponding method, which accepts
+    a `BitmapFactory.Options` object besides those needed. This way, we can use this
+    class to define our scaling strategy for the image while it is read. If we are
+    dealing with very big images, we can use a special API to decode small portions
+    of an image: this is `BitmapRegionDecoder`. The `BitmapRegionDecoder.decodeRegion()`
+    method accepts a `Rect` and a `BitmapFactory.Options` object as parameters to
+    decode the `Rect` region of the image passed in the `BitmapRegionDecoder.newInstance()`
+    method.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First of all, we need to know the resolution of the image. To find out, we want
+    to get image dimensions without reading the whole source bitmap. This would contribute
+    to needlessly increasing the memory allocation. The API provides a way to get
+    the source image size by setting a particular property of the `BitmapFactory.Options`
+    object called `BitmapFactory.Options.inJustDecodeBounds`. The `BitmapFactory.Options.inJustDecodeBounds`
+    property is set to define whether the decoding method should return a `Bitmap`
+    object. Hence, we can set it as `true` to disable bitmap processing while reading
+    the image resolution, and then set it back to `false` to enable the full reading
+    of the image and obtain the desired image. This ensures that no bitmap memory
+    is needlessly allocated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we know what resolution we want for our image, we need to apply the new
+    settings to the option before processing it. For this, `BitmapFactory.Options.inSampleSize`
+    is what we need to use. It is an integer that specifies how many times to divide
+    separately each of the dimensions of the image to reach the requested size. It
+    is also forced to be a power of two. Hence, if we are setting a different value,
+    it will be scaled down to the nearest power of two before the processing step.
+    Then, if we set the `BitmapFactory.Options.inSampleSize` to `4`, the final width
+    and height will be 1/4 of the original one. Hence, the resulting image will be
+    made by 1/16 of the pixels that are in the source bitmap.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see, in the following code snippet, how to apply such useful properties:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Why is there such a strong limitation about the power of two for the sampling
+    property? Because, this way, the processed image will be composed of, for example,
+    just one pixel out of four in the source. Moreover, this is done pretty fast.
+    The advantage is in the speed of computation, while the disadvantage is that we
+    cannot scale the image precisely to the desired size.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are other properties to scale the image using a different approach. Instead
+    of the `BitmapFactory.Options.inJustDecodeBounds` property, we can use the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`inScaled`: This enables the density check to scale the image based on the
+    other values in this list.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`inDensity`: This is the density to use for the bitmap. If it is different
+    from the following `inTargetSize`, then the image will be processed to be scaled
+    and reach the `inTargetDensity`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`inTargetDensity`: This is the desired density for the resulting image if it
+    is different from the `inDensity` property.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The scale ratio will be calculated using the formula *scale = inTargetDensity
+    / inDensity*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Then, we can use the ratio between the actual and desired dimensions in pixels
+    of the image to calculate the scale values. Hence, the previous snippet of code
+    becomes the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is using a different calculation to scale the image at a particular size.
+    The precision has a cost in terms of speed. Therefore, this solution exchanges
+    the speed of the previous one with the precision in creating an image with the
+    desired resolution. Hence, as suggested by Google, the best results are reached
+    by using a mix of both the previous solutions. The first step is to identify the
+    most accurate power of two to use as `BitmapFactory.Options.inSampleSize` to speed
+    up the gross scaling if needed. Then, the image is converted from this intermediate
+    image to the accurate desired scaled one. If our source image is **1920x1080**
+    pixels and we need the final one to be **320x180** pixels, there will be an intermediate
+    image of, for example, **480x270** pixels, as shown in *Figure 2*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Loading](img/4666_10_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 2: Scaling steps'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What has been discussed can be implemented with all of the properties introduced
+    earlier, as in the following code example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This solution combines the speed of the first one and the precision of the second.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Processing
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The operations described in the previous section are unpredictable from a timing
+    point of view, but they are certainly affecting the CPU. It does not matter what
+    the image sizes are, or whether the operations are quick. All of operations must
+    be executed in a worker thread, as discussed in [Chapter 5](ch05.html "Chapter 5. Multithreading"),
+    *Multithreading*, in order not to block the user interface and degrade perceived
+    application performance for lack of responsiveness.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main operation to be done with scaling is to set the bitmap to `ImageView`
+    to create a layout. Hence, we need an `AsyncTask` subclass with a reference to
+    a view. We discussed this combination of objects in [Chapter 4](ch04.html "Chapter 4. Memory"),
+    *Memory* and we found that this leads to an activity leak. Hence, remember to
+    use `WeakReference` to hold `ImageView` to be collected when `Activity` has been
+    destroyed. Then, don't forget to verify that `ImageView` is still referenced in
+    `WeakReference`, otherwise `NullPoionterException` will occur.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Such an `AsyncTask` subclass can be like the code in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Caching
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's talk about where these bitmaps are and how to handle them locally. Most
+    of the time, bitmaps are stored in a remote resource, and this forces us to create
+    the corresponding code to download them before displaying them on the screen.
+    However, we do not want to download them again as many times as they are needed
+    to be shown on the screen. Hence, we need a simple and fast way to store images
+    and make them available on request.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, we must be careful to make sure that at some point the images are deleted.
+    Otherwise, the internal memory of the device will be saturated because, potentially,
+    the images in an application are not limited. Because of this, we need a limited
+    space to store the images. This space is called the **cache**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, the question is: which is the right algorithm to remove images? The main
+    algorithm used by Android is the LRU one. This uses a stack of objects to identify
+    which ones have a higher priority, placing them on top and lower priority ones
+    at the bottom. Then, when an object is used, it is moved up to gain a higher priority,
+    and all of the others are shifted down. Hence, the priority, in this case, is
+    the number of requests for a single object; the stack will then be a ranking of
+    objects from the most used on top to the least used on the bottom, as shown in
+    *Figure 3*, where the image in position 3 is used another time, and it moves to
+    the top of the stack:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Caching](img/4666_10_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 3: Example of LRU stack'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this kind of reasoning, when a new object needs to be added to a full
+    stack, the choice is pretty simple: it will take the place of the least used object
+    because it has got the least chance of being requested again.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All of this logic is implemented and provided by Android in the `LRUCache` object.
+    This implementation works in memory and not on disk, to provide a faster and reliable
+    cache ready to be queried. This means that any object at the bottom of the stack,
+    when it's evicted because of a new addition, is eligible for garbage collection.
+    Moreover, this class allows defining the keys and the value types to use because
+    it uses generics. Because of this, it can be used for every kind of object we
+    need and not only bitmaps. The `LRUCache` object is even thread-safe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The things to do after choosing the keys and value types is to define the size
+    of the cache. There are no rules for this, but keep in mind that too small a cache
+    leads to too many changes inside the stack, making the use of the cache irrelevant,
+    while too big a cache can lead to `OutOfMemoryErrors` during the use of our application.
+    The right thing to do in this case is to provide to the cache a portion of the
+    available memory of the application. In the following code, the `LRUCache` object
+    is created using strings as keys and the available memory is divided by 8:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then we need to define the size of a single entry in the cache. This can be
+    done by overriding the `LRUCache.sizeOf()` method and returning the right number
+    of bytes of a bitmap during instantiation in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we can use this cache object when an image needs to be displayed in
+    `ImageView`, as described in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As mentioned previously, this kind of cache resides in the heap memory; when
+    the user changes the activity and then comes back, every item must be downloaded,
+    scaled, and added to the cache again. Then, we want a cache type that can be persisted
+    across multiple access attempts and rebooted. To do this, there is a helpful class
+    from the official Android samples in the official repository, called `DiskLRUCache`.
+    This is not thread-safe, and so we need a lock when we access it. Moreover, its
+    initialization can be a long-running one, and we have to execute it inside a worker
+    thread in order not to block the main thread. Let''s use an `AsyncTask` class
+    to do so, as in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'By adding this class, we can use two levels of cache:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Heap-level cache**: The faster but not persistent cache, as discussed earlier.
+    Its aim is to be checked first when an image is needed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disk-level cache**: The slower but persistent cache, checked second if the
+    other one does not contain the requested image.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Hence, the logics behind an image request should be something like that shown
+    in *Figure 4*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Caching](img/4666_10_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 4: Flow diagram for an image request using both cache levels'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we want to put an image in the cache, we need to add it to both of them,
+    as seen in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Displaying
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'As mentioned previously, when an image is displayed on the screen, it is described
+    by a 32-bit pixel, with 8 bits for every color of the image, as shown in *Figure
+    5*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Displaying](img/4666_10_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 5: Bitmap pixel compression'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unfortunately, there is no way to use 24 bits without ignoring the transparency
+    part; instead, when the image does not contain the alpha byte of the pixel, Android
+    will add it anyway, converting a 24-bit image into a 32-bit one. Obviously, this
+    has got many side effects in the everyday use of an application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First of all, the amount of memory needed to store the bitmap in the heap is
+    greater, leading to more garbage collection events because it is more difficult
+    to allocate bigger contiguous memory portions than smaller ones. Moreover, it
+    takes longer to allocate and collect such bigger memory blocks. Furthermore, there
+    is no compression on allocated memory. The time to decode and display them will
+    be longer, affecting both CPU and GPU. What's the solution to this?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android provides four different pixel formats to be used while dealing with
+    images. This means that every single pixel of an image can be described with less
+    bits and therefore can be lighter in terms of memory, garbage collection, CPU,
+    and GPU. This comes at a cost: the quality will not be the same. Hence, the use
+    of this should be by design, because it cannot be correct for every image in our
+    application. However, we could think of a way do it in a cleverer fashion; for
+    example, we could choose different pixel formats depending on the device''s capabilities.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you are dealing with applications that handle images, it''s really important
+    to check whether, depending on the requirements, it''s possible to use different
+    pixel formats to reduce the impact of large memory blocks, which the bitmaps are,
+    and improve performance from different points of view: memory, speed, and battery
+    charge duration.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The pixel formats currently handled by the Android platform for `Bitmap` objects
+    are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ARGB_8888`: This is the default discussed value, which uses 32 bits for pixels
+    as all of the channels use 8 bits each.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ARGB_4444`: This maintains four channels, as the previous one does, but uses
+    just 4 bits for each channel for a 16-bit pixel. Although it saves half the image
+    memory, its poor quality on the screen led Google to deprecate this value, recommending
+    the default one, despite its advantages in memory management.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`RGB_565`: This particular value keeps only the color channels, removing the
+    alpha one. The red and blue channels are described using 5 bits, while the green
+    channel is described using 6 bits. Every pixel uses 16 bits, as with the previous
+    format, but ignoring the alpha transparency and improving color quality. Hence,
+    this is good to use when dealing with images without transparency.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ALPHA_8`: This is used to store just alpha transparency information with no
+    color channel.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'However, how could we use them? This is also a decoding option. `BitmapFactory.Options.inPreferredConfig`
+    is used to define the pixel format to use when an image is about to be decoded.
+    So, let''s check the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is obviously expensive because it leads to more computation time and CPU
+    usage. However, its cost is less than the whole bitmap in memory, and, if we are
+    aware of reusing images, we can save not just time, but critical system resources.
+    So, let's see how to reuse the image to further improve the memory usage of our
+    application, as described in the following pages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Managing memory
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: What has been discussed until now is related to memory management from both
+    a heap and disk point of view. However, there is a higher level of abstraction
+    we can use to improve heap memory management while dealing with bitmaps. In [Chapter
+    4](ch04.html "Chapter 4. Memory"), *Memory*, we introduced a particular design
+    pattern to avoid what we called memory churn; this is the object pool pattern.
+    With this pattern, a memory allocation can be reused to avoid garbage collection
+    when an object is no longer referenced.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When lots of bitmap objects are about to be handled, as in a list or grid, many
+    new instantiations and deletions are executed with many garbage collection events
+    occurring. This degrades the overall memory performance of the application as
+    we know collection events are blocking any other thread, in addition to the large
+    memory size of these kinds of objects. Hence, if we could use the object pool
+    pattern for bitmaps, we would limit the garbage collector operations without compromising
+    and indeed speeding up, the caching technique we discussed previously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Practically, we want to reuse the already allocated memory to process new images
+    to be displayed. As reported in *Figure 6*, if four images are displayed on the
+    screen, the memory allocation should remain the same after a scroll by the user:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Managing memory](img/4666_10_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 6: Heap memory management with the object pool'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To implement such a useful mechanism, we need to introduce a particular `BitmapFactory.Options`
+    property called `BitmapFactory.Options.inBitmap`. If we use this property, we
+    have to provide an existing `Bitmap` object to let the decoder reuse its memory
+    allocations. This way, the previous object is not destroyed, and the new one is
+    not created, and there is no need for garbage collection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'However, this useful property has its limitations, as reported in the official
+    documentation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Until Android Jelly Bean (API Level 18), the provided object and the new one
+    must have the exact same size. Starting from Android KitKat (API Level 19), the
+    provided bitmap can be larger or equal to the new one, but not smaller.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The first point implies that images with different pixel formats should not
+    be used for this kind of operation.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Keeping this in mind, let''s see a quick overview of some code to create such
+    a logic. First of all, let''s create the controls to meet these requirements:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, let''s write the code to retrieve, if there is one, the reusable `Bitmap`
+    object from the pool:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, let''s create a method to add these `BitmapFactory.Options` before
+    the decoding process, to use a reusable object instead of creating a new one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Don''t forget to create a set of reusable bitmaps to search in when you need
+    to. So, let''s define a pool of bitmaps as a set of `SoftReference` objects to
+    store our images. Our `BitmapCache` class should look like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Image optimization
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous pages of this chapter, we discussed how to handle images when
+    they are ready to be loaded and displayed. We want now to discuss the way they
+    get into the device and how to improve this process. It is now clear that images
+    are big memory boulders, and instead of improving the user experience of our application,
+    they can break it up if we do not take care of handling them properly. So, we
+    can design the best framework to download images from a remote server, but if
+    they are too large, or if their compression is not high enough, our application
+    will be perceived as slow and expensive. Images need time and bandwidth to be
+    downloaded. Hence, our aim is to find the right way to reduce their size as much
+    as possible, without compromising their quality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: An application that displays images always needs a good design to ensure the
+    download process is fast. To do this, images must be as small as possible regarding
+    bytes used, to make it easier to transfer them from a remote server to a device
+    that may use a poor connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As analyzed in [Chapter 6](ch06.html "Chapter 6. Networking"), *Networking*,
+    there are lots of different conditions for the device to access the server. Moreover,
+    this is unpredictable. However, it does not matter which connection is using the
+    user''s device, we want to offer the user the best user experience we can. So
+    what can we do to reduce the image size? There are two main aspects to consider
+    for this: **resolution** and **compression**. Let''s discuss them in more detail.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Resolution
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The resolution aspect is very underrated when we develop an application that
+    displays images. However, let''s think about it for a while: if we are sure the
+    image will be displayed in 480x270 pixels at most, why should we download a larger
+    image? Moreover, knowing the large fragmentation of screen resolution and densities
+    that the Android platform is afflicted by, why should we download images with
+    the same resolution on a device of 480x800 pixels and another one of 1920x1080
+    pixels?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The best approach is to serve an image with the same resolution as the placeholder
+    of the particular device it will be shown on. Then, if the placeholder is 480x270
+    pixels, we should download an image size of 270 pixels or 480 pixels, at the most,
+    or the same resolution of the placeholder; the overhead will be lost anyway. Unfortunately,
+    this approach can be put into practice only if we have access to the server implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we are unable to change the server settings, there are tons of real-time
+    image processing services to do this. We can decide to use them in particular
+    conditions or connections, or for just a specific type of image or section of
+    our application. It will be of benefit anyway.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When an image with the same content should be displayed in multiple sections
+    of our application, perhaps using different resolutions, the trick is to download
+    the image with the highest resolution and then use the techniques discussed earlier
+    to scale it down to be used in a different placeholder. This way we are saving
+    time, battery charge, and bandwidth. This is not a rule to be applied every time;
+    you should always design the best approach to reducing the size of the images
+    to be transferred to the device, depending on the application's requirements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compression
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Things get interesting when talking about compression: the most-used image
+    format is PNG. It is a type of lossless compression, leading to full-quality images.
+    Unfortunately, its ability to compress can lead to bigger files, and then bad
+    transferring results and all the other side effects discussed previously.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A lighter format is the JPEG one; it uses lossy compression to reduce the image
+    size and obtain a good result, while there is little difference perceived by the
+    user. This is a better choice of format for images that come from a remote resource.
+    Unfortunately, it does not handle transparency. Also, there is an even lighter
+    format, suggested by Google, called **WebP**; it can use loss or lossless compression
+    with or without transparency and animations. This format analyzes pixels and predicts
+    the nearby pixels, reducing the quantity of data, in bits, required for an image.
+    This is also completely supported starting from Android Jelly Bean (API Level
+    17).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Anyway, if we need to use PNG files for any reason, there are lots of tools
+    to apply lossy image compression and reduce their sizes drastically. These tools
+    allow us to change color profiles, apply filters, and other useful operations
+    to reduce the image size. It is up to us to find the right loss for our images.
+    An image just exported by the graphics editor programs is bigger than needed;
+    we should always clean it, searching for unused data inside it, and then apply
+    any compression improvement we need to reduce overheads in image transfers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Serialization
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The same considerations related to lowering image sizes to speed up transfers
+    can be used for text files as well. So, let's have a quick overview of a typical
+    format to transfer data over our client/server architecture. Until a couple of
+    years ago, the XML format was the most used. Then developers changed it to JSON
+    format. Both are human readable, but JSON is simpler to write because of its syntax.
+    It has no need for tags and attributes. For these reasons, JSON is lighter and
+    more preferred and used than XML.
+  prefs: []
+  type: TYPE_NORMAL
+- en: JSON improvements
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Google provide an easy-to-use library to handle JSON serialization and deserialization,
+    called GSON. In principle, it uses reflection to find the getters and setters
+    of a Java bean; then, if everything is in the right place inside the bean, it
+    can be deserialized by providing just the wanted class, to create a new object
+    filled with all the data inside the JSON file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To improve serialization/deserialization performance and transfer timings, we
+    need to improve the JSON file design; our goal is to reduce the size of JSON files.
+    The main and obvious tip here is to avoid unnecessary data inside the JSON structure.
+    So, don't serialize data that the client does not use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The typical approach to data serialization using JSON is to create an array
+    of objects to be transferred. However, the JSON format needs a name for every
+    property to be recognized correctly during the deserialization process. This way,
+    many characters for duplicated strings are added, causing an overhead in the file
+    size. The following JSON file example shows a list of objects with the related
+    duplicated keys characters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The content of this file can be serialized in a smaller file defining arrays
+    of properties instead of arrays of objects. *Figure 7* shows the concept and the
+    change of structure to apply here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![JSON improvements](img/4666_10_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 7: Structure change from an array of objects to an array of properties
+    to apply to a JSON file'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Applying this kind of remodeling, the following file would be the new format,
+    containing the same content of the first JSON file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: The actual size of the first file is about 250 bytes, while the second one is
+    140 bytes. But the more objects there are in a single file, the greater the savings
+    that will be applied to the whole JSON file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: JSON alternatives
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: However, both the XML and JSON formats are too expensive; they are verbose in
+    terms of readability, slower to be encoded by the server, and, once the client
+    has received them, slower to decode than other lighter formats. Usually, for debugging
+    purposes, developers prefer a human readable format to performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a matter of fact, there are other formats to let the client and the server
+    communicate in a faster way. These are by Google; let's have an overview of these.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Protocol buffers
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The first serializing method developed is called a **protocol buffer**. Similar
+    to XML, it provides a way to define data structures, but it is faster and smaller.
+    It uses files with a `.proto` extension to set the syntax of the not-readable
+    binary file created and transferred later. It is something similar to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Every message is a key/value pair series. Then, once defined, our data to be
+    transmitted would look just like a binary stream. This is the main advantage of
+    this method: it is up to 10 times smaller and 100 times faster than an XML file
+    with the same data.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This method is platform independent and can be used across multiple environments.
+    Nevertheless, not every developing language is supported; at the moment the current
+    release includes Java, C++, and Python compilers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unfortunately, protocol buffer implementation needs a lot of memory and code
+    to be used. This is not suitable for mobile devices where, as we know, there is
+    a need to save memory as much as possible to achieve performance goals. For this
+    reason, a special version of protocol buffers has been created to minimize code
+    and memory usage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Flat buffers
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Flat buffers are an advanced serialization method created by Google. A flat
+    buffer is made by a flat binary buffer without the need to parse it. Memory allocation
+    here is extremely low, while providing high flexibility in defining fields. The
+    code overhead is minimal. Also, it is possible to parse JSON texts in a faster
+    and more efficient way than other parsers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This method is open source and there are different implementations with different
+    features for every single supported language, because they depend on community
+    contributions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Flat buffers do not need intermediate representation data to be parsed; hence,
+    they are faster at providing data than the protocol buffers. Let's have a quick
+    look at their integration in an Android application to understand their advantages
+    and whether the integration time is worthwhile.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first thing to do is to define a schema file to be used to delineate the
+    data structure or to convert the JSON original one if we are migrating from that
+    kind of serialization method. So, let''s have a look at the following JSON file
+    to convert:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The schema declaration file should contain a table for every object in the
+    file, specifying the type of every property. The following is the corresponding
+    schema file content:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once done, we need to create the Java model with classes to use in our application.
+    For this purpose, the flat compiler is provided, and we can use it to generate
+    all the Java class files by calling the following command line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Refer to the official documentation for further information about the correct
+    use of the provided sources. The final file for the `User` class created for the
+    model of the previous example is the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This class can be used just by calling the `User.getRootAsUser()` method; just
+    after the source, it''s converted into a byte array and then a `ByteBuffer` object,
+    as shown in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: For the Android implementation, this solution reduces the transfer size significantly,
+    and serialization and deserialization timings are much lower than in the JSON
+    case. This means that the flat buffers are much more efficient, and we should
+    think of replacing our JSON strategy with one based on flat buffers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Local serialization
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Serialization is worthwhile for communication purposes because its main aim
+    is to provide a light way to transmit structured objects in different environments.
+    However, serialization and deserialization processes need an overhead of time
+    to be executed. So, while it is good for network transfers, it should not be used
+    locally by the client, saving the time needed for serialization and deserialization
+    operations, for example, to store data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A typical example is the storing of a JSON file in the cache memory. This must
+    be deserialized every time before accessing its data. In addition, if you need
+    to change something inside the file, the JSON file must be serialized with the
+    new content before saving it into the cache memory. This is much more expensive
+    than using a local database with the structured data, even if it is the fastest
+    way to develop such a data management system inside an Android application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When you need to save data, avoid serialization while handling local data. Choose
+    a SQLite database to save data instead of the serialized methods, because the
+    database access is much faster than the serialization and deserialization operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Code improvements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We want to discuss in the following pages a couple of optimizations related
+    to particular coding situations and common patterns. These tips are examples of
+    how common habits in practical everyday development work may lead to performance
+    faults.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getters and setters
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: One of the core concepts used in object-oriented programming is **encapsulation**;
+    as you know, it means that the fields of an object should not be accessed directly
+    by other objects. So, you can encapsulate an object's fields in Java by using
+    the private modifier and by creating getter and setter methods to let other objects
+    access them. This guarantees that the class itself has complete control over its
+    own fields and no one else can use it. Then, you are free to create read-only
+    or write-only fields, simply defining just the related method and avoiding defining
+    the other one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The benefits of encapsulation are not at issue, but they come with a cost.
+    Accessing fields directly is three times faster than using a getter if there is
+    no JIT, and seven times faster if there is a JIT. This means that we should keep
+    encapsulating our fields, but we should avoid calling getters and setters where
+    it is not necessary. For example, don''t call getters and setter inside a class,
+    because it is more expensive and you do not need to do it because the class can
+    access its own fields directly. Let''s have an example; the following code calls
+    an internal method during instantiation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Although it is not wrong, this code can be made faster during execution by
+    removing the internal call to the setter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is just an example, but the main tip here is to avoid calling setters and
+    getters internally in every case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inner classes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We''ve already talked about inner classes in [Chapter 4](ch04.html "Chapter 4. Memory"),
+    *Memory*, while discussing the problem related to memory leaks. Nesting classes
+    in Android is a very common practice because many times we need to have a reference
+    of the wrapper class inside the inner one. However, this advantage has a hidden
+    cost. Let''s have an example to clarify what we are talking about:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The two classes we are dealing with will be separated anyway. This means that
+    the compiler will create methods inside the outer class to let the inner one access
+    the referenced wrapper class''s variables and methods. Let''s have a look at the
+    bytecode of the aforementioned classes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `OuterClass` class creates a method for every variable to let the `InnerClass`
+    class access it in a package protection-level environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The static methods created are needed to let `InnerClass` access the related
+    methods of `OuterClass`. This results in slower access, as mentioned in the previous
+    paragraph, producing slower code execution. This can be avoided by declaring package-protected
+    variables and methods to allow `InnerClass` to access them without the need to
+    produce static methods in the bytecode. This would allow access by any other class
+    in the same package, but it can speed up the code. So, it is up to us to know
+    whether we can do it. If so, `OuterClass` should be turned into the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Java 8 in Android N
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The new Android N SDK provides support to the new features Java 8 introduced
+    on its release. In the following pages, we will go through them to understand
+    how they can be helpful while developing our application, and go through the new
+    toolchain introduced to improve timings while building the APK file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setup
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In order to use the new Java 8 features, we need to target the new Android N
+    and use the new Android Studio 2.1 that supports Android N, otherwise, those features
+    won't be available. At the time of the writing this book, the new Android Studio
+    2.1 is in preview version. However, we can use it to have a better understanding
+    of the steps to follow to use Java 8 and its new features in our projects. This
+    is because the new Jack toolchain, introduced in Android MarshMallow (API Level
+    23), which we will discuss in greater detail in the following pages, with the
+    new Gradle plugin, is the only way to compile through Java 8 and use the features
+    we will go through in the following section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the moment, we need to change the `build.gradle` file in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: This way, we are enabling the Jack toolchain and Java 8 compatibility for our
+    project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Features
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The main new features of Java 8 we can use inside our projects, if targeted
+    by using Android N, are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Default and static methods inside an interface
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Lambda expression
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Repeating annotations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Improved reflection APIs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Let's go through them in the following pages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Default interface methods
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Assume you are developing a library for other projects. You want to write an
+    interface for the definition of a behavior of all the classes that implement that
+    interface. For example, let''s see what''s inside the following interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And the following is an implementation of the interface by `Activity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If now we want to add a feature inside the interface to improve it, we need
+    to change all of the classes that implement that interface. Let''s say we want
+    to handle the long click on a news as well as the normal click. The interface
+    would be turned into the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, Android Studio would notify us of a compilation error in the `MainActivity`
+    class, as well as in any other class that implements the `OnNewsSelected` interface.
+    And here comes the magic: using Java 8 and its new features, we can define a default
+    implementation of a new method directly inside the interface itself. The following
+    snippet shows how this can be done for our interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using this feature, there is no need to implement the new method in every class
+    that implements the interface, but it's needed only where we need a different
+    implementation from the default one we define inside the interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Static interface methods
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Static methods are similar to the default ones, but they cannot be overridden
+    by the subclasses. They can be called by using the static references for the classes,
+    or by using the object call as well. Then, our `OnNewsSelected` interface example
+    would be turned into the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: This way, we are defining only one possible behavior for the long click on news
+    and no subclass is able to define its own implementation of the method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lambda expression
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When we are developing interfaces that define just one method, we are creating
+    what is called a **functional interface**. When we create anonymous inner classes
+    while using these functional interfaces, the code readability is not so clear.
+    Then, from Java 8, we can use the Lambda expression to pass simple code as a parameter
+    instead of an anonymous inner class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, let''s create the following `Adder` functional interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A Lambda expression is made up of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A list of parameters separated by a comma: `(int a, int b)`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'An arrow token: `->`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A body with a statement block: `a + b`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Then, when we need an implementation of the functional interface we defined,
+    we can use the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we can use the object `adder` as an implementation of the `Adder` interface.
+    We could do the same with anonymous classes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The previous code snippet would replace the following one, with obvious improved
+    readability:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: Repeating annotations
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'When compiling with Java 8, we can set a particular annotation feature that
+    allows us to add the same annotation multiple times on a class or variable. This
+    is the `@Repeatable` annotation to be set on the declaration of an annotation.
+    Let''s see the following example, where we want to define multiple manufacturers
+    for a single device. Then, let''s add the `@Repeatable` annotation on top of the
+    definition as the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we can use the following to set multiple manufacturers for the same device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: Jack toolchain
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A toolchain is a particular sequences of steps to compile our code and create
+    the APK file as the output that contains the `.dex` bytecode. *Figure 8* shows
+    the main differences between the old Javac toolchain and the new Jack one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Jack toolchain](img/4666_10_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Figure 8: Differences between Javac and Jack toolchains'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Jack toolchain brings new improvements in the building process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Faster compilation time
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Code and resources shrinking
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Code obfuscation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Repackaging
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Multidex compilation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There is no need to change anything in our code, or in our configuration, in
+    order to use the new toolchain except the configuration of the `build.gradle`
+    file we dealt with in the *Setup* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the time of writing this book, the new Jack toolchain is not compatible with
+    the new **Instant Run** feature of Android Studio 2.0\. This means that **Instant
+    Run** will be disabled while using the Jack toolchain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: APK optimizations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'When everything is done, the code is developed and tested, and users are waiting
+    for an update of our application, we use it to build an APK file to distribute
+    through the Google Play Store or anywhere else. However, due to multiple factors,
+    the resulting APK file is forever getting bigger: new feature implementations,
+    new, different configurations to support, new Android versions, more libraries
+    used in the application, and so on. This way, we are forcing our users to use
+    more bandwidth to update it and more storage to save it. In addition, there is
+    a limit to the APK size that can be uploaded and distributed via the store. So,
+    are we sure that we are doing well? What can we do to reduce the file size? Let''s
+    try to give an answer to these questions in the following pages from different
+    points of view.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Removing unused code
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'High-level languages consider reusability of the code to improve development
+    times and reduce debugging. It is also helpful to minimize the APK file size,
+    as well as keeping our code cleaner and better organized. Maintaining the code
+    as clean as possible should be an everyday activity. Nevertheless, even if we
+    are doing it every day, we can still improve the cleanliness of our code inside
+    the final build by using a tool we already discussed for security purposes in
+    [Chapter 7](ch07.html "Chapter 7. Security"), *Security*. We are talking about
+    ProGuard. This not only obfuscates the code to increase the security level, but
+    it can also be set to search for and remove unused code in our application when
+    enabled:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: Removing unused resources
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We already talked about images and the effect their size has on communications,
+    but here the same considerations can be used in order to reduce the APK file size.
+    Hence, it could be a good idea to check whether our image sizes can be reduced
+    using the online tools to change compression and/or resolution, as described in
+    the previous section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a more general rule, we should always check whether there are unused resources
+    inside the project and delete them, whether they are images or any other type
+    of resource. This is also helpful for keeping a clean project. In this operation,
+    Lint is really useful, searching for any unused resources in the project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If those actions are not enough to remove all of the unused resources of the
+    project from the final APK file, Gradle helps us by analyzing all the resources
+    of the project before the final build. We just have to enable it inside the `build.gradle`
+    file, as shown in the following example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: Remember to enable minify. Otherwise, the resource shrinking will not work.
+    This is really useful where we are using external libraries, but not all of its
+    resources are used. For example, if we have added the Google Play Service library
+    to our project, but we are not using the Google+ login, or the Google Cast API,
+    then Gradle will remove the related unused resources from the resulting file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The same scenario should be covered for different configurations we are supporting
+    in our application; for example, if our application supports just the English
+    and French languages, but the linked library supports more languages than our
+    application, all the others will still be in the final build if we don''t tell
+    Gradle which configurations we want. To do this, we can add the `resConfig` property
+    to the configuration of the build inside the `build.gradle` file, as shown in
+    the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `resConfig` property accepts every configuration type we want to support,
+    filtering all the others from the application and the linked libraries. Hence,
+    this can be used for all the configurations Android provides, such as densities,
+    orientations, languages, Android versions, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We started this chapter discussing the importance of the good management of
+    images from different points of view, because it is critical for every application
+    that handles them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Loading**: Images are the biggest weight on the memory. Many times we use
+    them as they are, without processing them properly to reduce their pressure on
+    overall system performance. For this reason, scaling operations are always needed
+    in such a fragmented market as that of Android devices. Hence, we discussed the
+    proper way to enhance performance while scaling them by using the commonly provided
+    Android API.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Processing**: Operations over images are expensive, and they need to be executed
+    in a worker thread in order to free the main one from unnecessary computations.
+    We looked at a way to elaborate images safely from a responsiveness perspective.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Caching**: The best way to save external communication is to save data for
+    future reuse. That''s why we improved methods and algorithms to cache images,
+    maximizing their reuse, introducing the LRU cache architecture for both heap and
+    disk cache memory levels to improve persistence and avoid `OutOfMemoryErrors`
+    during the use of the application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Displaying**: We introduced the pixel format configuration for the images
+    to be displayed, in order to speed up the responsiveness of the application and
+    improve compression.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Managing memory**: When many images are about to be processed, as in a `ListView`
+    or other similar `ViewGroup` with an `Adapter` class, memory churn might occur,
+    leading to too many garbage collections over time. For this, we discussed the
+    ways that are provided to reuse memory allocation over multiple images processes,
+    saving garbage collector interventions.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Other than the code, we discussed which compressions and resolutions are the
+    best for images to be displayed on screens that are becoming increasingly large,
+    with higher densities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Continuing with networking exchanges of data, we considered and analyzed the
+    way to transfer texts over the network, defining best practices for JSON-like
+    structured files and introducing multiple serialization techniques, such as protocol
+    buffers and flat buffers, provided by Google to reduce overhead in local serialization/deserialization
+    operations and to speed up transferring data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we found a couple of habits to be adopted by developers while dealing
+    with Java beans and inner classes from a pure Java point of view; a performance
+    hit can be taken even if we are following the directions on the use of a common
+    language.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, at the end of this chapter, we went through tips to reduce the APK
+    file size in order to distribute it through stores. This is important to comply
+    with store limits and to maintain a cleaner project for new implementations in
+    future.
+  prefs: []
+  type: TYPE_NORMAL

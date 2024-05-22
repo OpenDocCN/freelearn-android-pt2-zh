@@ -1,0 +1,3050 @@
+- en: Chapter 2. Java Native Interface
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading native libraries and registering native methods
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Passing parameters and receiving returns in primitive types
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manipulating strings in JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Managing references in JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manipulating classes in JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manipulating objects in JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manipulating arrays in JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Accessing Java static and instance fields in native code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Calling static and instance methods from native code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Caching jfieldID, jmethodID, and reference data to improve performance
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Checking errors and handling exceptions in JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Integrating assembly code in JNI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Programming with Android NDK is essentially writing code in both Java and native
+    languages such as C, C++, and assembly. Java code runs on Dalvik **Virtual Machine**
+    (**VM**), while native code is compiled to binaries running directly on the operating
+    system. **Java Native Interface** (**JNI**) acts like the bridge that brings both
+    worlds together. This relationship between Java code, Dalvik VM, native code,
+    and the Android system can be illustrated using the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introduction](img/1505OT_02_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The arrow in the diagram indicates which party initiates the interaction. Both
+    **Dalvik VM** and **Native Code** run on top of **Android system** (Android is
+    a Linux-based OS). They require the system to provide the execution environment.
+    **JNI** is part of **Dalvik VM**, which allows **Native Code** to access fields
+    and invoke methods at Java Code. **JNI** also allows **Java Code** to invoke native
+    methods implemented in **Native Code**. Therefore, **JNI** facilitates the two-way
+    communication between **Native Code** and **Java Code**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you are familiar with Java programming and C, or C++, or assembly programming,
+    then learning programming with Android NDK is mostly learning JNI. JNI comes with
+    both primitive and reference data types. These data types have their corresponding
+    mapping data types in Java. Manipulating the primitive types can usually be done
+    directly, since a data type is normally equivalent to a native C/C++ data type.
+    However, reference data manipulation often requires the help of the predefined
+    JNI functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we'll first cover various data types in JNI and demonstrate
+    how to invoke native methods from Java. We then describe accessing the Java fields
+    and calling Java methods from the native code. Finally, we will discuss how to
+    cache data to achieve better performance, how to handle errors and exceptions,
+    and how to use assembly in native method implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Every recipe in this chapter comes with a sample Android project that illustrates
+    the topic and related JNI functions. Because of the space constraint, we cannot
+    list all the source code in the book. The code is a very important part of this
+    chapter and it is strongly recommended that you download the source code and refer
+    to it when going through the recipes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'JNI is a complex topic, and we tried to cover the most essential parts of it
+    in the context of Android NDK programming. However, a single chapter is not enough
+    to provide all the details. Readers may want to refer to Java JNI Specification
+    at [http://docs.oracle.com/javase/6/docs/technotes/guides/jni/](http://docs.oracle.com/javase/6/docs/technotes/guides/jni/)
+    or the Java Native Interface: Programmer''s Guide and Specification book at [http://java.sun.com/docs/books/jni/](http://java.sun.com/docs/books/jni/).
+    For Android-specific information, you can refer to JNI Tips at [https://developer.android.com/guide/practices/jni.html](https://developer.android.com/guide/practices/jni.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading native libraries and registering native methods
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Native code is usually compiled into a shared library and loaded before the
+    native methods can be called. This recipe covers how to load native libraries
+    and register native methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Please read the recipes in [Chapter 1](ch01.html "Chapter 1. Hello NDK"), *Hello
+    NDK*, to set up the Android NDK development environment if you haven't done so
+    already.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps will show you how to build an Android application that
+    demonstrates loading native libraries and registering native methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Start Eclipse, select **File** | **New** | **Android Project**. Enter the value
+    for **Project Name** as `NativeMethodsRegister`. Select **Create new project in
+    workspace**. Then, click on **Next**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the next window, select the latest version of Android SDK, then click on
+    **Next** to go to the next window.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Specify the package name as `cookbook.chapter2`. Select the **Create Activity**
+    checkbox, and specify the name as `NativeMethodsRegisterActivity`. Set the value
+    for **Minimum SDK** as **5 (Android 2.0)**. Then, click on **Finish**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In **Eclipse Package Explorer**, right-click on the `NativeMethodsRegister`
+    project, then select **New** | **Folder**. Enter the name `jni` in the pop-up
+    window, then click on **Finish**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the newly created `jni` folder under the `NativeMethodsRegister`
+    project, then select **New** | **File**. Enter `nativetest.c` as the value for
+    **File name**, then click on **Finish**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add the following code to `nativetest.c`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code to load the native shared library and define native
+    methods to `NativeMethodRegisterActivity.java`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Change `TextView` in the `res/layout/activity_native_method_register.xml` file
+    as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a file named `Android.mk` under the `jni` folder with the following
+    content:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Start a terminal, go to the `jni` folder under our project, and type `ndk-build`
+    to build the native library.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run the project on an Android device or emulator. You should see something similar
+    to the following screenshot:![How to do it…](img/1505_02_02.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe describes how to load a native library and register native methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Loading Native Library**: The `java.lang.System` class provides two methods
+    to load native libraries, namely `loadLibrary` and `load`. `loadLibrary` accepts
+    a library name without the prefix and file extension. For example, if we want
+    to load the Android native library compiled as `libNativeRegister.so` in our sample
+    project, we use `System.loadLibrary("NativeRegister")`. The `System.load` method
+    is different. It requires the full path of the native library. In our sample project,
+    we can use `System.load("/data/data/cookbook.chapter2/lib/libNativeRegister.so")`
+    to load the native library. The `System.load` method can be handy when we want
+    to switch between different versions of a native library, since it allows us to
+    specify the full library path.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We demonstrated the usage of both the methods in the static initializer of the
+    `NativeMethodRegisterActivity.java` class. Note that only one method should be
+    enabled when we build and run the sample application.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**JNIEnv Interface Pointer**: Every native method defined in native code at
+    JNI must accept two input parameters, the first one being a pointer to `JNIEnv`.
+    The `JNIEnv` interface pointer is pointing to thread-local data, which in turn
+    points to a JNI function table shared by all threads. This can be illustrated
+    using the following diagram:![How it works…](img/1505OT_02_03.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `JNIEnv` interface pointer is the gateway to access all pre-defined JNI
+    functions, including the functions that enable the native code to process Java
+    objects, access Java fields, invoke Java methods, and so on. The `RegisterNatives`
+    native function we're going to discuss next is also one of them.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `JNIEnv` interface pointer points to thread-local data, so it cannot be
+    shared between threads. In addition, `JNIEnv` is only accessible by a Java thread.
+    A native thread must call the JNI function `AttachCurrentThread` to attach itself
+    to the VM, to obtain the `JNIEnv` interface pointer. We will see an example of
+    this in the *Manipulating classes in JNI* recipe in this chapter.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Registering Native Methods**: JNI can automatically discover the native method
+    implementation if its function name follows a specific naming convention as mentioned
+    in [Chapter 1](ch01.html "Chapter 1. Hello NDK"), *Hello NDK*. This is not the
+    only way. In our sample project, we explicitly called the `RegisterNatives` JNI
+    function to register the native methods. The `RegisterNatives` function has the
+    following prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `clazz` argument is a reference to the class in which the native method
+    is to be registered. The `methods` argument is an array of the `JNINativeMethod`
+    data structure. `JNINativeMethod` is defined as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`name` indicates the native method name, `signature` is the descriptor of the
+    method''s input argument data type and return value data type, and `fnPtr` is
+    the function pointer pointing to the native method. The last argument, `nMethods`
+    of `RegisterNatives`, indicates the number of methods to register. The function
+    returns zero to indicate success, and a negative value otherwise.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`RegisterNatives` is handy to register a native method implementation for different
+    classes. In addition, it can simplify the native method name to avoid careless
+    mistakes.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The typical way of using `RegisterNatives` is in the `JNI_OnLoad` method as
+    shown in the following template. `JNI_OnLoad` is called when the native library
+    is loaded, so we can guarantee that the native methods are registered before they''re
+    invoked:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We demonstrated the usage of the preceding template in the `JNI_OnLoad` method
+    of our sample code, where we registered two native methods to add and multiply
+    two input integers respectively. The execution result shown earlier proves that
+    the Java code can invoke the two registered native methods successfully.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that this example uses some JNI features that we're going to cover in later
+    recipes, including the `FindClass` function and field descriptors. It is alright
+    if don't fully understand the code at this stage. You can always go back to it
+    after learning more about those topics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Passing parameters and receiving returns in primitive types
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Java code can pass parameters to native methods and receive the processing results
+    returned. This recipe walks through how to pass parameters and receive returns
+    in primitive types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: You should have built at least one Android application with native code before
+    reading this recipe. If you haven't done so, please read the *Writing a Hello
+    NDK program* recipe in [Chapter 1](ch01.html "Chapter 1. Hello NDK"), *Hello NDK*
+    first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create a sample Android application with native methods
+    receiving input parameters from the Java code and returning the processing result
+    back:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `PassingPrimitive`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `PassingPrimitiveActivity`. Under this project, create
+    a folder named `jni`. Please refer to the *Loading native libraries and registering
+    native methods* recipe in this chapter if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add a file named `primitive.c` under the `jni` folder and implement the native
+    methods. In our sample project, we implemented one native method for each of the
+    eight primitive data types. Following is the code for `jboolean`, `jint`, and
+    `jdouble`. Please refer to the downloaded code for the complete list of methods:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `PassingPrimitiveActivity.java` Java code, we add code to load the native
+    library, declare the native methods, and call the native methods. Following is
+    that part of the code. The "`…`" indicates the part that is not shown. Please
+    refer to the source file downloaded from the website for the complete code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Modify the `res/layout/activity_passing_primitive.xml` file according to step
+    8 of the *Loading native libraries and registering native methods* recipe of this
+    chapter or the downloaded project code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create a file named `Android.mk` under the `jni` folder, and add the following
+    content to it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Start a terminal, go to the `jni` folder, and type `ndk-build` to build the
+    native library `PassingPrimitive`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In Eclipse, select **Window** | **Show View** | **LogCat** to show the logcat
+    console. Alternatively, start a terminal and enter the following command in your
+    terminal to show `logcat` output on it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Run the project on an Android device or emulator. You should see something similar
+    to the following screenshot:![How to do it…](img/1505_02_04.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The logcat output is as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/1505_02_05.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The code illustrates how to pass parameters and receive returns in primitive
+    types from the native method. We created one method for each primitive type. In
+    the native code, we printed the received value to `logcat`, modified the value,
+    and returned it back.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**JNI primitive type and Java primitive** **type mapping**: The primitive types
+    in JNI and Java have the following mapping:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '| Java Type | JNI Type | Number of bytes | Sign |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `boolean` | `jboolean` | 1 | unsigned |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `byte` | `jbyte` | 1 | signed |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `char` | `jchar` | 2 | unsigned |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `short` | `jshort` | 2 | signed |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `int` | `jint` | 4 | signed |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `long` | `jlong` | 8 | signed |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `float` | `jfloat` | 4 | - |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `double` | `jdouble` | 8 | - |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: Note that both Java `char` and JNI `jchar` are two bytes, while the C/C++ `char`
+    type is only one byte long. In fact, C/C++ `char` are interchangeable with `jbyte`
+    instead of `jchar` in JNI programming.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Android log library**: We output the received values to the Android logging
+    system at a native method, by using the following code:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`ANDROID_LOG_INFO` is an `enum` value defined in `android/log.h`, which indicates
+    that we''re using the info-level logging. `LOG_TAG` can be any strings, and `__VA_ARGS__`
+    is replaced by the parameters passed to the API, in a format similar to the `printf`
+    method in C.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'We must include the `android/log.h` header in the native code to use the log
+    functions:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Besides this, we''ll need to include the NDK log library in the `Android.mk`
+    file in order to use the API:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We will cover more details about Android logging API in [Chapter 3](ch03.html
+    "Chapter 3. Build and Debug NDK Applications"), *Build and Debug NDK Applications*,
+    while utilizing logging API for debugging purposes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Manipulating strings in JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Strings are somewhat complicated in JNI, mainly because Java strings and C strings
+    are internally different. This recipe will cover the most commonly used JNI string
+    features.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Understanding the basics of encoding is essential to comprehend the differences
+    between Java string and C string. We'll give a brief introduction to Unicode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'According to the Unicode Consortium, the Unicode Standard is defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The Unicode Standard is a character coding system designed to support the
+    worldwide interchange, processing, and display of the written texts of the diverse
+    languages and technical disciplines of the modern world. In addition, it supports
+    classical and historical texts of many written languages.*'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Unicode assigns a unique number for each character it defines, called **code
+    point**. There are mainly two categories of encoding methods that support the
+    entire Unicode character set, or a subset of it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first one is the **Unicode Transformation Format** (**UTF**), which encodes
+    a Unicode code point into a variable number of code values. UTF-8, UTF-16, UTF-32,
+    and a few others belong to this category. The numbers 8, 16, and 32 refer to the
+    number of bits in one code value. The second category is the **Universal Character
+    Set** (**UCS**) encodings, which encodes a Unicode code point into a single code
+    value. UCS2 and UCS4 belong to this category. The numbers 2 and 4 refer to the
+    number of bytes in one code value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Unicode defines more characters than what two bytes can possibly represent.
+    Therefore, UCS2 can only represent a subset of Unicode characters. Because Unicode
+    defines fewer characters than what four bytes can represent, multiple code values
+    of UTF-32 are never needed. Therefore, UTF-32 and UCS4 are functionally identical.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Java programming language uses UTF-16 to represent strings. If a character cannot
+    fit in a 16-bit code value, a pair of code values named **surrogate pair** is
+    used. C strings are simply an array of bytes terminated by a null character. The
+    actual encoding/decoding is pretty much left to the developer and the underlying
+    system. A modified version of UTF-8 is used by JNI to represent strings, including
+    class, field, and method names in the native code. There are two differences between
+    the modified UTF-8 and standard UTF-8\. Firstly, the null character is encoded
+    using two bytes. Secondly, only one-byte, two-byte, and three-byte formats of
+    Standard UTF-8 are supported by JNI, while longer formats cannot be recognized
+    properly. JNI uses its own format to represent Unicode that cannot fit into three
+    bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps show you how to create a sample Android project that illustrates
+    string manipulation at JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `StringManipulation`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `StringManipulationActivity`. Under the project, create
+    a folder named `jni`. Refer to the *Loading native libraries and registering native
+    methods* recipe in this chapter if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create a file named `stringtest.c` under the `jni` folder, then implement the
+    `passStringReturnString` method as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the `StringManipulationActivity.java` Java code, add the code to load a native
+    library, declare a native method, and invoke a native method. Refer to downloaded
+    code for the source code details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the `res/layout/activity_passing_primitive.xml` file according to step
+    8 of the *Loading native libraries and registering native methods* recipe in this
+    chapter or the downloaded project code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file called `Android.mk` under the `jni` folder. Refer to step 9 of
+    the *Loading native libraries and registering native methods* recipe in this chapter
+    or the downloaded code for details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Start a terminal, go to the `jni` folder, and type `ndk-build` to build the
+    native library.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run the project on an Android device or emulator. We should see something similar
+    to the following screenshot:![How to do it](img/1505_02_06.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The following should be seen at the logcat output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it](img/1505_02_07.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe discusses string manipulation at JNI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Character encoding**: Android uses UTF-8 as its default charset, which is
+    shown in our program by executing the `Charset.defaultCharset().name()` method.
+    This means that the default encoding in the native code is UTF-8\. As mentioned
+    before, Java uses the UTF-16 charset. This infers that an encoding conversion
+    is needed when we pass a string from Java to the native code and vice versa. Failing
+    to do so will cause unwanted results. In our example, we tried printing `jstring`
+    directly in the native code, but the result was some unrecognizable characters.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Fortunately, JNI comes with a few pre-defined functions that do the conversion.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Java string to native string**: When a native method is called with an input
+    parameter of string type, the string received needs to be converted to the native
+    string first. Two JNI functions can be used for different cases.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The first function is `GetStringUTFChars`, which has the following prototype:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This function converts the Java string into an array of UTF-8 characters. If
+    a new copy of the Java string content is made, `isCopy` is set to `true` when
+    the function returns; otherwise `isCopy` is set to false and the returned pointer
+    points to the same characters as the original Java string.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It is not predictable whether the VM will return a new copy of the Java string.
+    Therefore, we must be careful when converting a large string, as the possible
+    memory allocation and copy may affect the performance and even cause "out of memory"
+    issues. Also note that if `isCopy` is set to `false`, we cannot modify the returned
+    UTF-8 native string, because it will modify the Java string content and break
+    the immutability property of the Java string.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Once we''ve finished all the operations with the converted native string, we
+    should call `ReleaseStringUTFChars` to inform the VM that we don''t need to access
+    the UTF-8 native string anymore. The function has the following prototype, with
+    the second parameter being the Java string and the third parameter being the UTF-8
+    native string:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The second function for conversion is `GetStringUTFRegion`, with the following
+    prototype:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `start` and `len` parameters indicate the start position of the Java UTF-16
+    string and number of UTF-16 characters for conversion. The `buf` argument points
+    to the location to store the converted native UTF-8 char array.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Let''s compare the two methods. The first method may or may not require allocation
+    of new memory for the converted UTF-8 string depending on whether VM decides to
+    make a new copy or not, whereas the second method made use of a pre-allocated
+    buffer to store the converted content. In addition, the second method allows us
+    to specify the position and length of the conversion source. Therefore, the following
+    rules can be followed:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: To modify the converted UTF-8 native string, the JNI method `GetStringUTFRegion`
+    should be used
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If we only need a substring of the original Java string, and the substring is
+    not large, the `GetStringUTFRegion` should be used
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If we're dealing with a large string, and we're not going to modify the converted
+    UTF-8 native string, `GetStringUTFChars` should be used
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In our example, we used a fixed length buffer when calling the `GetStringUTFRegion`
+    function. We should make sure it is enough to hold the string, otherwise we should
+    use the dynamic allocated array.
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**String length**: The JNI function `GetStringUTFLength` can be used to get
+    the string length of a UTF-8 `jstring`. Note that it returns the number of bytes
+    and not the number of UTF-8 characters, as shown in our example.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Native string to Java string**: We also need to return string data from the
+    native code to Java code at times. The returned string should be UTF-16 encoded.
+    The JNI function `NewStringUTF` constructs a `jstring` from a UTF-8 native string.
+    It has the following prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '**Conversion failure**: `GetStringUTFChars` and `NewStringUTF` require allocation
+    of memory space to store the converted string. If you run out of memory, these
+    methods will throw an `OutOfMemoryError` exception and return `NULL`. We''ll cover
+    more about exception handling in the *Checking errors and handling exceptions
+    in JNI* recipe.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**More about character encoding in JNI**: JNI character encoding is much more
+    complicated than what we covered here. Besides UTF-8, it also supports UTF-16
+    conversion functions. It is also possible to call Java string methods in the native
+    code to encode/decode characters in other formats. Since Android uses UTF-8 as
+    its platform charset, we only cover how to deal with conversions between Java
+    UTF-16 and UTF-8 native string here.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Managing references in JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: JNI exposes strings, classes, instance objects, and arrays as reference types.
+    The previous recipe introduces the string type. This recipe will cover reference
+    management and the subsequent three recipes will discuss class, object, and arrays
+    respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create a sample Android project that illustrates reference
+    management in JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `ManagingReference`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `ManagingReferenceActivity`. Under the project, create
+    a folder named `jni`. Refer to the *Loading native libraries and registering native
+    methods* recipe in this chapter, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create a file named `referencetest.c` under the `jni` folder, then implement
+    the `localReference`, `globalReference`, `weakReference`, and `referenceAssignmentAndNew`
+    methods. This is shown in the following code snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Modify the `ManagingReferenceActivity.java` file by adding code to load the
+    native library, then declare and invoke the native methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the `res/layout/activity_managing_reference.xml` file according to step
+    8 of the *Loading native libraries and registering native methods* recipe in this
+    chapter, or the downloaded project code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `Android.mk` under the `jni` folder. Refer to step 9 of
+    the *Loading native libraries and registering native methods* recipe of this chapter,
+    or the downloaded code for details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Start a terminal, go to the `jni` folder, and type `ndk-build` to build the
+    native library.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run the project on an Android device or emulator and monitor the logcat output
+    with either eclipse or the `adb logcat -v time` command in your terminal. We'll
+    show the sample results for each native method when while going through the details
+    in the following section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe covers reference management in JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**JNI reference**: JNI exposes strings, classes, instance objects, and arrays
+    as references. The basic idea of a reference can be illustrated using the following
+    diagram:![How it works…](img/1505OT_02_08.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The reference adds one more level of indirection to an object (an object can
+    be a class, an instance object, a string, or an array) access. An object is pointed
+    by an object pointer, and a reference is used to locate the object pointer. Although
+    this indirection introduces an overhead for object manipulation, it allows VM
+    to conceal the object pointer from developers. The VM can therefore move the underlying
+    object at runtime memory management and update the object pointer value accordingly,
+    without affecting the reference.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Note that the garbage collector at VM moves the objects around to achieve cheap
+    memory allocation, bulk de-allocation, reduce heap fragmentation, improve locality,
+    and so on.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A reference does not have to be a pointer. The details of how a reference is
+    used to locate the object pointer are hidden from the developers.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Local reference versus global reference versus weak reference**: Three different
+    types of references can be created to refer to the same data, namely local reference,
+    global reference, and weak reference. Unless we explicitly create a global or
+    weak reference, JNI operates using a local reference. The following table summarizes
+    the differences between the three different types of references:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '|   | Creation | Lifespan | Visibility | Garbage collector (GC) behavior for
+    referenced object | Free |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Local reference** | `Default` or `NewLocalRef` | One invocation of the
+    native method. Invalid after native method returns. | Within the thread that created
+    it. | GC won''t garbage collect the referenced object. | Automatically freed or
+    call `DeleteLocalRef` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Global reference** | `NewGlobalRef` | Valid until freed explicitly. | Across
+    multiple threads. | GC won''t garbage collect the referenced object. | `DeleteGlobalRef`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Weak reference** | `NewGlobalWeakRef` | Valid until freed explicitly. |
+    Across multiple threads. | GC can garbage collect the referenced object. | `DeleteWeakGlobalRef`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: 'We will now take a look at the reference types one by one while referring to
+    the sample source code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Local reference**: The native method `localReference` shows the two basic
+    JNI functions, namely `NewLocalRef` and `DeleteLocalRef`. The first function creates
+    a local reference, while the second frees it. Note that normally we don''t have
+    to free a local reference explicitly, as it will be automatically freed after
+    the native method returns. However, there are two exceptions. First, if we''re
+    creating lots of local references within a native method invocation, we can cause
+    overflow. This is illustrated in our sample method when we pass `false` to the
+    `pDelete` input parameter. The following screenshot represents an example of such
+    a scenario:![How it works…](img/1505_02_09.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The first execution deletes the local reference right after using it, so it's
+    finished fine, while the second doesn't delete the local reference and eventually
+    causes the `ReferenceTable` overflow.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Secondly, when we implement a utility function that is called by other native
+    functions, we should not leak any references other than the return value. Otherwise,
+    if the utility function is invoked by a native method many times, it will also
+    cause an overflow issue.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Prior to Android 4.0, the local references were implemented using direct pointers
+    to objects. Furthermore, those direct pointers were never invalidated even after
+    `DeleteLocalRef` was called. Therefore, programmers can use local references as
+    direct pointers, even after the reference is claimed to be deleted. A lot of JNI
+    code not coded correctly worked due to this design. However, local references
+    have been changed to use an indirection mechanism from Android 4.0 onwards. Hence,
+    the buggy code using local references as direct pointers are going to break in
+    Android 4.0 onwards. It is strongly recommended that you always follow JNI specifications.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Global reference**: The native method, `globalReference`, demonstrates a
+    typical usage of a global reference. The global reference is retained when passing
+    `false` to the `pDelete` input parameter, since it is a static variable. Next
+    time the method is called, the static global reference will still reference to
+    the same object. Therefore, we don''t need to call `NewGlobalRef` again. This
+    technique can save us from carrying out the same operation at every invocation
+    of global reference.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We invoke `globalReference` three times in the Java code, as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The results should look similar to the following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_10.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: The string passed along with the first method call is retained, and therefore
+    the first two invocations display the same string. After we delete the global
+    reference at the end of the second call, the third call displays the string passed
+    along with it.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Note that although `DeleteGlobalRef` frees the global reference, it doesn't
+    set it to `NULL`. We have explicitly set the global reference to `NULL` after
+    the deletion.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Weak reference**: Weak reference is similar to global reference, except that
+    it doesn''t prevent the **Garbage Collector** (**GC**) from garbage collecting
+    the underlying object referenced by it. Weak reference is not used as often as
+    local and global reference. A typical use case is when we are referencing to lots
+    of non-critical objects, and we don''t want to prevent the GC from garbage collecting
+    some of those objects when the GC thinks it''s necessary.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The support for weak references in Android is version dependent. Prior to Android
+    2.2, weak references were not implemented at all. Prior to Android 4.0, it can
+    only be passed to `NewLocalRef`, `NewGlobalRef`, and `DeleteWeakGlobalRef`. From
+    Android 4.0 onwards, Android has full support for weak references.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Assignment versus New<ReferenceType>Ref**: In the `referencetest.c` source
+    code, we implemented the native `ReferenceAssignmentAndNew` method. This method
+    illustrates the difference between assignment and allocating a new reference.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We passed the input jstring `pStringP` to the JNI function `NewGlobalRef` twice,
+    to create two global references (`globalRefNew` and `globalRefNew2`), and assigned
+    one of the global references to a variable `globalRefAssignment`. We then tested
+    if they were all referencing to the same object.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Since `jobject` and `jstring` are actually pointers to void data type, we can
+    print out their values as integers. Lastly, we invoked `DeleteGlobalRef` three
+    times. The following is a screenshot of the Android logcat output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_11.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: The first three lines indicate that the input jstring `pStringP`, two global
+    references `globalRefNew` and `globalRefNew2`, and the assigned jstring `globalRefAssignment`
+    all reference to the same object. Lines five to eight of the output show the same
+    value, which means all the references themselves are equivalent. Lastly, the first
+    two calls of `DeleteGlobalRef` succeed, while the last one fails.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The `New<ReferenceType>Ref JNI` function actually locates the underlying object
+    and then adds a reference to the object. It allows multiple references added for
+    the same object. Note that although our sample execution shows the values of references
+    created by `New<ReferenceType>Ref` are the same, it is not guaranteed. It is possible
+    that two object pointers pointing to the same object and references referencing
+    to the same object are associated with the two different pointers.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: It is recommended that you never rely on the value of a reference; you should
+    use JNI functions instead. One example of this is to use `IsSameObject` and never
+    use "`==`" to test if two references point to the same underlying object unless
+    we test against `NULL`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The number of `Delete<ReferenceType>Ref` calls must match the number of `New<ReferenceType>Ref`
+    invocations. Fewer calls will potentially cause a memory leak, while having more
+    calls will fail, as shown in the preceding result.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The assignment operation doesn't go through the VM, therefore it won't cause
+    the VM to add a new reference.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Note that although we used a global reference for illustration, the principles
+    also apply to local and weak references.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There's another method to manage the local references with JNI functions `PushLocalFrame`
+    and `PopLocalFrame`. Interested readers can refer to the JNI specification for
+    more information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After attaching a native thread with `AttachCurrentThread`, the code running
+    in the thread would not free the local references until the thread is detached.
+    The local reference should be freed explicitly. In general, it is a good practice
+    that we free local reference explicitly, as long as we don't need it any more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Manipulating classes in JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipe discusses that Android JNI supports three different kinds
+    of references. The references are used to access the reference data types, including
+    string, class, instance object, and array. This recipe focuses on class manipulations
+    in Android JNI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Managing References in NDK* recipe should be read first before going through
+    this recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps describe how to build a sample Android application that
+    illustrates class manipulation in JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `ClassManipulation`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `ClassManipulationActivity`. Under the project, create
+    a folder named `jni`. Refer to the *Loading native libraries and registering native
+    methods* recipe of this chapter if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `classtest.c` under the `jni` folder, then implement the
+    `findClassDemo`, `findClassDemo2`, `GetSuperclassDemo`, and `IsAssignableFromDemo`
+    methods. We can refer to the downloaded `ClassManipulation` project source code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify `ClassManipulationActivity.java` by adding code to load the native library,
+    declare native methods, and invoke native methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a `Dummy` class and a `DummySubClass` subclass that extends the `Dummy`
+    class. Create a `DummyInterface` interface and a `DummySubInterface` subinterface,
+    which extends the `DummyInterface`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the `layout` XML file, add the `Android.mk` build file, and build the
+    native library. Refer to steps 8 to 10 of the the *Loading native libraries and
+    registering native methods* recipe of this chapter for details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We're now ready to run the project. We'll present the output while discussing
+    each native method in the following section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe demonstrates the manipulation of classes in JNI. We highlight a
+    few points as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Class descriptor**: A class descriptor refers to the name of a class or an
+    interface. It can be derived by replacing the "`.`" character in Java with "`/`"
+    in JNI programming. For example, the descriptor for class `java.lang.String` is
+    `java/lang/String`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**FindClass and class loader**: The JNI function `FindClass` has the following
+    prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'It accepts a `JNIEnv` pointer and a class descriptor, and then locates a class
+    loader to load the corresponding class. It returns a local reference to an initialized
+    class, or `NULL` in case of failure. `FindClass` uses the class loader associated
+    with the topmost method of the call stack. If it cannot find one, it will use
+    the "system" class loader. One typical example is that after we create a thread
+    and attach it to the VM, the topmost method of the call stack will be as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This method is not part of our application code. Therefore the "system" class
+    loader is used.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A thread can be created at Java (called the managed thread or Java thread) or
+    native code (called the native thread or non-VM thread). The native thread can
+    be attached to a VM by calling the JNI function `AttachCurrentThread`. Once attached,
+    the native thread works just like a Java thread, running inside a native method.
+    It remains attached until the JNI function `DetachCurrentThread` is called.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In our `ClassManipulation` project, we illustrated `FindClass` with `findClassDemo`
+    and `findClassDemo2` native methods. The `findClassDemo` method runs in a VM created
+    thread. The `FindClass` call will locate the class loader properly. The `findClassDemo2`
+    method creates a non-VM thread and attaches the thread to VM. It illustrates the
+    case we described in the preceding section. The logcat output for calling the
+    two native methods is as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_12.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As shown in the output, the non-VM thread loads the `String` class successfully
+    but not the `Dummy` class defined by us. The way to work around this issue is
+    to cache a reference to the `Dummy` class in the `JNI_OnLoad` method. We'll provide
+    a detailed example in the *Caching jfieldID, jmethodID, and referencing data to
+    improve performance* recipe.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`GetSuperclass`: The JNI function `GetSuperclass` has the following prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: It helps us to find the superclass of a given class. If `clazz` is `java.lang.Object`,
+    this function returns `NULL`; if it's an interface, it returns a local reference
+    to `java.lang.Object`; if it's any other class, it returns a local reference to
+    its superclass.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In our `ClassManipulation` project, we illustrated `GetSuperclass` with the
+    `GetSuperclassDemo` native method. We created a `Dummy` class and a `DummyInterface`
+    interface in Java code, where `DummySubClass` extends `Dummy`, and `DummySubInterface`
+    extends `DummyInterface`. In the native method, we then invoked `GetSuperclass`
+    to `java.lang.Object`, `DummySubClass`, and `DummySubInterface` respectively.
+    The following is a screenshot of the logcat output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_13.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As shown in the screenshot, `GetSuperclass` can find the superclass of `DummySubClass`
+    successfully. In this native method, we used a utility function `nativeGetClassName`,
+    where we called the `toString` method. We'll cover more about how to make such
+    method calls in the *Calling instance and static methods in JNI* recipe.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`IsAssignableFrom`: The JNI function `IsAssignableFrom` has the following prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This function returns `JNI_TRUE` if `cls1` can be safely casted to `cls2`,
+    and `JNI_FALSE` otherwise. We demonstrated its usage with the native method `IsAssignableFromDemo`.
+    We obtained a local reference to `DummySubClass`, and called `GetSuperclass` to
+    get a local reference to `Dummy`. Then, we called `IsAssignableFrom` to test if
+    we can cast `DummySubClass` to `Dummy` and vice versa. The following is a screenshot
+    of the logcat output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_14.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As expected, the subclass can be safely cast to its superclass, but not the
+    other way round.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The JNI function `DefineClass` is not supported on Android. This is because
+    the function requires the raw class data as input, and the Dalvik VM on Android
+    doesn't use the Java bytecode or class files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Manipulating objects in JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipe shows how we can manipulate classes in Android JNI. This
+    recipe describes how to manipulate instance objects in Android NDK programming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following recipes should be read first before going through this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Managing references in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating classes in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now we''ll create an Android project with native methods demonstrating the
+    usage of JNI functions related to instance objects. Perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `ObjectManipulation`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `ObjectManipulationActivity`. Under the project, create
+    a folder named `jni`. Please refer to the *Loading native libraries and registering
+    native methods* recipe in this chapter, if you want more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `objecttest.c` under the `jni` folder, then implement the
+    `AllocObjectDemo`, `NewObjectDemo`, `NewObjectADemo`, `NewObjectVDemo`, `GetObjectClassDemo`,
+    and `IsInstanceOfDemo` methods. You can refer to the downloaded `ObjectManipulation`
+    project source code.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify `ObjectManipulationActivity.java` by adding code to load the native library,
+    declare the native methods, and invoke them.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a `Dummy` class, and a `DummySub` class which extends `Dummy`. Create
+    a `Contact` class with two fields `name` and `age`, a constructor, and a `getContactStr`
+    method.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the `layout` XML file, add the `Android.mk` build file, and build the
+    native library. Refer to steps 8 to 10 of the *Loading native libraries and registering
+    native methods* recipe of this chapter for more details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We're now ready to run the project. We'll present the output while discussing
+    each native method in the following section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe presents various methods for manipulating objects in JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Create instance objects in the native code**: Four JNI functions can be used
+    to create instance objects of a Java class in the native code, namely `AllocObject`,
+    `NewObject`, `NewObjectA`, and `NewObjectV`. The `AllocObject` function creates
+    an uninitialized object, while the other three methods take a constructor as an
+    input parameter to create the object. The prototypes for the four functions are
+    as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `clazz` argument is a reference to the Java class of which we want to create
+    an instance object. It cannot be an array class, which has its own set of JNI
+    functions. `methodID` is the constructor method ID, which can be obtained using
+    the `GetMethodID` JNI function.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'For `NewObject`, a variable number of arguments can be passed after `methodID`,
+    and the function will pass them to the constructor to create the instance object.
+    `NewObjectA` accepts an array of type `jvalue`, and passses it to the constructor.
+    `jvalue` is a union type and is defined as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`NewObjectV` passes an argument stored in `va_list` to the constructor. `va_list`,
+    along with `va_start`, `va_end`, and `va_arg` enable us to access a variable number
+    of input arguments for a function. The details are beyond the scope of this book.
+    However, you can get a basic idea of how it works from the sample code provided.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In the Java code, we called all four native methods, each of which uses a different
+    JNI function to create an instance object of the `Contact` class defined by us.
+    We will then display the values of the name and age fields of all four `Contact`
+    objects. The following is a screenshot of a sample run:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_15.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As shown, the instance object created by `AllocObject` is not initialized and
+    therefore all fields contain the default value assigned by Java, while the other
+    three methods create objects with the initial value passed by us.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`GetObjectClass`: This JNI function has the following prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: It returns a local reference to the class of the instance object `obj`. The
+    `obj` argument must not be `NULL`, otherwise it will cause the VM to crash.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In our `GetObjectClassDemo` native method implementation, we obtained a reference
+    to the `Contact` class and then called `AllocObject` to create an uninitialized
+    object instance. In the Java code, we display the fields of the created object
+    instance as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_16.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As expected, the field values for the uninitialized instance `Contact` object
+    are the default values assigned by Java.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`IsInstanceOf`: This JNI function call has the following prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'It determines if the instance object `obj` is an instance of class `clazz`.
+    We illustrated the usage of this function in the `IsInstanceOfDemo` native method.
+    The method creates a local reference to the `Dummy` class and a local reference
+    to the `DummySub` class, which is a sub class of `Dummy`. It then creates two
+    objects, one for each class. The code then calls `IsInstanceOf` with each of the
+    object references against each of the class references, making four checks in
+    total. We send the output to logcat. A sample execution of this method gives the
+    following result :'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_17.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As the result shows, the `Dummy` instance object is an instance of the `Dummy`
+    class but not `DummySub` class, while the `DummySub` instance object is an instance
+    of the `Dummy` class and the `DummySub` class.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Manipulating arrays in JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: JNI exposes strings, classes, instance objects, and arrays as reference types.
+    This recipe will discuss arrays in JNI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'You should make sure you''ve read the following recipes before going through
+    this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Managing references in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating classes in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this section, we will create a sample Android project that demonstrates how
+    to manipulate arrays in JNI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `ArrayManipulation`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `ArrayManipulationActivity`. Under the project, create
+    a folder named `jni`. Refer to the *Loading native libraries and registering native
+    methods* recipe of this chapter for more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `arraytest.c` under the `jni` folder, then implement the
+    `GetArrayLengthDemo`, `NewObjectArrayDemo`, `NewIntArrayDemo`, `GetSetObjectArrayDemo`,
+    `GetReleaseIntArrayDemo`, `GetSetIntArrayRegionDemo`, and `GetReleasePrimitiveArrayCriticalDemo`
+    native methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify `ArrayManipulationActivity.java` by adding code to load the native library,
+    declare the native methods, and invoke them.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a `Dummy` class with a single integer field named `value`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the layout XML file, add the `Android.mk` build file, and build the native
+    library. Refer to steps 8 to 10 of the *Loading native libraries and registering
+    native methods* recipe of this chapter for more details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We're now ready to run the project. We'll present the output while discussing
+    each native method in the following section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Arrays are represented by `jarray` or its subtypes such as `jobjectArray` and
+    `jbooleanArray`. Similar to `jstring`, they cannot be accessed directly by native
+    code like C arrays do. JNI provides various functions for accessing arrays:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Create new arrays**: JNI provides `NewObjectArray` and `New<Type>Array` functions
+    to create arrays for objects and primitive types. Their function prototypes are
+    as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We demonstrate the usage of NewObjectArray in the native method `NewObjectArrayDemo`,
+    where we create 10 instances of the `Dummy` class. The `length` parameter of the
+    function indicates the number of objects to create, `elementType` is a reference
+    to the class, and `initialElement` is the initialization value that is going to
+    be set for all the created object instances in the array. In the Java code, we
+    implemented the `callNewObjectArrayDemo` method, which calls the `NewObjectArrayDemo`
+    native method to create an array of 10 `Dummy` objects, all with the value field
+    set to `5`. The execution result should look similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_18.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As expected, the `value` field of all the objects created by `NewObjectArray`
+    is `5`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The usage of `New<Type>Array` is shown in the native method `NewIntArrayDemo`,
+    where we create an array of 10 integers using the JNI function `NewIntArray`,
+    and then assign a value to each of the integers. All eight primitive types (`jboolean`,
+    `jbyte`, `jchar`, `jshort`, `jint`, `jlong`, `jfloat`, and `jdouble`) of JNI have
+    a corresponding `New<Type>Array` function to create an array of its type. Note
+    that `NewIntArrayDemo` calls the `GetIntArrayElements` and `ReleaseIntArrayElements`
+    JNI functions, which we''ll discuss later in this recipe. In the Java code, we
+    implemented a `callNewIntArrayDemo` method to call `NewIntArrayDemo` and display
+    the integer array elements on the screen. The execution of `callNewIntArrayDemo`
+    gives the following result:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_19.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As shown in the screenshot, the integer arrays are assigned with values from
+    `0` to `9`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`GetArrayLength`: This native function has the following prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'It accepts a reference to `jarray` and returns its length. We demonstrated
+    its usage in the native method `GetArrayLengthDemo`. In the Java code, we implemented
+    the `callGetArrayLengthDemo` method, which creates three arrays, including a `double`
+    array, a `Dummy` object array, and a two-dimensional array of integers. The method
+    calls the `GetArrayLengthDemo` native method to find the lengths for the three
+    arrays. We output the array length to logcat in the native method. The sample
+    execution output should look similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_20.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: '**Access object arrays**: JNI provides two functions to access object arrays,
+    namely `GetObjectArrayElement` and `SetObjectArrayElement`. As its name suggests,
+    the first one retrieves a reference to an object element of an array, while the
+    second one sets the element of an object array. The two functions have the following
+    prototype:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the two functions, the argument `array` refers to the object array and `index`
+    is the position of the element. While the `get` function returns a reference to
+    the object element, the `set` function sets the element according to the `value`
+    argument.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'We illustrate the usage of the two functions in native method `GetSetObjectArrayDemo`.
+    The method accepts an object array and an object. It replaces the object at index
+    one with the object received and then returns the original object at index one.
+    In the Java code, we call the `callGetSetObjectArrayDemo` method to pass an array
+    of three `Dummy` objects with values of `0`, `1`, `2`, and another `Dummy` object
+    of value `100` to the native method. The execution result should look similar
+    to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_21.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As shown, the object at index `1` is replaced by the object with value `100`,
+    and the original object of value `1` is returned.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Access arrays of primitive types**: JNI provides three sets of functions
+    to access arrays of primitive types. We demonstrate them separately using three
+    different native methods, all using `jintarray` as an example. Arrays of other
+    primitive types are similar to integers.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Firstly, if we want to create a separate copy of `jintarray` in a native buffer,
+    or only access a small portion of a large array, `GetIntArrayRegion`/ `SetIntArrayRegion`
+    functions are the proper choices. These two functions have the following prototype:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The two functions accept the same set of input parameters. The argument `array`
+    refers to the `jintArray` we operate on, `start` is the start element position,
+    `len` indicates the number of elements to get or set, and `buf` is the native
+    integer buffer. We show the usage of these two functions in a native method called
+    `GetSetIntArrayRegionDemo`. The method accepts an input `jintArray`, copies three
+    elements from index 1 to 3 of the array to a native buffer, multiplies their values
+    by `2` at the native buffer, and copies the value back to index `0` to `2`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In the Java code, we implement the `callGetSetIntArrayRegionDemo` method to
+    initialize an integer array, pass the array to a native method `GetSetIntArrayRegionDemo`,
+    and display the before and after values of all the elements. You should see an
+    output similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_22.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: The initial values for the five elements were `0`, `1`, `2`, `3`, and `4`. We
+    copied three elements from index one (`1`, `2`, `3`) to the native buffer `buf`.
+    We then multiplied the values at the native buffer by `2`, which made the first
+    three elements at the native buffer `2`, `4`, and `6`. We copied these three values
+    from the native buffer back to the integer array, starting at index `0`. The final
+    values for the three elements were therefore `2`, `4`, and `6`, and the last two
+    elements remained unchanged as `3` and `4`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Secondly, if we want to access a large array, then `GetIntArrayElements` and
+    `ReleaseIntArrayElements` are the JNI functions for us. They have the following
+    prototype:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`GetIntArrayElements` returns a pointer to the array elements, or `NULL` in
+    case of a failure. The array input parameter refers to the array we want to access,
+    and `isCopy` is set to `true` if a new copy is created after the function call
+    finishes. The returned pointer is valid until `ReleaseIntArrayElements` is called.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`ReleaseIntArrayElements` informs the VM that we don''t need access to the
+    array elements any more. The input parameter `array` refers to the array we operate
+    on, `elems` is the pointer returned by `GetIntArrayElements`, and `mode` indicates
+    the release mode. When `isCopy` at `GetIntArrayElements` is set to `JNI_TRUE`,
+    the changes we make through the returned pointer will be reflected on the `jintArray`,
+    since we''re operating on the same copy. When `isCopy` is set to `JNI_FALSE`,
+    the `mode` parameter determines how the data release is done. Depending upon whether
+    we want to copy values from the native buffer back to the original array, and
+    whether we want to free the `elems` native buffer, the `mode` parameters can be
+    `0`, `JNI_COMMIT`, or `JNI_ABORT`, as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '| Copy values back | Yes | No |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| Free native buffer |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| Yes | `0` | `JNI`_ABORT |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| No | JNI_`COMMIT` | - |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: 'We illustrate the two JNI functions with the native method `GetReleaseIntArrayDemo`.
+    The method accepts an input integer array, obtains a native pointer through `GetIntArrayElements`,
+    multiplies each element by `2`, and finally commits the changes back by `ReleaseIntArrayElements`
+    with `mode` set to `0`. In the Java code, we implement the `callGetReleaseIntArrayDemo`
+    method to initialize the input array and invoke the `GetReleaseIntArrayDemo` native
+    method. The following is a screenshot of the phone display after executing the
+    `callGetReleaseIntArrayDemo` method:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_23.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As expected, all integer elements in the original array are multiplied by `2`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The third set of JNI functions are `GetPrimitiveArrayCritical` and `ReleasePrimitiveArrayCritical`.
+    The usage of these two functions is similar to that of `Get<Type>ArrayElements`
+    and `Release<Type>ArrayElements`, except for one important difference—the code
+    block between the `Get` and `Release` methods is a critical region. No other JNI
+    functions or function calls causing the current thread to wait for another thread
+    in the same VM shall be made. These two methods essentially increase the possibility
+    of obtaining an uncopied version of the original primitive array, and therefore
+    improve the performance. We demonstrate the usage of these functions in a native
+    method `GetReleasePrimitiveArrayCriticalDemo` along with the Java method `callGetReleasePrimitiveArrayCriticalDemo`.
+    The implementations are similar to the second set of functions calls, and the
+    display result is the same.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Accessing Java static and instance fields in the native code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have demonstrated how to pass parameters of different types to native methods
+    and return data back to Java. This is not the only way of sharing data between
+    the native code and Java code. This recipe covers another method—accessing Java
+    fields from the native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We''re going to cover how to access Java fields of different types, including
+    primitive types, strings, instance objects, and arrays. The following recipes
+    should be read first before reading this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Passing parameters and receiving returns in primitive types*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating strings in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating classes in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating objects in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating arrays in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Readers are also expected to be familiar with Java reflection API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Follow these steps to create a sample Android project that demonstrates how
+    to access Java static and instance fields from the native code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `AccessingFields`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `AccessingFieldsActivity`. Under the project, create
+    a folder named `jni`. Refer to the *Loading native libraries and registering native
+    methods* recipe of this chapter for more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `accessfield.c` under the `jni` folder, then implement the
+    `AccessStaticFieldDemo`, `AccessInstanceFieldDemo`, and `FieldReflectionDemo`
+    native methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify `AccessingFieldsActivity.java` by adding code to load the native library,
+    declare native methods, and invoke them. In addition, add four instance fields
+    and four static fields.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a `Dummy` class with an integer instance field named `value` and an integer
+    static field named `value2`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the layout XML file, add the `Android.mk` build file, and build the native
+    library. Refer to steps 8 to 10 of the *Loading native libraries and registering
+    native methods* recipe of this chapter for more details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We're now ready to run the project. We'll present the output while discussing
+    each native method, in the following section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe discusses the access of fields (both static and instance fields)
+    in Java from native code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**jfieldID data type**: `jfieldID` is a regular C pointer pointing to a data
+    structure with details hidden from developers. We should not confuse it with `jobject`
+    or its subtypes. `jobject` is a reference type corresponding to `Object` in Java,
+    while `jfieldID` doesn''t have such a corresponding type in Java. However, JNI
+    provides functions to convert the `java.lang.reflect.Field` instance to `jfieldID`
+    and vice versa.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Field descriptor**: It refers to the modified UTF-8 string used to represent
+    the field data type. The following table summarizes the Java field types and its
+    corresponding field descriptors:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '| Java field type | Field descriptor |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `boolean` | `Z` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `byte` | `B` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `char` | `C` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `short` | `S` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `int` | `I` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `long` | `J` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `float` | `F` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `double` | `D` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `String` | `Ljava/lang/String;` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `Object` | `Ljava/lang/Object;` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `int[]` | `[I` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `Dummy[]` | `[Lcookbook/chapter2/Dummy;` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `Dummy[][]` | `[[Lcookbook/chapter2/Dummy;` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: As shown in the table, each of the eight primitive types has a single character
+    string as its field descriptor. For objects, the field descriptor starts with
+    `"L"`, followed by the class descriptor (refer to the *Manipulating classes in
+    JNI* recipe for detailed information) and ends with "`;`". For arrays, the field
+    descriptor starts with "`[`", followed by the descriptor for the element type.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Accessing static fields**: JNI provides three functions to access static
+    fields of a Java class. They have the following prototypes:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: To access a static field, the first step is to obtain the field ID, which is
+    done by the first function listed here. In the method prototype, the `clazz` argument
+    refers to the Java class at which the static field is defined, `name` indicates
+    the field name, and `sig` is the field descriptor.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Once we have the method ID, we can either get or set the field value by calling
+    function two or three. In the function prototype, `<Type>` can refer to any of
+    the eight Java primitive types or `Object`, and `fieldID` is `jfieldID` returned
+    by calling the first method. For `set` functions, `value` is the new value that
+    we want to assign to the field.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The usage of the preceding three JNI functions are demonstrated in the native
+    method `AccessStaticFieldDemo`, where we set and get values for an integer field,
+    a string field, an array field, and a `Dummy` object field. These four fields
+    are defined in the Java class `AccessingFieldsActivity`. In native code, we output
+    the get values to Android logcat, while in the Java code we display the value
+    set by the native code to the phone screen. The following screenshot shows the
+    logcat output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_24.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'The phone display will look similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_25.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As shown, the values we set at the Java code for the fields can be obtained
+    by the native code; and the values set by the native method are reflected in the
+    Java code.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Accessing instance field**: Accessing instance fields is similar to accessing
+    static fields. JNI also provides the following three functions for us:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Again, we need to obtain the field ID first, before we can get and set the values
+    for the field. Instead of passing the class reference to the `get` and `set` functions,
+    we should pass the object reference.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The usage is shown in native method `AccessInstanceFieldDemo`. Again, we print
+    the values of `get` in the native code to the logcat and display the modified
+    field values on the phone screen. The following screenshot shows the logcat output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_26.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'The phone display will look similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_27.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: A similar interpretation to accessing static fields can be made on the results.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Reflection support for field**: JNI provides two functions to support the
+    interoperation with the Java Reflection API for `Field`. They have the following
+    prototypes:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The first function converts `java.lang.reflect.Field` to `jfieldID`, and then
+    we can use the `set` and `get` JNI functions described previously. The argument
+    field is an instance of `java.lang.reflect.Field`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The second function does the reverse. It accepts a class reference, a `jfieldID`,
+    and a `jboolean` variable indicating whether it is a static or an instance field.
+    The function returns a reference to an object of `java.lang.reflect.Field`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The usage of these two functions is demonstrated in the native method `FieldReflectionDemo`.
+    We used the `Field` instance passed from the caller to access the field value,
+    and then returned a `Field` instance for another field. In the Java method `callFieldReflectionDemo`,
+    we pass the `Field` instance to the native code and use the returned `Field` instance
+    to obtain the `field` value. The native code outputs the field value to logcat
+    as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_28.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'The Java code displays the value for another field on the phone screen as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_29.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Calling static and instance methods from the native code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous recipe covers how to access Java fields in NDK. Besides fields,
+    a Java class also has methods. This recipe focuses on calling static and instance
+    methods from JNI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The code examples require a basic understanding of the JNI primitive types,
+    strings, classes, and instance objects. It is better to make sure you have read
+    the following recipes before going through this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Passing parameters and receiving returns in primitive types*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating strings in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating classes in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Manipulating objects in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Accessing Java static and instance fields in native code*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Readers are also expected to be familiar with Java reflection API.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps can be followed to create a sample Android project that
+    illustrates how to call static and instance methods from the native code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `CallingMethods`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `CallingMethodsActivity`. Under the project, create a
+    folder named `jni`. Refer to the *Loading native libraries and registering native
+    methods* recipe of this chapter for more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `callmethod.c` under the `jni` folder, then implement the
+    native methods `AccessStaticMethodDemo`, `AccessInstanceMethodDemo`, and `MethodReflectionDemo`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify `CallingMethodsActivity.java` by adding code to load the native library,
+    declare the native methods, and invoke them.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a `Dummy` class with an integer instance field named `value` and an integer
+    static field named `value2`. In addition, create a `DummySub` class that extends
+    `Dummy` with an additional String field called `name`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the layout XML file, add the `Android.mk` build file, and build the native
+    library. Refer to steps 8 to 10 of the *Loading native libraries and registering
+    native methods* recipe of this chapter for more details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We're now ready to run the project. We'll present the output while discussing
+    each native method in the following section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe illustrates how to call the Java static and instance methods from
+    the native code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**jmethodID data type**: Similar to `jfieldID`, `jmethodID` is a regular C
+    pointer pointing to a data structure with details hidden from the developers.
+    JNI provides functions to convert the `java.lang.reflect.Method` instance to `jmethodID`
+    and vice versa.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Method descriptor**: This is a modified UTF-8 string used to represent the
+    input (input arguments) data types and output (return type) data type of the method.
+    Method descriptors are formed by grouping all field descriptors of its input arguments
+    inside a "`()`", and appending the field descriptor of the return type. If the
+    return type is `void`, we should use "`V`". If there''s no input arguments, we
+    should simply use "`()`", followed by the field descriptor of the return type.
+    For constructors, "`V`" should be used to represent the return type. The following
+    table lists a few Java methods and their corresponding method descriptors:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '| Java method | Method descriptor |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `Dummy(int pValue)` | `(I)V` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `String getName()` | `()Ljava/lang/String;` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `void setName(String pName)` | `(Ljava/lang/String;)V` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| `lont f(byte[] bytes, Dummy dummy)` | `([BLcookbook/chapter2/Dummy;)J` |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '**Calling static methods**: JNI provides four sets of functions for native
+    code to call Java methods. Their prototypes are as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The first function gets the method ID. It accepts a reference `clazz` to the
+    Java class, a method name in a modified UTF-8 string format, and a method descriptor
+    `sig`. The other three sets of functions are used to call the static methods.
+    `<Type>` can be any of the eight primitive types, `Void`, or `Object`. It indicates
+    the return type of the method invoked. The `methodID` argument is the `jmethodID`
+    returned by the `GetStaticMethodID` function. The arguments to the Java method
+    are passed one by one in `CallStatic<Type>Method`, or put into an array of `jvalue`
+    as `CallStatic<Type>MethodA`, or put into the `va_list` structure as `CallStatic<Type>MethodV`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'We illustrate the usage of all the four sets of JNI functions in a native method
+    `AccessStaticMethodDemo`. This method gets the method IDs for the `getValue2`
+    and `setValue2` static methods of the `Dummy` class, and invokes these two methods
+    using three different ways to pass the arguments to the called Java method. In
+    `CallingMethodsActivity.java`, we implement `callAccessStaticMethodDemo`, which
+    initializes the `value2` static field to `100`, invokes the native method `AccessStaticMethodDemo`,
+    and prints the final `value2` value on phone screen. The following screenshot
+    shows the logcat output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_30.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'The output of screen looks similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_31.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As shown, the native method firstly got `value2` as `100`, and it then used
+    three different JNI functions to call the `set` method to modify the value. Finally,
+    the phone display indicated that the final modified value is reflected in Java
+    code.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '*Calling instance methods*: Calling instance methods from the native code is
+    similar to calling static methods. JNI also provides four sets of functions as
+    follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The usage of these four sets of functions is similar to that of the JNI functions
+    for calling static methods, except that we need to pass a reference to the instance
+    object instead of the class. In addition, JNI provides another three sets of functions
+    for calling instance methods, as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: These three sets of methods accept an extra argument `clazz` as compared to
+    the three sets of functions earlier. The `clazz` argument can be a reference to
+    the class that `obj` is instantiated from, or a superclass of `obj`. A typical
+    use case is to call `GetMethodID` on a class to obtain a `jmethodID`. We have
+    a reference to an object of the class's subclass, and then we can use the preceding
+    functions to call the Java method associated by `jmethodID` with the object reference.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The usage of all the seven sets of functions is illustrated in a native method
+    `AccessInstanceMethodDemo`. We used the first four sets of functions to call `getName`
+    and `setName` methods of the `DummySub` class with an object of it. We then used
+    `CallNonvirtual<Type>Method` to call the `getValue` and `setValue` methods, which
+    are defined in the `Dummy` superclass. In `CallingMethodsActivity.java`, we implemented
+    the `callAccessInstanceMethodDemo` method to invoke the `AccessInstanceMethodDemo`
+    native method. The following screenshot shows the logcat output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_32.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As the results show, the `getName`, `setName`, `getValue`, and `setValue` methods
+    are executed successfully.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Reflection support for method**: Similar to fields, JNI also provides the
+    following two functions to support reflection:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The first function accepts a reference to the `java.lang.reflect.Method` instance,
+    and returns its corresponding `jmethodID`. The returned `jmethodID` value can
+    then be used to call the associated Java method. The second function does the
+    reverse. It accepts a reference to the Java class, `jmethodID`, and `jboolean`
+    indicating whether it's a static method or not, and returns a reference to `java.lang.reflect.Method`.
+    The return value can be used in the Java code to access the corresponding method.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: We illustrate these two JNI functions in native method `MethodReflectionDemo`.
+    In `CallingMethodsActivity.java`, we implement the `callMethodReflectionDemo`
+    method to pass the `java.lang.reflect.Method` object of `getValue` to the native
+    code, get the returned `setValue java.lang.reflect.Method` object, and invoke
+    the `setValue` method with the returned object.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The native method outputs the return value of `getValue` method to logcat as
+    follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_33.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'The Java code displays the `getValue` method return values before and after
+    invoking `setValue` on the phone screen as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_34.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: As expected, the native code can access the `getValue` method with the `Method`
+    object passed from the Java code, and the Java code can call the `setValue` method
+    with the `Method` object returned from the native method.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Caching jfieldID, jmethodID, and referencing data to improve performance
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This recipe covers caching in Android JNI, which can improve the performance
+    of our native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'You should make sure you''ve read the following recipes before going through
+    this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Accessing Java static and instance fields in native code*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Calling static and instance methods from native code*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps detail how to build a sample Android application that demonstrates
+    caching in JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `Caching`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `CachingActivity`. Under the project, create a folder
+    named `jni`. Refer to the *Loading native libraries and registering native methods*
+    recipe of this chapter for more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `cachingtest.c` under the `jni` folder, then implement the
+    `InitIDs`, `CachingFieldMethodIDDemo1`, `CachingFieldMethodIDDemo2`, and `CachingReferencesDemo`
+    methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the `CachingActivity.java` file by adding code to load the native library,
+    then declare and invoke the native methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the layout XML file, add the `Android.mk` build file, and build the native
+    library. Refer to steps 8 to 10 of the *Loading native libraries and registering
+    native methods* recipe of this chapter for details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run the project on an Android device or emulator and monitor the logcat output
+    with either eclipse or the `adb logcat -v time` command in your terminal.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: At the `onCreate` method of `CachingActivity.java`, enable the `callCachingFieldMethodIDDemo1`
+    method and disable the other demo methods. Start the Android application, and
+    you should be able to see the following at logcat:![How to do it…](img/1505_02_35.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Enable `callCachingFieldMethodIDDemo2` at `CachingActivity.java` while disabling
+    the other demo methods and `InitIDs` method (at the static initializer). Start
+    the Android application, and you should be able to see the following at logcat:![How
+    to do it…](img/1505_02_36.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Enable `callCachingReferencesDemo` at `CachingActivity.java` while commenting
+    out other demo methods. Start the Android application, and you should be able
+    to see the following at logcat:![How to do it…](img/1505_02_37.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe discusses the usage of caching at JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Caching field and method IDs**: Field and method IDs are internal pointers.
+    They''re required to access a Java field or making native to Java method calls.
+    Obtaining the field or method ID requires calling pre-defined JNI functions, which
+    do symbolic lookups according to the name and descriptor. The lookup process typically
+    requires several string comparisons and is relatively expensive.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Once the field or method ID is obtained, accessing the field or making native
+    to Java calls is relatively quick. Therefore, a good practice is to perform lookup
+    only once and cache the field or method ID.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'There are two approaches to cache field and method IDs. The first approach
+    caches at the class initializer. In Java, we can have something similar to the
+    following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The static initializer is guaranteed to be executed before any of the class's
+    methods. Therefore, we can ensure that the IDs required by the native method are
+    valid when they're invoked. The usage of this approach is demonstrated in the
+    `InitIDs` and `CachingFieldMethodIDDemo1` native methods and `CachingActivity.java`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The second approach caches the IDs at the point of usage. We store the field
+    or method ID in a static variable, so that the ID is valid the next time the native
+    method is invoked. The usage of this approach is demonstrated in the native methods
+    `CachingFieldMethodIDDemo2` and `CachingActivity.java`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: On comparison of these two approaches, the first one is preferred. Firstly,
+    the first it doesn't require a validity check for the IDs before using them, because
+    the static initializer is always called first and the IDs are therefore always
+    valid before the native methods are called. Secondly, if the class is unloaded,
+    the cached IDs will be invalid. If the second approach is used, we'll need to
+    ensure the class is not unloaded and loaded again. If the first approach is used,
+    the static initializer is called automatically when the class is loaded again,
+    so we never have to worry about the class being unloaded and loaded again.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Caching references**: JNI exposes classes, instance objects, strings, and
+    arrays as references. We covered how to manage references in the *Managing references
+    at JNI* recipe. Sometimes, caching references can also improve performance. Unlike
+    field and method IDs, which are direct pointers, references are implemented using
+    an indirect mechanism that is hidden from developers. Therefore, we need to rely
+    on JNI functions to cache them.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In order to cache reference data, we need to make it a global reference or weak
+    global reference. A **global reference** guarantees that the reference will be
+    valid until it is explicitly deleted. While **weak global** reference allows the
+    underlying object to be garbage collected. Therefore, we'll need to do a validity
+    check before using it.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The native method `CachingReferencesDemo` demonstrates how to cache a string
+    reference. Note that while `DeleteGlobalRef` makes the global reference invalid,
+    it doesn't assign `NULL` to the reference. We'll need to do this manually.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Checking errors and handling exceptions in JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: JNI functions can fail because of system constraint (for example, lack of memory)
+    or invalid arguments (for example, passing a native UTF-8 string when the function
+    is expecting a UTF-16 string). This recipe discusses how to handle errors and
+    exceptions in JNI programming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following recipes should be read first before proceeding with this recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*Manipulating strings in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Managing references in JNI*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Accessing Java static and instance fields in native code*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Calling static and instance methods from native code*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Follow these steps to create a sample Android project that illustrates errors
+    and exception handling in JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `ExceptionHandling`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `ExceptionHandlingActivity`. Under the project, create
+    a folder named `jni`. Refer to the *Loading native libraries and registering native
+    methods* recipe of this chapter for more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `exceptiontest.c` under the j`n`i folder, then implement
+    the `ExceptionDemo` and `FatalErrorDemo` methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the `ExceptionHandlingActivity.java` file by adding code to load the
+    native library, then declare and invoke the native methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the layout XML file, add the `Android.mk` build file, and build the native
+    library. Refer to steps 8 to 10 of the the *Loading native libraries and registering
+    native methods* recipe of this chapter for more details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: We're now ready to run the project. We'll present the output while discussing
+    each native method, in the following section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe discusses error checking and exception handling at JNI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Check for errors and exceptions**: Many JNI functions return a special value
+    to indicate failure. For example, the `FindClass` function returns `NULL` to indicate
+    it failed to load the class. Many other functions do not use the return value
+    to signal failure; instead an exception is thrown.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Besides JNI functions, the Java code invoked by native code can also throw exceptions.
+    We should make sure we check for such cases in order to write robust native code.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'For the first group of functions, we can simply check the return value to see
+    if an error occurs. For the second group of functions, JNI defines two functions
+    to check for exceptions, as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The first function returns `JNI_TRUE` to indicate that an exception occurs,
+    and `JNI_FALSE` otherwise. The second function returns a local reference to the
+    exception. When the second function is used, an additional JNI function can be
+    called to examine the details of the exception:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The function prints the exception and a back trace of the stack to the logcat.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: In the native method `ExceptionDemo`, we used both approaches to check for occurrence
+    of exceptions and `ExceptionDescribe` to print out the exception details.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Handle errors and exceptions**: Exceptions at JNI are different from Java
+    exceptions. At Java, when an error occurs, an exception object is created and
+    handed to the runtime. The runtime then searches the call stack for an exception
+    handler that can handle the exception. The search starts at the method where the
+    exception occurred and proceeds in the reverse order in which the methods are
+    called. When such a code block is found, the runtime handles the control to the
+    exception handler. The normal control flow is therefore interrupted. In contrast,
+    JNI exception doesn''t change the control flow, and we''ll need to explicitly
+    check for exception and handle it properly.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There are generally two ways to handle an exception. The first approach is to
+    free the resources allocated at JNI and return. This will leave the responsibility
+    of handling the exception to the caller of the native method.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The second practice is to clear the exception and continue executing. This
+    is done through the following JNI function call:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the native method `ExceptionDemo`, we used the second approach to clear `java.lang.NullPointerException`,
+    and the first approach to return `java.lang.RuntimeException` to the caller, which
+    is the Java method `callExceptionDemo` at `ExceptionHandlingActivity.java`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'When an exception is pending, not all the JNI functions can be called safely.
+    The following functions are allowed when there are pending exceptions:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`DeleteGlobalRef`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DeleteLocalRef`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DeleteWeakGlobalRef`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ExceptionCheck`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ExceptionClear`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ExceptionDescribe`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ExceptionOccurred`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MonitorExit`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PopLocalFrame`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PushLocalFrame`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Release<PrimitiveType>ArrayElements`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ReleasePrimitiveArrayCritical`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ReleaseStringChars`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ReleaseStringCritical`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ReleaseStringUTFChars`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: They're basically exception check and handle functions, or functions that clear
+    resources allocated at native code.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Calling JNI functions other than the functions listed here can lead to unexpected
+    results when an exception is pending. We should handle the pending exception properly
+    and then proceed.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Throw exceptions in the native code**: JNI provides two functions to throw
+    an exception from native code. They have the following prototypes:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The first function accepts a reference to a `jthrowable` object and throws the
+    exception, while the second function accepts a reference to an exception class.
+    It will create an exception object of the `clazz` class with the message argument
+    and throw it.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: In the `ExceptionDemo` native method, we used the `ThrowNew` function to throw
+    `java.lang.NullPointerException` and a `Throw` function to throw `java.lang.RuntimeException`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The following logcat output indicates how the exceptions are checked, cleared,
+    and thrown:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_38.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'The last exception is not cleared at the native method. In the Java code, we
+    catch the exception and display the message on the phone screen:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_39.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: '**Fatal error**: A special type of error is the fatal error, which is not recoverable.
+    JNI defines a function `FatalError`, as follows, to raise a fatal error:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This function accepts a message and prints it to logcat. After that, the VM
+    instance for the application is terminated. We demonstrated the usage of this
+    function in the native method `FatalErrorDemo` and Java method `callFatalErrorDemo`.
+    The following output is captured at logcat:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How it works…](img/1505_02_40.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Note that the code after the `FatalError` function is never executed, in neither
+    the native nor Java code, because `FatalError` never returns, and the VM instance
+    is terminated. On my Android device, this does not lead the Android application
+    to crash, but causes the application to freeze instead.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: C++ exception is currently not supported on Android JNI programming. In other
+    words, the native C++ exceptions do not propagate to Java world through JNI. Therefore,
+    we should handle C++ exceptions within C++ code. Alternatively, we can write a
+    C wrapper to throw an exception or return an error code to Java.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integrating assembly code in JNI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android NDK allows you to write assembly code at JNI programming. Assembly code
+    is sometimes used to optimize the critical portion of code to achieve the best
+    performance. This recipe does not intend to discuss how to program in assembly.
+    It describes how to integrate assembly code in JNI programming instead.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Read the *Passing parameters and receiving returns in primitive types* recipe
+    before you continue.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following steps create a sample Android project that integrates the assembly
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a project named `AssemblyInJNI`. Set the package name as `cookbook.chapter2`.
+    Create an activity named `AssemblyInJNIActivity`. Under the project, create a
+    folder named `jni`. Refer to the *Loading native libraries and registering native
+    methods* recipe of this chapter for more detailed instructions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a file named `assemblyinjni.c` under the `jni` folder, then implement
+    the `InlineAssemblyAddDemo` method.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create a file named `tmp.c` under the `jni` folder, and implement the native
+    method `AssemblyMultiplyDemo`. Compile the `tmp.c` code to an assembly source
+    file named `AssemblyMultiplyDemo.s`, using the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Modify the `AssemblyInJNIActivity.java` file by adding code to load the native
+    library, then declare and invoke the native methods.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Modify the layout XML file, add the `Android.mk` build file, and build the native
+    library. Refer to steps 8 to 10 of the *Loading native libraries and registering
+    native methods* recipe of this chapter for details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: At `AssemblyInJNIActivity.java`, enable the `callInlineAssemblyAddDemo` native
+    method and disable the `callAssemblyMultiplyDemo` method. Run the project on an
+    Android device or emulator. The phone display should look similar to the following
+    screenshot:![How to do it…](img/1505_02_41.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: At `AssemblyInJNIActivity.java`, enable the `callAssemblyMultiplyDemo` native
+    method and disable the `callInlineAssemblyAddDemo` method. Run the project on
+    an Android device or emulator. The phone display should look similar to the following
+    screenshot:![How to do it…](img/1505_02_42.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe demonstrates the usage of the assembly code to implement a native
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Inline assembly at C code**: We can write inline assembly code for Android
+    NDK development. This is illustrated in native method `InlineAssemblyAddDemo`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Generating a separate assembly code**: One approach to write assembly code
+    is to write the code in C or C++, and use a compiler to compile the code into
+    assembly code. Then, we optimize based on the auto-generated assembly code. Since
+    this recipe is not about writing code in an assembly language, we use the Android
+    NDK cross compiler to generate a native method `AssemblyMultiplyDemo` and call
+    it from the Java method `callAssemblyMultiplyDemo`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We first write the native method `AssemblyMultiplyDemo` in `AssemblyMultiplyDemo.c`,
+    then cross compile the code using the compiler with Android NDK, using the following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the preceding command, `$ANDROID_NDK` is an environment variable pointing
+    to the location of Android NDK. If you have followed the recipes in [Chapter 1](ch01.html
+    "Chapter 1. Hello NDK"), *Hello NDK*, then this should have been configured correctly.
+    Otherwise, you can replace it with the full path to your Android NDK location
+    (for example, in my computer, the path is `/home/roman10/Desktop/android/android-ndk-r8`).
+    `<level>` indicates the targeted Android version. In our case, we used `14`. `<arch>`
+    indicates the architecture; we used `arm`. If we build an application for other
+    architectures such as x86, then this should be `x86`. The `-S` option tells the
+    cross compiler to compile the `<c_file_name>.c` file into an assembly code, but
+    don't assemble or link it. The `-o` option tells the compiler to output the assembly
+    code to a file `<output_file_name>.s`. If no such option appears, the compiler
+    outputs to a file named `<c_file_name>.s`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**Compile the assembly code**: Compiling assembly code is just like compiling
+    C/C++ source code. As shown in the `Android.mk` file, we simply list the assembly
+    file as a source file as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE

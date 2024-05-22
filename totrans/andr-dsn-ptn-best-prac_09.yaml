@@ -1,0 +1,744 @@
+- en: Chapter 9. Observing Patterns
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the last chapter, we looked at how to simplify interaction by allowing a
+    user to store frequently used data, such as location and dietary preferences.
+    This is only one way to make using an app as enjoyable as possible. Another valuable
+    method is to provide the user with timely notifications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Observing Patterns](img/image_09_001.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: All mobile devices have provision for receiving notifications; usually these
+    are delivered using the narrow status bar at the top of the screen, and Android
+    is no exception. What makes this process interesting to us as developers, is that
+    these notifications need to be delivered when our app may well not be in use.
+    There is clearly no callback method for handling such an event in an activity,
+    so we will have to look at background components such as **services** to trigger
+    such events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In terms of design patterns, there is one pattern that is almost purpose built
+    for managing one to many relationships, the **observer pattern**. Although perfect
+    for the delivery and reception of notifications, observer patterns occur everywhere
+    in software design and you will no doubt have encountered the **Observer** and
+    **Observed** Java utilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will start the chapter by taking a close look at the observer pattern itself
+    and then at how Android notifications are designed, built, and customized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, you will learn how to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an observer pattern
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Issue a notification
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Use Java observer utilities
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Apply a pending intent
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Configure privacy and priority settings
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Customize notifications
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Create a service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This chapter focuses largely on the observer pattern, and how it can be applied
+    to managing notifications. The best place to begin is to take a look at the pattern
+    itself, its purpose and its structure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Observer pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You may not realize it, but you will have encountered the observer pattern many
+    times, as every click listener (and any other listener) is in fact an observer.
+    The same applies to the icons and features of any desktop or GUI and these type
+    of listener interfaces demonstrate very nicely the purpose of the observer pattern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The observer acts like a sentry, keeping watch for a particular event or state
+    change in its subject, or subjects, and then reporting this information to interested
+    parties.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: As already mentioned, Java has its own observer utilities, and although these
+    can be useful in some cases, the way Java handles inheritance and the simplistic
+    nature of the pattern makes writing our own preferable. We will see how to use
+    these built-in classes but in most of the examples here, we will build our own.
+    This will also provide a deeper understanding of the pattern's workings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notifications must be used with caution, as few things can annoy a user more
+    than unwanted messages. However, if used sparingly, notifications can provide
+    an invaluable promotional tool. The secret lies in allowing users to opt in and
+    out of various message streams, so that they only receive notifications that interest
+    them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the pattern
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Considering our sandwich maker app, there appears to be very little opportunity
+    to issue notifications. One such use might be if we were to provide the option
+    for customers to collect their sandwiches as well as having them delivered, then
+    users may appreciate being notified when their sandwich is ready.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To effectively communicate between devices, we would need a central server with
+    an associated application. We will not be able to cover that here but that will
+    not stop us seeing how the pattern works and how notifications are posted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will begin by building a simple observer pattern, along with a basic notification
+    manager to track and report the progress of an order.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To see how this is done, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the heart of an observer pattern lies an interface for the subject and one
+    for the observer.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The subject interface looks like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This is the observer interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, implement the subject as the sandwich being ordered, like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Next, implement the observer interface like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This completes the pattern itself; its structure is quite simple as can be
+    seen here:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Creating the pattern](img/image_09_002.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: It is the subject that does all the work here. It keeps a list of all its observers
+    and provides mechanisms for observers to subscribe and unsubscribe to its updates.
+    In the previous example, we call `unregister()` during `update()` from the observer
+    once the order is complete, as our listener will no longer be interested in this
+    subject.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `Observer` interface may seem too simple to be necessary, but it allows
+    for loose coupling between the `Sandwich` and its observers, and this means we
+    can modify either of them independently of the other.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although we have only included one observer, it should be clear how the methods
+    implemented in our subject allow for any number of individual orders and respond
+    accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding a notification
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `order.update()` method provides the appropriate text for us to issue as
+    a notification. To test the pattern and deliver notifications to the status bar,
+    follow the steps here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Begin by creating an XML layout with the following nested layout:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Open your Java activity and add these fields:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the method that listens for the order button to be clicked:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'And one for the update button:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, add the `sendNotification()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can now run the code on a device or emulator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Adding a notification](img/image_09_003.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The code above, responsible for issuing the notifications, demonstrates the
+    simplest possible way to post a notification, and the icon and two text fields
+    are the minimum required for this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As this is only a demonstration and the observer pattern really does nothing
+    more than simulate the server, it is important not to confuse this with the native
+    notification API calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The use of a notification ID is worth noting. This is primarily used for updating
+    notifications. Sending a notification with the same ID will update the previous
+    message, and in the preceding situation, this is actually what we should have
+    done, the incrementing of the ID here was done only to demonstrate how it can
+    be used. To correct this, comment out the line and rerun the project so that only
+    one message stream is generated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is a lot more we can and should do to make the most of this invaluable
+    tool, such as have it perform actions and be delivered when our app is not active,
+    and we will return to these issues in later sections, but for now it is worth
+    taking a look at how Java provides its own utilities for implementing observer
+    patterns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Utility observers and observables
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'As mentioned earlier, Java provides its own observer utilities, the `java.util.observer`
+    interface and the `java.util.observable` abstract class. These come equipped with
+    methods for registering, un-registering, and notifying observers. The example
+    from the previous section can be easily implemented using them, as can be seen
+    by following these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this case, the subject is realized by extending the observable class, as
+    can be seen here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Order` class is an observer and therefore implements that interface, like
+    this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The XML layout and `sendNotification()` method are exactly as before, and the
+    only changes to the activity source code are as outlined here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As you can see, this code performs the same task as our previous example, and
+    it is worth comparing the two listings. The Observer's `setChanged()` and `notifyObservers()`
+    methods replaced the method we implemented in our custom version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Which of these approaches you adopt for future observer patterns depends mostly
+    on the particular circumstances. Generally, the use of the Java observable utils
+    suits simple situations, and if you are unsure it is a good idea to start with
+    this method, as you will soon see if a more flexible approach is required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The examples covered above only introduce the observer pattern and notifications.
+    The pattern demonstrated a very simple situation and to appreciate its full potential,
+    we will need to apply it to a more complex situation. First though, we will take
+    a look at how much more we can do with the notification system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notifications
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sending a simple string message to a user is the primary purpose of the notification
+    system, but there is much more that can be done with it. First and foremost, a
+    notification can be made to perform one or more actions; usually one of these
+    will be to open the relevant application. It is also possible to create expanded
+    notifications that can contain various media and are very useful for situations
+    where there is too much information for a single line message, but we want to
+    save the user the bother of having to open an app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since API 21, it has been possible to send heads-up notifications and notifications
+    to the user's lock screen. This function is something that was taken from other
+    mobile platforms and despite its apparent usefulness, it should be used with great
+    caution. It barely requires pointing out that notifications should only contain
+    pertinent and tine-related information. The rule of thumb is only issue a notification
+    if the information cannot wait until the next time the user logs in. A good example
+    of a valid notification might be *your sandwich has been delayed,* not *new range
+    of cheeses coming soon*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Along with the risk of pestering the user, the lock screen notification contains
+    another danger. Messages displayed on a locked device are to all intents and purposes
+    public. Anyone passing a phone left on a desk can see the content. Now although
+    most people would not mind their boss seeing what type of sandwich they like,
+    there will no doubt be apps you will write that will contain more sensitive material
+    and fortunately the API provides programmable privacy settings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Regardless of the caution that needs applying, the full range of notification
+    functionality is still well worth becoming acquainted with, starting with having
+    a notification actually do something.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting an intent
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As with the starting of an activity or any other top level app component, the
+    intent provides our route from notification to action. In most cases, we want
+    to use the notification to start an activity, and this is what we will do here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Users of mobile devices want to be able to move between activities and applications
+    easily and swiftly. As a user navigates between apps, the system keeps track of
+    the order which it stores in a back-stack. This is usually sufficient, but when
+    a user is drawn away from an app by a notification, then pressing the back button
+    will not return them to the app they had previously been engaged in. This is likely
+    to annoy users but is fortunately easily avoided by creating an artificial back-stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating our own back-stack is nowhere as difficult as it might sound as the
+    following example demonstrates. It is in fact so simple that this example also
+    details how to include a few other notification features, such as a more elaborate
+    icon and ticker text that will scroll along the status bar when the notification
+    is first delivered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Follow these steps to see how this is achieved:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open the project we worked on earlier and create a new activity class, like
+    so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Next we will need a layout file to match the content view set in the `onCreate()`
+    method previously. This can be left empty, save for a root layout.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now add the following lines to the top of the `sendNotification()` method in
+    your main activity:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Append the notification builder with these settings:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, include the new activity in the manifest file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The effects of these changes are obvious:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Setting an intent](img/image_09_004.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Comment out the lines generating the back-stack and open the notification when
+    using another app to see how it maintains intuitive navigation. The `setAutoCancel()`
+    call means that the status bar icon is dismissed when the notification is followed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Generally, we want a user to open our app from a notification, but from a user's
+    perspective it is important to get things done with the least possible effort
+    and if they can garner the same information without having to open another app,
+    then that is a good thing. This is where the expanded notification comes in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Customizing and configuring notifications
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The expanded notification was introduced with API 16\. The providing of a larger,
+    more flexible content area brought it in line with other mobile platforms. There
+    are three styles of expanded notification: text, image, and list. The following
+    steps demonstrate how to implement each of them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The following project can either be modified from the one we used earlier, or
+    begun from scratch.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Edit the main layout file so that it contains three buttons with the following
+    observer methods:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Make the following changes to the `sendNotification()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now create the three style methods. First the big text style:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The big picture style requires these settings:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally add the list, or inbox, style, like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These notifications can now be tested on a device or AVD:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Customizing and configuring notifications](img/image_09_005.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The most recent notification will always be expanded and others can be expanded
+    by swiping down on them. As with most material lists, notifications can be dismissed
+    by swiping them horizontally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These features provide us with a lot of flexibility when it comes to designing
+    notifications and if we want to do more, we can even customize them. This can
+    be done very simply by passing an XML layout to our builder. To do this, we need
+    the RemoteViews class, which is a form of layout inflater. Create a layout and
+    then include the following line in your code to instantiate it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then pass this to the builder with:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: In terms of implementing Android notifications, all we need to cover is how
+    to issue heads-up notifications and lock screen notifications. This is more a
+    matter of setting priorities and user permissions and settings than coding.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Visibility and priority
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Where and how some notifications appear is often down to two related properties,
+    privacy and importance. These are applied using metadata constants and can also
+    include categories such as *alarm* and *promo*, which the system can use to sort
+    and filter multiple notifications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When it comes to delivering a notification to a user''s lock screen, it is
+    not only how we set the metadata, it also depends on the user''s security setup.
+    To view these notifications, the user will have had to select a secure lock like
+    a PIN or gesture and then choose one of the following options from the **Security
+    | Notifications** settings:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Visibility and priority](img/image_09_006.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Providing the user has these settings, our notifications will be delivered
+    to a user''s lock screen. To protect the user''s privacy, we can set notification
+    visibility with our builder. There are three values for this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`VISIBILITY_PUBLIC` - The entire notification is displayed'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`VISIBILITY_PRIVATE` - Title and icon are displayed but content is hidden'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`VISIBILTY_SECRET` - Nothing is displayed at all'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To implement any of these settings use a line like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Heads up displays alert the user to their importance by appearing as a basic
+    (collapsed) notification at the top of the screen for five seconds, before reverting
+    to a status bar icon. They should only be used for information that requires the
+    user's immediate attention. This is controlled using priority metadata.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'By default, the priority of each notification is PRIORITY_DEFAULT. The five
+    possible values are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`PRIORITY_MIN` = -2'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRIORITY_LOW` = -1'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRIORITY_DEFAULT` = 0'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRIORITY_HIGH` = 1'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`PRIORITY_MAX` = 2'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'These too can be set by the builder, for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Any value greater than DEFAULT will trigger a heads-up notification, providing
+    either sound or vibration are also triggered. This too can be added by our builder
+    and would take the following form:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: The vibrator class takes an array of longs and applies these as millisecond
+    bursts of vibration, so the previous example would vibrate three times for half
+    a second each.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Including device vibrations anywhere in an app requires user permissions on
+    installment. These are added to the manifest file as a direct child of the root
+    element, like so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is little more we need to know about displaying and configuring notifications.
+    However, so far we have been issuing notifications from within the app itself
+    rather than remotely as they would in the wild.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Services
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Services are top-level application components such as activities. Their purpose
+    is to manage long-running background tasks such as playing audio or triggering
+    reminders or other scheduled events. Services do not require a UI, but in other
+    respects they are similar to activities and have a similar life cycle with associated
+    callback methods that we can use to intercept key events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although all services start out the same, they basically fall into two categories,
+    bound and unbound. A service that is bound to an activity will continue to run
+    until instructed otherwise or the binding activity is stopped. An unbound service,
+    on the other hand, will continue to run regardless of whether the calling activity
+    is active or not. In both these cases, the service will often be responsible for
+    switching itself off once it has completed its allotted task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following example demonstrates how to create a service that will set a
+    reminder. The service will then either post a notification after a set delay or
+    be canceled by user action. To see how this is done, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Start by creating a layout. This will need two buttons:![Services](img/image_09_007.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Include onClick attributes in both buttons:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new class to extend Service:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `onBind()` method will be insisted upon, but we will not need it, so it
+    can be left like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will not be using the `onCreate()` or `onDestroy()` methods either but it
+    is always useful to see how background activities are behaving, so complete the
+    methods like so:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The class will require the following fields:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the service to the manifest file alongside your activities, like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, open your main Java activity and complete these two button listeners:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The previous code demonstrates how to run code in the background using a service.
+    In many apps, this is an essential feature in many apps. Our only real consideration
+    is to ensure that all our services are correctly disposed of when they are no
+    longer needed, as services are particularly susceptible to memory leakage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have seen how the observer pattern can be used as a tool
+    to manage the delivery of user notifications, as well as keeping track of many
+    other events and responding accordingly. We began by looking at the pattern itself
+    and then at the Android notification APIs, which despite using the system-controlled
+    status bar and notification drawer, allow us a great deal of freedom when it comes
+    to designing notifications that suit the purpose and look of our apps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will take this and other patterns and see how we can
+    extend extant Android components and have them apply our design patterns directly.
+    We will then see how this can help us when it comes to developing for form factors
+    other than phones and tablets.
+  prefs: []
+  type: TYPE_NORMAL

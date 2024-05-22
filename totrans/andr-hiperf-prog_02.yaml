@@ -1,0 +1,1359 @@
+- en: Chapter 2. Efficient Debugging
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Every developer becomes familiar with the word "bug" early on, and the relationship
+    will last for their entire professional career. A **bug** is an error or flaw
+    in a software system that provokes an unexpected and incorrect result.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is some discussion about the etymology of the word. It was originally
+    intended to describe technical malfunctions in hardware systems and the first
+    reference to its usage comes from Thomas Edison. Grace Hopper, a computer pioneer,
+    apparently traced in 1946 the malfunctioning of the computer Mark II to a moth
+    that was trapped inside the relay. This physical bug ended up representing not
+    only physical bugs trapped inside machines and causing malfunctions, but also
+    logical bugs or software errors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Debugging** is, in this context, the process of finding bugs or malfunctions
+    in a software system. Debugging involves numerous factors, including reading logs,
+    memory dumping and analysis, profiling, and system monitoring. During the development
+    stage, or when a bug is detected in a production system, a developer will debug
+    the software application to detect the flaw and proceed to fix it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you are an Android developer, Google has provided a big set of tools that
+    we can use to debug our application. This book will be based on the Android Studio
+    suite and the official SDK from Google—notwithstanding other external tools that
+    can also be helpful in the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android Debug Bridge
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Android Debug Bridge**, more widely known as **ADB**, is a core tool for
+    Android. It is included in the Android SDK, in the folder/platform tools. If you
+    go to this folder and call the command `adb`, you will see on the screen a list
+    of the available options.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you haven't done this by now, this is a productivity tip that will pay off
+    in probably the first minute working with ADB. Add to your `PATH` environmental
+    variable the location where you have stored your Android SDK. From this moment,
+    you will be able to call all the tools included within that folder from any part
+    of your system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With `adb`, we can perform multiple operations, including displaying devices,
+    taking screenshots, or connecting to and disconnecting from different devices.
+    It is not the purpose of this book to give a thorough review of each operation
+    of a tool, but here, we present a list of the most common and useful functionalities
+    of `adb`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| # | Command | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | `adb logcat *:E&#124;D&#124;I` | Starts `logcat` in the console, filtering
+    by errors, debug messages, or information messages |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 2 | `adb devices` | Lists all the devices attached and connected to `adb`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 3 | `adb kill-server``adb start-server` | Kills and restarts the `adb` server.
+    A useful message when `adb` gets stuck or suffers from a malfunction |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 4 | `adb shell` | Starts a remote shell in the target device or emulator
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 5 | `adb bugreport` | Prints all the content of `dumpsys`, `dumpstate`, and
+    `logcat` to the screen |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 6 | `adb help` | Prints a list with all the executable commands of `adb`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: 'One interesting fact with `adb` is that, being a command-line tool, it can
+    be used for scripting and be included in **Continuous Integration** (**CI**) systems
+    such as Jenkins. By using the `adb` shell we can execute any command in the device.
+    Let''s think, for example, of a useful script that takes a screenshot of the device''s
+    screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are many possibilities with `adb` that we will explore in this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dalvik Debug Monitor Server
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Dalvik Debug Monitor Server** is also known as **DDMS**. This utility runs
+    on top of `adb`, and provides a graphical interface with a big set of functionalities,
+    including thread and heap information, logcat, SMS/call simulation, location data,
+    and more. This is how DDMS looks when it starts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The screen has different sections:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The top-left section shows the active devices and the different processes running
+    on the device.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The top-right section shows a variety of options, the default option being the
+    file explorer. At the bottom, **LogCat** is shown.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'There are more available options in the DDMS, so let''s explore them in detail.
+    First, the section we saw on the top-left side:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_24.jpg) icon starts
+    debugging the selected process.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_25.jpg) icon will
+    update the heap every time the GC is triggered for the selected process (more
+    information on this later).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The next icon, ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_26.jpg),
+    dumps HPROF in a file. **HPROF** is a binary format that contains the snapshot
+    of an application heap. There are some tools to visualize them, such as jhat.
+    Later on, we will show an example of how to convert this file and visualize it.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_27.jpg) option
+    will cause a garbage collection in our application (useful for the previous entry).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_28.jpg) icon updates
+    the threads in DDMS. When we are dealing with multithreaded applications, this
+    will come in very handy.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: With the ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_29.jpg) icon
+    we can start profiling threads and displaying accurate information about them.
+    A full example will be shown later.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: To stop a process running, we can use the ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_30.jpg)
+    icon.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: To take a screenshot of the application, the ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_31.jpg)
+    icon will do the trick.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: With ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_32.jpg), we can
+    get a snapshot of the view hierarchy and send it to the UI automator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_33.jpg) option
+    captures a system-wide trace with the help of Android's systrace.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The ![Dalvik Debug Monitor Server](img/Insert_Image_B04666_02_34.jpg) icon starts
+    capturing OpenGL traces.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Capturing and analyzing thread information
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now we want to see how we can deal with thread debugging. The traditional approach
+    of setting breakpoints and waiting until a thread is called will not work well
+    here, since a multithreaded application might have several threads running at
+    the same time and independently of each other. Hence, we want to visualize and
+    access them independently.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Select a process on the left-hand side of the list and click the ![Capturing
+    and analyzing thread information](img/Insert_Image_B04666_02_28.jpg) icon. If
+    now you click in the threads section on the right-hand side, you will see how
+    this section has been updated with information regarding the threads of the current
+    process:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Capturing and analyzing thread information](img/Insert_Image_B04666_02_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Some developers are confused about what processes and threads are, so just
+    in case: a process provides the required resources to execute a program (virtual
+    address space, executable code, security context, and so on). A process is the
+    instance of execution of a process (also referred to as a task in some contexts).
+    Several processes can be associated with the same program, and they disappear
+    when the machine is rebooted. A thread is a subset of a process. A process can
+    be composed of multiple threads, and multiple threads exploit parallelism in multiprocessor
+    systems. All the threads in the same process share a space address and a stack
+    or file descriptor, among other things.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can see different information on the screen for each thread: each of them
+    has an ID, a thread ID (Tid), a status, a utime (cumulative time spent executing
+    user code, in "jiffies", usually 10 ms), stime (cumulative time spent executing
+    system code, also in jiffies), and a name. If we click on one of the processes,
+    we will visualize the stack trace of the process in the section immediately below
+    it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have already mentioned that threads can be profiled. This is typically used
+    to debug memory leaks. Before we start profiling, keep in mind a few considerations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Devices under API Level 7 (Android 2.1) will need to have an SD card, since
+    the profiling will be saved there
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Devices above API Level 7 do not need to have an SD card
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Click the ![Capturing and analyzing thread information](img/Insert_Image_B04666_02_29.jpg)
+    icon. On Android devices over API Level 19 (Android 4.4), you will be prompted
+    to choose the sampling frequency, if you prefer trace-based profiling. When this
+    is activated, DDMS will be capturing information about the selected process, so
+    you just need to interact with your application. When you are ready, click again
+    on the icon (which now will look like ![Capturing and analyzing thread information](img/Insert_Image_B04666_02_35.jpg))
+    to stop the profiler and dump the obtained information. A screen such as the following
+    will appear:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Capturing and analyzing thread information](img/Insert_Image_B08951_02_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Each row represents the execution of an individual thread, increasing the time
+    as we move to the right-hand side. The execution of each method is displayed in
+    a different color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the bottom section of this new screen is a profile panel. This table shows
+    the inclusive and exclusive CPU time, in percentage and in absolute values. Exclusive
+    time means the time we have spent in the method, and inclusive time is the time
+    we have spent in the method and in all the functions being called. The calling
+    methods are hereby called parents, and the methods are called children.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There is a well-known issue with the profiler: the VM reuses thread IDs. If
+    a thread stops and another starts, they may get the same ID. This can result in
+    confusing data, so make sure you are handling threads properly when profiling.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Heap analysis and visualization
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have learned how to debug threads using DDMS. Now we will learn how to properly
+    analyze the memory heap of an application: that is, the portion of memory where
+    the allocated memory resides. This is very important when it comes to debugging
+    memory leaks.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s use a heap dump to track down the problem. Click the ![Heap analysis
+    and visualization](img/Insert_Image_B04666_02_26.jpg) icon to dump the HPROF file
+    and choose where you want to save the file. Now run `hprof-conv` over the file.
+    `hprof-conv` is an Android utility that converts the `.hprof` file from the Dalvik
+    format to the J2SE HPROF format, so it can be opened with standard tools. It can
+    be found under `/platform-tools`. To run it, you need to type the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now you will have a file that can be understood by some standard tools. In order
+    to read the file, we will use MAT, a standalone version downloadable from [http://www.eclipse.org/mat/downloads.php](http://www.eclipse.org/mat/downloads.php).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'MAT is a very complex and powerful tool. Click on **File** and open **Heap
+    Dump**. You will end up in a screen similar to the following one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Heap analysis and visualization](img/Insert_Image_B04666_02_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If we click on one of the groups we will display a set of options. A particularly
+    interesting one is **Histogram**. In the histogram, it is possible to see classes
+    filtered by the number of instances, the total amount of memory used, or the total
+    amount of memory alive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we right-click on one of the classes and select the **List objects** option
+    and then with incoming references, a list of the classes presented in the heap
+    will be produced. This can be ordered by usage later on. By picking one up we
+    can display the chains of references keeping the object alive. We cannot know
+    per se if that means there is a memory leak or not, but a programmer with knowledge
+    of the domain can identify whether one of the values should not be alive anymore:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Heap analysis and visualization](img/Insert_Image_B04666_02_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We can also visualize the heap in DDMS. If we select a process and click on
+    the ![Heap analysis and visualization](img/Insert_Image_B04666_02_25.jpg) icon,
+    the heap section will update with information about all the different data types
+    and objects that are currently alive in the application. It is also possible to
+    manually provoke a GC in order to update DDMS with the most up-to-date information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It is possible to see here the number of objects of each type, their total
+    size (including the values for the smallest and largest object, very useful to
+    identify when `OutOfMemoryExceptions` are happening), as well as the median and
+    the average size of each object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Heap analysis and visualization](img/Insert_Image_B04666_02_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Allocation tracker
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The allocation tracker is a tool provided by Android that records an app's memory
+    allocations and lists all allocated objects for the profiling cycle with their
+    call stack, size, and allocating code. This goes further than the memory heap
+    and allows us to identify individual pieces of memory being created. It is good
+    to identify places in the code that might be allocating memory inefficiently and
+    to identify objects of the same type that are being allocated and deallocated
+    over a short period of time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To start using the allocation tracker tool, select your process on the left-hand
+    side, select the **Allocation Tracker** section in the pane on the right, and
+    then click on the **Stop Tracking** button. A similar window to the following
+    one will open:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Allocation tracker](img/Insert_Image_B04666_02_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The amount of information can be overwhelming, and there is, therefore, a filter
+    at the bottom where you can specify which information you want to get. If you
+    click on one of the rows, the location of the allocated object will be printed
+    on the screen. Note that in our particular case, we are displaying information
+    about an object contained in the Google Maps API and the classes are named with
+    a letter. That means that the code has been obfuscated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using ProGuard to obfuscate code is a basic security mechanism. ProGuard does
+    not only optimize the code and get rid of the boilerplate, but also makes it very
+    hard for a hypothetical attacker to take a look at our code and, eventually, play
+    with it. In addition, each row represents a memory allocation event. Each column
+    represents information about the allocation, such as the object type, the thread,
+    and its size.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Network usage
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In Android 4.0, the **Data Usage** feature in **Settings** enables long-term
+    monitoring of how an application uses network resources. Starting with Android
+    4.0.3, it is possible to monitor an application using network resources in real
+    time. It is possible as well to distinguish traffic sources by applying a tag
+    to network sockets before use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To display the network usage of an application, select a process from the left-hand
+    side. Then move to the **Network Statistics** tab and click on the **Start** button.
+    You can select the tracking speed: every 100, 250, or 500 ms. Then, interact with
+    your application. A similar screen to the following one will be displayed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Network usage](img/Insert_Image_B04666_02_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The bottom of the screen displays the network information by **Tag**, and collected
+    by **Total**. It is possible to see the number of bytes and packages being sent
+    and received in total, as well as a graphical representation of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you haven''t done it yet, it is a good idea to set tags on a per-thread
+    basis with the help of the `TrafficStats` class. The `setThreadStatsTag()` function
+    will establish a tag identifier. The `tagSocket()` and `untagSocket()` functions
+    will manually tag individual sockets. Here''s a typical example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Emulator Control
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The last tab in the DDMS is the so-called **Emulator Control**. By selecting
+    one of our adb devices and starting it, a tab with some additional options will
+    be shown:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Emulator Control](img/Insert_Image_B04666_02_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'With the emulator control, we can modify our phone network in several ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is possible to select a different configuration for the data and voice (home
+    network, roaming, not found, denied, and so on)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The speed and latency of the Internet connection can be defined
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It is possible to simulate an incoming phone call or an incoming SMS from a
+    defined phone number
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We can send fake locations to our emulator. This can be done either manually
+    or by uploading a GPX/KML file
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: System status
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The last section of the DDMS is the **System Information** tab. Here, it is
+    possible to find out up to three different information categories: the CPU load,
+    memory usage at the current time, and the frame render time (this one is especially
+    important when benchmarking and debugging video games):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![System status](img/Insert_Image_B04666_02_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Debugging the UI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have focused until now on memory, threading, and the system aspects of Android.
+    There is a more visual aspect that can also dramatically improve the performance
+    of our application: the **user interface** (**UI**). Android provides a tool called
+    **Hierarchy Viewer** to debug and optimize any UI designed for Android. **Hierarchy
+    Viewer** provides a visual representation of the hierarchy of layouts of an application
+    with information about the performance of each node that can be found on the layout.
+    It provides a so-called **Pixel Perfect** window with magnified information of
+    the display, in case a close look at pixels is required.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To run **Hierarchy Viewer**, we need first to connect our device or emulator.
+    Note that, for security reasons, only devices running a developer version of the
+    Android system will work with **Hierarchy Viewer**. When it has been connected,
+    launch the `hierarchyviewer` program from the `/tools` directory. If you have
+    not yet set up this directory as part of your system `PATH`, this is a very good
+    moment to do it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You will see a screen similar to the following one. For each device connected
+    to the system, you will see a list of the attached running processes. Select one
+    of the processes, and click on **Load View Hierarchy**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging the UI](img/Insert_Image_B04666_02_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'A new screen with the actual **Hierarchy Viewer** is opened. The **Hierarchy
+    Viewer** looks as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging the UI](img/Insert_Image_B04666_02_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**Hierarchy Viewer** contains the following elements:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the upper right side, the **Tree Overview** provides a bird's eye view of
+    the `ViewHierarchy` application.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The **TreeView** can be dragged and zoomed with the help of the mouse. When
+    we click on an item, this item is highlighted, and we can access its properties.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The **Properties** pane, under the **TreeView**, provides a summary of all the
+    properties of the view.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The **Layout** view shows a wireframe of the layout. The outline of the view
+    that has been currently selected is red. If we click on an outline it will be
+    selected, and the properties will be accessible in the **Properties** pane.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Profiling with Hierarchy Viewer
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Hierarchy Viewer** provides a powerful profiler to analyze and optimize the
+    application. To proceed with the profiling, click the ![Profiling with Hierarchy
+    Viewer](img/Insert_Image_B04666_02_36.jpg) icon, **Profile Node**. If the hierarchy
+    of your view is quite large, it might take some time until it is initialized.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At this point, all the views in your hierarchy will get three dots:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The left dot represents the **Draw** process of the rendering pipeline
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The middle dot represents the **Layout** phase
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The right dot represents the **Execute** phase![Profiling with Hierarchy Viewer](img/Insert_Image_B04666_02_13.jpg)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Each dot color within a view has a different meaning:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A green dot means that the view is rendering faster than at least half of the
+    other views. Generally, a green color can be seen as a high-performing view.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A yellow dot means that the view is rendering faster than the bottom half of
+    the views in the hierarchy. This is only relative, but yellow colors might require
+    us to take a look at the view.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Red means the view is among the slowest half of views. Generally, we want to
+    take a look at these values.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'How can we interpret the result after applying the **Hierarchy Viewer** profiler?
+    The most important thing to note is that the profiler is always measuring in relative
+    terms, that is, against our own layout. That could mean that a node is always
+    red, but not necessarily slow if the application is performing well. The other
+    extreme also applies: a node could be green, but the performance could be a disaster
+    if the entire application is not responsive.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The **Hierarchy Viewer** applies a process called rasterization to acquire information.
+    Rasterization, which might sound familiar to developers from a graphic programming
+    background, such as videogame development, is the process of taking a graphic
+    primitive (for instance, a circle) and transforming it into pixels on the screen.
+    This is usually done by the GPU, but in this case, since we are dealing with software
+    rasterization, it is done by the CPU. This also contributes to the relative correctness
+    of the input of the **Hierarchy Viewer**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are some rules to be applied in order to identify problems with **Hierarchy
+    Viewer**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Red dots in leaf nodes or view groups with only a small number of children,
+    might be pointing out a problem.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If a view group has many children and a red dot for the measure phase, take
+    a look at the individual children.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A root view with red dots does not necessarily mean there is a problem. This
+    can happen often, since this is the parent for all the present views.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Systrace
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Systrace is a tool included in the Google SDK to analyze the performance of
+    an application. It captures and displays the execution time from your application
+    on the kernel level (capturing information such as CPU scheduler, application
+    threads, and disk activity). After the analysis has been completed, it generates
+    an HTML file with all the information compiled.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To make it work, click the **Systrace** button in the DDMS view (![Systrace](img/Insert_Image_B04666_02_33.jpg)).
+    A screen such as the following will appear:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Systrace](img/Insert_Image_B04666_02_14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'On this screen, we can input a few parameters for Systrace:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Destination where the file will be stored as an HTML file.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Trace duration: the default value is 5 seconds. 30 seconds is a good value
+    to cope with a good amount of information.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Trace buffer size: how big the buffer should be for tracing.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We can select the process from which we will enable the application traces,
+    so normally we will select our own application here.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We need to select some of the tags that we would like to interact with from
+    the list.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'When everything has been selected, press the **OK** button and interact for
+    a while with your application. When the systracing has finished, an HTML file
+    will be stored in the location you provided. This file looks as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Systrace](img/Insert_Image_B04666_02_15.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Android device debug options
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When we are debugging an Android device, we need to activate developer mode.
+    This mode is hidden by default, and we need to activate it manually if we need
+    to connect the device to ADB or to use some of its options. Android's creators
+    did a good job at hiding this option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's see how we can activate this option to have a better understanding of
+    Android debugging, and how can we play with the different debug configurations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As mentioned, the developer options in the device are really hidden by default.
+    The purpose for this is very likely to make it only available to advanced users
+    and not to normal users. A casual person will not need to access the features
+    in this section; doing so might options that could harm the device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In standard ROMs we need to go to the **About** section, scroll down until
+    we see the **Build number** entry, and then tap five times in quick succession.
+    A small dialog will be displayed saying that we are now a developer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Android device debug options](img/Insert_Image_B04666_02_16.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Due to custom ROM customization, it might be a little bit different on some
+    other devices. Here are a few popular manufacturers and how the debugging options
+    can be activated:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Samsung**: **Settings** | **About device** | **Build number**'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**LG**: **Settings** | **About phone** | **Software information** | **Build
+    number**'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**HTC**: **Settings** | **About** | **Software information** | **More** | **Build
+    number**'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'When the developer option has been activated, we will see (this might vary
+    in different manufacturers) an option called **Developer options** in the **System**
+    section. If we click on it, the options will be displayed. We need to activate
+    the switch for **Developer options**, and we will have access to the entire set:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Android device debug options](img/Insert_Image_B04666_02_17.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Again, options might vary from each manufacturer to the next. However, this
+    is a comprehensive list of the default options in Android:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Take a bug report**: This option will collect information about the current
+    state of the device and send it as an e-mail. It might take some time, since a
+    lot of information might be collected.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Desktop backup password**: This sets up a password for full desktop backups,
+    which by default are not password-protected.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Stay awake**: The device will stay awake continuously while it is being charged,
+    which is very handy for debugging.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Always stay awake**: Similar to the previous one, but in this case the device
+    will always be awake regardless of whether it is being charged or not. It can
+    be dangerous if the developer forgets to activate it, since the device will be
+    awake even after developing.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**HDCP checking**: **HDCP** stands for **High-bandwidth Digital Content Protection**.
+    We can set up this option to never check for digital protection, to always check
+    for digital protection, and to do so only in the case of DRM content.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Enable Bluetooth HCI snoop log**: When this option is activated, all HCI
+    Bluetooth packages will be saved in a file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Process stats**: This section contains geeky stats about the device''s processes.
+    It displays the background applications that have been running for the last two
+    hours, as well as some particular information for them (such as average/maximum
+    RAM usage, runtime, and running services):![Android device debug options](img/Insert_Image_B04666_02_18.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**USB debugging**: This enables the device to debug applications with ADB when
+    the USB is connected. This should be the first option to be activated by a developer.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Bug report shortcut**: This option shows a button in the power menu that
+    can be pressed in order to take a bug report.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Allow mock locations**: Locations can be mocked when this option has been
+    activated.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Enable view attribute inspection**: By activating this option, we will be
+    able to view the attribute inspection in the Android system manager.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Select debug app**: Through this option we are able to select the application
+    to be debugged, without having to type long `adb` commands.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Wait for debugger**: This option attaches the app being debugged (selected
+    in the previous option) to the debugger.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Verify apps over USB**: This option is deactivated by default, unless the
+    USB debugging option is active. Any content being installed manually will be verified
+    to avoid the installation of malware.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Wireless display certification**: Use this option to help with the certification
+    of the Alliance Wi-Fi Display specification.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Enable Wi-Fi verbose logging**: This option enables a more comprehensive
+    log for all Wi-Fi operations.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Aggressive WiFi to cellular handover**: This option artificially reduces
+    the Wi-Fi **Received Signal Strength Indication** (**RSSI**) to encourage the
+    Wi-Fi state machine to decide to switch the connection.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Always allow Wi-Fi roam scans**: Android devices already connected to a Wi-Fi
+    network by default do not roam when a stronger SSID is available. With this option
+    activated, the device will permanently roam for a new Wi-Fi.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Logger buffer sizes**: This option alters the size of each logger buffer
+    (by default, this is 256 K).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Show touches**: Each time there is interaction with the screen, there will
+    be visual feedback if this option is activated.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Pointer location**: This is similar to the previous one: the pointer will
+    be located on the screen with two perpendicular lines. At the top of the screen,
+    there will be numerical information.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Show surface updates**: When the screen is being updated, the entire surface
+    will flash (not recommended for epileptics).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Show layout bounds**: This is one of the most useful options when we are
+    debugging layouts. Once this is enabled, you should see all of the bounding areas
+    of your views displayed in vibrant blue and purple:![Android device debug options](img/Insert_Image_B04666_02_19.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Force RTL layout direction**: This forces the layout directions from right
+    to left instead of the default left to right. Some users might like them right
+    to left, but for certain languages (such as Arabic or Hebrew), this is how the
+    layouts will automatically be set up. We can use this mode to test that our applications
+    behave properly under this configuration.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Window animation scale**: You can select the animation speed of each window
+    (between 0.5x and 10x) or deactivate it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Transition animation scale**: You can select the animation speed of each
+    transition (between 0.5x and 10x) or deactivate it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Animator animation scale**: You can select the animation speed for each animator
+    (between 0.5x and 10x) or deactivate it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Simulate secondary displays**: This setting allows developers to simulate
+    a different screen size in a secondary display.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Force GPU rendering**: Uses hardware 2D rendering. This can either make your
+    app look great or kill the performance. Use it for debugging purposes only.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Show GPU view updates**: Every element being drawn with GPU hardware will
+    be overlaid with a red square.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Show hardware layers updates**: This option indicates any time when the hardware
+    layers are being updated.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Debug GPU overdraw**: Visualizes overdraw with a code of colors in elements,
+    depending on how often they are being drawn: This can be used to research where
+    an app might be doing more rendering work than necessary. The screen will begin
+    to display a big set of colors, but do not panic! We can easily read what they
+    mean:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**True color**: The true color means that there has been no overdraw during
+    the execution'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Blue**: An overdrawn did happen once'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Green**: There was an overdraw twice in the context of the application'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Pink**: The overdraw happened three times'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Red**: There was an overdraw four or more times'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '![Android device debug options](img/Insert_Image_B04666_02_20.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: '**Force 4x MSAA**: Enables 4x **MSAA** (stands for **Multi Sample Anti Aliasing**).
+    This will make your application faster and will also improve the image quality.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disable HW overlays**: With a hardware overlay, each application gets its
+    own portion of video memory, getting rid of the need to check for collisions and
+    clipping. This option will disable hardware overlays.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Simulate color space**: With this option, we can force Android to simulate
+    the screen in only a certain combination of colors (for example, monochrome, red-green,
+    red-yellow, and so on).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Use NuPlayer (experimental)**: NuPlayer is a video player for supporting
+    online video content. It has a lot of bugs, so is disabled by default. With this
+    option NuPlayer will be activated.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disable USB audio routing**: This option disables the automatic redirection
+    of USB audio routing to external peripherals.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Strict mode enabled**: StrictMode is a developer mode that detects problems
+    that a developer might be having, and then notifies them so they can be fixed.
+    StrictMode typically catches actions such as network accesses in incorrect threads.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Show CPU usage**: This option, when activated, overlays information about
+    the CPU usage at the top of the screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Profile GPU rendering**: This tool, when it has been activated, provides
+    a visual representation of the speed and rhythm of rendering UI frames. This is
+    only available from Android 4.1\. In the following screen, we see an example of
+    the **Profile GPU rendering** tool, and here we have some instructions about how
+    to understand it:![Android device debug options](img/Insert_Image_B04666_02_21.jpg)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The horizontal axis represents the elapsed time, and the vertical axis is the
+    time per frame in milliseconds.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Each vertical bar corresponds with one rendered frame. The taller the bar, the
+    longer it needed to be rendered.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The green line represents 16 milliseconds. Every time a frame crosses the green
+    line your application is missing a frame, which may lead to the user perceiving
+    it as stuttering images.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Each of the color lines has a meaning: the blue section of the bar represents
+    the time used to create and update the view''s display lists. If this part of
+    the bar is tall, there may be a lot of custom view drawing or a lot of work in
+    the `onDraw` methods.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The purple section is the time spent transferring resources to the render thread
+    (only from Android 4.1). The red section of the bar represents the time spent
+    by Android's 2D renderer sending commands to OpenGL in order to draw and redraw
+    display lists.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The orange section represents the time the CPU waits until the GPU is finished.
+    If this bar is too long, the GPU is spending too much time performing operations.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Enable OpenGL traces**: Enables tracing OpenGL in a log file of your choice.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Don''t keep activities**: This setting closes every application as soon as
+    you leave its main view. There''s no need to say that one must be careful with
+    this since it will alter the state of every application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Background process limit**: With this option, we can limit the number of
+    background processes that will be running in parallel.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Show all ANRs**: Every ANR will be displayed when the application is being
+    blocked by an *Application Not Responding* error, even if this is happening in
+    the background.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android Instant Run
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: At the time of writing, Google released Android Studio 2.2 Preview. This is
+    (as the name suggests) the second major version of Android Studio, and it comes
+    with many fixes, performance improvements, and an awesome tool called **Android
+    Instant Run**. This tool allows us to perform changes in the code and display
+    them instantly in our device or emulator. This is a priceless feature when we
+    are debugging, since we do not need to recompile the application, start it again,
+    and reconnect it to `adb`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To activate this option, we need to go to **Preferences**, then look for **Build,
+    Execution, Deployment** | **Instant Run**. Check **Enable Instant Run to hot swap
+    code/resource changes on deploy (default enabled)**; if you are running the right
+    version of the Gradle plugin, you will be able to activate it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Android Instant Run](img/Insert_Image_B04666_02_22.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'To run an application, select **Run** so Android Studio operates normally.
+    Now comes the interesting part: after you have performed edits or modifications
+    on your source code, clicking **Run** once more will only deploy the changes to
+    the device or emulator.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the moment, there are a few operations that are not supported by **Instant
+    Run**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add, remove, or change annotations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Add, remove, or change an instance field
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Add, remove, or change a static field
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Add or remove a static method signature
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Change a static method signature
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Add or remove an instance method
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Change an instance method signature
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Changing which parent class the current class inherits from
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Change the list of implemented interfaces
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Changing the static initializer of a class
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Add, remove, or change a string (allowed, but requires a restart of the hosting
+    activity)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: GPU profiler
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The GPU profiler is also an experimental tool included in Android Studio 2.0\.
+    This tool aims to help us understand what has caused a particular problem in a
+    rendering outcome, and to inspect the GPU's state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The GPU debugging tools (where the GPU profiler is included) are not installed
+    by default. To do this, we need to install them from the SDK tools section of
+    the SDK manager.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To use this profiler within our application, we need to load the trace library
+    in our application. We can do this either in our Java code or in our C++ code
+    (something that makes sense, if we consider that a lot of the code used for graphics
+    runs in C++ due to its better performance). Regardless of which method you use,
+    you need to copy the library into your project to be loaded. The libraries will
+    be located in `<sdkDir>/extras/android/gapid/android/<abi>/libgapii.so`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also need to copy some other relevant folders into the `jniLibs` directory.
+    This can be found in `<projectDir>/app/src/main/jniLibs`. If it doesn't already
+    exist, you should create it (there will be an introduction to the NDK and how
+    to deal with native code in future chapters). Like the SDK manager folder, `jniLibs`
+    should contain one folder for each ABI that you plan to support. If you don't
+    know which ABIs you plan to support, you can copy all of the folders. Your final
+    project directory structure should look like `<projectDir>/app/src/main/jniLibs/<abi>/libgappii.so`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to load the library in native code, we need to create a code snippet
+    similar to the following one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In order to load it into the main class, the following code snippet must be
+    used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Downloading the example code**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Detailed steps to download the code bundle are mentioned in the *Preface* of
+    this book. The code bundle for the book is also hosted on GitHub at [https://github.com/PacktPublishing/Android-High-Performance-Programming](https://github.com/PacktPublishing/Android-High-Performance-Programming).
+    We also have other code bundles from our rich catalog of books and videos available
+    at [https://github.com/PacktPublishing/](https://github.com/PacktPublishing/).
+    Check them out!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running a trace
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When we have added the trace library to our application, it will block on startup
+    until it can connect to the trace receiver of Android Studio. That means you need
+    to remove the trace library when you are done with the profiler, since it will
+    lead to a useless render.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to start a trace, just run and deploy your application. A blank screen
+    will first be prompted while it is waiting for the trace receiver to connect.
+    To enable it, go to the CPU/GPU tab of the DDMS, and click on the red trace button,
+    which you can find on the left side of the GPU tab (![Running a trace](img/Insert_Image_B04666_02_37.jpg)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the tracing starts, the application unlocks and we can interact with it.
+    When we are done with the tracing, we need to click on the trace button again
+    to stop the tracing process. When the file has been written, it will be opened.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Running a trace](img/Insert_Image_B04666_02_23.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: ClassyShark
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'ClassyShark is a standalone Android diagnosing tool developed by Boris Farber,
+    Developer Advocate at Google. ClassyShark serves as an Android executable browser,
+    and is a valuable tool to navigate through Android classes and their internals:
+    class interfaces and members, dependencies, dex structure and counts, and so on.
+    ClassyShark has been released under the Apache 2.0 license, and it can be freely
+    downloaded from [https://github.com/google/android-classyshark](https://github.com/google/android-classyshark).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: ClassyShark is a useful tool when it comes to analyzing the inner content of
+    an Android APK, and diagnoses problems early that might happen due to multidex
+    or dexing problems, dependencies and sub-libraries being added, circular dependencies,
+    and problems with native code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting started
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In order to get started with ClassyShark, the fastest way is to download the
+    last `.jar` from the GitHub site (as the time of writing this book, version 6.6
+    can be downloaded from the following URL: [https://github.com/google/android-classyshark/releases](https://github.com/google/android-classyshark/releases)).
+    Download the latest version and then run it from the console with the following
+    command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will start the application. You will be prompted with a screen like the
+    following one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting started](img/Insert_Image_B04666_02_38.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: It is now time to open a sample APK to see its composition and start using ClassyShark.
+    Click on the ![Getting started](img/Insert_Image_B04666_02_40.jpg) icon and a
+    screen to select an APK will be displayed. Select an APK from one of your projects
+    (if you have been using Android Studio, they are generally in the `build/output/apk`
+    folder). For this purpose, any APK file will be valid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you want to automate ClassyShark or you feel more comfortable with the command
+    line, it is also possible to open the APK directly by running the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When you have opened the file, you will be able to see something similar to
+    the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting started](img/Insert_Image_B04666_02_39.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: On the left side, we can see a tree structure with the folders and the resources
+    of the APK file (including all the files inside `classes.dex`).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'On the right side we can see a summary of the source code composition for the
+    APK:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The number of classes
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The number of strings
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How many fields are declared within the APK
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The number of methods in the APK
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The number of limits is a particularly important upper limit when an application
+    is being developed. In particular, we can reference a large number of methods
+    on an APK, but we can only call the first 65,536\. There is no more space for
+    invocation instructions. This was for some time a cause of controversy and discussion
+    about how could it be solved, and most of the solutions have an impact on the
+    performance of the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we navigate through the `classes.dex` file, we will see all the source code
+    belonging to the APK (please refer to classes that have been obfuscated with ProGuarded),
+    including the source code of libraries such as Android Support, third-party libraries,
+    and so on. So, to make it interesting, try selecting one of the classes belonging
+    to your own application, and then click on it. You should be able to display a
+    dialog similar to the following one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting started](img/Insert_Image_B04666_02_41.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Note that all the fields, methods, and constructors of the files are being displayed
+    here. For all the graphics and stats aficionados, clicking on the **Methods count**
+    tab displays an interactive pie chart. Clicking on any of the sections of the
+    pie chart will display a subsection. We can also expand on the tree of each of
+    the groups. This way, we can easily track many issues with ClassyShark, such as
+    missing libraries, references to methods from other sub libraries, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting started](img/Insert_Image_B04666_02_42.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We have previously mentioned the 65 K limit in Android. One of the common solutions
+    to this problem is multidexing: that means including several `.dex` files so each
+    of them contains under 65 K methods. While this solves the limit problem, it can
+    lead to some performance problems.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With ClassyShark, we can accurately find out in which of the `.dex` files a
+    method has been included. When several `.dex` files have been included, all of
+    them will be displayed, as in the following screenshot (from the I/O schedule
+    application):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting started](img/Insert_Image_B04666_02_43.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Debugging an Android application is a science that a developer needs to be able
+    to master. Most debugging tools have a learning curve in order to be able to play
+    with them efficiently, and to know which one needs to be used in a particular
+    situation. Android provides a set of tools that take some time to get to know,
+    and due to the particular nature of Android as a mobile platform, some tools require
+    specific knowledge of debugging, such as threading and memory management.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After reading this chapter, the user will be aware of all the problems that
+    can happen when we are developing an Android application (ANRs, memory leaks,
+    incorrect threading, and so on) and which tool must be used in order to analyze
+    it, and then solve it. Using advanced techniques, such as profiling, will help
+    us to find bugs, memory leaks, and incorrect threading on our application; these
+    things cannot be easily seen by merely using the application.
+  prefs: []
+  type: TYPE_NORMAL
