@@ -1,86 +1,125 @@
 - en: Chapter 3. Android Security Assessment Tools
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第三章. Android安全评估工具
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将介绍以下内容：
 - en: Installing and setting up Santoku
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 安装和设置Santoku
 - en: Setting up drozer
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设置drozer
 - en: Running a drozer session
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 运行drozer会话
 - en: Enumerating installed packages
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 枚举已安装的软件包
 - en: Enumerating activities
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 枚举活动
 - en: Enumerating content providers
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 枚举内容提供者
 - en: Enumerating services
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 枚举服务
 - en: Enumerating broadcast receivers
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 枚举广播接收器
 - en: Determining application attack surfaces
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 确定应用程序攻击面
 - en: Launching activities
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 启动活动
 - en: Writing a drozer module – a device enumeration module
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 编写一个drozer模块——一个设备枚举模块
 - en: Writing an application certificate enumerator
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 编写一个应用程序证书枚举器
 - en: Introduction
+  id: totrans-14
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: We've covered all the Android development basics and introduced all the Android
     Development Tools. Now it's time to start getting into the Android hacking and
     security assessment tools.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经介绍了所有Android开发基础，并介绍了所有Android开发工具。现在是我们开始深入了解Android黑客和安全评估工具的时候了。
 - en: This chapter introduces you to an exploitation and Android security assessment
     framework called **drozer** —formally known as **Mercury** —developed by some
     of the people at MWR Labs. Also covered in the chapter is a Debian-based Linux
     distribution called **Santoku** , which is basically like BackTrack or Kali Linux
     of Mobile security assessment. Here we cover setting it up and getting it running.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章介绍了一个名为**drozer**的利用和Android安全评估框架——正式名称为**Mercury**——由MWR Labs的一些人开发。同时本章还介绍了一个基于Debian的Linux发行版，名为**Santoku**，它基本上就像是移动安全评估的BackTrack或Kali
+    Linux。这里我们将介绍如何设置它并使其运行。
 - en: Before we begin setting up drozer and writing some sample scripts, something
     that's very important for you to understand is a little about how drozer operates
     and how it solves some problems in the Android security assessment game.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们开始设置drozer并编写一些示例脚本之前，对于你来说非常重要的一件事是要了解一些关于drozer的运作方式以及它是如何在Android安全评估游戏中解决一些问题的。
 - en: 'drozer comes in two parts: one is the "console" that runs on your local machine
     and the other is the "server", which is basically an application installed on
     a target Android device. When you''re using the console to interact with the Android
     device, you are basically injecting Java code into the drozer Agent that gets
     executed on the actual device.'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: drozer分为两部分：一部分是在你的本地机器上运行的“控制台”，另一部分是安装在目标Android设备上的“服务器”。当使用控制台与Android设备交互时，你实际上是在将Java代码注入到drozer代理中，该代理在实际设备上执行。
 - en: Why design it this way? Well before drozer came along, writing application-vulnerability-focused
     exploits meant having to compile an Android app, to exploit a given vulnerability,
     deploy it to the target phone, and check if it worked. And then if it didn't,
@@ -89,21 +128,27 @@
     and test exploits by passing commands to the device on the fly by proxy of the
     drozer Agent, which means you never need to touch an Android development environment
     or recompile an exploit app multiple times.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 为什么要这样设计呢？在drozer出现之前，编写以应用程序漏洞为目标的利用意味着为了利用特定的漏洞，你需要编译一个Android应用，将其部署到目标手机上，并检查是否有效。如果无效，你需要重新进行整个流程！这种做法非常繁琐，会使得Android安全评估变得像一件苦差事。drozer通过代理drozer代理传递命令到设备，使得部署和测试利用变得简单，这意味着你永远不需要接触Android开发环境或多次重新编译利用应用。
 - en: drozer is called a framework because it allows you to extend its functionality
     by writing your own modules or plugins and adapting it to your needs. It is essentially
     the closest thing to the Metasploit of mobile security assessment.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: drozer被称为框架，因为它允许你通过编写自己的模块或插件来扩展其功能，并适应你的需求。它本质上是最接近移动安全评估的Metasploit。
 - en: Another effect that the standard drozer framework has is that it is essentially
     an Android application—one component of it—with no permissions, which means whatever
     exploits you manage to pull off on an Android device will automatically be quite
     portable and require very low privilege levels to succeed. The aim is to demonstrate
     how effective a "no-permission" application can be at exploiting an Android device
     and the applications hosted on it.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 标准drozer框架的另一个效果是，它本质上是一个Android应用程序——其中的一部分——没有权限，这意味着你在Android设备上成功执行的任何利用将自动变得非常可移植，并且成功所需的权限级别非常低。目的是展示一个“无权限”应用程序在利用Android设备及其上托管的应用程序时可以多么有效。
 - en: And that's it as far as some basic background into drozer goes. As far as the
     rest of the chapter is concerned, you may require some basic knowledge of the
     Python programming language, since drozer's modules are developed in Python. It
@@ -111,697 +156,984 @@
     to or have developed some Android apps. If you've never developed anything serious
     or generally never programmed in Python, don't fret—I'll make sure to walk through
     all the Python code and explain it carefully.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 关于drozer的基本背景知识就介绍到这里。至于本章的其余部分，你可能需要一些Python编程语言的基础知识，因为drozer的模块是用Python开发的。如果你了解Java反射，或者知道如何开发一些Android应用，也会有所帮助。如果你从未认真开发过东西，或者通常不使用Python编程，不要担心——我会确保详细解释所有的Python代码。
 - en: So without further ado, let's get going!
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 那么不再犹豫，让我们开始吧！
 - en: Installing and setting up Santoku
+  id: totrans-24
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 安装和设置Santoku
 - en: The folks at viaForensics have developed a really cool Ubuntu-based distribution
     packed with mobile security assessment tools, called Santoku. The following recipe
     shows you how to set up your own installation. The reason I'm doing this first
     is because you may want to install and run drozer inside your Santoku operating
     system installation.
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: viaForensics的开发者们开发了一个基于Ubuntu的非常酷的发行版，其中包含移动安全评估工具，名为Santoku。以下指南将展示如何设置你自己的安装。我首先做这个是因为你可能想要在你的Santoku操作系统安装中安装并运行drozer。
 - en: Getting ready
+  id: totrans-26
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: To start off with, we're going to be doing some downloading. Grab a copy of
     the latest Santoku image from [https://santoku-linux.com/download](https://santoku-linux.com/download).
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将进行一些下载。从[https://santoku-linux.com/download](https://santoku-linux.com/download)获取最新Santoku映像的副本。
 - en: How to do it...
+  id: totrans-28
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Once you''ve downloaded the latest copy of Santoku, you can begin setting it
     up as follows:'
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 下载最新版本的Santoku后，你可以按照以下步骤开始设置：
 - en: To start off, you can write the Santoku image to a USB memory stick using either
     the Ubuntu start-up disk creator or the Universal USB installer for Windows, available
     at [http://www.pendrivelinux.com/downloads/Universal-USB-Installer/Universal-USB-Installer-1.9.4.7.exe](http://www.pendrivelinux.com/downloads/Universal-USB-Installer/Universal-USB-Installer-1.9.4.7.exe).
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，你可以使用Ubuntu启动盘创建器或Windows的通用USB安装程序将Santoku映像写入USB存储棒，可从[http://www.pendrivelinux.com/downloads/Universal-USB-Installer/Universal-USB-Installer-1.9.4.7.exe](http://www.pendrivelinux.com/downloads/Universal-USB-Installer/Universal-USB-Installer-1.9.4.7.exe)获取。
 - en: Write the Santoku image you've downloaded to your USB disk.
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将你下载的Santoku映像写入USB磁盘。
 - en: 'Using the Universal USB installer, perform the following steps:'
+  id: totrans-32
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用通用USB安装程序，执行以下步骤：
 - en: Start up the Universal USB installer and select **Try Unlisted Linux ISO** at
     **Step 1**.![How to do it...](img/00050.jpeg)
+  id: totrans-33
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动通用USB安装程序，在**步骤1**中选择**尝试未列出的Linux ISO**。![如何操作...](img/00050.jpeg)
 - en: Click on **Browse** and select the path to your Santoku ISO as in the previous
     screenshot.
+  id: totrans-34
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 点击**浏览**，选择你Santoku ISO的路径，如前一个截图所示。
 - en: At **Step 3**, select the USB flash drive you wish to write the image to.
+  id: totrans-35
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在**步骤3**中，选择你希望写入映像的USB闪存盘。
 - en: Click on **Create** and sit back and relax while your install disk image is
     prepared.
+  id: totrans-36
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 点击**创建**，然后放松休息，同时你的安装磁盘映像正在准备中。
 - en: Restart your host machine with the USB device plugged in; open up the Boot Menu
     and select to boot off of the USB disk.
+  id: totrans-37
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在插入USB设备的情况下重启你的主机；打开启动菜单并选择从USB磁盘启动。
 - en: Once it boots from the USB start-up disk, you should see the following screen:![How
     to do it...](img/00051.jpeg)
+  id: totrans-38
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 一旦从USB启动盘启动，你应该会看到以下屏幕：![如何操作...](img/00051.jpeg)
 - en: At the boot screen, select **install – start the installer directly**.
+  id: totrans-39
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在启动屏幕上，选择**install – 直接启动安装程序**。
 - en: The installation should begin with the screen shown in the following screenshot:![How
     to do it...](img/00052.jpeg)
+  id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装应该从以下截图所示的屏幕开始：![如何操作...](img/00052.jpeg)
 - en: Follow the rest of the install wizard prompts until installation begins. The
     process is very easy to understand and should be familiar to anyone who has installed
     Ubuntu before.
+  id: totrans-41
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照安装向导的提示操作，直到开始安装。这个过程非常容易理解，对于之前安装过Ubuntu的人来说应该很熟悉。
 - en: 'Once the installation is complete, you should be presented with a brand new
     Santoku desktop as shown in the following screenshot:'
+  id: totrans-42
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 安装完成后，你应该会看到一个全新的Santoku桌面，如下截图所示：
 - en: '![How to do it...](img/00053.jpeg)'
+  id: totrans-43
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00053.jpeg)'
 - en: There's more...
+  id: totrans-44
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: If you're going to install this on a VM, you'll need to grab a copy of VirtualBox.
     For Windows and Unix/Linux users, this is available at [https://www.virtualbox.org/wiki/Downloads](https://www.virtualbox.org/wiki/Downloads).
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你打算在虚拟机上安装，你需要获取 VirtualBox 的副本。对于Windows和Unix/Linux用户，可以在[https://www.virtualbox.org/wiki/Downloads](https://www.virtualbox.org/wiki/Downloads)找到。
 - en: 'Once you''ve downloaded and installed VirtualBox, you''ll need to create a
     new VM by performing the following steps:'
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 下载并安装 VirtualBox 后，你需要通过以下步骤创建一个新的虚拟机：
 - en: Click on the **New** button located in the top left of the VirtualBox window.
+  id: totrans-47
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 点击 VirtualBox 窗口左上角的**新建**按钮。
 - en: The **Create Virtual Machine** dialog should pop up. Enter `Santuko` in the
     **Name** field, or alternatively whatever you'd like to name your new VM.
+  id: totrans-48
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**创建虚拟机**对话框应该会弹出。在**名称**字段中输入`Santuko`，或者你也可以根据喜好为新的虚拟机命名。'
 - en: Select **Linux** in the **Type** drop-down menu.
+  id: totrans-49
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在**类型**下拉菜单中选择**Linux**。
 - en: Select **Ubuntu** in the **Version** drop-down menu and click on **Next**.![There's
     more...](img/00054.jpeg)
+  id: totrans-50
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在**版本**下拉菜单中选择**Ubuntu**并点击**下一步**。![还有更多...](img/00054.jpeg)
 - en: The **Memory size** dialog should show up now; the default setting is **512**.
     This is adequate; however, if you have a beefy RAM on your host machine, you are
     welcome to be a bit more generous. Once you've decided on a memory size, click
     on **Next**.
+  id: totrans-51
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 此时会出现**内存大小**对话框；默认设置为**512**。这个设置是足够的；但是，如果你的宿主机有足够的内存，你可以更慷慨一点。确定内存大小后，点击**下一步**。
 - en: The **Hard Drive setup** dialog will show up; select the **Create virtual hard
     drive now** option and click on **Next**.
+  id: totrans-52
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**硬盘设置**对话框会出现；选择**现在创建虚拟硬盘**选项并点击**下一步**。'
 - en: You will be presented with the **Hard drive file type** dialog; select the **VDI
     (VirtualBox Disk Image)** option and click on **Next**.
+  id: totrans-53
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你将看到**硬盘文件类型**对话框；选择**VDI（VirtualBox磁盘映像）**选项并点击**下一步**。
 - en: The **Storage on physical hard drive** dialog should show up; select the **Dynamically
     allocated** option; this is because you will likely install and download a whole
     bunch of apps and tools onto this VM's hard disk. Click on **Next**.
+  id: totrans-54
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**物理硬盘上的存储**对话框应该会出现；选择**动态分配**选项；因为你会很可能在这个虚拟机的硬盘上安装和下载许多应用程序和工具。点击**下一步**。'
 - en: The **File location and size** dialog should show up. You can accept the defaults
     here; 8 gigabytes is enough to store all the initial operating system data and
     utilities. If you'd like more, you can configure the VM to take up a little more
     storage space; it's all up to you. Once you've chosen an appropriate size, click
     on **Next**.
+  id: totrans-55
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**文件位置和大小**对话框应该会出现。你可以接受这里的默认设置；8吉字节足以存储所有初始操作系统数据及工具。如果你需要更多空间，可以配置虚拟机占用更多的存储空间；一切由你决定。选择合适的大小后，点击**下一步**。'
 - en: Your VM should be all set up now; you will need to configure a live CD for it
     to boot from. To do this, click on **Settings**.
+  id: totrans-56
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你的虚拟机现在应该设置好了；你需要为其配置一个可启动的实时CD。为此，点击**设置**。
 - en: Once the **Settings** dialog shows up, click on **Storage** on the left-hand
     side pane of the **Settings** dialog.
+  id: totrans-57
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**设置**对话框出现后，点击**设置**对话框左侧面板中的**存储**。'
 - en: 'Under the **Controller: IDE** section, click on the **Add CD/DVD Device** button,
     which is the first button next to the **Controller: IDE** section label.![There''s
     more...](img/00055.jpeg)'
+  id: totrans-58
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '在**控制器: IDE**部分下，点击**控制器: IDE**部分标签旁边的第一个按钮**添加CD/DVD设备**。![还有更多...](img/00055.jpeg)'
 - en: A **VirtualBox Question** dialog will pop up; on this dialog, click on **Choose
     disk**. You should be presented with a **File** dialog.
+  id: totrans-59
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 会弹出一个**VirtualBox 问题**对话框；在这个对话框上，点击**选择磁盘**。你应该会看到一个**文件**对话框。
 - en: Navigate to and select the Santoku image you've downloaded.
+  id: totrans-60
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 导航到并选择你已下载的 Santoku 映像。
 - en: You can now start your new Santoku Virtual Machine and begin installing it.![There's
     more...](img/00056.jpeg)
+  id: totrans-61
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你现在可以启动新的 Santoku 虚拟机并开始安装。![还有更多...](img/00056.jpeg)
 - en: Setting up drozer
+  id: totrans-62
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设置 drozer
 - en: Installing and setting up drozer is fairly straightforward; the set up process
     is demonstrated for both Windows 7 and Unix/Linux types of systems.
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 安装并设置 drozer 是相当简单的；设置过程适用于Windows 7和Unix/Linux类型的系统。
 - en: How to do it...
+  id: totrans-64
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Before we start hacking out some drozer scripts and get to know the exploitation
     and enumeration modules, you will need to grab a copy of the drozer installer
     suited to your system. Here''s how you do that:'
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始编写一些 drozer 脚本并了解利用和枚举模块之前，你需要获取适合你系统的 drozer 安装程序。以下是操作方法：
 - en: Head over to [https://www.mwrinfosecurity.com/products/drozer/community-edition/](https://www.mwrinfosecurity.com/products/drozer/community-edition/)
     to grab a copy of the drozer framework; of course, here I will be talking about
     the community edition. If you wish to spend some cash on the non-free edition,
     head over to [https://products.mwrinfosecurity.com/drozer/buy](https://products.mwrinfosecurity.com/drozer/buy).![How
     to do it...](img/00057.jpeg)
+  id: totrans-66
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 访问 [https://www.mwrinfosecurity.com/products/drozer/community-edition/](https://www.mwrinfosecurity.com/products/drozer/community-edition/)
+    获取 drozer 框架的副本；当然，这里我将讨论社区版。如果你愿意花钱购买非免费版本，请访问 [https://products.mwrinfosecurity.com/drozer/buy](https://products.mwrinfosecurity.com/drozer/buy)。![如何操作...](img/00057.jpeg)
 - en: Windows users should click on the **drozer (Windows installer)** option; it
     should start downloading the `drozer-installer-[version].zip` file immediately.
+  id: totrans-67
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: Windows 用户应点击 **drozer (Windows 安装程序)** 选项；它应该会立即开始下载 `drozer-installer-[version].zip`
+    文件。
 - en: '![How to do it...](img/00058.jpeg)'
+  id: totrans-68
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00058.jpeg)'
 - en: Unix/Linux users would, depending on your distribution or OS flavor, choose
     either the **drozer (Debian/Ubuntu Archive)** file or the **drozer (RPM) package**
     file.
+  id: totrans-69
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: Unix/Linux 用户根据你的发行版或操作系统类型，选择 **drozer (Debian/Ubuntu Archive)** 文件或 **drozer
+    (RPM) 包** 文件。
 - en: 'Once you''ve downloaded the drozer version compatible with your system, you
     will need to do the following, depending on your system:'
+  id: totrans-70
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下载与你的系统兼容的 drozer 版本后，根据你的系统，你需要执行以下操作：
 - en: 'For Windows users:'
+  id: totrans-71
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 对于 Windows 用户：
 - en: You will need to unzip/unpack the `drozer-installer-[version].zip` file to a
     place/path you can easily remember.![How to do it...](img/00059.jpeg)
+  id: totrans-72
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你需要将 `drozer-installer-[version].zip` 文件解压到你能轻松记住的位置/路径中。[![如何操作...](img/00059.jpeg)
 - en: Once unzipped, run the file called `setup.exe` included in the ZIP archive.
     An install wizard should start up as shown in the following screenshot:![How to
     do it...](img/00060.jpeg)
+  id: totrans-73
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 解压后，运行 ZIP 归档中包含的名为 `setup.exe` 的文件。应该会如以下截图所示启动安装向导：![如何操作...](img/00060.jpeg)
 - en: Once the install wizard is set up, all you need to do is follow the prompts,
     pay attention to the configuration dialogs, and also make sure to take note of
     where drozer will be installed on your system; you will need to visit this path
     often to use drozer. Once installation starts, you should see the following dialog
     appear:![How to do it...](img/00061.jpeg)
+  id: totrans-74
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装向导设置好后，你需要做的就是按照提示操作，注意配置对话框，并确保记下 drozer 将安装在系统上的位置；你需要经常访问此路径以使用 drozer。安装开始后，你应该会看到以下对话框出现：![如何操作...](img/00061.jpeg)
 - en: Once installation is complete, you should have drozer installed to the path
     you've specified. By default, this is configured to be at the root of the `C`
     drive, as shown in the following screenshot:![How to do it...](img/00062.jpeg)
+  id: totrans-75
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装完成后，你应该已经将 drozer 安装到你指定的路径中。默认情况下，这被配置在 `C` 驱动的根目录下，如下截图所示：![如何操作...](img/00062.jpeg)
 - en: 'For Unix/Linux users:'
+  id: totrans-76
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 对于 Unix/Linux 用户：
 - en: 'The drozer framework is available in a package file format relevant to your
     system, so either a DEB file for Debian users or an RPM file for Red Hat users.
     All you need to do with this file is open it using your package manager, and it
     will handle the rest. Debian users can make use of the following command to get
     drozer installed:'
+  id: totrans-77
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: drozer 框架以与你的系统相关的包文件格式提供，因此对于 Debian 用户是 DEB 文件，对于 Red Hat 用户是 RPM 文件。你只需使用包管理器打开此文件，其余的它会处理。Debian
+    用户可以使用以下命令来安装 drozer：
 - en: '[PRE0]'
+  id: totrans-78
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: Once drozer is installed, you should try to run it. How you run it will partly
     depend on your operating system.
+  id: totrans-79
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装完 drozer 后，你应该尝试运行它。如何运行部分取决于你的操作系统。
 - en: 'For Windows users:'
+  id: totrans-80
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 对于 Windows 用户：
 - en: Open a command prompt and head over to the path you've installed your drozer
     to. By default—as previously mentioned—this is the `C:\drozer` path.
+  id: totrans-81
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开命令提示符并转到你安装 drozer 的路径。如前所述，默认情况下这是 `C:\drozer` 路径。
 - en: 'Invoke drozer by executing the following command:'
+  id: totrans-82
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过执行以下命令调用 drozer：
 - en: '[PRE1]'
+  id: totrans-83
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'You should see the output similar to the following screenshot:'
+  id: totrans-84
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你应该看到类似于以下截图的输出：
 - en: '![How to do it...](img/00063.jpeg)'
+  id: totrans-85
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00063.jpeg)'
 - en: 'As a diagnostic test, try invoking the drozer console. If there''s anything
     wrong, it should notify you of the errors before telling you that the device—which
     is not attached here—is unavailable or refusing connections. Execute the following
     command:'
+  id: totrans-86
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 作为诊断测试，尝试调用 drozer 控制台。如果出现问题，它会在告诉你设备（这里未连接）不可用或拒绝连接之前，通知你错误。执行以下命令：
 - en: '[PRE2]'
+  id: totrans-87
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Unless you''ve been clever enough to fix the error, you should see the output
     similar to the one shown in the following screenshot:'
+  id: totrans-88
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 除非你已经足够聪明地解决了错误，否则你应该看到与以下屏幕截图相似的输出：
 - en: '![How to do it...](img/00064.jpeg)'
+  id: totrans-89
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00064.jpeg)'
 - en: This error means drozer cannot locate your Java installation.
+  id: totrans-90
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这个错误意味着 drozer 无法找到你的 Java 安装。
 - en: Assuming you've already installed Java, you can add drozer to your system `PATH`
     variable.
+  id: totrans-91
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 假设你已经安装了 Java，你可以将 drozer 添加到你的系统 `PATH` 变量中。
 - en: 'On Windows Augmenting your `PATH` variable is pretty straightforward; you start
     by performing the following steps:'
+  id: totrans-92
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在 Windows 上增强你的 `PATH` 变量非常直接；你可以通过执行以下步骤开始：
 - en: Open **My Computer**.
+  id: totrans-93
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开 **我的电脑**。
 - en: Click on **System properties**.
+  id: totrans-94
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 点击 **系统属性**。
 - en: Under the **Control Panel** section of the screen, click on **Advanced system
     settings**.![How to do it...](img/00065.jpeg)
+  id: totrans-95
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在屏幕的 **控制面板** 部分下，点击 **高级系统设置**。![如何操作...](img/00065.jpeg)
 - en: A **User Access Control** prompt should pop up. If you have administrator access,
     simply click on **OK** or enter the administrator password.
+  id: totrans-96
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 应该会弹出 **用户访问控制** 提示。如果你有管理员权限，只需点击 **确定** 或输入管理员密码。
 - en: On the **System Properties** dialog, click on the button labeled **Environment
     Variables...**.![How to do it...](img/00066.jpeg)
+  id: totrans-97
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 **系统属性** 对话框中，点击标记为 **环境变量...** 的按钮。![如何操作...](img/00066.jpeg)
 - en: Once the **Environment Variables** dialog pops up, under the section labeled
     **System variables**, scroll down to the variable called **Path** and click on
     **Edit…**.![How to do it...](img/00067.jpeg)
+  id: totrans-98
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 一旦弹出 **环境变量** 对话框，在标记为 **系统变量** 的部分，向下滚动到名为 **Path** 的变量并点击 **编辑…**。![如何操作...](img/00067.jpeg)
 - en: 'Another dialog should pop up, allowing you to edit the `PATH` variable. Add
     the following string to the end of the value:'
+  id: totrans-99
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 应该会弹出一个对话框，允许你编辑 `PATH` 变量。在变量值的末尾添加以下字符串：
 - en: '[PRE3]'
+  id: totrans-100
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'For Unix/Linux users:'
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于 Unix/Linux 用户：
 - en: 'You can invoke drozer by executing the following command from your terminal
     window:'
+  id: totrans-102
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你可以通过从你的终端窗口执行以下命令来调用 drozer：
 - en: '[PRE4]'
+  id: totrans-103
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: If all is well, you should see exactly the same output as the Windows drozer
     edition.
+  id: totrans-104
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果一切正常，你应该看到与 Windows 版 drozer 完全相同的输出。
 - en: 'If Java has not been added to your `PATH` variable, execute the following command
     to get it added:'
+  id: totrans-105
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果 Java 尚未添加到你的 `PATH` 变量中，执行以下命令以添加它：
 - en: '[PRE5]'
+  id: totrans-106
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: To make this persistent, add the previous command line to the end of your `/home/[user]/.bashrc`
     file.
+  id: totrans-107
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 为了使这个持久化，将之前的命令行添加到你的 `/home/[user]/.bashrc` 文件的末尾。
 - en: There's more…
+  id: totrans-108
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'Before drozer can get up and running, you will need to install the drozer Agent
     on an Android device. This is pretty simple; here''s how you do it:'
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 drozer 能够启动并运行之前，你需要在 Android 设备上安装 drozer 代理。这很简单；以下是操作方法：
 - en: 'Assuming the device is connected to your host machine via USB, you can install
     the `drozer.apk file` as follows:'
+  id: totrans-110
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 假设设备通过 USB 连接到你的主机，你可以按照以下方式安装 `drozer.apk` 文件：
 - en: '[PRE6]'
+  id: totrans-111
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: For this to work, you need to make sure that **Unknown Sources** and **USB Debugging**
     are both enabled for the target Android device.
+  id: totrans-112
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了使这个工作，你需要确保目标 Android 设备已启用 **未知来源** 和 **USB 调试**。
 - en: 'On launching drozer, you should see the following:'
+  id: totrans-113
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 启动 drozer 后，你应该看到以下内容：
 - en: '![There''s more…](img/00068.jpeg)'
+  id: totrans-114
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![还有更多…](img/00068.jpeg)'
 - en: To make using the drozer console from the command-line interface a little easier,
     you could also add drozer itself to your system `PATH` variable.
+  id: totrans-115
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了使从命令行界面使用 drozer 控制台更加方便，你也可以将 drozer 本身添加到你的系统 `PATH` 变量中。
 - en: 'For Windows users:'
+  id: totrans-116
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 对于 Windows 用户：
 - en: Access the **Environment Variable** dialog as described in the previous recipe.
+  id: totrans-117
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照前一个菜谱描述的方式访问 **环境变量** 对话框。
 - en: 'Add the following string to your `PATH` variable:'
+  id: totrans-118
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将以下字符串添加到你的 `PATH` 变量中：
 - en: '[PRE7]'
+  id: totrans-119
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'If you are a Unix/Linux user, execute the following command from your terminal:'
+  id: totrans-120
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你是一个 Unix/Linux 用户，从你的终端执行以下命令：
 - en: '[PRE8]'
+  id: totrans-121
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: To make this persistent, add the previous command line to the end of your `/home/[user]/.bashrc`
     file.
+  id: totrans-122
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 为了使这个持久化，将之前的命令行添加到你的 `/home/[user]/.bashrc` 文件的末尾。
 - en: 'If the DEB file fails to install, there is another way to get drozer installed
     that is relatively painless. To get drozer installed without the DEB package,
     perform the following steps:'
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果 DEB 文件安装失败，还有另一种相对无痛的方法来安装 drozer。要在不使用 DEB 包的情况下安装 drozer，请执行以下步骤：
 - en: 'To start off, grab a copy of the Python development headers and packages by
     executing the following command:'
+  id: totrans-124
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，通过执行以下命令获取 Python 开发头文件和软件包的副本：
 - en: '[PRE9]'
+  id: totrans-125
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'Grab a copy of the Python setup tools by executing the following command:'
+  id: totrans-126
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过执行以下命令获取 Python 安装工具的副本：
 - en: '[PRE10]'
+  id: totrans-127
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Install the 32-bit support libraries for your Debian system:'
+  id: totrans-128
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为你的 Debian 系统安装 32 位支持库：
 - en: '[PRE11]'
+  id: totrans-129
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Install the Python dependencies; the first one is `protobuf`, which you can
     install by executing the following command:'
+  id: totrans-130
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装 Python 依赖项；第一个是 `protobuf`，你可以通过执行以下命令来安装：
 - en: '[PRE12]'
+  id: totrans-131
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Once `protobuf` is installed, you''ll need to install `twisted` for python,
     which you can do by executing the following command:'
+  id: totrans-132
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装 `protobuf` 之后，你需要为 Python 安装 `twisted`，可以通过执行以下命令来完成：
 - en: '[PRE13]'
+  id: totrans-133
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: What you need to do then is grab a copy of the drozer architecture independent
     package available at [https://www.mwrinfosecurity.com/system/assets/571/original/drozer-2.3.2.tar.gz](https://www.mwrinfosecurity.com/system/assets/571/original/drozer-2.3.2.tar.gz).
+  id: totrans-134
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来你需要做的是获取一份可在 [https://www.mwrinfosecurity.com/system/assets/571/original/drozer-2.3.2.tar.gz](https://www.mwrinfosecurity.com/system/assets/571/original/drozer-2.3.2.tar.gz)
+    下载的 drozer 独立架构包。
 - en: 'Once downloaded, unpack this into some directory of your choice. Once unpacked,
     it should contain a file called `drozer-[version]-py2.7.egg`. You can then install
     this EGG by executing the following command:'
+  id: totrans-135
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下载后，将其解压到你选择的某个目录中。解压后，它应该包含一个名为 `drozer-[version]-py2.7.egg` 的文件。然后你可以通过执行以下命令来安装这个
+    EGG：
 - en: '[PRE14]'
+  id: totrans-136
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: And that's it—drozer should be ready to rock!
+  id: totrans-137
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 就这样——drozer 应该已经准备好大显身手了！
 - en: Running a drozer session
+  id: totrans-138
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 运行 drozer 会话
 - en: So you've got drozer all set up and ready to go; you can start running some
     drozer sessions on a sample Android device—preferably one with the drozer Agent
     installed on it.
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然已经设置好 drozer 并准备就绪，你就可以在示例 Android 设备上运行一些 drozer 会话了——最好是已经安装了 drozer 代理的设备。
 - en: The following recipe takes you through the basics of setting up a drozer session
     and how to fire off some quick and easy modules via the drozer console.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下教程将带你了解设置 drozer 会话的基础知识以及如何通过 drozer 控制台快速运行一些简单的模块。
 - en: How to do it...
+  id: totrans-141
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Before proceeding with this recipe, you will need to have installed the drozer
     console on your machine and drozer Agent on the target device. If all that''s
     been sorted, you can move on to running your drozer console session by performing
     the following steps:'
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 在继续本教程之前，你需要在你的机器上安装 drozer 控制台，在目标设备上安装 drozer 代理。如果这些都准备好了，你可以通过执行以下步骤来开始你的
+    drozer 控制台会话：
 - en: 'Using ADB, set up some port forwarding, provided you have some kind of device
     connected:'
+  id: totrans-143
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用 ADB，设置一些端口转发，前提是你连接了某种设备：
 - en: '[PRE15]'
+  id: totrans-144
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: You'll need to make sure the drozer Embedded Server has been started. You will
     need to start it via the application's interface on your device. Simply find the
     drozer Agent on your device; it should have popped up somewhere among the other
     apps on your device, but seeing that you likely just installed it, you would probably
     see a notification about it and will be able to launch it from your notification
     menu.
+  id: totrans-145
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 您需要确保已启动 drozer 嵌入式服务器。你需要通过设备上的应用程序界面来启动它。只需在设备上找到 drozer 代理；它应该会出现在其他应用程序中，但由于你可能刚刚安装了它，你可能会看到一条关于它的通知，并且可以从通知菜单中启动它。
 - en: Press the button labeled **Embedded Server via the drozer Agent User interface**.
     You should be presented with the screen as shown in the following screenshot:![How
     to do it...](img/00069.jpeg)
+  id: totrans-146
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 点击通过 drozer 代理用户界面标记为 **嵌入式服务器** 的按钮。你应该会看到如下截图所示的屏幕：![如何操作...](img/00069.jpeg)
 - en: Drag the button labeled **Disabled** to the right. It should say **Enabled**
     now and the **Enabled** label under the **Server Details** section of the user
     interface should be engaged, as shown in the following screenshot:![How to do
     it...](img/00070.jpeg)
+  id: totrans-147
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将标记为 **禁用** 的按钮向右拖动。现在它应该显示 **启用**，并且用户界面中 **服务器详情** 部分下的 **启用** 标签应该已激活，如下截图所示：![如何操作...](img/00070.jpeg)
 - en: 'You can then connect the drozer console by executing the following command:'
+  id: totrans-148
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，你可以通过执行以下命令来连接 drozer 控制台：
 - en: '[PRE16]'
+  id: totrans-149
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: drozer should then drop into console mode, allowing you to start firing off
     commands and modules.
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 然后 drozer 应该进入控制台模式，允许你开始执行命令和模块。
 - en: '![How to do it...](img/00071.jpeg)'
+  id: totrans-151
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00071.jpeg)'
 - en: Enumerating installed packages
+  id: totrans-152
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 枚举已安装的包
 - en: The drozer Agent is all set up and you've managed to fire up the drozer console;
     you can start firing off some drozer modules and really engage with your device's
     security.
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: drozer 代理已经设置好了，你也成功启动了 drozer 控制台；你可以开始运行一些 drozer 模块，真正与设备的安全性进行交互。
 - en: The following recipe details the basic usage of the drozer framework to perform
     novel tasks such as enumerating the installed packages and filtering them based
     on package name.
+  id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下教程详细介绍了如何使用 drozer 框架执行诸如枚举已安装的包并根据包名进行过滤等新任务。
 - en: How to do it...
+  id: totrans-155
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Once you''ve got your drozer framework up and running, you may want to start
     scratching and messing around on your Android device. One useful thing you may
     want to do is list all the packages installed on your device. You can do this
     by firing off the following command from your drozer console:'
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你搭建并运行了你的drozer框架后，你可能想要开始在Android设备上摸索和尝试。你可能想要做的一件有用的事情是列出设备上安装的所有包。你可以通过从你的drozer控制台触发以下命令来实现这一点：
 - en: '[PRE17]'
+  id: totrans-157
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'You should see something similar to the following start appearing on your screen:'
+  id: totrans-158
   prefs: []
   type: TYPE_NORMAL
+  zh: 你应该会在屏幕上看到类似以下内容开始出现：
 - en: '![How to do it...](img/00072.jpeg)'
+  id: totrans-159
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00072.jpeg)'
 - en: How it works...
+  id: totrans-160
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: Let's take a look at the drozer source code to find out exactly how it interfaces
     with the package manager API to get all this useful information. I'm going to
     be explaining the code behind most of the modules so you get to see how drozer
     works, and build you up to writing a drozer module of your own later in this chapter!
     After all, that's what frameworks are about—building your own mods and add-ons.
+  id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们来看看drozer的源代码，确切地了解它是如何与包管理器API接口来获取所有这些有用信息的。我将解释大部分模块背后的代码，以便你了解drozer是如何工作的，并在本章的后面指导你自己编写一个drozer模块！毕竟，框架的意义就在于——构建你自己的模块和插件。
 - en: Beware non-Python users/developers! You may need a little Python background
     to be able to read this source code; although, seeing that Python is pretty semantic
     even if you've never written Python code, you should be able to follow pretty
@@ -810,375 +1142,570 @@
     So, in summary, you don't need to run out and get a book on Python just yet. If
     you've written Android apps before, this will be very easy to follow. Anyway,
     enough talk—let's see some code!
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 非Python用户/开发者请注意！你可能需要一些Python背景知识才能阅读这段源代码；尽管如此，考虑到Python的语义性，即使你从未编写过Python代码，你也应该能很容易地跟上。drozer设计的一个额外好处是，它们基本上镜像了Android
+    Java API，使得模块开发对Android开发者来说很容易上手。所以，总之，你暂时还不需要去拿本Python的书来读。如果你之前写过Android应用，这将非常容易理解。无论如何，废话少说——让我们来看一些代码！
 - en: Note
+  id: totrans-163
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The following code is available at [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py)
     (lines 99-121).
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下代码可以在[https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py)（第99-121行）找到。
 - en: '[PRE18]'
+  id: totrans-165
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: The `execute()` method is called whenever you fire off the `app.activity.info`
     module from your console. It's essentially the entry point to the real hard work
     the module does.
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: '`execute()`方法在你从控制台触发`app.activity.info`模块时会被调用。它实际上是模块执行实际工作的入口点。'
 - en: We see the call to the package manager, `self.packageManager().getPackages(…)`;
     this returns a list of package objects along with each package's permissions,
     configurations, GID, and shared libraries. The script calls `self.__get_package()`
     on each package object to print it out to the drozer console. The same is done
     for cases where a specific package is supplied via the command-line arguments.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们看到对包管理器的调用，`self.packageManager().getPackages(…)`；这返回一个包含每个包对象及其权限、配置、GID和共享库的列表。脚本在每个包对象上调用`self.__get_package()`来将其输出到drozer控制台。当通过命令行参数提供特定包时，也会执行相同的操作。
 - en: If you'd like to get your own copy of this code, you can grab it from the official
     drozer GitHub repository, which is very easy to find if you Google hard enough.
     But to make your lives easier, I've dropped a URL to the code repository in the
     *See also* section of this recipe.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想要获取这段代码的副本，可以从drozer的官方GitHub仓库获取，如果你足够用心去Google，找到它是非常容易的。为了让大家更方便，我在本食谱的*另请参阅*部分提供了一个代码仓库的URL。
 - en: There's more...
+  id: totrans-169
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'The `dz> run app.package.list` command is a wrapper to the Android package
     manager; because of this, one of the cool things you can do is filter through
     applications based on their name, as follows:'
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: '`dz> run app.package.list`命令是对Android包管理器的一个封装；因此，你能做的很酷的一件事就是基于应用名称进行筛选，如下所示：'
 - en: '[PRE19]'
+  id: totrans-171
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Here, `[application name]` is the name of the application or package you want
     to check for. Here''s an example:'
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，`[application name]`是你想要检查的应用程序或包的名称。以下是一个例子：
 - en: '[PRE20]'
+  id: totrans-173
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'Another enumeration-type module in drozer you can use to extract information
     is `app.package.info`, which will fetch the following information about a package:'
+  id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: drozer中的另一个用于提取信息的枚举类型模块是`app.package.info`，它会获取关于一个包的以下信息：
 - en: Permissions
+  id: totrans-175
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 权限
 - en: Configuration
+  id: totrans-176
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 配置
 - en: Group IDs
+  id: totrans-177
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 群组ID
 - en: Shared libraries
+  id: totrans-178
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 共享库
 - en: 'You can use this module by firing off the following command from your drozer
     console:'
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以通过从你的drozer控制台发出以下命令来使用这个模块：
 - en: '[PRE21]'
+  id: totrans-180
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: When used this way, it will extract all the related information about all the
     packages on your Android device.
+  id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: 以这种方式使用时，它将提取关于你Android设备上所有软件包的相关信息。
 - en: 'Naturally, you might want to narrow down this information to a particular package:'
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 自然地，你可能希望将此信息缩小到特定的软件包：
 - en: '[PRE22]'
+  id: totrans-183
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'You could also use the shorthand for the switch, as follows:'
+  id: totrans-184
   prefs: []
   type: TYPE_NORMAL
+  zh: 你也可以使用以下开关的简写方式：
 - en: '[PRE23]'
+  id: totrans-185
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Here''s an example:'
+  id: totrans-186
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个示例：
 - en: '[PRE24]'
+  id: totrans-187
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: '![There''s more...](img/00073.jpeg)'
+  id: totrans-188
   prefs: []
   type: TYPE_IMG
+  zh: '![更多内容...](img/00073.jpeg)'
 - en: 'A quick explanation of the output shown in the previous screenshot is as follows:'
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前截图中显示输出的快速解释如下：
 - en: '**Application Label**: The displayed name of the application'
+  id: totrans-190
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**应用程序标签**：应用程序显示的名称'
 - en: '**Process Name**: The name of the process that this application runs in'
+  id: totrans-191
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**进程名称**：此应用程序运行的进程名称'
 - en: '**Version**: The version of the application installed'
+  id: totrans-192
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**版本**：安装的应用程序版本'
 - en: '**Data Directory**: The full path to the directory that will be used to store
     the user data and application specifically associated to this application'
+  id: totrans-193
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**数据目录**：将用于存储与该应用程序特别关联的用户数据和应用程序的目录的完整路径'
 - en: '**APK Path**: The path to the actual Android application package file on the
     device'
+  id: totrans-194
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**APK路径**：设备上实际Android应用程序包文件的路径'
 - en: '**UID**: The user ID associated to the application; everything it does on the
     Android system will be done using the access rights associated to this user ID,
     unless it gets other applications and processes to do things on its behalf'
+  id: totrans-195
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**UID**：与应用程序关联的用户ID；它在Android系统上执行的所有操作都将使用与此用户ID关联的访问权限，除非它让其他应用程序和进程代表它执行操作'
 - en: '**GID**: The system group IDs associated to this application''s user ID; usually,
     these are associated to an application based on a number of special permissions
     that are granted to the application'
+  id: totrans-196
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**GID**：与该应用程序用户ID关联的系统群组ID；通常，这些ID基于授予应用程序的特殊权限数量与之关联'
 - en: '**Shared Libraries**: The full path to the shared libraries used by this application'
+  id: totrans-197
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**共享库**：此应用程序使用的共享库的完整路径'
 - en: '**Shared User ID**: The shared user ID this application is allowed to use'
+  id: totrans-198
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**共享用户ID**：此应用程序允许使用的共享用户ID'
 - en: '**Uses Permissions**: A list of the permissions granted to this application'
+  id: totrans-199
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**使用权限**：授予此应用程序的权限列表'
 - en: 'Another example, in case you have a Nexus device, would be to run this against
     the Google Services Framework as follows:'
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个例子，如果你有一个Nexus设备，可以按照以下方式针对Google服务框架运行：
 - en: '[PRE25]'
+  id: totrans-201
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'The previous command should produce the output as shown in the following screenshot:'
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前的命令应该会产生如下截图所示的输出：
 - en: '![There''s more...](img/00074.jpeg)'
+  id: totrans-203
   prefs: []
   type: TYPE_IMG
+  zh: '![更多内容...](img/00074.jpeg)'
 - en: 'Another cool thing you can do with the `app.package.info` module is find packages
     based on permissions. You can do that by executing the following command:'
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 你还可以使用`app.package.info`模块做另一件很酷的事情，那就是基于权限查找软件包。你可以通过执行以下命令来完成：
 - en: '[PRE26]'
+  id: totrans-205
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'An example would be the following:'
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
+  zh: 一个例子如下：
 - en: '[PRE27]'
+  id: totrans-207
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: Why is this so cool? Well, you may want to know all the applications with a
     set of dangerous permissions. I mean, do you know how many of your applications
     have the `INTERNET` permission or any other dangerous permission? No? Exactly!
+  id: totrans-208
   prefs: []
   type: TYPE_NORMAL
+  zh: 这为什么这么酷？好吧，你可能想知道所有具有一组危险权限的应用程序。我的意思是，你知道你的应用程序中有多少个具有`INTERNET`权限或其他危险权限的吗？不知道吧？正是如此！
 - en: See also
+  id: totrans-209
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The drozer GitHub repository at [https://github.com/mwrlabs/drozer](https://github.com/mwrlabs/drozer)
+  id: totrans-210
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: drozer GitHub仓库位于[https://github.com/mwrlabs/drozer](https://github.com/mwrlabs/drozer)
 - en: The `package.py` drozer module at [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py)
+  id: totrans-211
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`package.py` drozer模块位于[https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py)'
 - en: Enumerating activities
+  id: totrans-212
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 枚举活动
 - en: drozer also offers a useful module for enumerating information about the activity
     components available on a target Android device. The following recipe demonstrates
     the use of this module.
+  id: totrans-213
   prefs: []
   type: TYPE_NORMAL
+  zh: drozer还提供了一个有用的模块，用于枚举目标Android设备上可用的活动组件信息。以下食谱演示了此模块的使用。
 - en: How to do it...
+  id: totrans-214
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'You may at some point want to find out which activities are installed and exported
     on your device. The drozer framework makes this pretty easy, here''s how to do
     it:'
+  id: totrans-215
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能有时候想要找出设备上安装并导出的活动。drozer框架使这变得相当简单，以下是操作方法：
 - en: 'Fire off the following command from your drozer console:'
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 从你的drozer控制台执行以下命令：
 - en: '[PRE28]'
+  id: totrans-217
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: This command will list all the activities that are exported on your device.
+  id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 此命令将列出设备上导出的所有活动。
 - en: There's more...
+  id: totrans-219
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'You may want to get a little more information about the activities on your
     device; for example, listing all applications that have a certain name or a certain
     string in their name, such as "browser" or "facebook", which applications have
     what permissions, or even search for unexported activities. Here''s how to do
     that:'
+  id: totrans-220
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能想要获取有关设备上活动的更多信息；例如，列出所有具有特定名称或名称中包含特定字符串的应用程序，如"browser"或"facebook"，这些应用程序具有什么权限，甚至搜索未导出的活动。以下是操作方法：
 - en: 'Search for activities based on name by executing the following command:'
+  id: totrans-221
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过执行以下命令，根据名称搜索活动：
 - en: '[PRE29]'
+  id: totrans-222
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'This will list all the activities with `[activity name]` in their name. Here''s
     an example:'
+  id: totrans-223
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将列出名称中带有`[activity name]`的所有活动。例如：
 - en: '[PRE30]'
+  id: totrans-224
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'As with all Unix-style or Linux-style commands, there is a shortcut for this:'
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 与所有Unix风格或Linux风格的命令一样，这个命令也有一个快捷方式：
 - en: '[PRE31]'
+  id: totrans-226
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'The previous command should produce the output as shown in the following screenshot:'
+  id: totrans-227
   prefs: []
   type: TYPE_NORMAL
+  zh: 上一个命令应该会产生如下截图所示的输出：
 - en: '![There''s more...](img/00075.jpeg)'
+  id: totrans-228
   prefs: []
   type: TYPE_IMG
+  zh: '![还有更多...](img/00075.jpeg)'
 - en: You can also specify which package you want to inspect for activities.
+  id: totrans-229
   prefs: []
   type: TYPE_NORMAL
+  zh: 你还可以指定要检查活动的包。
 - en: 'Search for activities in a given package as follows:'
+  id: totrans-230
   prefs: []
   type: TYPE_NORMAL
+  zh: 按照以下方式在给定包中搜索活动：
 - en: '[PRE32]'
+  id: totrans-231
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'You could also use the shortcut for this command:'
+  id: totrans-232
   prefs: []
   type: TYPE_NORMAL
+  zh: 你也可以使用此命令的快捷方式：
 - en: '[PRE33]'
+  id: totrans-233
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'Here''s an example:'
+  id: totrans-234
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个例子：
 - en: '[PRE34]'
+  id: totrans-235
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'The previous command should produce the output as shown in the following screenshot:'
+  id: totrans-236
   prefs: []
   type: TYPE_NORMAL
+  zh: 上一个命令应该会产生如下截图所示的输出：
 - en: '![There''s more...](img/00076.jpeg)'
+  id: totrans-237
   prefs: []
   type: TYPE_IMG
+  zh: '![还有更多...](img/00076.jpeg)'
 - en: See also
+  id: totrans-238
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The drozer activity modules source code at [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/activity.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/activity.py)
+  id: totrans-239
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: drozer活动模块的源代码在[https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/activity.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/activity.py)
 - en: Enumerating content providers
+  id: totrans-240
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 枚举内容提供者
 - en: Much like enumerating activities and packages, drozer also provides some modules
     for listing all of the content providers and some information on them. The following
     recipe talks about how to do this using the `app.provider.info` module.
+  id: totrans-241
   prefs: []
   type: TYPE_NORMAL
+  zh: 与枚举活动和包类似，drozer也提供了一些模块来列出所有内容提供者及其一些信息。以下食谱将介绍如何使用`app.provider.info`模块进行操作。
 - en: How to do it...
+  id: totrans-242
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's get started enumerating content providers.
+  id: totrans-243
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始枚举内容提供者。
 - en: 'Execute the following command from your drozer terminal:'
+  id: totrans-244
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从你的drozer终端执行以下命令：
 - en: '[PRE35]'
+  id: totrans-245
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'This will return the following information about a content provider:'
+  id: totrans-246
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这将返回有关内容提供者的以下信息：
 - en: Authorities – the names of the classes implementing their SQLite frontends
+  id: totrans-247
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 权限 - 实现其SQLite前端的类名称
 - en: Read permission
+  id: totrans-248
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 读取权限
 - en: Write permission
+  id: totrans-249
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 写入权限
 - en: Grant URI permissions
+  id: totrans-250
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 授予URI权限
 - en: Paths
+  id: totrans-251
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 路径
 - en: How it works...
+  id: totrans-252
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: Let's take a look at the code for the `app.provider.info` module.
+  id: totrans-253
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看`app.provider.info`模块的代码。
 - en: Note
+  id: totrans-254
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The following code is available at [https://github.com/mwrlabs/drozer/blob/766329cacde6dbf1ba05ca5dee36b882041f1b01/src/drozer/modules/app/provider.py](https://github.com/mwrlabs/drozer/blob/766329cacde6dbf1ba05ca5dee36b882041f1b01/src/drozer/modules/app/provider.py).
+  id: totrans-255
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下代码在[https://github.com/mwrlabs/drozer/blob/766329cacde6dbf1ba05ca5dee36b882041f1b01/src/drozer/modules/app/provider.py](https://github.com/mwrlabs/drozer/blob/766329cacde6dbf1ba05ca5dee36b882041f1b01/src/drozer/modules/app/provider.py)。
 - en: '[PRE36]'
+  id: totrans-256
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'The first notable part of the code is where the script makes a call to the
     package manager. Here''s what it looks like:'
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 代码中第一个值得注意的部分是脚本调用包管理器的地方。它看起来像这样：
 - en: '[PRE37]'
+  id: totrans-258
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: The script grabs a list of packages by making a call to the Android package
     manager and throws it some flags that make sure it gets the providers back with
     their grant URI permission patterns. Next we see that once the details about the
@@ -1191,319 +1718,489 @@
     required to read from the content provider or `writePermission`, which, surprisingly
     enough, is required to write to the content provider. After this, it resets the
     provider object before printing it out to the console.
+  id: totrans-259
   prefs: []
   type: TYPE_NORMAL
+  zh: 脚本通过调用 Android 包管理器获取一个包列表，并抛出一些标志以确保获取到带有授权 URI 权限模式的提供者。接下来我们看到，一旦包管理器收集了关于内容提供者的详细信息，脚本就会调用一个名为
+    `__get_provider()` 的函数，该函数提取有关提供者读取和写入权限的信息（如果有的话）。通过 `match_filters()` 调用进行一些简单的字符串匹配，`__get_provider()`
+    函数基本上在定义内容提供者权限的部分查找某个字符串值。这个字符串值由 `readPermission` 标记，表示从内容提供者读取所需的权限，或者由 `writePermission`
+    标记，出人意料的是，它表示写入内容提供者所需的权限。在此之后，它会在将提供者对象打印到控制台之前重置该对象。
 - en: There's more...
+  id: totrans-260
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Much like the other `.info` modules in drozer, you can add filter information
     in the following ways:'
+  id: totrans-261
   prefs: []
   type: TYPE_NORMAL
+  zh: 与 drozer 中的其他 `.info` 模块类似，你可以通过以下方式添加过滤器信息：
 - en: 'Search based on package names:'
+  id: totrans-262
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 基于包名称搜索：
 - en: '[PRE38]'
+  id: totrans-263
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'Or:'
+  id: totrans-264
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者：
 - en: '[PRE39]'
+  id: totrans-265
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: 'Search based on permissions:'
+  id: totrans-266
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 基于权限搜索：
 - en: '[PRE40]'
+  id: totrans-267
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'Or:'
+  id: totrans-268
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者：
 - en: '[PRE41]'
+  id: totrans-269
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: See also
+  id: totrans-270
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Content Providers* webpage at [http://developer.android.com/guide/topics/providers/content-providers.html](http://developer.android.com/guide/topics/providers/content-providers.html)
+  id: totrans-271
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 关于 *内容提供者* 的网页在 [http://developer.android.com/guide/topics/providers/content-providers.html](http://developer.android.com/guide/topics/providers/content-providers.html)
 - en: Enumerating services
+  id: totrans-272
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 枚举服务
 - en: You may also want to know about the services that are installed on your device.
     drozer has a module called `app.service.info` that extracts some useful information
     about services.
+  id: totrans-273
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能还想了解设备上安装了哪些服务。drozer 有一个名为 `app.service.info` 的模块，可以提取有关服务的有用信息。
 - en: How to do it...
+  id: totrans-274
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Execute the following command from your drozer console:'
+  id: totrans-275
   prefs: []
   type: TYPE_NORMAL
+  zh: 从你的 drozer 控制台执行以下命令：
 - en: '[PRE42]'
+  id: totrans-276
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'Running this command with no arguments lists all the services installed on
     the target device. It will look something like the following screenshot when run:'
+  id: totrans-277
   prefs: []
   type: TYPE_NORMAL
+  zh: 不带参数运行此命令将列出目标设备上安装的所有服务。运行时它看起来会像以下截图：
 - en: '![How to do it...](img/00077.jpeg)'
+  id: totrans-278
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00077.jpeg)'
 - en: 'You can also use the following filters to narrow down your search:'
+  id: totrans-279
   prefs: []
   type: TYPE_NORMAL
+  zh: 你还可以使用以下过滤器来缩小搜索范围：
 - en: 'Search based on permissions:'
+  id: totrans-280
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 基于权限搜索：
 - en: '[PRE43]'
+  id: totrans-281
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'Search based on service names:'
+  id: totrans-282
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 基于服务名称搜索：
 - en: '[PRE44]'
+  id: totrans-283
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'You can also choose to list unexported services, such as the following:'
+  id: totrans-284
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 你还可以选择列出未导出的服务，例如以下：
 - en: '[PRE45]'
+  id: totrans-285
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'And lastly, if you''d like information about the other switches and options,
     you can always run the `–help` option as follows:'
+  id: totrans-286
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 最后，如果你想了解其他开关和选项的信息，可以随时运行 `–help` 选项，如下所示：
 - en: '[PRE46]'
+  id: totrans-287
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'The previous command should produce the output as shown in the following screenshot:'
+  id: totrans-288
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 之前的命令应该会产生如下截图所示的输出：
 - en: '![How to do it...](img/00078.jpeg)'
+  id: totrans-289
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00078.jpeg)'
 - en: How it works…
+  id: totrans-290
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的…
 - en: 'The `app.service.info` module works like most of the other `.info` and `.list`
     type drozer modules by making calls to the package manager through the API. Here''s
     the call to the package manager from `drozer/master/src/drozer/modules/service.py`:'
+  id: totrans-291
   prefs: []
   type: TYPE_NORMAL
+  zh: '`app.service.info` 模块通过 API 调用包管理器，其工作方式与其他 `.info` 和 `.list` 类型的 drozer 模块类似。以下是来自
+    `drozer/master/src/drozer/modules/service.py` 的包管理器调用：'
 - en: '[PRE47]'
+  id: totrans-292
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'The script does a check to see whether a specific package was passed as an
     argument, which is the first piece of code in the `execute` method:'
+  id: totrans-293
   prefs: []
   type: TYPE_NORMAL
+  zh: 脚本会检查是否将特定包作为参数传递，这是 `execute` 方法中的第一段代码：
 - en: '[PRE48]'
+  id: totrans-294
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: 'If no argument or package name was defined, the script grabs a list of packages
     and iterates through them by calling the `self.__get_services()` method, which
     determines some package properties through string-matching the data returned from
     the `self.packageManager().getPackageInfo(arguments.package,common.PackageManager.GET_SERVICES
     | common.PackageManager.GET_PERMISSIONS)` call; for example, when looking for
     services with a specified permission, it does the following:'
+  id: totrans-295
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果没有定义参数或包名，脚本会获取一个包列表，并通过调用`self.__get_services()`方法来遍历它们，这个方法通过字符串匹配从`self.packageManager().getPackageInfo(arguments.package,common.PackageManager.GET_SERVICES
+    | common.PackageManager.GET_PERMISSIONS)`调用返回的数据来确定一些包属性；例如，在寻找具有特定权限的服务时，它会执行以下操作：
 - en: '[PRE49]'
+  id: totrans-296
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: This is to extract a list of services with the required permission.
+  id: totrans-297
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是为了提取具有所需权限的服务列表。
 - en: See also
+  id: totrans-298
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参见
 - en: The drozer *service.py* modules source at [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/service.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/service.py)
+  id: totrans-299
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: drozer的*service.py*模块源码在[https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/service.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/service.py)
 - en: The *Services – Android Developer* webpage at [http://developer.android.com/guide/components/services.html](http://developer.android.com/guide/components/services.html)
+  id: totrans-300
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Services – Android开发者](http://developer.android.com/guide/components/services.html)网页'
 - en: The *Bound Services – Android Developer* webpage at [http://developer.android.com/guide/components/bound-services.html](http://developer.android.com/guide/components/bound-services.html)
+  id: totrans-301
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Bound Services – Android开发者](http://developer.android.com/guide/components/bound-services.html)网页'
 - en: The *Service – Android API Reference* webpage at [http://developer.android.com/reference/android/app/Service.html](http://developer.android.com/reference/android/app/Service.html)
+  id: totrans-302
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Service – Android API参考](http://developer.android.com/reference/android/app/Service.html)网页'
 - en: Enumerating broadcast receivers
+  id: totrans-303
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 枚举广播接收器
 - en: Broadcast receivers often hold useful information about an application's attack
     surface and could offer attackers the opportunity to do many things, from performing
     arbitrary code execution to proliferating information; because of this, they cannot
     be ignored during an application-focused security assessment. The drozer developers
     were well aware of this fact and provided modules to help gain information about
     broadcast receivers.
+  id: totrans-304
   prefs: []
   type: TYPE_NORMAL
+  zh: 广播接收器通常包含有关应用程序攻击面的有用信息，并可能为攻击者提供执行任意代码到传播信息等多种机会；因此，在针对应用程序的安全评估中不能忽略它们。drozer的开发者深知这一点，并提供了模块来帮助获取有关广播接收器的信息。
 - en: The following recipe demonstrates the `app.broadcast.info` module by detailing
     its different invocation options.
+  id: totrans-305
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的指南详细介绍了`app.broadcast.info`模块的不同调用选项，以此演示其功能。
 - en: How to do it...
+  id: totrans-306
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The enumeration of broadcast receivers is performed using the following command:'
+  id: totrans-307
   prefs: []
   type: TYPE_NORMAL
+  zh: 广播接收器的枚举是通过以下命令执行的：
 - en: '[PRE50]'
+  id: totrans-308
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: 'The output for the previous command should be similar to the following screenshot:'
+  id: totrans-309
   prefs: []
   type: TYPE_NORMAL
+  zh: 前一个命令的输出应类似于以下截图：
 - en: '![How to do it...](img/00079.jpeg)'
+  id: totrans-310
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00079.jpeg)'
 - en: This `app.broadcast.info` module has all the cool features the other `.info`
     modules have and some more broadcast-receiver-specific options.
+  id: totrans-311
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个`app.broadcast.info`模块具有其他`.info`模块所有的酷功能，以及一些特定的广播接收器选项。
 - en: 'You can specify a specific package from which to extract information on receivers;
     the following command is an example:'
+  id: totrans-312
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以指定一个特定的包，从中提取接收器的信息；以下命令是一个示例：
 - en: '[PRE51]'
+  id: totrans-313
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'The command that follows is another example:'
+  id: totrans-314
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的命令是另一个示例：
 - en: '[PRE52]'
+  id: totrans-315
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'You can also search and list broadcast receivers based on their names; for
     example:'
+  id: totrans-316
   prefs: []
   type: TYPE_NORMAL
+  zh: 你也可以基于它们的名称搜索和列出广播接收器；例如：
 - en: '[PRE53]'
+  id: totrans-317
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'Or use the longer form:'
+  id: totrans-318
   prefs: []
   type: TYPE_NORMAL
+  zh: 或者使用更长的形式：
 - en: '[PRE54]'
+  id: totrans-319
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'Another option is to choose to include the unexported receivers:'
+  id: totrans-320
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个选项是选择包含未导出的接收器：
 - en: '[PRE55]'
+  id: totrans-321
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'And lastly, you can choose whether to include the intent filters in the requested
     information; for example:'
+  id: totrans-322
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，你可以选择是否在请求的信息中包含意图过滤器；例如：
 - en: '[PRE56]'
+  id: totrans-323
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: 'Or:'
+  id: totrans-324
   prefs: []
   type: TYPE_NORMAL
+  zh: 或者：
 - en: '[PRE57]'
+  id: totrans-325
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: See also
+  id: totrans-326
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参见
 - en: The *BroadcastReceivers – Android Reference* webpage at [http://developer.android.com/reference/android/content/BroadcastReceiver.html](http://developer.android.com/reference/android/content/BroadcastReceiver.html)
+  id: totrans-327
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[BroadcastReceivers – Android参考文档](http://developer.android.com/reference/android/content/BroadcastReceiver.html)网页'
 - en: The drozer Source *broadcast.py* module at [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/broadcast.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/broadcast.py)
+  id: totrans-328
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 位于 [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/broadcast.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/broadcast.py)
+    的 drozer 源码 *broadcast.py* 模块
 - en: Determining application attack surfaces
+  id: totrans-329
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 确定应用程序的攻击面
 - en: During your application security assessments, you may want to know what the
     attack surface of a given application is. drozer has a really neat module that
     helps you determine just that. In terms of this module, the attack surface for
     an application is simply the number of exported components.
+  id: totrans-330
   prefs: []
   type: TYPE_NORMAL
+  zh: 在您的应用程序安全评估过程中，您可能想要了解给定应用程序的攻击面是什么。drozer 有一个非常整洁的模块可以帮助您确定这一点。就这个模块而言，应用程序的攻击面仅是指导出组件的数量。
 - en: How to do it...
+  id: totrans-331
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Execute the following command from your drozer console:'
+  id: totrans-332
   prefs: []
   type: TYPE_NORMAL
+  zh: 从您的 drozer 控制台执行以下命令：
 - en: '[PRE58]'
+  id: totrans-333
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: This command will list all the exported activities for a given package as determined
     by the package manager API.
+  id: totrans-334
   prefs: []
   type: TYPE_NORMAL
+  zh: 此命令将列出由包管理器 API 确定的给定包的所有导出活动。
 - en: 'As an example, you could try running it against a sample package as follows:'
+  id: totrans-335
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，您可以尝试针对一个示例包按以下方式运行它：
 - en: '![How to do it...](img/00080.jpeg)'
+  id: totrans-336
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00080.jpeg)'
 - en: How it works…
+  id: totrans-337
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它的工作原理...
 - en: Let's take a look at the `app.package.attacksurface` module code. I think this
     is probably one of the most interesting modules, and walking through its code
     should spark some ideas on how to write automated testing tools in the form of
     applications. It will most certainly come in handy when you want to do mass automated
     application scanning!
+  id: totrans-338
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看 `app.package.attacksurface` 模块的代码。我认为这可能是最有趣的模块之一，通过阅读其代码应该能激发您如何以应用程序的形式编写自动化测试工具的想法。当您想要进行大规模的自动化应用程序扫描时，它绝对会派上用场！
 - en: 'The code from `drozer-master/src/mrw/droidhg/modules/package.py` is as follows:'
+  id: totrans-339
   prefs: []
   type: TYPE_NORMAL
+  zh: 来自 `drozer-master/src/mrw/droidhg/modules/package.py` 的代码如下：
 - en: '[PRE59]'
+  id: totrans-340
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: A lot of code here, but what's great about this module is that it follows the
     same style as the rest by interfacing the package manager. The module pulls information
     about services, activities, broadcast receivers, and content providers from the
@@ -1513,20 +2210,30 @@
     screen. The thing the module does is it tries to determine whether the app is
     debuggable and whether it uses a shared user ID, which is very valuable information
     with regards to the attack surface. I'll explain why in the next chapter.
+  id: totrans-341
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里的代码很多，但这个模块的好处在于它遵循与包管理器接口的相同风格。该模块从包管理器获取关于服务、活动、广播接收器和内容提供者的信息，并尝试确定它们是否根据包管理器导出。确定了哪些组件是导出的，它只是枚举它们，并在屏幕上打印导出组件的数量。该模块所做的就是尝试确定应用程序是否可调试以及是否使用共享用户
+    ID，这对于攻击面来说是非常有价值的信息。我将在下一章解释为什么。
 - en: See also
+  id: totrans-342
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The drozer Source *broadcast.py* module at [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py)
+  id: totrans-343
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 位于 [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/package.py)
+    的 drozer 源码 *broadcast.py* 模块
 - en: Launching activities
+  id: totrans-344
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 启动活动
 - en: Activities are the application components that facilitate user interaction.
     It may be useful during an application security assessment to find out which applications
     can be launched without permissions in case any of them provide access to sensitive
@@ -1535,282 +2242,418 @@
     for a good responsive introduction to engage with application components because
     you can actually see your Android device respond to your commands from the terminal.
     So, without further ado, let's get cracking with some activities!
+  id: totrans-345
   prefs: []
   type: TYPE_NORMAL
+  zh: 活动是促进用户交互的应用程序组件。在应用程序安全评估期间，了解哪些应用程序可以在没有权限的情况下启动可能很有用，以防它们中的任何一个提供了对敏感数据的访问或如果在不正确的上下文中启动导致应用程序崩溃。除了通过
+    drozer 控制台与活动互动的明显好处之外，它还是一个很好的响应式介绍，可以与应用程序组件互动，因为您实际上可以从终端看到您的 Android 设备对您的命令做出响应。所以，不再赘述，让我们开始一些活动吧！
 - en: How to do it...
+  id: totrans-346
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: You will need to choose an activity to launch, but seeing that you cannot inherently
     know where the launchable activities are or what they're called, I thought I'd
     include the process of finding a launchable activity in this recipe.
+  id: totrans-347
   prefs: []
   type: TYPE_NORMAL
+  zh: 你需要选择一个要启动的活动，但由于你无法本质上知道可启动活动在哪里或者它们叫什么，我认为我应该在教程中包含查找可启动活动的过程。
 - en: 'Find some activities using the `app.activity.info` module:'
+  id: totrans-348
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用 `app.activity.info` 模块查找一些活动：
 - en: '[PRE60]'
+  id: totrans-349
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: You'll need to choose a package and an activity to use in the next step. Get
     used to running this command a couple of times; you'll be using it quite a lot
     if you're going to get into Android penetration testing.
+  id: totrans-350
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在下一步中，你需要选择一个包和一个活动。习惯于多次运行这个命令；如果你打算进行 Android 渗透测试，你会经常使用它。
 - en: 'When you''ve found the activity you''re looking for, you can send it some launch
     intents and watch it pop up on your Android device''s screen. Here''s how you
     do that:'
+  id: totrans-351
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 找到你要找的活动后，你可以向它发送一些启动意图，并在你的 Android 设备屏幕上看到它弹出。以下是操作方法：
 - en: '[PRE61]'
+  id: totrans-352
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: Here, `[intent action]` is the action attribute of the intent filter set by
     the target activity and `[intent category]` is the category attribute of the intent
     filter set by the target activity, which you can get from the command in Step
     1.
+  id: totrans-353
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在这里，`[intent action]` 是目标活动设置的意图过滤器的动作属性，`[intent category]` 是目标活动设置的意图过滤器的类别属性，你可以从第一步的命令中获得。
 - en: 'Here''s an example you can try out:'
+  id: totrans-354
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个你可以尝试的例子：
 - en: '[PRE62]'
+  id: totrans-355
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: How it works...
+  id: totrans-356
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它的工作原理...
 - en: Let's take a look at the drozer source code to find out exactly how it manages
     to launch some activities.
+  id: totrans-357
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们查看 drozer 的源代码，确切地了解它是如何启动某些活动的。
 - en: Note
+  id: totrans-358
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The following code is available at [https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/activity.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/activity.py)
     (lines 166-174).
+  id: totrans-359
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下代码可以在[https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/activity.py](https://github.com/mwrlabs/drozer/blob/master/src/drozer/modules/app/activity.py)（第166-174行）找到。
 - en: '[PRE63]'
+  id: totrans-360
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: So, what we see here is that drozer simply bundles user-supplied arguments into
     an intent after pulling it through the argument parser; it then sends over this
     intent after checking if the intent is valid. This works the same way an intent
     would from an Android application.
+  id: totrans-361
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以看到，drozer 通过参数解析器获取用户提供的参数后，将这些参数打包成一个意图；在检查意图是否有效后，它发送这个意图。这与来自 Android
+    应用的意图工作方式相同。
 - en: There's more…
+  id: totrans-362
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: You can go about finding activities to launch using the `app.activity.forintent`
     module.
+  id: totrans-363
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以使用 `app.activity.forintent` 模块查找要启动的活动。
 - en: 'This nifty module lets you search for activities based on a given intent action
     and category; here''s how to do that:'
+  id: totrans-364
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个便捷的模块允许你根据给定的意图动作和类别搜索活动；以下是操作方法：
 - en: '[PRE64]'
+  id: totrans-365
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'Here''s an example:'
+  id: totrans-366
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个例子：
 - en: '[PRE65]'
+  id: totrans-367
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: See also
+  id: totrans-368
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Intent* filter reference material at [http://developer.android.com/reference/android/content/Intent.html](http://developer.android.com/reference/android/content/Intent.html)
+  id: totrans-369
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考[*Intent*过滤器参考资料](http://developer.android.com/reference/android/content/Intent.html)。
 - en: The *Intents and Intent Filters – Android Developer* webpage at [http://developer.android.com/guide/components/intents-filters.html](http://developer.android.com/guide/components/intents-filters.html)
+  id: totrans-370
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考[*Intents and Intent Filters – Android Developer*](http://developer.android.com/guide/components/intents-filters.html)网页。
 - en: The *Activites – Android Developer* webpage at [http://developer.android.com/guide/components/activities.html](http://developer.android.com/guide/components/activities.html)
+  id: totrans-371
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考[*Activites – Android Developer*](http://developer.android.com/guide/components/activities.html)网页。
 - en: Writing a drozer module – a device enumeration module
+  id: totrans-372
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 编写一个 drozer 模块——设备枚举模块
 - en: This recipe explains how you can actually develop drozer modules by demonstrating
     the practical steps that make up drozer module development. The following device
     information enumerator grabs information about some of the hardware and the OS
     build.
+  id: totrans-373
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程通过演示构成 drozer 模块开发的实际步骤，解释了如何实际开发 drozer 模块。以下设备信息枚举器获取有关部分硬件和操作系统版本的信息。
 - en: How to do it...
+  id: totrans-374
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Let''s get started writing a drozer device enumeration module:'
+  id: totrans-375
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始编写一个 drozer 设备枚举模块：
 - en: 'Open a text editor and type in the following code:'
+  id: totrans-376
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开文本编辑器并输入以下代码：
 - en: '[PRE66]'
+  id: totrans-377
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: Save that file as `ex.device.info`.
+  id: totrans-378
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将该文件保存为 `ex.device.info`。
 - en: Create a directory for all your future drozer modules and save the `ex.device.info`
     file in it.
+  id: totrans-379
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个目录来保存你未来所有的 drozer 模块，并将 `ex.device.info` 文件保存在其中。
 - en: 'Fire up the drozer console and execute the following command:'
+  id: totrans-380
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动 drozer 控制台并执行以下命令：
 - en: '[PRE67]'
+  id: totrans-381
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: 'Then execute the following command:'
+  id: totrans-382
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后执行以下命令：
 - en: '[PRE68]'
+  id: totrans-383
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: 'drozer should have installed your new module if there were no syntax errors
     or faults. You can now execute it using the following command:'
+  id: totrans-384
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果没有语法错误或故障，drozer应该已经安装了你的新模块。现在你可以使用以下命令执行它：
 - en: '[PRE69]'
+  id: totrans-385
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: 'The output for the previous command should be similar to the output in the
     following screenshot:'
+  id: totrans-386
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 之前命令的输出应该类似于以下截图中的输出：
 - en: '![How to do it...](img/00081.jpeg)'
+  id: totrans-387
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00081.jpeg)'
 - en: The next few recipes are all about writing some useful modules to extend your
     drozer framework; in each, I'll demonstrate some key module development skills
     that you'll find useful later in the book.
+  id: totrans-388
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来的几个食谱都是关于编写一些有用的模块来扩展你的drozer框架；在每一个中，我将演示一些你会在本书后面发现有用的关键模块开发技能。
 - en: How it works...
+  id: totrans-389
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: To start off with this explanation, I thought I'd discuss the code you just
     wrote for your new drozer module and how on earth it manages to extract information
     about your device.
+  id: totrans-390
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了开始这个解释，我想讨论一下你刚刚为你新的drozer模块编写的代码，以及它是如何设法提取关于你设备的信息的。
 - en: 'Well, first of all, I''d like to talk about the structure of a drozer module.
     Every module you write will start with the following line:'
+  id: totrans-391
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我想谈谈drozer模块的结构。你编写的每个模块都将从以下这行开始：
 - en: '[PRE70]'
+  id: totrans-392
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: The first line is essentially an inclusion of some code from the `modules` library
     and it gives drozer modules access to all the magic methods and attributes they
     need to operate. The second line is called the header of a class declaration and
     marks the beginning of an object definition in Python. You may notice the `(Module)`
     part of the header; this is how the `Info` class manages to adopt the attributes
     of the `Module` class, and semantically this works a lot like inheritance in Java.
+  id: totrans-393
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一行本质上是包含了一些来自`modules`库的代码，并让drozer模块能够访问到它们操作所需的所有魔法方法和属性。第二行称为类声明的头部，并标记了Python中对象定义的开始。你可能注意到了头部中的`(Module)`部分；这就是`Info`类如何采用`Module`类的属性，从语义上讲，这类似于Java中的继承。
 - en: 'The next couple of lines are as follows:'
+  id: totrans-394
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来的几行如下：
 - en: '[PRE71]'
+  id: totrans-395
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: 'These are just variables drozer uses to associate some metadata to the module
     and to make documentation a bit more standardized and easy to perform—nothing
     technical to see here. Moving on:'
+  id: totrans-396
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些只是drozer用来将一些元数据关联到模块，并使文档标准化、易于执行的一些变量——这里没有技术性的内容。继续：
 - en: '[PRE72]'
+  id: totrans-397
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: 'This particular piece of code is called a function header and marks the beginning
     of the definition of a Python function. What''s special about this function is
     that it''s the method that gets called to do all the hard work for the module,
     analogous to the `Main` method in a Java class. Let''s talk about the arguments
     the `execute` method expects to be passed:'
+  id: totrans-398
   prefs: []
   type: TYPE_NORMAL
+  zh: 这段特定的代码称为函数头，并标记了Python函数定义的开始。这个函数的特殊之处在于，它是执行模块所有繁重工作的方法，类似于Java类中的`Main`方法。让我们谈谈`execute`方法期望传递的参数：
 - en: '`self`: This is an instance of the class being defined. Its parsed to each
     function in the class so that they have access to the class instance.'
+  id: totrans-399
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`self`：这是正在定义的类的实例。它被解析到类中的每个函数，以便它们可以访问类实例。'
 - en: '`arguments`: This is a dictionary of the arguments parsed to the drozer module
     from the console.'
+  id: totrans-400
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`arguments`：这是从控制台传给drozer模块的分析后的参数字典。'
 - en: 'And then lastly we have the following piece of code:'
+  id: totrans-401
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们有以下这段代码：
 - en: '[PRE73]'
+  id: totrans-402
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: Well, besides dereferencing the `self` object and using some magic method called
     `new`, we see a string value of `android.os.Build` being passed as an argument.
     This string is the name of a Java class in the Android Java API, and the new method
     uses something called Java Reflection to instantiate the `Build` class that holds
     all the information we want to print to the screen.
+  id: totrans-403
   prefs: []
   type: TYPE_NORMAL
+  zh: 好吧，除了解引用`self`对象和使用一个名为`new`的魔法方法之外，我们看到一个字符串值`android.os.Build`作为参数传递。这个字符串是Android
+    Java API中的一个Java类的名称，而`new`方法使用了一种称为Java反射的东西来实例化持有我们想要打印到屏幕上所有信息的`Build`类。
 - en: 'The rest of the code looks something like the following:'
+  id: totrans-404
   prefs: []
   type: TYPE_NORMAL
+  zh: 代码的其余部分看起来像下面这样：
 - en: '[PRE74]'
+  id: totrans-405
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: The preceding code simply prints out the device information.
+  id: totrans-406
   prefs: []
   type: TYPE_NORMAL
+  zh: 上面的代码只是简单地打印出设备信息。
 - en: See also
+  id: totrans-407
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Build Class reference – Android Developer* webpage at [http://developer.android.com/reference/android/os/Build.html](http://developer.android.com/reference/android/os/Build.html)
+  id: totrans-408
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*构建类参考——Android开发者*网页在[http://developer.android.com/reference/android/os/Build.html](http://developer.android.com/reference/android/os/Build.html)'
 - en: The *Writing a Module* webpage at [https://github.com/mwrlabs/drozer/wiki/Writing-a-Module](https://github.com/mwrlabs/drozer/wiki/Writing-a-Module)
+  id: totrans-409
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 访问[编写模块](https://github.com/mwrlabs/drozer/wiki/Writing-a-Module)的网页，位于*Writing
+    a Module*。
 - en: Writing an application certificate enumerator
+  id: totrans-410
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 编写一个应用程序证书枚举器
 - en: In this recipe, I'm going to show you how to write a certificate enumerator,
     which does nothing more than pull application certificates as hexadecimal digests
     and dump them on your screen. The reason I've included this is because, firstly,
@@ -1822,43 +2665,63 @@
     also allow you to identify apps that may share resources and autonomously grant
     each other permissions; how this happens will be discussed in detail in the next
     section.
+  id: totrans-411
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个教程中，我将向你展示如何编写一个证书枚举器，它所做的不过是提取应用程序证书作为十六进制摘要并在屏幕上输出。我之所以包含这部分内容，首先是因为它演示了如何与包管理器接口并获取本节其他模块无法获取的信息。其次，当你寻找使用相同公钥签名的所有应用程序时，它可能有助于你获取应用程序签名。这很有用，因为开发者和恶意软件作者通常会用同一把钥匙为他们的多数应用程序签名。它还将允许你识别可能共享资源并自主互相授权权限的应用程序；这一过程将在下一节详细讨论。
 - en: How to do it...
+  id: totrans-412
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Open up your favorite text editor and enter the following code:'
+  id: totrans-413
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开你喜欢的文本编辑器并输入以下代码：
 - en: '[PRE75]'
+  id: totrans-414
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: 'Save it to your module repo; if you don''t have one, simply create a file somewhere
     on your machine where you''ll save all your modules. You can install the module
     by executing the following command from your drozer console:'
+  id: totrans-415
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将其保存到你的模块仓库中；如果你还没有仓库，只需在你的机器上创建一个文件，用来保存你所有的模块。你可以通过从你的drozer控制台执行以下命令来安装模块：
 - en: '[PRE76]'
+  id: totrans-416
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE76]'
 - en: 'And when this is all done, you can run the module using the following command:'
+  id: totrans-417
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 当这一切准备就绪，你可以使用以下命令运行该模块：
 - en: '[PRE77]'
+  id: totrans-418
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE77]'
 - en: 'You should see something like the following screenshot on your screen:'
+  id: totrans-419
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你的屏幕上应该会显示类似以下截图的内容：
 - en: '![How to do it...](img/00082.jpeg)'
+  id: totrans-420
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00082.jpeg)'
