@@ -1,53 +1,73 @@
 - en: Chapter 8. Testing and Profiling Performance
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第八章 测试和性能分析
 - en: In the previous chapters, we studied and developed tests for our Android application.
     Those tests let us evaluate compliance against a specification and allowed us
     to determine whether the software was behaving correctly or not according to these
     rules by taking a binary verdict, whether it complied green or not. If all test
     cases pass, it means our software is behaving as expected. If one of the test
     cases fails, the software needs to be fixed.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，我们研究和开发了针对Android应用程序的测试。这些测试让我们能够根据规范评估合规性，并通过二进制的判断确定软件是否根据这些规则正确或错误地行为。如果所有测试用例通过，意味着我们的软件表现如预期。如果其中一个测试用例失败，则软件需要修复。
 - en: In many other cases, mainly after we have verified that the software conforms
     to all these specifications, we want to move forward and know how or in what manner
     the criteria are satisfied. At the same time, we would want to know how the system
     performs under different situations to analyze other attributes such as usability,
     speed, response time, and reliability.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 在许多其他情况下，主要在我们验证软件符合所有这些规范后，我们希望向前迈进，了解这些标准是如何满足的。同时，我们还想了解系统在不同情况下的表现，以分析其他属性，如可用性、速度、响应时间和可靠性。
 - en: 'According to the Android developer guide ([http://developer.android.com/](http://developer.android.com/)),
     these are the best practices when it comes to designing our application:'
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据Android开发者指南（[http://developer.android.com/](http://developer.android.com/)），在设计应用程序时以下是最佳实践：
 - en: Designing for performance
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 性能设计
 - en: Designing for responsiveness
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 响应性设计
 - en: Designing for seamlessness
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 无缝设计
 - en: It's extremely important to follow these best practices and to think about performance
     and responsiveness from the very beginning of the design. Since our application
     will run on Android devices with limited computer power, identifying the targets
     for optimization once our application is built, at least partially, and then applying
     the performance testing (which we will be discussing soon) can bring us bigger
     gains.
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 遵循这些最佳实践并从一开始的设计中考虑性能和响应性至关重要。由于我们的应用程序将在计算能力有限的Android设备上运行，因此在构建应用程序（至少是部分构建）后确定优化目标，并应用性能测试（我们将在后面讨论）可以为我们带来更大的收益。
 - en: 'Donald Knuth popularized this years ago:'
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 多年前唐纳德·克努特普及了这一观点：
 - en: '*"Premature optimization is the root of all evil".*'
+  id: totrans-9
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
+  zh: '*"过早优化是万恶之源"。*'
 - en: Optimizations, which are based on guesses, intuition, and even superstition,
     often interfere with the design over short-term periods, and with readability
     and maintainability over long-term periods. On the contrary, *micro-optimizations*
@@ -55,106 +75,156 @@
     applying the changes, and then benchmarking again to evaluate the improvements
     of the optimization. So, the point we are concentrating on here is measuring the
     existing performance and the optimization alternatives.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 基于猜测、直觉甚至迷信的优化，往往会在短期内影响设计，并在长期内影响可读性和可维护性。相反，*微优化*基于识别需要优化的瓶颈或热点，应用更改，然后再次进行基准测试以评估优化的改进。因此，我们在这里关注的是测量现有性能和优化替代方案。
 - en: 'This chapter will introduce a series of concepts related to benchmarking and
     profiling, as follows:'
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章将介绍一系列与基准测试和性能分析相关的概念，如下：
 - en: Traditional logging statement methods
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 传统的日志语句方法
 - en: Creating Android performance tests
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建Android性能测试
 - en: Using profiling tools
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用性能分析工具
 - en: Microbenchmarks using Caliper
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用Caliper进行微基准测试
 - en: Ye Olde Logge method
+  id: totrans-16
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 旧日志方法
 - en: Sometimes, this is too simplistic for real-life scenarios but I'm not going
     to say that it could not help in some cases, mainly because its implementation
     takes minutes and you only need the `logcat` text output to analyze the case.
     This comes in handy during situations where you want to automate procedures or
     apply continuous integration, as described in previous chapters.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 有时，这对于现实生活场景来说过于简单，但我不想说它在某些情况下可能没有帮助，主要是因为其实施只需要几分钟，你只需要`logcat`文本输出就可以分析案例。在希望自动化流程或应用持续集成的场景中，这很方便，如前几章所述。
 - en: 'This method consists of timing a method (or a part of it), surrounding it by
     two time measures, and logging the difference at the end:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种方法包括对方法（或其一部分）进行计时，在它前后各进行一次时间测量，并在最后记录差值：
 - en: '[PRE0]'
+  id: totrans-19
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: This is very straightforward. We take the times and log the difference. For
     this, we are using the `Log.v()` method, and we can see the output in the logcat
     when we run the application. You can control the execution of this benchmark by
     setting `true` or `false` to the `BENCHMARK_TEMPERATURE_CONVERSION` constant that
     you defined outside the method.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 这非常直观。我们记录时间差。为此，我们使用`Log.v()`方法，并在运行应用程序时通过logcat查看输出。你可以通过设置你在外面定义的`BENCHMARK_TEMPERATURE_CONVERSION`常量为`true`或`false`来控制此基准测试的执行。
 - en: 'When we launch the activity with the `BENCHMARK_TEMPERATURE_CONVERSION` constant
     set to `true` in the logcat, we will receive messages like these every time the
     conversion takes place:'
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们设置`BENCHMARK_TEMPERATURE_CONVERSION`常量为`true`启动活动时，在logcat中，每次转换发生时，我们都会收到这样的消息：
 - en: '[PRE1]'
+  id: totrans-22
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: Timing logger
+  id: totrans-23
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 定时记录器
 - en: 'Now, the one better than this is the `android.util.TimingLogger` Android class.
     The `TimingLogger` object can help you time your method calls without having to
     worry about maintaining those time variables yourself. It also has a higher degree
     of accuracy than `System.currentTimeMillis()`:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，比这更好的是`android.util.TimingLogger`安卓类。`TimingLogger`对象可以帮助你计时方法调用，而无需自己维护这些时间变量。它也比`System.currentTimeMillis()`有更高的准确度：
 - en: '[PRE2]'
+  id: totrans-25
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'If you launch the application now, you will notice that nothing comes out in
     your logcat. This is because `TimingLogger` needs you to explicitly turn on the
     logging for the *Tag* you defined. Otherwise, the method calls will do nothing.
     From a terminal, run the following command:'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你现在启动应用程序，你会注意到logcat中没有输出。这是因为`TimingLogger`需要你显式打开你定义的*标签*的日志记录。否则，方法调用将什么都不做。从终端运行以下命令：
 - en: '[PRE3]'
+  id: totrans-27
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Tip
+  id: totrans-28
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: 'You can check what level your logging tag is set to with the `getprop` command:'
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 您可以使用`getprop`命令检查您的日志标签设置在什么级别：
 - en: '`adb shell getprop log.tag.TemperatureTag`'
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: '`adb shell getprop log.tag.TemperatureTag`'
 - en: 'You can list all other properties from your device using this command:'
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以使用这个命令列出设备中的所有其他属性：
 - en: '`adb shell getprop`'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: '`adb shell getprop`'
 - en: 'Now, when we launch the application, we will receive messages like these every
     time a conversion completes:'
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，当我们启动应用程序时，每次转换完成，我们都会收到这样的消息：
 - en: '[PRE4]'
+  id: totrans-34
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: Something you should take into account is that these benchmark-enabling constants
     should not be enabled in the production build, as other common constants, such
     as `DEBUG` or `LOGD`, are used. To avoid mistakes, you should integrate the verification
@@ -163,147 +233,213 @@
     logging from the build before it ships to production—not comment out but delete.
     Remember that you can always find it again in your version control system, in
     the history or on a branch.
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 你应该考虑的是，这些启用基准测试的常量不应该在生产版本中启用，就像使用其他常见常量，如`DEBUG`或`LOGD`一样。为了避免错误，你应该在用于自动化构建的构建过程中集成这些常量值的验证，例如Gradle。此外，我个人会在构建发布到生产之前，删除所有基准测试或验证日志——不是注释掉，而是删除。记住，你总是可以在你的版本控制系统、历史记录或分支中找到它。
 - en: Logging code execution's speed like this is simple, but for more complex performance
     issues, you might want to use more detailed—though more complex—techniques.
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样记录代码执行速度很简单，但对于更复杂的性能问题，你可能想要使用更详细（尽管更复杂）的技术。
 - en: Performance tests in Android SDK
+  id: totrans-37
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 安卓SDK的性能测试
 - en: If the previous method of adding log statements does not suit you, there are
     different methods of getting performance test results from our application. This
     is known as profiling.
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果之前添加日志声明的方法不适合你，还有其他方法可以从我们的应用程序获取性能测试结果。这种方法被称为分析。
 - en: When running instrumented code (as with our Android instrumented test cases),
     there is no standard way of getting performance test results from an Android application,
     as the classes used by Android tests are hidden in the Android SDK and only available
     to system applications, that is, applications that are built as part of the main
     build or system image. This strategy is not available for us, so we are not digging
     deeper in that direction. Instead, we will focus on other available choices.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 当运行检测代码（就像我们的安卓检测测试用例）时，没有标准的方法从安卓应用程序获取性能测试结果，因为安卓测试使用的类在安卓SDK中是隐藏的，仅对系统应用程序可用，即作为主构建或系统映像的一部分构建的应用程序。这个策略对我们不可用，因此我们不会朝这个方向深入挖掘。相反，我们将关注其他可用的选择。
 - en: Launching the performance test
+  id: totrans-40
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 启动性能测试
 - en: These tests are based on an approach similar to what we just discussed, and
     they are used by Android to test system applications. The idea is to extend `android.app.Instrumentation`
     to provide performance snapshots, automatically creating a framework that we can
     even extend to satisfy other needs. Let's understand better what this means with
     a simple example.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些测试基于我们刚才讨论的方法，Android使用它们来测试系统应用程序。这个想法是扩展`android.app.Instrumentation`以提供性能快照，自动创建一个框架，我们甚至可以扩展它以满足其他需求。让我们通过一个简单的例子来更好地理解这意味着什么。
 - en: Creating the LaunchPerformanceBase instrumentation
+  id: totrans-42
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 创建LaunchPerformanceBase检测
 - en: 'Our first step is to extend `Instrumentation` to provide the functionality
     we need. We are using a new package named `com.blundell.tut.launchperf` to keep
     our tests organized:'
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的第一步是扩展`Instrumentation`以提供我们需要的功能。我们使用了一个名为`com.blundell.tut.launchperf`的新包来组织我们的测试：
 - en: '[PRE5]'
+  id: totrans-44
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'We are extending `Instrumentation` here. The constructor initialized the two
     fields in this class: `results` and `intent`. At the end, we invoke the `setAutomaticPerformanceSnapshots()`
     method, which is the key here to creating this performance test.'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在这里扩展了`Instrumentation`。构造函数初始化了此类中的两个字段：`results`和`intent`。最后，我们调用了`setAutomaticPerformanceSnapshots()`方法，这是创建此性能测试的关键。
 - en: The `launchApp()` method is in charge of starting the desired Activity and waiting
     before returning.
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: '`launchApp()`方法负责启动所需的Activity并在返回前等待。'
 - en: The `finish()` method logs the results received and then invokes the Instrumentation's
     `finish()`.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: '`finish()`方法记录收到的结果，然后调用Instrumentation的`finish()`。'
 - en: Creating the TemperatureConverterActivityLaunchPerformance class
+  id: totrans-48
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 创建TemperatureConverterActivityLaunchPerformance类
 - en: 'This class sets up the Intent to invoke `TemperatureConverterActivity` and
     furnish the infrastructure provided by the `LaunchPerformanceBase` class to test
     the performance of launching our Activity:'
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个类设置了Intent以调用`TemperatureConverterActivity`，并提供`LaunchPerformanceBase`类提供的架构以测试启动我们Activity的性能：
 - en: '[PRE6]'
+  id: totrans-50
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: Here, `onCreate()` calls `super.onCreate()` as the Android lifecycle dictates.
     Then the Intent is set, specifying the class name and the package. Then one of
     the Instrumentation's methods, `start()`, is called. It creates and starts a new
     thread in which to run instrumentation. This new thread will make a call to `onStart()`,
     where you can implement the instrumentation.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，`onCreate()`按照Android生命周期调用`super.onCreate()`。然后设置了Intent，指定了类名和包名。然后调用`Instrumentation`的一个方法`start()`。它创建并启动了一个新的线程以运行检测。这个新线程将调用`onStart()`，你可以在其中实现检测功能。
 - en: Then the `onStart()` implementation follows, invoking `launchApp()` and `finish()`.
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后`onStart()`的实现遵循，调用`launchApp()`和`finish()`。
 - en: Running the tests
+  id: totrans-53
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 运行测试
 - en: '[PRE7]'
+  id: totrans-54
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: '[PRE8]'
+  id: totrans-55
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Once everything is in place, we are ready to start running the test.
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 一切准备就绪后，我们就可以开始运行测试了。
 - en: 'First, install the APK that includes these changes. Then, we have several options
     to run the tests, as we reviewed in previous chapters. In this case, we are using
     the command line, as it is the easiest way of getting all the details. If you
     only have one device connected, use this:'
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，安装包含这些更改的APK。然后，正如我们在前面的章节中回顾的那样，我们有多种运行测试的选择。在这种情况下，我们使用命令行，因为这是获取所有细节的最简单方法。如果你只有一个设备连接，使用这个：
 - en: '[PRE9]'
+  id: totrans-58
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Note
+  id: totrans-59
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: 'If you are ever wondering what `Instrumentation` test runners you have installed
     on your device, you can use this command:'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你曾经想知道你的设备上安装了哪些`Instrumentation`测试运行器，你可以使用这个命令：
 - en: '`adb shell pm list instrumentation`'
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: '`adb shell pm list instrumentation`'
 - en: 'We receive the set of results for this test in the standard output:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们通过标准输出接收了此测试的结果集：
 - en: '[PRE10]'
+  id: totrans-63
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'We have highlighted two of the values we are interested in: `execution_time`
     and `cpu_time`. They account for the total execution time and the CPU time used
     respectively.'
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们突出了我们感兴趣的两组值：`execution_time`和`cpu_time`。它们分别表示总执行时间和使用的CPU时间。
 - en: Running this test on an emulator increases the potential for mismeasurement,
     because the host computer is running other processes, which also take up the CPU,
     and the emulator does not necessarily represent the performance of a real piece
     of hardware.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 在模拟器上运行此测试可能会增加测量不准确的可能性，因为宿主计算机正在运行其他进程，这些进程也占用CPU，而模拟器并不一定能代表真实硬件的性能。
 - en: Needless to say, in this and any other case where you measure something that
     is variable over time, you should use a measurement strategy and run the test
     several times to obtain different statistical values, such as average or standard
     deviation.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 不用说，在这种情况下以及任何其他随时间变化的情况中，你应该使用测量策略并多次运行测试以获得不同的统计值，如平均值或标准差。
 - en: Using the Traceview and dmtracedump platform tools
+  id: totrans-67
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用Traceview和dmtracedump平台工具
 - en: The Android SDK includes among its various tools two that are specially intended
     to analyze performance problems and profiles, and potentially determine the target
     to apply optimizations. Android also offers us the **Dalvik Debug Monitor Service**
@@ -312,299 +448,443 @@
     or from the command line with the command monitor. You can use Traceview and other
     tools inside DDMS by using handy GUI shortcuts. Here, however, we are going to
     use the command-line options so that you can understand the tools behind the GUI.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: Android SDK在其众多工具中包含了两个专门用于分析性能问题和配置文件，并可能确定优化目标的工具。Android还为我们提供了 **Dalvik调试监控服务**（**DDMS**），它将所有这些工具集中在一个地方。DDMS可以通过Android
+    Studio导航到 **工具** | **Android** | **设备监控器** 打开，或者通过命令行使用 `monitor` 命令打开。你可以在DDMS中使用方便的GUI快捷方式使用Traceview和其他工具。然而，在这里，我们将使用命令行选项，以便你了解GUI背后的工具。
 - en: 'These tools have an advantage over other alternatives: usually, no modification
     to the source code is needed for simpler tasks. However, for more complex cases,
     some additions are needed, but they are very simple, as we will see shortly.'
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些工具相较于其他替代品有一个优势：通常，对于简单的任务，无需修改源代码。然而，对于更复杂的情况，我们需要进行一些简单的添加，这一点我们很快就会看到。
 - en: 'If you don''t need precision about starting and stopping tracing, you can drive
     it from the command line or Android Studio. For example, to start tracing from
     the command line, you can use the following command. Remember to add the serial
     number with `–s` if you have multiple devices attached:'
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你不需要精确控制追踪的开始和停止，可以通过命令行或Android Studio来操作。例如，要从命令行开始追踪，可以使用以下命令。如果连接了多个设备，记得使用
+    `-s` 添加序列号：
 - en: '[PRE11]'
+  id: totrans-71
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Do something such as entering a temperature value in the Celsius field to force
     a conversion, then run this:'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 进行一些操作，比如在摄氏度字段中输入一个温度值以强制转换，然后运行以下命令：
 - en: '[PRE12]'
+  id: totrans-73
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Otherwise, if you need more precision about when profiling starts, you can
     add the programmatic style:'
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 否则，如果你需要更精确地控制分析开始的时间，可以添加编程式的风格：
 - en: '[PRE13]'
+  id: totrans-75
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: This will create a trace file, using the default name, `dmtrace.trace`, on the
     SD card by invoking `Debug.startMethodTracing()`, which starts method tracing
     with the default log name and buffer size. When we are done, we call `Debug.stopMethodTracing()`
     to stop the profiling.
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将创建一个追踪文件，默认名为 `dmtrace.trace`，在SD卡上通过调用 `Debug.startMethodTracing()` 来启动方法追踪，它使用默认的日志名称和缓冲区大小开始方法追踪。完成之后，我们调用
+    `Debug.stopMethodTracing()` 来停止分析。
 - en: Note
+  id: totrans-77
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Remember that enabling profiling really slows down the application execution,
     so the results should be interpreted by their relative weight, not by their absolute
     values.
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 请记住，启用分析会大大减慢应用程序的执行速度，因此结果应该根据它们的相对权重来解释，而不是绝对值。
 - en: To be able to write to the SD card, the application requires an `android.permission.WRITE_EXTERNAL_STORAGE`
     permission to be added to the manifest.
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了能够向SD卡写入数据，应用程序需要在清单文件中添加 `android.permission.WRITE_EXTERNAL_STORAGE` 权限。
 - en: For Traceview using DDMS, the stream is sent through the JDWP connection straight
     to your development computer, and the permission is not needed.
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用DDMS进行Traceview时，数据流会通过JDWP连接直接发送到开发计算机，因此不需要该权限。
 - en: 'You need to exercise the application in order to obtain the trace file. This
     file needs to be pulled to the development computer to be further analyzed using
     `traceview`:'
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 你需要运行应用程序以获取追踪文件。这个文件需要被拉取到开发计算机上，以便使用 `traceview` 进行进一步分析：
 - en: '[PRE14]'
+  id: totrans-82
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'After running this command, the traceview''s window appears, displaying all
     the information collected, as shown in this screenshot:'
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 运行此命令后，Traceview窗口会出现，显示所有收集到的信息，如截图所示：
 - en: '![Using the Traceview and dmtracedump platform tools](img/00041.jpeg)'
+  id: totrans-84
   prefs: []
   type: TYPE_IMG
+  zh: '![使用Traceview和dmtracedump平台工具](img/00041.jpeg)'
 - en: The top part of the window shows the timeline panel and a colored area for every
     method. Time increases to the right along the scale. There are also small lines
     under the colored row, displaying the extent of all the calls to the selected
     method.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 窗口顶部显示了时间线面板以及每个方法的彩色区域。时间沿刻度向右增加。在彩色行下方还有小线条，显示了对选定方法的调用的范围。
 - en: We profiled a small segment of our application, so only the main thread was
     running from our process. In the cases where other threads run during the profiling,
     this information will also be displayed. For instance, this shows that an AsyncTask
     was executed by the system.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们对应用程序的一个小片段进行了分析，因此只有主线程在运行我们的进程。在其他线程在分析过程中运行的情况下，此信息也将显示。例如，这表明系统执行了一个AsyncTask。
 - en: The bottom part shows the profile panel, every method executed, and its parent-child
     relationships. We refer to calling methods as **parents** and the called methods
     as **children**. When clicked on, a method expands to show its parents and children.
     Parents are shown with a purple background and children with a yellow background.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 窗口底部显示了分析面板，执行了每个方法及其父子关系。我们将调用方法称为**父方法**，被调用的方法称为**子方法**。点击方法时，它会展开以显示其父方法和子方法。父方法显示为紫色背景，子方法显示为黄色背景。
 - en: Also, the color selected for the method, done in a round-robin fashion, is displayed
     before the method name.
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，为方法选择的颜色（以循环方式完成）在方法名称之前显示。
 - en: Finally, at the bottom, there's a **Find:** field, where we can enter a filter
     to reduce the amount of information displayed. For example, if we are interested
     in displaying only the methods in the `com.blundell.tut` package, we should enter
     `com/blundell/tut`.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，在底部有一个**查找：**字段，我们可以在其中输入筛选器以减少显示的信息量。例如，如果我们只想显示`com.blundell.tut`包中的方法，我们应该输入`com/blundell/tut`。
 - en: Clicking on a column will set the order of the list according to that column
     in ascending or descending order.
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 点击列标题将根据该列以升序或降序设置列表的顺序。
 - en: 'This table shows you the available columns and their descriptions:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 此表显示了可用的列及其描述：
 - en: '| Column | Description |'
+  id: totrans-92
   prefs: []
   type: TYPE_TB
+  zh: '| 列 | 描述 |'
 - en: '| --- | --- |'
+  id: totrans-93
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- |'
 - en: '| Name | The name of the method, including its package name, in the form we
     just described, which is by using / (slash) as the delimiter. Also, the parameters
     and the return type are displayed. |'
+  id: totrans-94
   prefs: []
   type: TYPE_TB
+  zh: '| 名称 | 方法的名称，包括其包名，正如我们刚才描述的那样，使用/（斜杠）作为分隔符。同时，显示参数和返回类型。 |'
 - en: '| Incl Cpu Time% | The inclusive time, as a percentage of the total time, used
     by the method. This includes all its children. |'
+  id: totrans-95
   prefs: []
   type: TYPE_TB
+  zh: '| 包含CPU时间百分比 | 方法使用的包含时间占总时间的百分比。这包括其所有子方法。 |'
 - en: '| Incl Cpu Time | The inclusive time, in milliseconds, used by the particular
     method. This includes the method and all its children. |'
+  id: totrans-96
   prefs: []
   type: TYPE_TB
+  zh: '| 包含CPU时间 | 特定方法的包含时间，以毫秒为单位。这包括该方法及其所有子方法。 |'
 - en: '| Excl Cpu Time% | The exclusive time, as a percentage of the total time, used
     by the method. This excludes all its children. |'
+  id: totrans-97
   prefs: []
   type: TYPE_TB
+  zh: '| 独占CPU时间百分比 | 方法使用的独占时间占总时间的百分比。这排除其所有子方法。 |'
 - en: '| Excl Cpu Time | The exclusive time, in milliseconds. This is the total time
     spent in the particular method. It excludes all its children. |'
+  id: totrans-98
   prefs: []
   type: TYPE_TB
+  zh: '| 独占CPU时间 | 独占时间，以毫秒为单位。这是特定方法所花费的总时间。它不包括所有子方法。 |'
 - en: '| Incl Real Time% | Inclusive time plus the waiting time of the process to
     execute as a percentage (waiting for I/O). |'
+  id: totrans-99
   prefs: []
   type: TYPE_TB
+  zh: '| 包含实时百分比 | 进程执行时的包含时间加上等待时间占总时间的百分比（等待I/O）。 |'
 - en: '| Incl Real Time | Inclusive time plus the waiting time of the process to execute.
     |'
+  id: totrans-100
   prefs: []
   type: TYPE_TB
+  zh: '| 包含实时 | 进程执行时的包含时间加上等待时间。 |'
 - en: '| Excl Real Time% | Exclusive time plus the waiting time of the process to
     execute as a percentage (waiting for I/O). |'
+  id: totrans-101
   prefs: []
   type: TYPE_TB
+  zh: '| 独占实时百分比 | 独占时间加上进程执行时的等待时间占总时间的百分比（等待I/O）。 |'
 - en: '| Excl Real Time | Exclusive time plus the waiting time of the process to execute.
     |'
+  id: totrans-102
   prefs: []
   type: TYPE_TB
+  zh: '| 独占实时 | 独占时间加上进程执行时的等待时间。 |'
 - en: '| Calls+RecurCalls/Total | This column shows the number of calls for the particular
     method and the number of recursive calls.The number of calls compared with the
     total number of calls made to this method. |'
+  id: totrans-103
   prefs: []
   type: TYPE_TB
+  zh: '| 调用+递归调用/总数 | 这一列显示了特定方法的调用次数和递归调用次数。与该方法收到的总调用次数进行比较。 |'
 - en: '| Cpu Time/Call | The time of every call in milliseconds. |'
+  id: totrans-104
   prefs: []
   type: TYPE_TB
+  zh: '| 每次调用CPU时间 | 每次调用的毫秒数时间。 |'
 - en: 'The final word on Traceview is a word of warning: Traceview currently disables
     the JIT compiler from running, which may cause Traceview to misattribute time
     to code blocks, which the JIT may be able to win back. Therefore, it is imperative
     after making changes you imply from Traceview data, that you ensure that the resulting
     code actually runs faster when run without Traceview.'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 关于 Traceview 的最后提醒是：目前 Traceview 禁止 JIT 编译器运行，这可能导致 Traceview 将时间误归到代码块，而 JIT
+    可能能够赢回这些时间。因此，在根据 Traceview 数据做出更改后，你一定要确保在未使用 Traceview 的情况下运行的实际代码能够更快。
 - en: Dmtracedump
+  id: totrans-106
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Dmtracedump
 - en: Dmtracedump is an alternative to traceview. It allows you to generate your trace
     data in alternative formats, including HTML, and also a call-stack diagram, using
     the trace files already gathered. The later diagram is of a tree structure, and
     each node of the tree represents one call in the stack.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: Dmtracedump 是 traceview 的替代品。它允许你使用已经收集的追踪文件，以替代格式生成追踪数据，包括 HTML，以及一个调用堆栈图。后者是树状结构，树的每个节点代表堆栈中的一个调用。
 - en: 'You can use the same traceview files we have pulled from the device with the
     new command:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 您可以使用我们从设备中提取的相同 traceview 文件，并使用以下新命令：
 - en: '[PRE15]'
+  id: totrans-109
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'To view your trace data as HTML, run the following:'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 要将你的追踪数据以 HTML 格式查看，请运行以下命令：
 - en: '[PRE16]'
+  id: totrans-111
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'This alternative HTML view allows you to navigate around the details of your
     trace and filter the call stacks of each call, in a way different from how the
     original traceview GUI does:'
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个替代的 HTML 视图允许你以不同于原始 traceview GUI 的方式浏览追踪详情，并过滤每个调用的调用堆栈。
 - en: '![Dmtracedump](img/00043.jpeg)'
+  id: totrans-113
   prefs: []
   type: TYPE_IMG
+  zh: '![Dmtracedump](img/00043.jpeg)'
 - en: 'This table describes the extra command-line arguments you can use with dmtracedump:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 下表描述了您可以使用 dmtracedump 的额外命令行参数：
 - en: '| Command | Description |'
+  id: totrans-115
   prefs: []
   type: TYPE_TB
+  zh: '| 命令 | 描述 |'
 - en: '| --- | --- |'
+  id: totrans-116
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- |'
 - en: '| `-d <trace-file-name>` | Carry out a comparison against this trace file and
     print the difference. |'
+  id: totrans-117
   prefs: []
   type: TYPE_TB
+  zh: '| `-d <trace-file-name>` | 与此追踪文件进行比较，并打印差异。 |'
 - en: '| `-g <graph-out-file-name.png>` | Generate the graph in this file. Technically,
     it might not generate PNG images, but if you name it `something.png`, you can
     open the file to see the graph. |'
+  id: totrans-118
   prefs: []
   type: TYPE_TB
+  zh: '| `-g <graph-out-file-name.png>` | 在此文件中生成图表。从技术上来说，它可能不会生成 PNG 图片，但如果你将其命名为
+    `something.png`，你可以打开文件查看图表。 |'
 - en: '| `-h` | Turn on the HTML output. This will be printed on your console just
     as HTML code, so remember to pipe this output to a file, such as `example.html`.
     |'
+  id: totrans-119
   prefs: []
   type: TYPE_TB
+  zh: '| `-h` | 开启 HTML 输出。这将在你的控制台以 HTML 代码形式打印，因此记得将此输出重定向到一个文件，例如 `example.html`。
+    |'
 - en: '| `-o` | Dump the trace file instead of profiling. |'
+  id: totrans-120
   prefs: []
   type: TYPE_TB
+  zh: '| `-o` | 输出追踪文件，而不是进行性能分析。 |'
 - en: '| `-s <trace-file-name>` | URL base to the location of the sortable JavaScript
     file (I''m not sure what the use of this parameter is! [https://code.google.com/p/android/issues/detail?id=53468](https://code.google.com/p/android/issues/detail?id=53468)).
     |'
+  id: totrans-121
   prefs: []
   type: TYPE_TB
+  zh: '| `-s <trace-file-name>` | 可排序 JavaScript 文件的 URL 路径基础（我不确定这个参数的用途！[https://code.google.com/p/android/issues/detail?id=53468](https://code.google.com/p/android/issues/detail?id=53468))。
+    |'
 - en: '| `-t <percent>` | Minimum threshold for including child nodes in the graph
     (the child''s inclusive time as a percentage of the parent''s inclusive time).
     If this option is not used, the default threshold is 20 percent. |'
+  id: totrans-122
   prefs: []
   type: TYPE_TB
+  zh: '| `-t <percent>` | 在图表中包含子节点的最小阈值（子节点的包含时间占父节点包含时间的百分比）。如果未使用此选项，则默认阈值为 20%。
+    |'
 - en: Microbenchmarks
+  id: totrans-123
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 微基准测试
 - en: Benchmarking is the act of running a computer program or operation in order
     to compare operations in a way that produces quantitative results, normally by
     running a set of tests and trials against them.
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 基准测试是运行计算机程序或操作的行为，以便以产生定量结果的方式比较操作，通常是对它们进行一系列测试和试验。
 - en: 'Benchmarks can be organized in the following two big categories:'
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 基准测试可以组织为以下两大类：
 - en: Macrobenchmarks
+  id: totrans-126
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 宏基准测试
 - en: Microbenchmarks
+  id: totrans-127
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 微基准测试
 - en: '**Macrobenchmarks**exist as a means to compare different platforms in specific
     areas such as processor speed, number of floating-point operations per unit of
     time, graphics and 3D performance, and so on. They are normally used against hardware
     components, but can also be used to test software-specific areas, such as compiler
     optimization or algorithms.'
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: '**宏基准测试**作为一种比较不同平台在特定领域（如处理器速度、每单位时间的浮点运算数量、图形和3D性能等）的手段而存在。它们通常用于硬件组件，但也可以用于测试软件特定领域，如编译器优化或算法。'
 - en: As opposed to these traditional macrobenchmarks, a **microbenchmark** attempts
     to measure the performance of a very small piece of code, often a single method.
     The results obtained are used to choose between competing implementations that
     provide the same functionality, when deciding the optimization path.
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 与这些传统的宏观基准测试相对，**微基准测试**试图测量非常小段代码的性能，通常是一个单独的方法。获得的这些结果用于在选择提供相同功能的不同实现方案时决定优化路径。
 - en: The risk here is to microbenchmark something different than what you think you
     are measuring. This is something to take into account mainly in the case of JIT
     compilers, as used by Android, starting with version 2.2 Froyo. The JIT compiler
     may compile and optimize your microbenchmark differently than the same code in
     your application. So, be cautious when taking your decision.
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里的风险是，您可能测量到的微基准测试与您认为正在测量的内容不同。这是在使用JIT编译器的情况下主要需要考虑的问题，Android从2.2 Froyo版本开始使用JIT编译器。JIT编译器可能会以与应用程序中相同代码不同的方式编译和优化您的微基准测试。因此，在做出决定时要谨慎。
 - en: This is different from the profiling tactic introduced in the previous section,
     as this approach does not consider the entire application but a single method
     or algorithm at a time.
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 这与上一节引入的剖析策略不同，因为这种方法不考虑整个应用程序，而是一次只考虑一个方法或算法。
 - en: Caliper microbenchmarks
+  id: totrans-132
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Caliper微基准测试
 - en: '**Caliper** is Google''s open source framework for writing, running, and viewing
     results of microbenchmarks. There are many examples and tutorials on its website
     at [http://code.google.com/p/caliper](http://code.google.com/p/caliper).'
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: '**Caliper**是谷歌的开源框架，用于编写、运行和查看微基准测试的结果。在[http://code.google.com/p/caliper](http://code.google.com/p/caliper)它的网站上有很多示例和教程。'
 - en: Caliper is endorsed on `developer.android.com` and is used by Google to measure
     the performance of the Android programming language itself. We are exploring its
     essential use here, and will introduce more Android-related usage in the next
     chapter.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: '`developer.android.com`上推荐了Caliper，谷歌用它来衡量Android编程语言本身的性能。我们在这里探讨其基本用法，并在下一章介绍更多与Android相关的使用方法。'
 - en: Its central idea is to benchmark methods, mainly to understand how efficient
     they are. We may decide that this is the target for our optimization, perhaps
     after analyzing the results provided by profiling the app via Traceview.
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 它的核心思想是基准测试方法，主要是为了了解它们的效率如何。我们可能会决定这是我们优化的目标，或许是在通过Traceview分析应用程序的剖析结果之后。
 - en: Caliper benchmarks use annotations to help you build your tests correctly. Benchmarks
     are structured in a fashion similar to JUnit tests. Previously, Caliper mirrored
     JUnit3 in its conventions; for instance, where tests had to start with the prefix
@@ -613,29 +893,43 @@
     then accepts an int parameter, usually named `reps`, indicating the number of
     repetitions to benchmark the code that sits inside the method, which is surrounded
     by a loop counting the repetitions.
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: Caliper基准测试使用注解来帮助您正确构建测试。基准测试的结构与JUnit测试类似。以前，Caliper在约定上模仿JUnit3；例如，测试必须以`test`为前缀，基准测试以`time`为前缀。在最新版本中，它类似于JUnit4，JUnit有`@Test`，Caliper使用`@Benchmark`。每个基准测试都接受一个int参数，通常命名为`reps`，表示对方法内部代码进行基准测试的重复次数，该代码由一个循环包围，计算重复次数。
 - en: The `setUp()` method or `@Before` annotation is present and is used as `@BeforeExperiment`.
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 存在`setUp()`方法或`@Before`注解，用作`@BeforeExperiment`。
 - en: Benchmarking the temperature converter
+  id: totrans-138
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 基准测试温度转换器
 - en: Let's start by creating a new Java module inside our project. Yes, this time,
     it is not an Android module—just Java.
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们从在项目中创建一个新的Java模块开始。是的，这次不是一个Android模块——只是Java。
 - en: For consistency, use the `com.blundell.tut` package as the main package.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了保持一致性，使用`com.blundell.tut`包作为主包。
 - en: 'Add a dependency to this module on your core module in the `/benchmark/build.gradle`
     file. This allows you to access the temperature converter code:'
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`/benchmark/build.gradle`文件中，将此模块的依赖项添加到您核心模块上。这样您就可以访问温度转换器代码：
 - en: '[PRE17]'
+  id: totrans-142
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'Also, add the `Caliper` library as a dependency; this is hosted on Maven central.
     However, at the time of writing this book, the version released by Google is Caliper
     1.0-beta-1, which does not include the annotations we have just discussed. I have
@@ -643,18 +937,26 @@
     star that issue if you feel so inclined. Therefore, in the meantime, another developer
     has released Caliper under his package to Maven central to allow us to use annotations.
     This is the import you need:'
+  id: totrans-143
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，将`Caliper`库作为一个依赖项添加；这是托管在Maven中央的。然而，在撰写这本书的时候，谷歌发布的版本是Caliper 1.0-beta-1，它不包括我们刚刚讨论的注解。我已经尝试在[https://code.google.com/p/caliper/issues/detail?id=291](https://code.google.com/p/caliper/issues/detail?id=291)上戳他们解决这个问题，如果你觉得有倾向，可以给那个问题加星。因此，与此同时，另一个开发者已经将Caliper发布到Maven中央的他的包下，以便我们可以使用注解。这是你需要导入的：
 - en: '[PRE18]'
+  id: totrans-144
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'Create the `TemperatureConverterBenchmark` class that will be containing our
     benchmarks:'
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建一个包含我们基准测试的`TemperatureConverterBenchmark`类：
 - en: '[PRE19]'
+  id: totrans-146
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: We have a `setUp()` method similar to JUnit tests that use the `@BeforeExperiment`
     annotation. It is run before the benchmarks are run. This method initializes a
     collection of random temperatures used in the conversion benchmark. The size of
@@ -664,98 +966,143 @@
     we have given the param some default values of `"1", "10", "100"`. This means
     we will have at least three benchmarks, with one, then 10, and then 100 values
     of temperature.
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们有一个类似于JUnit测试的`setUp()`方法，它使用`@BeforeExperiment`注解。它在运行基准测试之前执行。这个方法初始化一个用于转换基准测试的随机温度集合。这个集合的大小是一个字段，在这里用`@Param`注解，以便Caliper知道它的存在。当我们运行基准测试时，Caliper将允许我们提供这个参数的值。但是，对于这个例子，我们给param一些默认值`"1",
+    "10", "100"`。这意味着我们将至少有三个基准测试，分别是一个、然后是10个、最后是100个温度值。
 - en: We use a Gaussian distribution for the pseudo-random temperatures, as this can
     be a good model of the reality of a user.
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用高斯分布来生成伪随机温度，因为这可以是用户现实情况的一个很好的模型。
 - en: The benchmark method itself uses the `@Benchmark` annotation so that caliper
     can recognize and run this method, in this `timeCelsiusToFahrenheit()` instance.
     Inside this method, we loop for the number of repetitions passed to us as a method
     parameter, each time invoking the `TemperatureConverter.celsiusToFahrenheit()`
     conversion, which is the method we wish to benchmark.
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 基准测试方法本身使用`@Benchmark`注解，以便Caliper可以识别并运行这个方法，在这个`timeCelsiusToFahrenheit()`实例中。在这个方法内部，我们根据传递给我们的方法参数进行循环，每次调用`TemperatureConverter.celsiusToFahrenheit()`转换方法，这是我们希望进行基准测试的方法。
 - en: Running Caliper
+  id: totrans-150
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 运行Caliper。
 - en: To run Caliper, right-click on the class and select from the menu and run `TemperatureConverterBenchmark.main()`.
     If you want to change the total parameter from the default of `1, 10, 100`, edit
     the run configuration, and in the Program arguments field, input `–Dtotal=5,50,500`.
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 要运行Caliper，请右键点击该类，从菜单中选择并运行`TemperatureConverterBenchmark.main()`。如果你想改变总参数的默认值`1,
+    10, 100`，请编辑运行配置，在程序参数字段中输入`–Dtotal=5,50,500`。
 - en: 'Either way, this will run the benchmarks, and if everything goes well, we will
     be presented with the results:'
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 无论哪种方式，这都会运行基准测试，如果一切顺利，我们将看到结果：
 - en: '[PRE20]'
+  id: totrans-153
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: To help visualize these results, there is a service hosted on Google AppEngine
     ([http://microbenchmarks.appspot.com](http://microbenchmarks.appspot.com)) that
     accepts your result data and lets you visualize it in a much better way. You can
     see this URL in the preceding output, where the results have been published.
+  id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了帮助可视化这些结果，有一个托管在Google AppEngine上的服务（[http://microbenchmarks.appspot.com](http://microbenchmarks.appspot.com)），它接受你的结果数据，并让你以更好的方式可视化它。你可以在前面的输出中看到这个URL，结果已经发布在那里。
 - en: If you wish to access a suite of benchmarks, or collate your results over time,
     you can log in to this server and gain an API key to help congregate your results.
     Once you have obtained this key, it should be placed in the `~/.caliper/config.properties`
     file in your home directory, and the next time you run the benchmarks, the results
     will be linked to your login.
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你希望访问一组基准测试套件，或者随着时间的推移收集你的结果，你可以登录这个服务器并获得一个API密钥，以帮助汇总你的结果。一旦你获得了这个密钥，它应该被放在你主目录下的`~/.caliper/config.properties`文件中，下次你运行基准测试时，结果将与你登录的账户关联。
 - en: 'The `config.properties` will look like this snippet after you pasted the API
     key obtained:'
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 在您粘贴获得到的 API 密钥后，`config.properties` 文件将看起来像下面这段代码：
 - en: '[PRE21]'
+  id: totrans-157
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'The result will be as follows:'
+  id: totrans-158
   prefs: []
   type: TYPE_NORMAL
+  zh: 结果将如下所示：
 - en: '![Running Caliper](img/00044.jpeg)'
+  id: totrans-159
   prefs: []
   type: TYPE_IMG
+  zh: '![运行 Caliper](img/00044.jpeg)'
 - en: As well as the run speeds, the generated website shows you the configuration
     of the JVM used to run the tests. The blue and red sections are expandable for
     seeing more properties, helping you to detect when the environment being run on
     is actually affecting the different results being reported.
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了运行速度，生成的网站还会显示用于运行测试的 JVM 配置。蓝色和红色部分可以展开以查看更多属性，帮助您检测实际运行环境是否在影响报告的不同结果。
 - en: Summary
+  id: totrans-161
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: In this chapter, we dissected the available alternatives for testing the performance
     measures of our application by benchmarking and profiling our code.
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们通过基准测试和代码剖析，剖析了可用于测试应用程序性能指标的可用替代方案。
 - en: Some options that should be provided by the Android SDK are not available at
     the time of writing this book, and there is no way to implement Android `PerformanceTestCases`
     because some of the code is hidden in the SDK. We visited and analyzed some other
     valid alternatives.
+  id: totrans-163
   prefs: []
   type: TYPE_NORMAL
+  zh: 在撰写本书时，Android SDK 应提供的某些选项是不可用的，而且由于 SDK 中隐藏了一些代码，无法实现 Android `PerformanceTestCases`。
 - en: Among these alternatives, we found that we can use simple log statements or
     more sophisticated code that extends instrumentation.
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这些替代方案中，我们发现可以使用简单的日志声明或更复杂的扩展了插桩的代码。
 - en: Subsequently, we analyzed profiling alternatives and described and exemplified
     the use of `traceview` and `dmtracedump`.
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 随后，我们分析了剖析的替代方案，并描述和示例了 `traceview` 和 `dmtracedump` 的使用。
 - en: Finally, you discovered Caliper, a microbenchmarking tool that has native support
     for Android. However, we introduced its most basic usage, and postponed more specific
     Android and Dalvik VM usage for the next chapter.
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，您了解了 Caliper，这是一个支持 Android 原生的微基准测试工具。然而，我们仅介绍了其最基本的使用方法，并将更具体的 Android
+    和 Dalvik VM 使用方法留待下一章介绍。
 - en: To be able to quantify your testing efforts in the next chapter, we will be
     executing coverage reports on our code. We will also introduce alternative testing
     and discuss new upcoming libraries and topics in the Android testing world to
     hopefully give you some jumping-off points to explore and continue on your own
     testing voyage.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了在下一章中能够量化您的测试工作，我们将对我们的代码执行覆盖报告。我们还将介绍替代测试方法，并讨论 Android 测试领域的新兴库和主题，希望这能给您提供一些探索和继续您测试旅程的起点。
