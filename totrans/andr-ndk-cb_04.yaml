@@ -3,40 +3,48 @@
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第四章．Android NDK OpenGL ES API
 - en: 'In this chapter we will cover the following recipes:'
   id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Drawing 2D Graphics and applying transforms with OpenGL ES 1.x API
   id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES 1.x API绘制2D图形并应用变换
 - en: Drawing 3D graphics and lighting up the scene with the OpenGL ES 1.x API
   id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES 1.x API绘制3D图形并照亮场景
 - en: Mapping texture to 3D objects with the OpenGL ES 1.x API
   id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES 1.x API将纹理映射到3D对象
 - en: Drawing 3D graphics with the OpenGL ES 2.0 API
   id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES 2.0 API绘制3D图形
 - en: Displaying graphics with EGL
   id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用EGL显示图形
 - en: Introduction
   id: totrans-7
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: '**Open Graphics Library** (**OpenGL**) is a cross-platform industry standard
     API for producing 2D and 3D graphics. It specifies a language-independent software
     interface for graphics hardware or software graphics engines. **OpenGL ES** is
@@ -45,6 +53,8 @@
   id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: '**开放图形库**（**OpenGL**）是一个跨平台的工业标准API，用于生成2D和3D图形。它定义了一个与语言无关的软件接口，用于图形硬件或软件图形引擎。**OpenGL
+    ES**是针对嵌入式设备的OpenGL版本。它由OpenGL规范的一个子集和一些特定于OpenGL ES的附加扩展组成。'
 - en: OpenGL ES does not require dedicated graphics hardware to work. Different devices
     can come with graphics hardware with different processing capabilities. The workload
     of the OpenGL ES calls is divided between the CPU and graphics hardware. It is
@@ -53,6 +63,8 @@
   id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL ES不需要专用的图形硬件来工作。不同的设备可以配备具有不同处理能力的图形硬件。OpenGL ES的调用工作负载在CPU和图形硬件之间分配。完全从CPU支持OpenGL
+    ES是可能的。然而，根据其处理能力，图形硬件可以在不同级别上提高性能。
 - en: 'Before we dive into Android NDK OpenGL ES, a little introduction of the **Graphics
     Rendering Pipeline** (**GRP**) in the OpenGL context is necessary. GRP refers
     to a series of processing stages, which the graphics hardware takes to produce
@@ -63,6 +75,7 @@
   id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 在深入探讨Android NDK OpenGL ES之前，有必要简要介绍一下OpenGL上下文中的**图形渲染管线**（**GRP**）。GRP指的是一系列处理阶段，图形硬件通过这些阶段来生成图形。它以图元（**图元**指的是简单的几何形状，如点、线和三角形）的顶点形式接受对象描述，并为显示上的像素输出颜色值。它可以大致分为以下四个主要阶段：
 - en: '**Vertex processing**: It accepts the graphics model description, processes
     and transforms the individual vertices to project then onto the screen, and combines
     their information for further processing of **primitives**.'
@@ -70,6 +83,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**顶点处理**：它接受图形模型描述，处理并转换各个顶点以将它们投影到屏幕上，并将它们的信息组合起来进行**图元**的进一步处理。'
 - en: '**Rasterization**: It converts primitives into fragments. A **fragment** contains
     the data that is necessary to generate a pixel''s data in the frame buffer. Note
     that only the pixels affected by one or more primitives will have a fragment.
@@ -79,18 +93,21 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**光栅化**：它将图元转换为片段。一个**片段**包含生成帧缓冲区中像素数据所必需的数据。请注意，只有受到一个或多个图元影响的像素才会有片段。一个片段包含信息，如光栅位置、深度、插值颜色和纹理坐标。'
 - en: '**Fragment processing**: It processes each fragment. A series of operations
     are applied to each fragment, including alpha test, texture mapping, and so on.'
   id: totrans-13
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**片段处理**：它处理每个片段。一系列操作被应用于每个片段，包括alpha测试、纹理映射等。'
 - en: '**Output merging**: It combines all fragments to produce the color values (including
     alpha) for the 2D display.'
   id: totrans-14
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**输出合并**：它将所有片段结合起来，为2D显示产生颜色值（包括alpha）。'
 - en: In the modern computer graphics hardware, vertex processing and fragment processing
     are programmable. We can write programs to perform custom transform and processing
     of vertices and fragments. In contrast, rasterization and output merging are configurable,
@@ -98,6 +115,7 @@
   id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 在现代计算机图形硬件中，顶点处理和片段处理是可编程的。我们可以编写程序来执行自定义的顶点和片段转换和处理。相比之下，光栅化和输出合并是可配置的，但不可编程。
 - en: Each of the preceding stages can consist of one or more steps. OpenGL ES 1.x
     and OpenGL ES 2.0 provide different GRPs. Specifically, OpenGL ES 1.x provides
     a fixed function pipeline, where we input primitive and texture data, set up lighting,
@@ -107,28 +125,35 @@
   id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 前述每个阶段可以包含一个或多个步骤。OpenGL ES 1.x和OpenGL ES 2.0提供了不同的GRP。具体来说，OpenGL ES 1.x提供了一个固定功能管线，我们输入原始数据和纹理数据，设置光照，剩下的由OpenGL
+    ES处理。相比之下，OpenGL ES 2.0提供了一个可编程管线，允许我们用**OpenGL ES着色语言**（**GLSL**）编写顶点和片段着色器来处理具体细节。
 - en: 'The following diagram indicaties the fixed function pipeline of OpenGL ES 1.x:'
   id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 下图指示了OpenGL ES 1.x的固定功能管线：
 - en: '![Introduction](img/1505_04_01.jpg)'
   id: totrans-18
   prefs: []
   type: TYPE_IMG
+  zh: '![介绍](img/1505_04_01.jpg)'
 - en: 'The following is another diagram that illustrates the programmable pipeline
     of OpenGL ES 2.0:'
   id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 下图是另一个说明OpenGL ES 2.0可编程管线的图：
 - en: '![Introduction](img/1505_04_02.jpg)'
   id: totrans-20
   prefs: []
   type: TYPE_IMG
+  zh: '![介绍](img/1505_04_02.jpg)'
 - en: As shown in the preceding diagram, the fixed pipeline in OpenGL ES 1.x has been
     replaced by the programmable shaders in OpenGL ES 2.0.
   id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前图所示，OpenGL ES 1.x中的固定管线已经被OpenGL ES 2.0中的可编程着色器所取代。
 - en: 'With this introduction of computer graphics, we''re now ready to start our
     journey to Android NDK OpenGL ES programming. Android NDK provides both OpenGL
     ES 1.x (version 1.0 and version 1.1) and OpenGL ES 2.0 libraries, which differ
@@ -137,41 +162,50 @@
   id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过这篇计算机图形学的介绍，我们现在准备开始学习Android NDK OpenGL ES编程的旅程。Android NDK提供了OpenGL ES 1.x（版本1.0和版本1.1）和OpenGL
+    ES 2.0库，它们之间有显著差异。以下表格概述了在选择Android应用程序中使用的OpenGL ES版本时需要考虑的因素：
 - en: '|   | OpenGL 1.x | OpenGL 2.0 |'
   id: totrans-23
   prefs: []
   type: TYPE_TB
+  zh: '|   | OpenGL 1.x | OpenGL 2.0 |'
 - en: '| --- | --- | --- |'
   id: totrans-24
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- | --- |'
 - en: '| **Performance** | Fast 2D and 3D graphics. | Depending upon the Android device,
     but in general it provides faster 2D and 3D graphics. |'
   id: totrans-25
   prefs: []
   type: TYPE_TB
+  zh: '| **性能** | 快速的2D和3D图形。 | 根据Android设备而定，但通常提供更快的2D和3D图形。 |'
 - en: '| **Device compatibility** | Almost all Android devices. | Majority of Android
     devices, and increasing. |'
   id: totrans-26
   prefs: []
   type: TYPE_TB
+  zh: '| **设备兼容性** | 几乎所有的Android设备。 | 大多数Android设备，且在增加中。 |'
 - en: '| **Coding convenience** | Fixed pipeline with convenient functions. Easy to
     use for simple 3D applications. | No built-in basic functions and more effort
     may be required for simple 3-D applications. |'
   id: totrans-27
   prefs: []
   type: TYPE_TB
+  zh: '| **编码便利性** | 固定管线，方便的功能。对于简单的3D应用来说容易使用。 | 没有内置的基本功能，对于简单的3-D应用可能需要更多努力。 |'
 - en: '| **Graphics control** | Fixed pipeline. Difficult or impossible to create
     some effects (for example, cartoon shading). | Programmable pipeline. More direct
     control of the graphics processing pipeline to create certain effects. |'
   id: totrans-28
   prefs: []
   type: TYPE_TB
+  zh: '| **图形控制** | 固定管线。创建某些效果（例如，卡通着色）困难或不可能。 | 可编程管线。更直接地控制图形处理管线以创建特定效果。 |'
 - en: Tip
   id: totrans-29
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: OpenGL ES 1.0 is supported on all Android devices because Android comes with
     a 1.0-capable software graphics engine, which can be used on devices without corresponding
     graphics hardware. OpenGL ES 1.1 and OpenGL ES 2.0 are supported only on devices
@@ -179,6 +213,8 @@
   id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有Android设备都支持OpenGL ES 1.0，因为Android附带了一个1.0能力的软件图形引擎，可以在没有相应图形硬件的设备上使用。只有配备相应**图形处理单元**（**GPU**）的设备支持OpenGL
+    ES 1.1和OpenGL ES 2.0。
 - en: This chapter will cover both the OpenGL 1.x and OpenGL ES 2.0 APIs in Android
     NDK. We first demonstrated how to draw 2D and 3D graphics using the OpenGL 1.x
     API. Transforms, lighting, and texture mapping are also covered. We then introduce
@@ -189,6 +225,9 @@
   id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章将介绍Android NDK中的OpenGL 1.x和OpenGL ES 2.0 API。我们首先展示了如何使用OpenGL 1.x API绘制2D和3D图形。涵盖了变换、光照和纹理映射。然后我们介绍NDK中的OpenGL
+    2.0 API。最后，我们描述如何使用EGL显示图形。本章介绍了一些计算机图形学的基础知识和OpenGL的原则。已经熟悉OpenGL ES的读者可以跳过这些部分，专注于如何从Android
+    NDK调用OpenGL ES API。
 - en: We will provide a sample Android application for every recipe covered in this
     chapter. Due to space constraints, we cannot show all the source code in the book.
     Readers are strongly recommended to download the code and refer to to it when
@@ -196,36 +235,43 @@
   id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将为本章介绍的每个教程提供一个示例Android应用程序。由于篇幅限制，书中无法展示所有源代码。强烈建议读者下载代码并在阅读本章时参考。
 - en: Drawing 2D Graphics and applying transforms with the OpenGL ES 1.x API
   id: totrans-33
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES 1.x API绘制2D图形并应用变换
 - en: This recipe covers 2D drawing in OpenGL ES 1.x by example. In order to draw
     2D objects, we'll also describe the OpenGL rendering display through `GLSurfaceView`,
     adding colors to them, and transformation.
   id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程通过示例介绍了OpenGL ES 1.x中的2D绘图。为了绘制2D对象，我们还将描述通过`GLSurfaceView`的OpenGL渲染显示，为它们添加颜色以及变换。
 - en: Getting ready
   id: totrans-35
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Readers are recommended to read the introduction of this chapter, which is essential
     to understand some of the content in this recipe.
   id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 推荐读者阅读本章的介绍，这对于理解本教程中的一些内容至关重要。
 - en: How to do it...
   id: totrans-37
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps create our sample Android NDK project:'
   id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将创建我们的示例Android NDK项目：
 - en: Create an Android application named `TwoDG1`. Set the package name as `cookbook.chapter4.gl1x`.
     Please refer to the *Loading native libraries and registering native methods*
     recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
@@ -234,23 +280,28 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`TwoDG1`的Android应用程序。将包名设置为`cookbook.chapter4.gl1x`。如果你需要更详细的说明，请参考[第2章](ch02.html
+    "第2章。Java本地接口")中的*加载本地库和注册本地方法*教程，*Java本地接口*。
 - en: Right-click on the `TwoDG1` project in Eclipse, select **Android Tools** | **Add
     Native Support**.
   id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在Eclipse中右键点击`TwoDG1`项目，选择**Android Tools** | **Add Native Support**。
 - en: 'Add the following three Java files under the `cookbook.chapter4.gl1x` package:'
   id: totrans-41
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter4.gl1x`包下添加以下三个Java文件：
 - en: '`MyActivity.java`: It creates the activity of this project:'
   id: totrans-42
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`MyActivity.java`：它创建了此项目的活动：'
 - en: '[PRE0]'
   id: totrans-43
   prefs:
@@ -265,6 +316,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`MySurfaceView.java`：它扩展了`GLSurfaceView`，后者提供了一个专用的表面来显示OpenGL渲染：'
 - en: '[PRE1]'
   id: totrans-45
   prefs:
@@ -278,6 +330,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`MyRenderer.java`：它实现了`Renderer`并调用本地方法：'
 - en: '[PRE2]'
   id: totrans-47
   prefs:
@@ -292,12 +345,14 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加`TwoDG1.cpp`、`Triangle.cpp`、`Square.cpp`、`Triangle.h`和`Square.h`文件。请参考下载的项目以获取完整的代码内容。这里，我们只列出代码中的一些重要部分：
 - en: '`TwoDG1.cpp`: It consists of the code to set up the OpenGL ES 1.x environment
     and perform the transforms:'
   id: totrans-49
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`TwoDG1.cpp`：它包含了设置OpenGL ES 1.x环境并执行变换的代码：'
 - en: '[PRE3]'
   id: totrans-50
   prefs:
@@ -309,6 +364,7 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`Triangle.cpp`：它绘制一个2D三角形：'
 - en: '[PRE4]'
   id: totrans-52
   prefs:
@@ -320,6 +376,7 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`Square.cpp`：它绘制一个2D正方形：'
 - en: '[PRE5]'
   id: totrans-54
   prefs:
@@ -331,6 +388,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加`Android.mk`文件，内容如下：
 - en: '[PRE6]'
   id: totrans-56
   prefs:
@@ -343,25 +401,30 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建Android NDK应用程序并在Android设备上运行。以下是显示的截图：![如何操作...](img/1505_04_03.jpg)
 - en: How it works...
   id: totrans-58
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: This recipe demonstrates basic 2D drawing with OpenGL ES.
   id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程演示了使用OpenGL ES的基本2D绘图。
 - en: OpenGL ES rendering display through GLSurfaceView
   id: totrans-60
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 通过GLSurfaceView显示OpenGL ES渲染
 - en: '`GLSurfaceView` and `GLSurfaceView.Renderer` are the two foundational classes
     provided by Android SDK to display OpenGL ES graphics.'
   id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: '`GLSurfaceView`和`GLSurfaceView.Renderer`是Android SDK提供的两个基础类，用于显示OpenGL ES图形。'
 - en: '`GLSurfaceView` accepts a user defined `Renderer` object that does the actual
     rendering. It is often extended to handle touch events, which is illustrated in
     the next recipe. It supports both on-demand and continuous rendering. In our sample
@@ -370,37 +433,44 @@
   id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: '`GLSurfaceView`接受一个用户定义的`Renderer`对象，该对象实际执行渲染。它通常被扩展以处理触摸事件，这将在下一个教程中说明。它支持按需和连续渲染。在我们的示例代码中，我们只需设置`Renderer`对象并将渲染模式配置为按需。'
 - en: '`GLSurfaceView.Renderer` is the interface for renderer. Three methods need
     to be implemented with it:'
   id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: '`GLSurfaceView.Renderer`是渲染器的接口。需要实现它的三个方法：'
 - en: '`onSurfaceCreated`: It''s called once when setting up the OpenGL ES environment.'
   id: totrans-64
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onSurfaceCreated`：在设置OpenGL ES环境时被调用一次。'
 - en: '`onSurfaceChanged`: It''s called if the geometry of the view changes; most
     common examples are device screen orientation changes.'
   id: totrans-65
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onSurfaceChanged`：如果视图的几何形状发生变化，它会被调用；最常见的例子是设备屏幕方向的变化。'
 - en: '`onDrawFrame`: It''s called at each redraw of the view.'
   id: totrans-66
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onDrawFrame`：每次重绘视图时都会调用它。'
 - en: In our sample project, `MyRenderer.java` is a simple wrapper, while the actual
     work is done in native C++ code.
   id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例项目中，`MyRenderer.java`是一个简单的包装器，实际工作是在本地C++代码中完成的。
 - en: Drawing objects at OpenGL ES
   id: totrans-68
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 在OpenGL ES中绘制物体
 - en: Two methods are commonly used to draw objects in OpenGL ES, including `glDrawArrays`
     and `glDrawElements`. We demonstrate the usage of these two methods in `Triangle.cpp`
     and `Square.cpp` respectively. Note that both the methods require `GL_VERTEX_ARRAY`
@@ -408,6 +478,7 @@
   id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 在OpenGL ES中绘制物体通常使用两种方法，包括`glDrawArrays`和`glDrawElements`。我们分别在`Triangle.cpp`和`Square.cpp`中演示了这两种方法的用法。请注意，这两种方法都需要启用`GL_VERTEX_ARRAY`。
 - en: The first argument is the mode of drawing, which indicates the primitive to
     use. In our sample code, we used `GL_TRIANGLES`, which means we're actually drawing
     two triangles to form the square. Other valid values in Android NDK OpenGL ES
@@ -416,11 +487,14 @@
   id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一个参数是绘制模式，指明了要使用的图元。在我们的示例代码中，我们使用了`GL_TRIANGLES`，这意味着我们实际上绘制了两个三角形来形成正方形。在Android
+    NDK OpenGL ES中还有其他有效值，包括`GL_POINTS`、`GL_LINES`、`GL_LINE_LOOP`、`GL_LINE_STRIP`、`GL_TRIANGLE_STRIP`和`GL_TRIANGLE_FAN`。
 - en: Colors at OpenGL ES
   id: totrans-71
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 在OpenGL ES中的颜色
 - en: We also demonstrate two methods to add colors to the objects. In `Triangle.cpp`,
     we set the current color by the `glColor4f` API call. In `Square.cpp`, we enable
     `GL_COLOR_ARRAY`, and define an array of color by using `glColorPointer`. The
@@ -429,40 +503,48 @@
   id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还展示了两种给物体添加颜色的方法。在`Triangle.cpp`中，我们通过`glColor4f` API调用设置当前颜色。在`Square.cpp`中，我们启用了`GL_COLOR_ARRAY`，并使用`glColorPointer`定义了一个颜色数组。该颜色数组将由`glDrawElements`（使用`glDrawArrays`也行）API调用使用。
 - en: OpenGL ES transformation
   id: totrans-73
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: OpenGL ES转换
 - en: 'The following diagram illustrates different transformation stages in OpenGL
     ES 1.0:'
   id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 下图展示了OpenGL ES 1.0中的不同转换阶段：
 - en: '![OpenGL ES transformation](img/1505_04_04.jpg)'
   id: totrans-75
   prefs: []
   type: TYPE_IMG
+  zh: '![OpenGL ES转换](img/1505_04_04.jpg)'
 - en: 'As illustrated in the diagram, vertex data are transformed before rasterization.
     The transforms are analogous to taking a photograph with a camera:'
   id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 如图中所示，顶点数据在光栅化之前进行转换。这些转换类似于用相机拍照：
 - en: '**ModelView transform**: Arrange the scene and place the camera'
   id: totrans-77
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**模型视图转换**：安排场景并放置相机'
 - en: '**Projection transform**: Choose a camera lens and adjust zoom factor'
   id: totrans-78
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**投影转换**：选择一个相机镜头并调整缩放因子'
 - en: '**Viewpoint transform**: Determine how large the final photograph is'
   id: totrans-79
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**视点转换**：确定最终照片的大小'
 - en: '**ModelView transform** actually refers to two different transforms, namely
     Model Transform and View Transform. **Model Transform** refers to the process
     of converting all objects from its object space (also known as local space or
@@ -472,6 +554,7 @@
   id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: '**模型视图转换**实际上指的是两种不同的转换，即模型转换和视图转换。**模型转换**是指将所有物体从其对象空间（也称为局部空间或模型空间）转换到世界空间的过程，该空间被所有物体共享。这个转换通过一系列缩放（`glScalef`）、旋转（`glRotatef`）和平移（`glTranslatef`）来完成。'
 - en: '`glScalef`: It stretches, shrinks, or reflects an object. The x-, y- and z-axis
     values are multiplied by the corresponding x, y, and z scaling factor. In our
     sample code, we called `glScalef(0.2f, 0.2f, 0.2f)` to scale down both the triangle
@@ -480,6 +563,8 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glScalef`：它拉伸、缩小或反射物体。x、y和z轴的值分别乘以相应的x、y和z缩放因子。在我们的示例代码中，我们调用了`glScalef(0.2f,
+    0.2f, 0.2f)`，以缩小三角形和正方形，使它们能够适应屏幕。'
 - en: '`glRotatef`: It rotates an object in a counter clockwise manner in the direction
     from the origin through specified point (x, y, z). The rotation angle is measured
     in degrees. In our sample code, we called `glRotatef(45.0, 0.0, 0.0, 1.0)` to
@@ -488,6 +573,8 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glRotatef`：它以从原点通过指定点（x, y, z）的方向逆时针旋转物体。旋转角度以度为单位测量。在我们的示例代码中，我们调用了`glRotatef(45.0,
+    0.0, 0.0, 1.0)`，使正方形绕z轴旋转45度。'
 - en: '`glTranslatef`: It moves an object by the given values along each axis. In
     our sample code, we called `glTranslatef(0.3f, 0.0f, 0.0f)` to move the triangle
     to the right and `glTranslatef(-0.3f, 0.0f, 0.0f)` to move the square to the left,
@@ -496,6 +583,8 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glTranslatef`：该函数根据给定的值沿着每个轴移动对象。在我们的示例代码中，我们调用了`glTranslatef(0.3f, 0.0f,
+    0.0f)`将三角形向右移动，以及`glTranslatef(-0.3f, 0.0f, 0.0f)`将正方形向左移动，以防止它们重叠。'
 - en: Model transform arranges the objects in a scene, while View transform changes
     the position of the viewing camera. To produce a specific image, we can either
     move the objects or change our camera position. Therefore, OpenGL ES internally
@@ -503,11 +592,13 @@
   id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 模型变换在场景中安排对象，而视图变换改变观察相机的位置。为了产生特定的图像，我们可以移动对象或改变相机位置。因此，OpenGL ES内部使用单一的矩阵——`GL_MODELVIEW`矩阵执行这两种变换。
 - en: Tip
   id: totrans-85
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: OpenGL ES defines that the camera is default at the origin (0, 0, 0) of eye
     coordinates space and aims into the negative z-axis. It is possible to change
     the position by `GLU.gluLookAt` at the Android SDK. However, the corresponding
@@ -515,6 +606,8 @@
   id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL ES定义了相机默认位于眼睛坐标空间的原点（0, 0, 0），并指向负z轴。可以通过Android SDK中的`GLU.gluLookAt`改变位置。然而，在Android
+    NDK中不提供相应的API。
 - en: '**Projection transform** determines what can be seen (analogous to choosing
     camera lens and zoom factor) and how vertex data are projected onto the screen.
     OpenGL ES supports two modes of projection, namely perspective projection (`glFrustum`)
@@ -529,12 +622,16 @@
   id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: '**投影变换**决定了可以看到什么（类似于选择相机镜头和缩放因子）以及顶点数据如何投影到屏幕上。OpenGL ES支持两种投影模式，分别是透视投影（`glFrustum`）和正交投影（`glOrtho`）。**透视投影**使得远离的物体显得更小，这与普通相机相匹配。另一方面，**正交投影**类似于望远镜，直接映射物体而不影响其大小。OpenGL
+    ES通过`GL_PROJECTION`矩阵操纵变换。在投影变换后，位于裁剪体积外的物体将被裁剪掉，在最终场景中不绘制。在我们的示例项目中，我们调用了`glOrthof(-ratio,
+    ratio, -1, 1, 0, 10)`来指定视景体，其中`ratio`指的是屏幕的宽高比。'
 - en: After projection transform, perspective division is done by dividing the clip
     coordinates by the transformed `w` value of the input vertex. The values the for
     x-, y-, and z-axes will be normalized to the range between `-1.0` to `1.0`.
   id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 投影变换后，通过将裁剪坐标除以输入顶点的变换后的`w`值来进行透视除法。x轴、y轴和z轴的值将被归一化到`-1.0`到`1.0`的范围内。
 - en: 'The final stage of the OpenGL ES transform pipeline is the viewport transform,
     which maps the normalized device coordinates to window coordinates (in pixels,
     with the origin at the upper-left corner). Note that a viewpoint also includes
@@ -548,10 +645,14 @@
   id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL ES变换管道的最终阶段是视口变换，它将归一化设备坐标映射到窗口坐标（以像素为单位，原点在左上角）。请注意，视点还包括一个z分量，这在例如两个重叠的OpenGL场景的排序等情况下是需要的，可以通过`glDepthRange`
+    API调用设置。当显示尺寸发生变化时，应用程序通常需要通过`glViewport` API调用设置视口。在我们的示例中，我们通过调用`glViewport(0,
+    0, width, height)`将视口设置为整个屏幕。这个设置与`glOrthof`调用一起，将保持投影变换后的对象比例，如下图所示：
 - en: '![OpenGL ES transformation](img/1505_04_05.jpg)'
   id: totrans-90
   prefs: []
   type: TYPE_IMG
+  zh: '![OpenGL ES变换](img/1505_04_05.jpg)'
 - en: 'As shown in the diagram, the clipping volume is set to (-width/height, width/height,
     -1, 1, 0, 1). At perspective division, the vertex is divided by `w`. At viewpoint
     transform, both the x and y coordinates ranges are scaled up by `w*height/2`.
@@ -563,40 +664,49 @@
   id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 如图表所示，裁剪体积设置为（-width/height, width/height, -1, 1, 0, 1）。在透视除法中，顶点被`w`除。在视点变换中，x和y坐标范围都被`w*height/2`放大。因此，对象将如本食谱的*如何操作...*部分所示成比例显示。以下屏幕截图的左侧显示了如果我们通过调用`glOrthof(-1,
+    1, -1, 1, 0, 1)`设置裁剪体积的输出，右侧表示如果通过调用`glViewport(0, 0, width/2, height/5)`设置视口，图形将呈现什么样子：
 - en: '![OpenGL ES transformation](img/1505_04_06_new.jpg)'
   id: totrans-92
   prefs: []
   type: TYPE_IMG
+  zh: '![OpenGL ES变换](img/1505_04_06_new.jpg)'
 - en: Drawing 3D graphics and lighting up the scene with the OpenGL ES 1.x API
   id: totrans-93
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES 1.x API绘制3D图形并点亮场景
 - en: This recipe covers how to draw 3D objects, handle touch events, and lighten
     up the objects in OpenGL ES.
   id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱涵盖了如何在OpenGL ES中绘制3D对象、处理触摸事件以及点亮对象。
 - en: Getting ready
   id: totrans-95
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Readers are recommended to read the introduction and the *Drawing 2D Graphics
     and Apply Transforms with OpenGL ES 1.x API* recipies below before going through
     this one.
   id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 建议读者在阅读本食谱之前，先阅读引言和下面的*使用OpenGL ES 1.x API绘制2D图形和应用变换*的食谱。
 - en: How to do it...
   id: totrans-97
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps show how to develop our sample Android project:'
   id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤展示了如何开发我们的示例Android项目：
 - en: Create an Android application named `CubeG1`. Set the package name as `cookbook.chapter4.gl1x`.
     Please refer to the *Loading native libraries and registering native methods*
     recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
@@ -605,11 +715,14 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`CubeG1`的Android应用程序。将包名设置为`cookbook.chapter4.gl1x`。如果你需要更详细的说明，请参考[第2章](ch02.html
+    "第2章。Java本地接口")中的*加载本地库和注册本地方法*食谱，*Java Native Interface*。
 - en: Right-click on the project CubeG1, select **Android Tools** | **Add Native Support**.
   id: totrans-100
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 右键点击项目CubeG1，选择**Android Tools** | **添加本地支持**。
 - en: Add three Java files, namely `MyActivity.java`, `MySurfaceView`, and `MyRenderer.java`,
     under the `cookbook.chapter4.gl1x` package. `MyActivity.java` is the same as used
     in the previous recipe.
@@ -617,12 +730,14 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter4.gl1x`包下添加三个Java文件，分别为`MyActivity.java`，`MySurfaceView`和`MyRenderer.java`。`MyActivity.java`与上一个食谱中使用的一致。
 - en: '`MySurfaceView.java` extends `GLSurfaceView` with the code to handle touch
     events:'
   id: totrans-102
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`MySurfaceView.java`扩展了`GLSurfaceView`，包含处理触摸事件的代码：'
 - en: '[PRE7]'
   id: totrans-103
   prefs:
@@ -635,6 +750,7 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`MyRenderer.java`实现了一个渲染器，以调用本地方法渲染图形：'
 - en: '[PRE8]'
   id: totrans-105
   prefs:
@@ -649,11 +765,13 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加`CubeG1.cpp`、`Cube.cpp`和`Cube.h`文件。请参考下载的项目以获取完整内容。让我们列出`CubeG1.cpp`中的`naInitGL1x`、`naSurfaceChanged`和`naDrawGraphics`本地方法以及`Cube.cpp`中的绘制和光照方法的代码：
 - en: '`CubeG1.cpp` sets up the OpenGL ES environment and lighting:'
   id: totrans-107
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`CubeG1.cpp`设置OpenGL ES环境和光照：'
 - en: '[PRE9]'
   id: totrans-108
   prefs:
@@ -665,6 +783,7 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`Cube.cpp`绘制一个3D立方体并点亮它：'
 - en: '[PRE10]'
   id: totrans-110
   prefs:
@@ -676,6 +795,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加`Android.mk`文件，内容如下：
 - en: '[PRE11]'
   id: totrans-112
   prefs:
@@ -688,17 +808,20 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建Android NDK应用程序并在Android设备上运行。应用程序将显示一个立方体，我们可以触摸它使其旋转：![如何操作...](img/1505_04_08_new.jpg)
 - en: How it works...
   id: totrans-114
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: This recipe discusses how to use the OpenGL ES 1.x API to draw 3D graphics.
     Note that we will need to load the OpenGL ES library `GLESv1_CM` in the `Andorid.mk`
     file, and include the header file `GLES/gl.h` in the native source code.
   id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱讨论了如何使用OpenGL ES 1.x API绘制3D图形。注意，我们将在`Andorid.mk`文件中需要加载OpenGL ES库`GLESv1_CM`，并在本地源代码中包含头文件`GLES/gl.h`。
 - en: '**Drawing 3D objects in OpenGL ES**: Drawing 3D objects is similar to drawing
     2D objects. In the `Cube::draw` method, we first set up the vertex buffer and
     then called `glDrawElements` to draw the six faces of the cube. We used `GL_TRIANGLES`
@@ -708,6 +831,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**在OpenGL ES中绘制3D对象**：绘制3D对象与绘制2D对象类似。在`Cube::draw`方法中，我们首先设置顶点缓冲区，然后调用`glDrawElements`来绘制立方体的六个面。我们使用`GL_TRIANGLES`作为图元。因为每个面包含两个三角形，所以有12个三角形和36个顶点。'
 - en: '**Touch event handling**: In `MySurfaceView.java`, we override the `onTouchEvent`
     method to detect the figure movement on screen and change the rotation angle attributes
     of `MyRenderer`. We call the `requestRender` method to request the renderer to
@@ -716,6 +840,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**触摸事件处理**：在`MySurfaceView.java`中，我们重写`onTouchEvent`方法以检测屏幕上的图形移动，并改变`MyRenderer`的旋转角度属性。我们调用`requestRender`方法，请求渲染器重新绘制图形。'
 - en: '**Lighting and material in OpenGL ES**: There are classes of lighting models,
     namely local illumination and global illumination. **Local illumination** only
     considers direct lighting, and therefore lighting calculation can be performed
@@ -728,6 +853,9 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**OpenGL ES中的光照和材质**：光照模型分为两类，即局部光照和全局光照。**局部光照**只考虑直接光照，因此可以对单个对象进行光照计算。与之相对的是，**全局光照**考虑了从其他对象和环境反射的间接光照，因此计算成本更高。OpenGL
+    ES 1.x使用局部光照，而全局光照可以使用**OpenGL着色语言**（**GLSL**）在OpenGL ES 2.0中进行编程。这里，我们只讨论OpenGL
+    ES 1.x中的光照。'
 - en: 'Three parties are involved in OpenGL ES when lighting is considered, including
     camera position, light sources, and the material of the objects. Camera position
     is always at a default position `(0, 0, 0)` and aims into the negative z-axis,
@@ -738,12 +866,14 @@
   id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 当考虑光照时，OpenGL ES中涉及三个参与者，包括摄像机位置、光源和物体的材质。摄像机位置始终在默认位置`(0, 0, 0)`，并朝向负z轴，如前面的食谱所述。光源可以提供独立的环境光、漫反射光和镜面光。材质可以反射不同数量的环境光、漫反射光和镜面光。此外，材质也可能发射光。每种光都由RGB分量组成：
 - en: '**Ambient light**: It approximates the constant amount of light present everywhere
     in the scene.'
   id: totrans-120
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**环境光**：它近似于场景中无处不在的恒定光照量。'
 - en: '**Diffuse light**: It approximates the light from distant directional light
     source (for example, sunlight). When the reflected light strikes a surface, it
     is scattered equally in all directions.'
@@ -751,6 +881,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**漫反射光**：它近似于来自远距离方向光源的光（例如，阳光）。当反射光照射到表面时，它在所有方向上均匀散射。'
 - en: '**Specular light**: It approximates the lights reflected by a smooth surface.
     Its intensity depends on the angle between the viewer and the direction of the
     ray reflected from the surface.'
@@ -758,11 +889,13 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**镜面光**：它近似于光滑表面反射的光。其强度取决于观察者与从表面反射的射线方向之间的角度。'
 - en: '**Emission light**: Some materials can emit lights.'
   id: totrans-123
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**发射光**：某些材质可以发光。'
 - en: Note that RGB values in light sources indicate the intensity of the color component,
     while they refer to the reflected proportions of those colors in the material.
     To understand how both the light sources and material can affect the viewer perception
@@ -772,10 +905,12 @@
   id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，光源中的RGB值表示颜色分量的强度，而在材质中则指反射这些颜色的比例。为了理解光源和材质如何影响观察者对物体的感知，可以考虑一束白光照射在表面上，如果表面只反射光的蓝色分量，那么观察者看到的表面将是蓝色的。如果光是纯红色的，那么观察者看到的表面将是黑色的。
 - en: 'The following steps can be performed to set up simple lighting in OpenGL ES:'
   id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤可以在OpenGL ES中设置简单的光照：
 - en: Set the lighting model parameters. This is done through `glLightModelfv`. Android
     NDK OpenGL ES supports two parameters, including `GL_LIGHT_MODEL_AMBIENT` and
     `GL_LIGHT_MODEL_TWO_SIDE`. The first one allows us to specify the global ambient
@@ -785,6 +920,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 设置光照模型参数。这是通过`glLightModelfv`完成的。Android NDK OpenGL ES支持两个参数，包括`GL_LIGHT_MODEL_AMBIENT`和`GL_LIGHT_MODEL_TWO_SIDE`。第一个允许我们指定全局环境光，第二个允许我们指定是否要在表面的背面计算光照。
 - en: 'Enable, configure, and place one or more light sources. This is done through
     the `glLightfv` method. We can configure ambient, diffuse, and specular light
     separately. The light source position is also configured through `glLightfv` with
@@ -793,6 +929,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启用、配置并放置一个或多个光源。这是通过`glLightfv`方法完成的。我们可以分别配置环境光、漫反射光和镜面光。光源位置也通过`glLightfv`与`GL_POSITION`一起配置。在`CubeG1.cpp`中，我们使用了以下代码：
 - en: '[PRE12]'
   id: totrans-128
   prefs:
@@ -812,20 +949,25 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 位置的第四个值表示光源是位置的还是方向的。当值设置为`0`时，光为方向光，模拟一个远距离的光源（阳光）。光线在撞击表面时是平行的，位置的（x, y, z）值指的是光的传播方向。如果第四个值设置为`1`，光为位置光，类似于灯泡。这里的（x,
+    y, z）值指的是光源的位置，光线从不同的角度撞击表面。请注意，光源向所有方向发射强度相等的光。以下图像说明了这两种光源：
 - en: '![How it works...](img/1505_04_22.jpg)'
   id: totrans-130
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![它是如何工作的...](img/1505_04_22.jpg)'
 - en: 'Besides positional and directional light sources, there''s also spotlight:'
   id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了位置光和方向光，还有聚光灯：
 - en: We shall enable lighting and the light sources also by calling
   id: totrans-132
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们也将通过调用以下方法来启用光照和光源
 - en: '[PRE13]'
   id: totrans-133
   prefs:
@@ -837,6 +979,7 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 以及
 - en: '[PRE14]'
   id: totrans-135
   prefs:
@@ -850,6 +993,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为所有对象的每个顶点定义法向量。这些法向量决定了物体相对于光源的方向。在我们的代码中，我们依赖OpenGL ES的默认法向量。
 - en: Define the material. This is done by the `glMaterialf` or `glMaterialfv` method.
     In our sample code, we specify the red component of the diffuse light to be `0.8`,
     while keeping the green and blue components 0\. Therefore, the final cube appears
@@ -858,37 +1002,44 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 定义材质。这可以通过`glMaterialf`或`glMaterialfv`方法来完成。在我们的示例代码中，我们将漫反射光的红色分量指定为`0.8`，而将绿色和蓝色分量保持为0。因此，最终的立方体看起来是红色的。
 - en: Mapping texture to 3D objects with the OpenGL ES 1.x API
   id: totrans-138
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES 1.x API将纹理映射到3D对象
 - en: '**Texture mapping** is a technique that overlays an image onto an object''s
     surface to create a more realistic scene. This recipe covers how to add texture
     in OpenGL ES 1.x.'
   id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: '**纹理映射**是一种将图像覆盖到物体表面以创建更真实场景的技术。这个菜谱涵盖了如何在OpenGL ES 1.x中添加纹理。'
 - en: Getting ready
   id: totrans-140
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Readers are recommended to read the *Drawing 3D graphics and lighting up the
     scene with OpenGL ES 1.x API* recipe before going through this one.
   id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 建议读者在阅读本节内容之前，先阅读《使用OpenGL ES 1.x API绘制3D图形并照亮场景》的菜谱。
 - en: How to do it...
   id: totrans-142
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps create an Android project that demonstrates mapping texture
     to 3D objects:'
   id: totrans-143
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤创建了一个展示如何将纹理映射到3D对象的Android项目：
 - en: Create an Android application named `DiceG1`. Set the package name as `cookbook.chapter4.gl1x`.
     Please refer to the *Loading native libraries and registering native methods*
     recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
@@ -897,12 +1048,15 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`DiceG1`的Android应用程序。将包名设置为`cookbook.chapter4.gl1x`。如果你需要更详细的说明，请参考[第2章](ch02.html
+    "第2章。Java本地接口")《Java本地接口》中的《加载本地库和注册本地方法》菜谱。
 - en: Right-click on the project `CubeG1`, select **Android Tools** | **Add Native
     Support**.
   id: totrans-145
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在项目`CubeG1`上点击右键，选择**Android Tools** | **添加本地支持**。
 - en: Add three Java files, namely `MyActivity.java`, `MySurfaceView.java`, and `MyRenderer.java`
     under the `cookbook.chapter4.diceg1` package. `MyActivity.java` and `MySurfaceView.java`
     are similar to the previous recipe.
@@ -910,11 +1064,13 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter4.diceg1`包下添加三个Java文件，分别为`MyActivity.java`，`MySurfaceView.java`和`MyRenderer.java`。`MyActivity.java`和`MySurfaceView.java`与之前的配方相似。
 - en: '`MyRenderer.java` is listed as follows:'
   id: totrans-147
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`MyRenderer.java`代码如下：'
 - en: '[PRE15]'
   id: totrans-148
   prefs:
@@ -929,6 +1085,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加`DiceG1.cpp`，`Cube.cpp`，`Cube.h`和`mylog.h`文件。请参考下载的项目以获取完整内容。这里，我们列出`DiceG1.cpp`中的`fornaLoadTexture`和`naInitGL1x`本地方法以及`Cube.cpp`中的`draw`方法的代码：
 - en: '[PRE16]'
   id: totrans-150
   prefs:
@@ -940,6 +1097,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加`Android.mk`文件，内容如下：
 - en: '[PRE17]'
   id: totrans-152
   prefs:
@@ -952,15 +1110,18 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建Android NDK应用程序并在Android设备上运行。该应用将显示一个纹理为骰子的立方体：![如何操作...](img/1505_04_10_new.jpg)
 - en: How it works...
   id: totrans-154
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: This recipe adds a texture to the 3D cube to make it look like a dice.
   id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个配方给3D立方体添加了一个纹理，使其看起来像骰子。
 - en: '**Texture coordinates**: A texture is typically a 2D image. Texture coordinates
     `(s, t)` are usually normalized to `[0.0, 1.0]` as shown in the following diagram.
     Texture image is mapped to `[0, 1]` in both the `s` and `t` axes:![How it works...](img/1505_04_12.jpg)'
@@ -968,6 +1129,8 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**纹理坐标**：纹理通常是2D图像。纹理坐标`(s, t)`通常被归一化到`[0.0, 1.0]`，如下图所示。纹理图像在`s`和`t`轴上被映射到`[0,
+    1]`：![工作原理...](img/1505_04_12.jpg)'
 - en: '**Loading textures**: The first step of mapping texture in OpenGL ES is to
     load them. In our example, we used Android SDK to read image files from drawable
     resources and pass the bitmaps to native code. The native method `naLoadTexture`
@@ -976,12 +1139,14 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**加载纹理**：在OpenGL ES中映射纹理的第一步是加载它们。在我们的示例中，我们使用Android SDK从可绘制资源中读取图像文件，并将位图传递给本地代码。本地方法`naLoadTexture`锁定位图图像并执行以下OpenGL操作。'
 - en: '**Create the glGenTexture texture**: This generates texture IDs.'
   id: totrans-158
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**创建glGenTexture纹理**：这生成纹理ID。'
 - en: 'Bind texture: glBindTexture. This tells OpenGL which texture id we''re working
     with.'
   id: totrans-159
@@ -989,6 +1154,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 绑定纹理：glBindTexture。这告诉OpenGL我们要使用的纹理id。
 - en: '**Set the texture filtering**: `glTexParameter` with `GL_TEXTURE_MIN_FILTER`
     or `GL_TEXTURE_MAG_FILTER` (this is discussed later).'
   id: totrans-160
@@ -996,6 +1162,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**设置纹理过滤**：使用`glTexParameter`与`GL_TEXTURE_MIN_FILTER`或`GL_TEXTURE_MAG_FILTER`（这将在后面讨论）。'
 - en: '**Set the texture wrapping**: `glTexParameter` with `GL_TEXTURE_WRAP_S` or
     `GL_TEXTURE_WRAP_T` (this is discussed later).'
   id: totrans-161
@@ -1003,6 +1170,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**设置纹理包装**：使用`glTexParameter`与`GL_TEXTURE_WRAP_S`或`GL_TEXTURE_WRAP_T`（这将在后面讨论）。'
 - en: '**Load the images data to OpenGL**: (`glTexImage2D`) we need to specify image
     data, width, height, color format, and so on.'
   id: totrans-162
@@ -1010,6 +1178,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**将图像数据加载到OpenGL中**：（`glTexImage2D`）我们需要指定图像数据、宽度、高度、颜色格式等。'
 - en: '**Texture wrapping**: texture is mapped to `[0, 1]` in both the s and t axes.
     However, we can specify the texture coordinates beyond the range. Wrapping will
     be applied once that happens. Typical settings for texture wrapping are as follows:'
@@ -1017,18 +1186,21 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**纹理包装**：纹理在`s`和`t`轴上被映射到`[0, 1]`。但是，我们可以指定超出范围的纹理坐标。一旦发生这种情况，将应用包装。典型的纹理包装设置如下：'
 - en: '`GL_CLAMP`: Clamp the texture coordinates to `[0.0, 1.0]`.'
   id: totrans-164
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GL_CLAMP`：将纹理坐标限制在`[0.0, 1.0]`。'
 - en: '`GL_REPEAT`: Repeat the texture. This creates a repeating pattern.'
   id: totrans-165
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GL_REPEAT`：重复纹理。这创建了一个重复的模式。'
 - en: '**Texture filtering**: It is common that the texture image has a different
     resolution than the object. If the texture is smaller, magnification is performed;
     if the texture is larger, minification is performed. The following two methods
@@ -1037,6 +1209,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**纹理过滤**：通常纹理图像的分辨率与对象不同。如果纹理较小，则会进行放大处理；如果纹理较大，则会进行缩小处理。通常使用以下两种方法：'
 - en: '`GL_NEAREST`: Use the texture element that is nearest to the center of the
     pixel being textured.'
   id: totrans-167
@@ -1044,6 +1217,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GL_NEAREST`：使用与被纹理化的像素中心最近的纹理元素。'
 - en: '`GL_LINEAR`: Apply interpolation to calculate the color values based on the
     four texture elements closest to the pixel being textured.'
   id: totrans-168
@@ -1051,6 +1225,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GL_LINEAR`：对基于与被纹理化的像素最近的四个纹理元素进行插值计算颜色值。'
 - en: '**Set the texture environment**: Before we map textures to objects, we can
     call `glTexEnvf` to control how texture values are interpreted when a fragment
     is textured. We can configure `GL_TEXTURE_ENV_COLOR` and `GL_TEXTURE_ENV_MODE`.
@@ -1060,6 +1235,8 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**设置纹理环境**：在我们将纹理映射到对象之前，可以调用 `glTexEnvf` 来控制当片段被纹理化时如何解释纹理值。我们可以配置 `GL_TEXTURE_ENV_COLOR`
+    和 `GL_TEXTURE_ENV_MODE`。在我们的示例项目中，我们使用了 `GL_REPLACE` 作为 `GL_TEXTURE_ENV_MODE`，这简单地将立方体片段替换为纹理值。'
 - en: '**Mapping the texture**: We draw each face of the 3D cube and map the texture
     by `glDrawElement`. `GL_TEXTURE_COORD_ARRAY` must be enabled by calling `glEnableClientState`.
     Before drawing each interface, we bind to the corresponding texture by calling
@@ -1068,58 +1245,71 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**映射纹理**：我们绘制3D立方体的每个面并通过 `glDrawElement` 映射纹理。必须通过调用 `glEnableClientState`
+    启用 `GL_TEXTURE_COORD_ARRAY`。在绘制每个接口之前，我们通过调用 `glBindTexture` 绑定到相应的纹理。'
 - en: There's more...
   id: totrans-171
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: In our native code, we used the Android native bitmap API to receive texture
     bitmap object from Java code. More details of this API will be covered in [Chapter
     7](ch07.html "Chapter 7. Other Android NDK API"), *Other Android NDK API*.
   id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的本地代码中，我们使用了Android本地位图API从Java代码接收纹理位图对象。这个API的更多细节将在[第7章](ch07.html "第7章.
+    其他Android NDK API")，*其他Android NDK API*中进行介绍。
 - en: Drawing 3D graphics with the OpenGL ES 2.0 API
   id: totrans-173
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES 2.0 API绘制3D图形
 - en: The previous recipes describe OpenGL ES 1.x on the Android NDK. This recipe
     covers how to use OpenGL ES 2.0 in Android NDK.
   id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: 前面的食谱描述了在Android NDK上的OpenGL ES 1.x。这个食谱涵盖了如何在Android NDK中使用OpenGL ES 2.0。
 - en: Getting ready
   id: totrans-175
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Readers are recommended to read the introduction of this chapter before going
     through this recipe. A lot of graphic basics are covered in the following recipes;
     it is suggested that we go through them first:'
   id: totrans-176
   prefs: []
   type: TYPE_NORMAL
+  zh: 建议读者在阅读这个食谱之前先阅读本章的介绍。在以下食谱中涵盖了大量的图形基础；建议我们首先阅读它们：
 - en: '*Drawing 2D graphics and applying transforms with OpenGL ES 1.x API*'
   id: totrans-177
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*使用OpenGL ES 1.x API绘制2D图形和应用变换*'
 - en: '*Drawing 3D graphics and lighting up the scene with OpenGL ES 1.x API*'
   id: totrans-178
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*使用OpenGL ES 1.x API绘制3D图形并照亮场景*'
 - en: How to do it...
   id: totrans-179
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps create an Android project that renders a 3D cube with OpenGL
     ES 2.0 API in Android NDK:'
   id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤使用Android NDK中的OpenGL ES 2.0 API创建一个渲染3D立方体的Android项目：
 - en: Create an Android application named `CubeG2`. Set the package name as `cookbook.chapter4.cubeg2`.
     Please refer to the *Loading native libraries and registering native methods*
     recipe of [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
@@ -1128,12 +1318,15 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为 `CubeG2` 的Android应用程序。将包名设置为 `cookbook.chapter4.cubeg2`。如果你需要更详细的说明，请参考[第2章](ch02.html
+    "第2章. Java本地接口")的*加载本地库和注册本地方法*一节，*Java Native Interface*。
 - en: Right-click on the project `CubeG2`, select **Android Tools** | **Add Native
     Support**.
   id: totrans-182
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在项目 `CubeG2` 上右键点击，选择 **Android Tools** | **添加本地支持**。
 - en: 'Add three Java files, namely `MyActivity.java`, `MyRenderer.java`, and `MySurfaceView.java`.
     We only list a part of `MyRenderer.java` here, since the other two files—`MyActivity.java`
     and `MySurfaceView.java`—are similar to the files in the previous recipe:'
@@ -1141,6 +1334,8 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加三个Java文件，分别为 `MyActivity.java`，`MyRenderer.java` 和 `MySurfaceView.java`。我们只列出了部分
+    `MyRenderer.java` 代码，因为其他两个文件 `MyActivity.java` 和 `MySurfaceView.java` 与前一个食谱中的文件相似：
 - en: '[PRE18]'
   id: totrans-184
   prefs:
@@ -1153,6 +1348,8 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `jni` 文件夹下添加 `Cube.cpp`，`matrix.cpp`，`CubeG2.cpp`，`Cube.h`，`matrix.h` 和 `mylog.h`
+    文件。文件内容总结如下：
 - en: '**Cube.cpp and Cube.h**: They define a `Cube` object and method to draw a 3D
     cube.'
   id: totrans-186
@@ -1160,6 +1357,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Cube.cpp 和 Cube.h**：它们定义了一个 `Cube` 对象和方法来绘制3D立方体。'
 - en: '**matrix.cpp and matrix.h**: These matrix operations, including creating translation,
     scale and rotation matrices, and matrix multiplication.'
   id: totrans-187
@@ -1167,6 +1365,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**matrix.cpp 和 matrix.h**：这些矩阵操作，包括创建平移、缩放和旋转矩阵以及矩阵乘法。'
 - en: '**CubeG2.cpp**: They create and load shaders. They also create, link, and use
     programs and apply transformations to the 3D cube.'
   id: totrans-188
@@ -1174,22 +1373,26 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**CubeG2.cpp**：它们创建并加载着色器。它们还创建、链接并使用程序，并对3D立方体应用变换。'
 - en: '**mylog.h**: They define macros for Android NDK logging.'
   id: totrans-189
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**mylog.h**：它们定义了用于Android NDK日志记录的宏。'
 - en: Here, we list a part of `Cube.cpp` and `CubeG2.cpp`.
   id: totrans-190
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在这里，我们列出了 `Cube.cpp` 和 `CubeG2.cpp` 的部分内容。
 - en: '`Cube.cpp`:'
   id: totrans-191
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`Cube.cpp`：'
 - en: '[PRE19]'
   id: totrans-192
   prefs:
@@ -1202,6 +1405,8 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`CubeG2.cpp`：它包含了 `loadShader`，`createProgram`，`naInitGL20` 和 `naDrawGraphics`
+    方法，下面将进行解释：'
 - en: '`loadShader`: This method creates a shader, attaches a source, and compiles
     the shader:'
   id: totrans-194
@@ -1209,6 +1414,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`loadShader`：这个方法创建一个着色器，附加源代码，并编译着色器：'
 - en: '[PRE20]'
   id: totrans-195
   prefs:
@@ -1223,6 +1429,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`createProgram`：这个方法创建一个程序对象，附加着色器，并链接程序：'
 - en: '[PRE21]'
   id: totrans-197
   prefs:
@@ -1237,6 +1444,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`naInitGL20`：这个方法设置 OpenGL ES 2.0 环境，获取着色器源字符串，以及获取着色器属性和统一变量的位置：'
 - en: '[PRE22]'
   id: totrans-199
   prefs:
@@ -1251,6 +1459,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`naDrawGraphics`：这个方法应用模型变换（旋转、缩放和平移）和投影变换：'
 - en: '[PRE23]'
   id: totrans-201
   prefs:
@@ -1264,12 +1473,14 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `res` 文件夹下创建一个名为 `raw` 的文件夹，并向其中添加以下两个文件：
 - en: '`vshader`: This is the vertex shader source:'
   id: totrans-203
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`vshader`：这是顶点着色器的源代码：'
 - en: '[PRE24]'
   id: totrans-204
   prefs:
@@ -1283,6 +1494,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`fshader`：这是片段着色器的源代码：'
 - en: '[PRE25]'
   id: totrans-206
   prefs:
@@ -1296,6 +1508,8 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `jni` 文件夹下添加 `Android.mk` 文件，如下所示。注意，我们必须通过 `LOCAL_LDLIBS := -lGLESv2` 链接到
+    OpenGL ES 2.0：
 - en: '[PRE26]'
   id: totrans-208
   prefs:
@@ -1308,6 +1522,8 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `AndroidManifest.xml` 文件中的 `<application>...</application>` 之前添加以下行，表示安卓应用使用
+    OpenGL ES 2.0 功能：
 - en: '[PRE27]'
   id: totrans-210
   prefs:
@@ -1320,42 +1536,50 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建安卓 NDK 应用程序并在安卓设备上运行。该应用将显示一个立方体，我们可以触摸以旋转立方体：![如何操作...](img/1505_04_13_new.jpg)
 - en: How it works...
   id: totrans-212
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: 'The sample project renders a 3D cube using OpenGL ES 2.0\. OpenGL ES 2.0 provides
     a programmable pipeline, where a vertex shader and fragment shader can be supplied
     to control how the vertex and fragment are processed:'
   id: totrans-213
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例项目使用 OpenGL ES 2.0 渲染了一个 3D 立方体。OpenGL ES 2.0 提供了一个可编程管线，可以提供顶点着色器和片段着色器来控制顶点和片段的处理方式：
 - en: '**Vertex shader**: It''s executed for every vertex. Transforms, lighting, texture
     mapping, and so on are usually performed using it.'
   id: totrans-214
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**顶点着色器**：它对每个顶点执行。通常使用它进行变换、光照、纹理映射等。'
 - en: '**Fragment shader**: It''s executed for every fragment produced by the rasterizer.
     A typical processing is to adding colors to every fragment.'
   id: totrans-215
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**片段着色器**：它对光栅化器产生的每个片段执行。一个典型的处理是向每个片段添加颜色。'
 - en: Shaders are programmed using OpenGL Shading Language, which is discussed next.
   id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 着色器是使用 OpenGL 着色语言编程的，下面将讨论这一点。
 - en: OpenGL Shading Language (GLSL)
   id: totrans-217
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: OpenGL 着色语言（GLSL）
 - en: Here, we briefly introduce GLSL.
   id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 在此，我们简要介绍 GLSL。
 - en: '**Data types**: They are of four main types, including `bool`, `int`, `float`,
     and `sampler`. There are also vector types for the first three types—`bvec2`,
     `bvec3`, `bvec4` refer to 2D, 3D, and 4D boolean vectors. `ivec2`, `ivec3`, and
@@ -1365,6 +1589,8 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**数据类型**：它们主要有四种类型，包括 `bool`、`int`、`float` 和 `sampler`。对于前三种类型还有向量类型——`bvec2`、`bvec3`、`bvec4`
+    分别指 2D、3D 和 4D 布尔向量。`ivec2`、`ivec3` 和 `ivec4` 代表整数向量。`vec2`、`vec3` 和 `vec4` 指浮点向量。**采样器**用于纹理采样，必须是统一变量。'
 - en: '**Attributes, uniforms, and varyings**: A shader includes three types of inputs
     and outputs, including uniforms, attributes, and varyings. All three types have
     to be global:'
@@ -1372,6 +1598,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**属性、统一变量和着色器间变量**：着色器包括三种输入和输出类型，包括统一变量、属性和着色器间变量。这三种类型都必须是全局的：'
 - en: '**Uniform**: It is of read-only type and doesn''t need to be changed during
     rendering. For example, light position.'
   id: totrans-221
@@ -1379,6 +1606,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**统一变量**：它是只读类型的，在渲染过程中不需要更改。例如，光源位置。'
 - en: '**Attribute**: It is of read-only type and is only available as an input to
     the vertex shader. It changes for every vertex. For example, vertex position.'
   id: totrans-222
@@ -1386,6 +1614,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**属性**：它是只读类型的，仅作为顶点着色器的输入。它对每个顶点都不同。例如，顶点位置。'
 - en: '**Varying**: It is used to pass data from the vertex shader to the fragment
     shader. It is readable and writable in the vertex shader, but only readable in
     the fragment shader.'
@@ -1394,30 +1623,35 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**着色器间变量**：它用于将数据从顶点着色器传递到片段着色器。在顶点着色器中它是可读可写的，但在片段着色器中仅可读。'
 - en: '**Built-in types**: GLSL has various built-in attributes, uniforms, and varyings
     for shaders. We highlight a few of them as follows:'
   id: totrans-224
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**内置类型**：GLSL 有各种内置的属性、统一变量和着色器间的变量。以下我们突出介绍其中的一些：'
 - en: '`gl_Vertex`: It is an attribute—a 4D vector representing the vertex position.'
   id: totrans-225
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`gl_Vertex`：它是一个属性——一个表示顶点位置的 4D 向量。 '
 - en: '`gl_Color`: It is an attribute—a 4D vector representing the vertex color.'
   id: totrans-226
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`gl_Color`：这是一个属性——表示顶点颜色的4D向量。'
 - en: '`gl_ModelViewMatrix`: It is an uniform—the 4x4 model view matrix.'
   id: totrans-227
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`gl_ModelViewMatrix`：这是一个统一变量——4x4的模型视图矩阵。'
 - en: '`gl_ModelViewProjectionMatrix`: It is a uniform. The 4x4 model view projection
     matrix.'
   id: totrans-228
@@ -1425,6 +1659,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`gl_ModelViewProjectionMatrix`：这是一个统一变量。4x4的模型视图投影矩阵。'
 - en: '`gl_Position`: It is only available as vertex shader output. It''s a 4D vector
     representing the final processed vertex position.'
   id: totrans-229
@@ -1432,6 +1667,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`gl_Position`：它仅作为顶点着色器输出可用。它是一个4D向量，表示最终处理的顶点位置。'
 - en: '`gl_FragColor`: It is only available as fragment shader output. It''s a 4D
     vector representing the final color to be written to the frame buffer.'
   id: totrans-230
@@ -1439,11 +1675,13 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`gl_FragColor`：它仅作为片段着色器输出可用。它是一个4D向量，表示最终要写入帧缓冲区的颜色。'
 - en: 'How to use shader:'
   id: totrans-231
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 如何使用着色器：
 - en: 'In our sample project, the vertex shader program simply multiplies every cube
     vertex with the model-view-projection matrix, and the fragment shader sets green
     color to every fragment. The following steps should be followed to use the shader
@@ -1451,11 +1689,13 @@
   id: totrans-232
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例项目中，顶点着色器程序简单地将每个立方体顶点与模型视图投影矩阵相乘，而片段着色器将每个片段设置为绿色。要使用着色器源代码，应遵循以下步骤：
 - en: '**Create Shaders**: The following OpenGL ES 2.0 methods are called:'
   id: totrans-233
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**创建着色器**：调用了以下OpenGL ES 2.0方法：'
 - en: '`glCreateShader`: It creates a `GL_VERTEX_SHADER` or `GL_FRAGMENT_SHADER` shader.
     A non-zero value is returned by it, by which the shader can be referenced.'
   id: totrans-234
@@ -1463,6 +1703,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glCreateShader`：它创建一个`GL_VERTEX_SHADER`或`GL_FRAGMENT_SHADER`着色器。它返回一个非零值，通过这个值可以引用着色器。'
 - en: '`glShaderSource`: It puts the source code in a shader object. The source code
     stored previously will be completely replaced.'
   id: totrans-235
@@ -1470,17 +1711,20 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glShaderSource`：它将源代码放入着色器对象中。之前存储的源代码将被完全替换。'
 - en: '`glCompileShader`: It compiles the source code of the shader object.'
   id: totrans-236
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glCompileShader`：它编译着色器对象中的源代码。'
 - en: '**Create a program and attach the shaders**: The following methods are called:'
   id: totrans-237
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**创建程序并附加着色器**：调用了以下方法：'
 - en: '`glCreateProgram`: It creates an empty program object to which shaders can
     be attached. Program objects essentially provide a mechanism to link everything
     needed to be executed together.'
@@ -1489,12 +1733,14 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glCreateProgram`：它创建一个空的程序对象，可以向其附加着色器。程序对象本质上是提供一种机制，将所有需要一起执行的内容链接起来。'
 - en: '`glAttachShader`: It attaches a shader to a program object.'
   id: totrans-239
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glAttachShader`：它将着色器附加到程序对象上。'
 - en: '`glLinkProgram`: It links a program object. If any `GL_VERTEX_SHADER` objects
     are attached to the program object, they will be used to create an executable
     running on the vertex processor. If any `GL_FRAGMENT_SHADER` shaders are attached,
@@ -1504,24 +1750,28 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glLinkProgram`：它链接一个程序对象。如果程序对象附加了任何`GL_VERTEX_SHADER`对象，它们将被用来在顶点处理器上创建一个可执行文件。如果附加了任何`GL_FRAGMENT_SHADER`着色器，它们将被用来在片段处理器上创建一个可执行文件。'
 - en: '**Use the program**: We use the following calls to pass data to shaders and
     perform OpenGL operations:'
   id: totrans-241
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**使用程序**：我们使用以下调用向着色器传递数据并执行OpenGL操作：'
 - en: '`glUseProgram`: A program object as part of current rendering state is installed'
   id: totrans-242
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glUseProgram`：将程序对象作为当前渲染状态的一部分安装。'
 - en: '`glGetAttribLocation`: It returns an attribute variable''s location'
   id: totrans-243
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glGetAttribLocation`：它返回一个属性变量的位置。'
 - en: '`glVertexAttribPointer`: It specifies the location and data format of the array
     of generic vertex attributes to use at rendering'
   id: totrans-244
@@ -1529,35 +1779,41 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glVertexAttribPointer`：它指定了在渲染时要使用的通用顶点属性数组的存储位置和数据格式。'
 - en: '`glEnableVertexAttribArray`: It enables a vertex attribute array'
   id: totrans-245
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glEnableVertexAttribArray`：它启用一个顶点属性数组。'
 - en: '`glGetUniformLocation`: It returns a uniform variable''s location'
   id: totrans-246
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glGetUniformLocation`：它返回一个统一变量的位置。'
 - en: '`glUniform`: It specifies the value of a uniform variable'
   id: totrans-247
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glUniform`：它指定一个统一变量的值。'
 - en: '`glDrawArrays`: It renders primitives from the array data.'
   id: totrans-248
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`glDrawArrays`：它从数组数据中渲染图元。'
 - en: There's more...
   id: totrans-249
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: The sample project performs model-view transform and projection transform through
     **matrix operations**. The details of these transforms are tedious and not within
     the scope of this book, therefore we won't cover them here. However, detailed
@@ -1566,36 +1822,43 @@
   id: totrans-250
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例项目通过**矩阵操作**执行模型视图变换和投影变换。这些变换的细节很繁琐，不在本书的讨论范围内，因此这里不予介绍。但是，代码中提供了详细的注释。感兴趣的读者也可以轻松地在网上找到这些操作的资源。
 - en: Displaying graphics with EGL
   id: totrans-251
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用EGL显示图形
 - en: Besides the `GLSurfaceView` display mechanism we described in the previous recipe,
     it is also possible to display OpenGL graphics using EGL.
   id: totrans-252
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了我们在上一个配方中描述的 `GLSurfaceView` 显示机制外，还可以使用 EGL 显示 OpenGL 图形。
 - en: Getting ready
   id: totrans-253
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Readers are recommended to read the *Drawing 3D Graphics and Lighting up the
     Scene with OpenGL ES 1.x API* recipe before going through this one.
   id: totrans-254
   prefs: []
   type: TYPE_NORMAL
+  zh: 建议读者在阅读本节之前先阅读 *使用 OpenGL ES 1.x API 绘制3D图形和点亮场景* 的配方。
 - en: How to do it...
   id: totrans-255
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps describe how to create an Android project that demonstrates
     the usage of EGL:'
   id: totrans-256
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤描述了如何创建一个演示 EGL 用法的 Android 项目：
 - en: Create an Android application named `EGLDemo`. Set the package name as `cookbook.chapter4.egl`.
     Please refer to the *Loading native libraries and registering native methods*
     recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
@@ -1604,12 +1867,16 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为 `EGLDemo` 的 Android 应用程序。将包名设置为 `cookbook.chapter4.egl`。如果你需要更详细的说明，请参考
+    [第2章](ch02.html "第 2 章. Java Native Interface") *Java Native Interface* 中的 *加载本地库和注册本地方法*
+    配方。
 - en: Right-click on the project `EGLDemo`, select **Android Tools** | **Add Native
     Support**.
   id: totrans-258
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在项目 `EGLDemo` 上右键点击，选择 **Android Tools** | **添加本地支持**。
 - en: 'Add two Java files, namely `EGLDemoActivity.java` and `MySurfaceView.java`.
     `EGLDemoActivity.java` sets `ContentView` as an instance of `MySurfaceView`, and
     starts and stops rendering at the Android activity callback functions:'
@@ -1617,6 +1884,8 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加两个 Java 文件，分别是 `EGLDemoActivity.java` 和 `MySurfaceView.java`。`EGLDemoActivity.java`
+    将 `ContentView` 设置为 `MySurfaceView` 的实例，并在 Android 活动回调函数中开始和停止渲染：
 - en: '[PRE28]'
   id: totrans-260
   prefs:
@@ -1629,6 +1898,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`MySurfaceView.java` 执行的角色类似于 `GLSurfaceView`。它与本地渲染器交互来管理显示表面和处理触摸事件：'
 - en: '[PRE29]'
   id: totrans-262
   prefs:
@@ -1640,12 +1910,14 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以下代码应添加到 `jni` 文件夹中：
 - en: '**Cube.cpp and Cube.h**: Use the OpenGL 1.x API to draw a 3D cube.'
   id: totrans-264
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Cube.cpp 和 Cube.h**：使用 OpenGL 1.x API 绘制3D立方体。'
 - en: '**OldRenderMethods.cpp and OldRenderMethods.h**: Initialize OpenGL 1.x, perform
     transforms, draw graphics, and so on. This is similar to the corresponding methods
     in *the Drawing 3D Graphics in OpenGL 1.x* recipe.'
@@ -1654,6 +1926,8 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**OldRenderMethods.cpp 和 OldRenderMethods.h**：初始化 OpenGL 1.x，执行变换，绘制图形等。这类似于
+    *在 OpenGL 1.x 中绘制3D图形* 配方中的相应方法。'
 - en: '**Renderer.cpp and Renderer.h**: Simulate `android.opengl.GLSurfaceView.Renderer`.
     It sets up the EGL context, manages the display, and so on.'
   id: totrans-266
@@ -1661,6 +1935,8 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Renderer.cpp 和 Renderer.h**：模拟 `android.opengl.GLSurfaceView.Renderer`。它设置
+    EGL 上下文，管理显示等。'
 - en: '`renderAFrame`: It sets the event type, and then signals the rendering thread
     to handle the event:'
   id: totrans-267
@@ -1668,6 +1944,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`renderAFrame`：设置事件类型，然后通知渲染线程处理事件：'
 - en: '[PRE30]'
   id: totrans-268
   prefs:
@@ -1682,6 +1959,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`renderThreadRun`：在一个单独的线程中运行，处理各种事件，包括表面更改、绘制一帧等：'
 - en: '[PRE31]'
   id: totrans-270
   prefs:
@@ -1695,6 +1973,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`initDisplay`：设置 EGL 上下文：'
 - en: '[PRE32]'
   id: totrans-272
   prefs:
@@ -1709,6 +1988,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`EGLDemo.cpp`：注册本地方法并包装本地代码。以下两个方法被使用：'
 - en: '`naSurfaceChanged`: It gets the native window associated with a Java `Surface`
     object and initializes EGL and OpenGL:'
   id: totrans-274
@@ -1716,6 +1996,7 @@
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`naSurfaceChanged`：它获取与 Java `Surface` 对象关联的本地窗口，并初始化 EGL 和 OpenGL：'
 - en: '[PRE33]'
   id: totrans-275
   prefs:
@@ -1730,6 +2011,7 @@
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`naRequestRenderer`：渲染一帧，由 `MySurfaceView` 中的 `touch` 事件处理程序调用：'
 - en: '[PRE34]'
   id: totrans-277
   prefs:
@@ -1742,6 +2024,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `jni` 文件夹下添加 `Android.mk` 文件，内容如下：
 - en: '[PRE35]'
   id: totrans-279
   prefs:
@@ -1754,11 +2037,13 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建Android NDK应用程序并在Android设备上运行。应用程序将显示一个立方体，我们可以触摸它使其旋转：![如何操作...](img/1505_04_15_new.jpg)
 - en: How it works...
   id: totrans-281
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: EGL is an interface between OpenGL ES and the underlying native window system.
     According to Khronos EGL web page ([http://www.khronos.org/egl](http://www.khronos.org/egl)),
     graphics context management, surface binding, and rendering synchronization for
@@ -1767,11 +2052,14 @@
   id: totrans-282
   prefs: []
   type: TYPE_NORMAL
+  zh: EGL 是 OpenGL ES 与底层本地窗口系统之间的接口。根据 Khronos EGL 网页（[http://www.khronos.org/egl](http://www.khronos.org/egl)）的说明，它处理包括
+    OpenGL ES 在内的其他 Khronos 2D 和 3D API 的图形上下文管理、表面绑定和渲染同步。
 - en: Tip
   id: totrans-283
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**EGL** is a cross-platform API widely used in embedded systems, including
     Android and iPhone (the EGL implementation from Apple is called **EAGL**). Many
     desktop platforms also support EGL. Different implementations may not be 100 percent
@@ -1780,11 +2068,13 @@
   id: totrans-284
   prefs: []
   type: TYPE_NORMAL
+  zh: '**EGL**是一个在嵌入式系统中广泛使用的跨平台API，包括Android和iPhone（苹果实现的EGL称为**EAGL**）。许多桌面平台也支持EGL。不同的实现可能不是100%兼容，但通常EGL代码的移植工作不会很繁重。'
 - en: 'The following steps describe how to set up and manipulate EGL and its integration
     with OpenGL:'
   id: totrans-285
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤描述了如何设置和操作EGL及其与OpenGL的集成：
 - en: '**Get and initialize the display connection**: EGL needs to know where the
     content should be displayed, therefore we will need to get a display connection
     and initialize it. This is done using the following two methods:'
@@ -1792,6 +2082,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**获取并初始化显示连接**：EGL需要知道内容应该显示在哪里，因此我们将需要获取一个显示连接并初始化它。这是使用以下两个方法完成的：'
 - en: '`eglGetDisplay`: It obtains the EGL display connection for the native display.
     If the input argument is `EGL_DEFAULT_DISPLAY`, a default display connection is
     returned.'
@@ -1800,17 +2091,20 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`eglGetDisplay`：它获取原生显示的EGL显示连接。如果输入参数是`EGL_DEFAULT_DISPLAY`，则返回默认显示连接。'
 - en: '`eglInitialize`: It initializes an EGL display connection obtained by `eglGetDisplay`.'
   id: totrans-288
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`eglInitialize`：它初始化通过`eglGetDisplay`获取的EGL显示连接。'
 - en: '**Configure EGL**: This is done through `eglChooseConfig`.'
   id: totrans-289
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**配置EGL**：这是通过`eglChooseConfig`完成的。'
 - en: '`eglChooseConfig` returns a list of EGL frame buffer configurations that match
     the requirements specified by the `attrib_list` argument. The attribute is an
     array with pairs of attributes and corresponding desired values, and it is terminated
@@ -1820,18 +2114,21 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`eglChooseConfig`返回与`attrib_list`参数指定的要求相匹配的EGL帧缓冲区配置列表。属性是一个属性和相应期望值对的数组，以`EGL_NONE`结束。在我们的代码中，我们简单指定`EGL_SURFACE_TYPE`为`EGL_WINDOW_BIT`，颜色组件大小为8位。'
 - en: '**Create a render surface where the display content will be placed**: This
     is done through `eglCreateWindowSurface`.'
   id: totrans-291
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**创建一个渲染表面，用于放置显示内容**：这是通过`eglCreateWindowSurface`完成的。'
 - en: '`eglCreateWindowSurface`, given the EGL display connection, the EGL frame buffer
     configuration and native window returns a new EGL window surface.'
   id: totrans-292
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`eglCreateWindowSurface`，给定EGL显示连接、EGL帧缓冲区配置和原生窗口，返回一个新的EGL窗口表面。'
 - en: In our code, we start from `SurfaceView` and pass its associated `android.view.Surface`
     value to the native code. In the native code, we obtain its native window, and
     finally create the EGL window surface for OpenGL drawing.
@@ -1839,12 +2136,14 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在我们的代码中，我们从`SurfaceView`开始，并将其关联的`android.view.Surface`值传递给原生代码。在原生代码中，我们获取其原生窗口，并最终为OpenGL绘制创建EGL窗口表面。
 - en: '**Create the EGL rendering context and make it the current**: This is done
     by `eglCreateContext` and `eglMakeCurrent`.'
   id: totrans-294
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**创建EGL渲染上下文并将其设为当前**：这是通过`eglCreateContext`和`eglMakeCurrent`完成的。'
 - en: '`eglCreateContext`: It creates a new EGL rendering context, which is used to
     render into the EGL draw surface.'
   id: totrans-295
@@ -1852,6 +2151,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`eglCreateContext`：它创建一个新的EGL渲染上下文，用于渲染到EGL绘制表面。'
 - en: '`eglMakeCurrent`: It attaches an EGL context to the EGL draw and read surfaces.
     In our code, the created window surface is used as both the read and draw surface.'
   id: totrans-296
@@ -1859,23 +2159,27 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`eglMakeCurrent`：它将EGL上下文附加到EGL绘制和读取表面。在我们的代码中，创建的窗口表面被用作读取和绘制表面。'
 - en: '**OpenGL drawing**: This is covered in previous recipes.'
   id: totrans-297
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**OpenGL绘制**：这在前面的食谱中已经介绍过了。'
 - en: '**Swap the EGL surface internal buffers to display the content**: This is done
     by the `eglSwapBuffers` call.'
   id: totrans-298
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**交换EGL表面内部缓冲区以显示内容**：这是通过`eglSwapBuffers`调用完成的。'
 - en: '`eglSwapBuffers` posts the EGL surface color buffer to a native window. This
     effectively displays the drawing content on the screen.'
   id: totrans-299
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`eglSwapBuffers`将EGL表面颜色缓冲区发布到原生窗口。这有效地在屏幕上显示绘制内容。'
 - en: EGL internally maintains two buffers. The content of the front buffer is displayed,
     while the drawing can be done on the back buffer. At the time we decided to display
     the new drawing, we swap the two buffers.
@@ -1883,12 +2187,14 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: EGL内部维护两个缓冲区。前缓冲区的内容被显示，而绘制可以在后缓冲区进行。当我们决定显示新的绘制内容时，我们交换这两个缓冲区。
 - en: 'At time we want to stop rendering. Release the EGL context, destroy the EGL
     surface, and terminate the EGL display connection:'
   id: totrans-301
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当我们想要停止渲染时，释放EGL上下文，销毁EGL表面，终止EGL显示连接：
 - en: '`eglMakeCurrent` with `EGL_NO_SURFACE` and `EGL_NO_CONTEXT` releases the current
     context'
   id: totrans-302
@@ -1896,12 +2202,14 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用`EGL_NO_SURFACE`和`EGL_NO_CONTEXT`的`eglMakeCurrent`释放当前上下文。
 - en: '`eglDestroySurface` destroys an EGL surface'
   id: totrans-303
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`eglDestroySurface`销毁一个EGL表面。'
 - en: '`eglTerminate` terminates the EGL display connection'
   id: totrans-304
   prefs:

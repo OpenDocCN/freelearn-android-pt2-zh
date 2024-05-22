@@ -1,189 +1,280 @@
 - en: Chapter 6. Android NDK Multithreading
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第6章. Android NDK多线程
 - en: 'In this chapter we will cover:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章将涵盖以下内容：
 - en: Creating and terminating native threads at Android NDK
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android NDK中创建和终止本地线程
 - en: Synchronizing native threads with mutex at Android NDK
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android NDK中使用互斥锁同步本地线程
 - en: Synchronizing native threads with conditional variables at Android NDK
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android NDK中使用条件变量同步本地线程
 - en: Synchronizing native threads with reader/writer locks at Android NDK
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android NDK中使用读写锁同步本地线程
 - en: Synchronizing native threads with semaphore at Android NDK
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android NDK中用信号量同步本地线程
 - en: Scheduling native threads at Android NDK
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android NDK中调度本地线程
 - en: Managing data for native threads at Android NDK
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android NDK中为本地线程管理数据
 - en: Introduction
+  id: totrans-9
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 简介
 - en: Most non-trivial Android apps use more than one thread, therefore multithreaded
     programming is essential to Android development. At Android NDK, **POSIX Threads**
     (**pthreads**) is bundled in Android's Bionic C library to support multithreading.
     This chapter mainly discusses the API functions defined in the `pthread.h` and
     `semaphore.h` header files, which can be found under the `platforms/android-<API
     level>/arch-arm/usr/include/` folder of Android NDK.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 大多数非琐碎的Android应用都使用不止一个线程，因此多线程编程对Android开发至关重要。在Android NDK中，**POSIX线程**（**pthreads**）被包含在Android的Bionic
+    C库中，以支持多线程。本章主要讨论`pthread.h`和`semaphore.h`头文件中定义的API函数，这些文件可以在Android NDK的`platforms/android-<API
+    level>/arch-arm/usr/include/`目录下找到。
 - en: We will first introduce thread creation and termination. Synchronization is
     important in all multithreaded applications, therefore we discuss four commonly
     used synchronization techniques at Android NDK with four recipes, including mutex,
     conditional variables, reader/writer locks, and semaphore. We then illustrate
     thread scheduling and finally describe how to manage data for threads.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将首先介绍线程的创建和终止。在所有多线程应用程序中，同步非常重要，因此我们讨论了Android NDK中四种常用的同步技术，包括互斥锁、条件变量、读写锁和信号量。然后我们说明了线程调度，最后描述了如何为线程管理数据。
 - en: Being a practical book, we will not cover the theories behind multithreaded
     programming. Readers are expected to understand the basics of multithreading,
     including concurrency, mutual exclusion, deadlock, and so on.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为一本实用书籍，我们将不涉及多线程编程背后的理论。读者需要了解多线程的基础知识，包括并发、互斥、死锁等。
 - en: 'In addition, pthreads programming is a complicated topic and there are books
     written solely for pthreads programming. This chapter will only focus on the essentials
     at the context of Android NDK programming. Interested readers can refer to the
     book *Pthreads Programming: A POSIX Standard for Better Multiprocessing*, by *Bradford
     Nicols*, *Dick Buttlar*, and *Jacqueline Proulx Farrell* for more information.'
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: '此外，pthreads编程是一个复杂的话题，有专门针对pthreads编程的书籍。本章将仅关注Android NDK编程环境下的基本内容。感兴趣的读者可以参考*Bradford
+    Nicols*，*Dick Buttlar*和*Jacqueline Proulx Farrell*所著的《Pthreads Programming: A
+    POSIX Standard for Better Multiprocessing》以获取更多信息。'
 - en: Creating and terminating native threads at Android NDK
+  id: totrans-14
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Android NDK中创建和终止本地线程
 - en: This recipe discusses how to create and terminate native threads at Android
     NDK.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱讨论如何在Android NDK中创建和终止本地线程。
 - en: Getting ready…
+  id: totrans-16
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪…
 - en: Readers are expected to know how to create an Android NDK project. We can refer
     to the *Writing a Hello NDK program* recipe in [Chapter 1](ch01.html "Chapter 1. Hello
     NDK"), *Hello NDK*, for detailed instructions.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 读者需要知道如何创建一个Android NDK项目。我们可以参考[第1章](ch01.html "第1章. Hello NDK")中的*编写Hello
+    NDK程序*食谱，详细说明操作步骤。
 - en: How to do it...
+  id: totrans-18
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps describe how to create a simple Android application with
     multiple native threads:'
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤描述了如何创建一个具有多个本地线程的简单Android应用程序：
 - en: Create an Android application named `NativeThreadsCreation`. Set the package
     name as `cookbook.chapter6.nativethreadscreation`. Refer to the *Loading native
     libraries and registering native methods* recipe in [Chapter 2](ch02.html "Chapter 2. Java
     Native Interface"), *Java Native Interface* for more detailed instructions.
+  id: totrans-20
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`NativeThreadsCreation`的Android应用程序。将包名设置为`cookbook.chapter6.nativethreadscreation`。更多详细说明请参考[第2章](ch02.html
+    "第2章. Java Native Interface")中的*加载本地库和注册本地方法*食谱。
 - en: Right-click on the project **NativeThreadsCreation**, select **Android Tools**
     | **Add Native Support**.
+  id: totrans-21
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 右键点击项目**NativeThreadsCreation**，选择**Android Tools** | **Add Native Support**。
 - en: Add a Java file named `MainActivity.java` under package `cookbook.chapter6.nativethreadscreation`.
     This Java file simply loads the native library `NativeThreadsCreation` and calls
     the native `jni_start_threads` method.
+  id: totrans-22
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `cookbook.chapter6.nativethreadscreation` 包下添加一个名为 `MainActivity.java` 的 Java
+    文件。这个 Java 文件简单加载原生库 `NativeThreadsCreation` 并调用原生的 `jni_start_threads` 方法。
 - en: Add `mylog.h` and `NativeThreadsCreation.cpp` files under the `jni` folder.
     The `mylog.h` file contains the Android native `logcat` utility functions, while
     the `NativeThreadsCreation.cpp` file contains the native code to start multiple
     threads. A part of the code is shown next.
+  id: totrans-23
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `jni` 文件夹下添加 `mylog.h` 和 `NativeThreadsCreation.cpp` 文件。`mylog.h` 文件包含了安卓原生
+    `logcat` 实用功能函数，而 `NativeThreadsCreation.cpp` 文件包含了启动多线程的原生代码。部分代码如下所示。
 - en: 'The `jni_start_threads` function starts two threads and waits for the two threads
     to terminate:'
+  id: totrans-24
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_start_threads` 函数启动两个线程并等待这两个线程结束：'
 - en: '[PRE0]'
+  id: totrans-25
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'The `run_by_thread` function is executed to the native threads:'
+  id: totrans-26
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread` 函数被原生线程执行：'
 - en: '[PRE1]'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Add an `Android.mk` file in the `jni` folder with the following code:'
+  id: totrans-28
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `jni` 文件夹中添加一个 `Android.mk` 文件，并包含以下代码：
 - en: '[PRE2]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Build and run the Android project, and use the following command to monitor
     the `logcat` output:'
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建并运行安卓项目，并使用以下命令监控 `logcat` 输出：
 - en: '[PRE3]'
+  id: totrans-31
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'The following is a screenshot of the `logcat` output:'
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 以下是 `logcat` 输出的截图：
 - en: '![How to do it...](img/1505_06_01.jpg)'
+  id: totrans-33
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/1505_06_01.jpg)'
 - en: How it works...
+  id: totrans-34
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: This recipe shows how to create and terminate threads at Android NDK.
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程展示了如何在安卓 NDK 中创建和终止线程。
 - en: Build with pthreads
+  id: totrans-36
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 使用 pthreads 构建
 - en: Traditionally, pthread is implemented as an external library and must be linked
     by providing a linker flag `-lpthread`. Android's Bionic C library has its own
     pthread implementation bundled in. Therefore, we do not use `-lpthread` in the
     `Android.mk` file in our project.
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 传统上，pthread 被实现为一个外部库，必须通过提供链接器标志 `-lpthread` 来链接。安卓的 Bionic C 库有自己的 pthread
+    实现。因此，在我们的项目中，`Android.mk` 文件不使用 `-lpthread`。
 - en: Thread creation
+  id: totrans-38
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 线程创建
 - en: 'As demonstrated in our code, a thread can be created with the `pthread_create`
     function, which has the following prototype:'
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 正如我们的代码所示，可以使用 `pthread_create` 函数创建一个线程，该函数具有以下原型：
 - en: '[PRE4]'
+  id: totrans-40
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: This function creates and starts a new thread with attributes specified by the
     `attr` input argument. If `attr` is set to `NULL`, default attributes are used.
     The `start_routine` argument points to the function to be executed by the newly
@@ -191,218 +282,321 @@
     returns, the `thread` input argument will point to a location where the thread
     ID is stored and the return value will be zero to indicate success, or other values
     to indicate error.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个函数使用 `attr` 输入参数指定的属性创建并启动一个新线程。如果 `attr` 设置为 `NULL`，则使用默认属性。`start_routine`
+    参数指向新创建的线程要执行的函数，`arg` 作为函数的输入参数。当函数返回时，`thread` 输入参数将指向存储线程 ID 的位置，返回值为零表示成功，或其他值表示错误。
 - en: In our sample code, we created two threads to execute the `run_by_thread` function.
     We pass a pointer to an integer as input argument to the `run_by_thread` function.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例代码中，我们创建了两个线程来执行 `run_by_thread` 函数。我们传递一个整数指针作为输入参数给 `run_by_thread`
+    函数。
 - en: Thread termination
+  id: totrans-43
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 线程终止
 - en: 'The thread is terminated after it returns from the `start_routine` function
     or we explicitly call `pthread_exit`. The `pthread_exit` function has the following
     prototype:'
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 线程在从 `start_routine` 函数返回后终止，或者我们显式调用 `pthread_exit`。`pthread_exit` 函数具有以下原型：
 - en: '[PRE5]'
+  id: totrans-45
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'This function terminates the calling thread and returns the value pointed by
     `value_ptr` to any successful `join` with the calling thread. This is also demonstrated
     in our sample code. We called `pthread_join` on both threads we created. The `pthread_join`
     function has the following prototype:'
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个函数终止调用线程，并将 `value_ptr` 指向的值返回给与调用线程成功 `join` 的任何线程。这也在我们的示例代码中进行了演示。我们对创建的两个线程调用了
+    `pthread_join`。`pthread_join` 函数具有以下原型：
 - en: '[PRE6]'
+  id: totrans-47
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: The function suspends the execution of the calling thread until the thread specified
     by the first input argument terminates. When the function returns successfully,
     the second argument can be used to retrieve the exit status of the terminated
     thread as demonstrated in our sample code.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 该函数挂起调用线程的执行，直到由第一个输入参数指定的线程终止。当函数成功返回时，第二个参数可用于获取已终止线程的退出状态，正如我们的示例代码所示。
 - en: In addition, the `logcat` screenshot that we have seen previously shows that
     calling return from a thread is equivalent to calling `pthread_exit`. Therefore,
     we can get the exit status when either method is called.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，我们之前看到的`logcat`截图显示，从线程中返回相当于调用`pthread_exit`。因此，无论调用哪种方法，我们都可以获取退出状态。
 - en: Note
+  id: totrans-50
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: '`pthread_cancel` is not supported by Android Bionic C library pthread. Therefore,
     if we are porting code which uses `pthread_cancel`, we will need to refactor the
     code to get rid of it.'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: Android Bionic C库pthread不支持`pthread_cancel`。因此，如果我们正在移植使用`pthread_cancel`的代码，我们需要重构代码以摆脱它。
 - en: Synchronizing native threads with mutex at Android NDK
+  id: totrans-52
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Android NDK中用互斥锁同步本地线程
 - en: This recipe discusses how to use pthread mutex at Android NDK.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱讨论如何在Android NDK中使用pthread互斥锁。
 - en: How to do it...
+  id: totrans-54
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps help to create an Android project that demonstrates the
     usage of pthread mutex:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤帮助创建一个演示pthread互斥锁使用的Android项目：
 - en: Create an Android application named `NativeThreadsMutex`. Set the package name
     as `cookbook.chapter6.nativethreadsmutex`. Refer to the *Loading native libraries
     and registering native methods* recipe in [Chapter 2](ch02.html "Chapter 2. Java
     Native Interface"), *Java Native Interface* for more detailed instructions.
+  id: totrans-56
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`NativeThreadsMutex`的Android应用程序。将包名设置为`cookbook.chapter6.nativethreadsmutex`。更多详细说明请参考[第2章](ch02.html
+    "第2章。Java本地接口")中的*加载本地库和注册本地方法*食谱，*Java Native Interface*。
 - en: Right-click on the project **NativeThreadsMutex**, select **Android Tools**
     | **Add Native Support**.
+  id: totrans-57
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 右键点击项目**NativeThreadsMutex**，选择**Android Tools** | **添加本地支持**。
 - en: Add a Java file named `MainActivity.java` under the `cookbook.chapter6.nativethreadsmutex`
     package. This Java file simply loads the native `NativeThreadsMutex` library and
     calls the native `jni_start_threads` method.
+  id: totrans-58
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter6.nativethreadsmutex`包下添加一个名为`MainActivity.java`的Java文件。这个Java文件只是加载本地`NativeThreadsMutex`库并调用本地`jni_start_threads`方法。
 - en: 'Add two files named `mylog.h` and `NativeThreadsMutex.cpp` in the `jni` folder.
     `NativeThreadsMutex.cpp` contains the code to start two threads. The two threads
     will update a shared counter. A part of the code is shown as follows:'
+  id: totrans-59
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹中添加两个名为`mylog.h`和`NativeThreadsMutex.cpp`的文件。`NativeThreadsMutex.cpp`包含启动两个线程的代码。这两个线程将更新一个共享计数器。部分代码如下所示：
 - en: 'The `run_by_thread1` function is executed by the first native thread:'
+  id: totrans-60
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread1`函数由第一个本地线程执行：'
 - en: '[PRE7]'
+  id: totrans-61
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'The `run_by_thread2` function is executed by the second native thread:'
+  id: totrans-62
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread2`函数由第二个本地线程执行：'
 - en: '[PRE8]'
+  id: totrans-63
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Add an `Android.mk` file in the `jni` folder with the following content:'
+  id: totrans-64
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹中添加一个`Android.mk`文件，内容如下：
 - en: '[PRE9]'
+  id: totrans-65
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Build and run the Android project, and use the following command to monitor
     the `logcat` output.
+  id: totrans-66
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建并运行Android项目，并使用以下命令监控`logcat`输出。
 - en: '[PRE10]'
+  id: totrans-67
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'The `logcat` output is shown as follows:'
+  id: totrans-68
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`logcat`输出如下所示：'
 - en: '![How to do it...](img/1505_06_02.jpg)'
+  id: totrans-69
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/1505_06_02.jpg)'
 - en: We also implemented a native method `jni_start_threads_dead` in `NativeThreadsMutex.cpp`,
     which can probably cause a deadlock (we may need to run the code a few times to
     produce the deadlock situation). If we call `jni_start_threads_dead` in `MainActivity.java`,
     the two threads will start and then block as shown in the following `logcat` output:![How
     to do it...](img/1505_06_03.jpg)
+  id: totrans-70
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们还在`NativeThreadsMutex.cpp`中实现了一个本地方法`jni_start_threads_dead`，这可能会导致死锁（可能需要运行几次代码才能产生死锁情况）。如果在`MainActivity.java`中调用`jni_start_threads_dead`，两个线程将会启动然后如以下`logcat`输出所示阻塞：![如何操作...](img/1505_06_03.jpg)
 - en: As indicated in this screenshot, the two threads cannot proceed after **started**.
+  id: totrans-71
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如此截图所示，两个线程在**启动后**无法继续执行。
 - en: How it works...
+  id: totrans-72
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'The sample project demonstrates how to use mutex to synchronize native threads.
     We describe the details as follows:'
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例项目演示了如何使用互斥锁来同步本地线程。以下是详细信息：
 - en: Initialize and destroy mutex
+  id: totrans-74
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 初始化和销毁互斥锁
 - en: 'A mutex can be initialized with the `pthread_mutex_init` function, which has
     the following prototype:'
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 可以使用`pthread_mutex_init`函数初始化互斥锁，该函数具有以下原型：
 - en: '[PRE11]'
+  id: totrans-76
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: The input argument mutex is a pointer to the mutex to be initialized and `attr`
     indicates the attributes of mutex. If `attr` is set to `NULL`, the default attributes
     will be used. The function will return a zero if the mutex is initialized successfully
     and a non-zero value otherwise.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 输入参数mutex是要初始化的互斥锁的指针，`attr`表示互斥锁的属性。如果`attr`设置为`NULL`，将使用默认属性。如果互斥锁初始化成功，该函数将返回零，否则返回非零值。
 - en: Note
+  id: totrans-78
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: A macro `PTHREAD_MUTEX_INITIALIZER` is also defined in `pthread.h` to initialize
     a mutex with default attributes.
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`pthread.h`中定义了一个宏`PTHREAD_MUTEX_INITIALIZER`，用于使用默认属性初始化互斥量。
 - en: 'When we are done with the mutex, we can destroy it with the `pthread_mutex_destroy`
     function, which has the following prototype:'
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们完成互斥量的使用后，可以通过`pthread_mutex_destroy`函数销毁它，该函数具有以下原型：
 - en: '[PRE12]'
+  id: totrans-81
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: The input argument is a pointer pointing to the mutex to be destroyed.
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 输入参数是指向要销毁的互斥量的指针。
 - en: In our sample project, we created two mutexes `mux1` and `mux2` to synchronize
     the access of a shared counter `cnt` by the two threads. After the two threads
     exit, we destroyed the mutexes.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例项目中，我们创建了两个互斥量`mux1`和`mux2`，以同步两个线程对共享计数器`cnt`的访问。两个线程退出后，我们销毁了这些互斥量。
 - en: Using the mutex
+  id: totrans-84
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 使用互斥量
 - en: 'The following four functions are available to lock and unlock a mutex:'
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是可用于锁定和解锁互斥量的四个函数：
 - en: '[PRE13]'
+  id: totrans-86
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: In all the four functions, the input argument refers to the `mutex` object in
     use. A zero return value indicates the mutex is locked or unlocked successfully.
     The last function allows us to specify a wait timeout in milliseconds. If it cannot
     acquire the mutex after the timeout, it will return `EBUSY` to indicate failure.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 在所有四个函数中，输入参数指的是正在使用的`mutex`对象。零返回值表示互斥量锁定或解锁成功。最后一个函数允许我们指定以毫秒为单位的等待超时。如果超时后无法获取互斥量，它将返回`EBUSY`表示失败。
 - en: Note
+  id: totrans-88
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The `pthread_mutex_timedlock` function is defined in some pthread implementations
     to allow us to specify a timeout value. However, this function is not available
     in the Android Bionic C library.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread_mutex_timedlock`函数在一些pthread实现中被定义，允许我们指定一个超时值。然而，这个函数在Android Bionic
+    C库中是不可用的。'
 - en: 'We demonstrated the usage of the functions previously in our example. In function
     `run_by_thread1`, we first lock `mux1` by `pthread_mutex_lock`, and then `mux2`
     by `pthread_mutex_trylock`. If `mux2` cannot be locked, we unlock `mux1`, sleep
@@ -411,11 +605,15 @@
     function `run_by_thread2` is similar to `run_by_thread1`, except that it locks
     `mux2` first, and then `mux1`. The two functions are executed by two threads.
     This can be illustrated by the following diagram:'
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在之前的示例中演示了这些函数的使用。在`run_by_thread1`函数中，我们首先通过`pthread_mutex_lock`锁定`mux1`，然后通过`pthread_mutex_trylock`尝试锁定`mux2`。如果无法锁定`mux2`，我们就解锁`mux1`，休眠50毫秒，然后再次尝试。如果可以锁定`mux2`，我们就更新共享计数器`cnt`，记录其当前值，然后释放两个互斥量。另一个函数`run_by_thread2`与`run_by_thread1`类似，不同之处在于它首先锁定`mux2`，然后锁定`mux1`。这两个函数由两个线程执行。这可以通过以下图示说明：
 - en: '![Using the mutex](img/1505_06_04.jpg)'
+  id: totrans-91
   prefs: []
   type: TYPE_IMG
+  zh: '![使用互斥量](img/1505_06_04.jpg)'
 - en: As shown in the preceding diagram, thread 1 needs to obtain `mux1`, then `mux2`
     in order to update `cnt`, while thread 2 needs to acquire `mux2`, then `mux1`
     to update `cnt`. In case thread 1 locked `mux1` and thread 2 locked `mux2`, neither
@@ -424,216 +622,313 @@
     the other thread can proceed to update the shared counter `cnt` and release the
     two mutexes. Note that we can replace the `pthread_mutex_trylock` with `pthread_mutex_lock_timeout_np`
     in our code. Readers are encouraged to try it out themselves.
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前面的图所示，线程1需要获取`mux1`，然后是`mux2`以更新`cnt`，而线程2需要获取`mux2`，然后是`mux1`以更新`cnt`。如果线程1锁定了`mux1`而线程2锁定了`mux2`，那么这两个线程都无法继续。这对应于`pthread_mutex_trylock`返回非零值的情况。如果发生这种情况，一个线程将放弃其互斥量，以便另一个线程可以继续更新共享计数器`cnt`并释放两个互斥量。请注意，我们可以在代码中将`pthread_mutex_trylock`替换为`pthread_mutex_lock_timeout_np`。鼓励读者亲自尝试。
 - en: 'We also implemented a native method `jni_start_threads_dead` which will probably
     cause a deadlock. The thread setup is similar to the previous case, but we use
     `pthread_mutex_lock` instead of `pthread_mutex_trylock`, and the threads do not
     give up the mutexes they have already locked. This can be illustrated as shown
     in the following diagram:'
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还实现了一个本地方法`jni_start_threads_dead`，它很可能会造成死锁。线程设置与上一个案例相似，但我们使用`pthread_mutex_lock`而不是`pthread_mutex_trylock`，并且线程不会放弃它们已经锁定的互斥量。这可以如下所示图示：
 - en: '![Using the mutex](img/1505_06_05.jpg)'
+  id: totrans-94
   prefs: []
   type: TYPE_IMG
+  zh: '![使用互斥量](img/1505_06_05.jpg)'
 - en: Thread 1 tries to lock `mux1` and then `mux2`, while thread 2 tries to lock
     `mux2` and then `mux1`. In case where thread 1 has locked `mux1` and thread 2
     has locked `mux2`, none of the threads can proceed. Because they won't give up
     the mutexes they've obtained, the two threads will be blocked forever. This is
     referred to as a deadlock.
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 线程1尝试锁定`mux1`然后是`mux2`，而线程2尝试锁定`mux2`然后是`mux1`。如果线程1锁定了`mux1`而线程2锁定了`mux2`，那么这两个线程都无法继续。因为它们不会放弃已经获得的互斥锁，这两个线程将被永久阻塞。这被称为死锁。
 - en: There's more...
+  id: totrans-96
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Recall that second input argument for function `pthread_mutex_init` is a pointer
     to `pthread_mutexattr_t`. A few functions are defined in `pthread.h` to initialize,
     manipulate, and destroy mutex attributes, including:'
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 回想一下，函数`pthread_mutex_init`的第二个输入参数是指向`pthread_mutexattr_t`的指针。`pthread.h`中定义了一些函数来初始化、操作和销毁互斥属性，包括：
 - en: '`pthread_mutexattr_init`'
+  id: totrans-98
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_mutexattr_init`'
 - en: '`pthread_mutexattr_destroy`'
+  id: totrans-99
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_mutexattr_destroy`'
 - en: '`pthread_mutexattr_gettype`'
+  id: totrans-100
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_mutexattr_gettype`'
 - en: '`pthread_mutexattr_settype`'
+  id: totrans-101
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_mutexattr_settype`'
 - en: '`pthread_mutexattr_setpshared`'
+  id: totrans-102
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_mutexattr_setpshared`'
 - en: '`pthread_mutexattr_getpshared`'
+  id: totrans-103
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_mutexattr_getpshared`'
 - en: Interested readers can look into the `pthread.h` header file for more information.
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 感兴趣的读者可以查看`pthread.h`头文件以获取更多信息。
 - en: Synchronizing native threads with conditional variables at Android NDK
+  id: totrans-105
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Android NDK中使用条件变量同步本地线程
 - en: The previous recipe discusses how to synchronize threads with mutex. This recipe
     describes how to use conditional variables.
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 前一个食谱讨论了如何使用互斥锁来同步线程。这个食谱描述了如何使用条件变量。
 - en: How to do it...
+  id: totrans-107
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps will help us create an Android project that demonstrates
     the usage of pthread conditional variables:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将帮助我们创建一个展示pthread条件变量使用的Android项目：
 - en: Create an Android application named `NativeThreadsCondVar`. Set the package
     name as `cookbook.chapter6.nativethreadscondvar`. Refer to the *Loading native
     libraries and registering native methods* recipe in [Chapter 2](ch02.html "Chapter 2. Java
     Native Interface"), *Java Native Interface* for more detailed instructions.
+  id: totrans-109
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`NativeThreadsCondVar`的Android应用程序。将包名设置为`cookbook.chapter6.nativethreadscondvar`。有关更详细的说明，请参考[第2章](ch02.html
+    "第2章。Java本地接口")中的*加载本地库和注册本地方法*食谱，*Java Native Interface*。
 - en: Right-click on the project **NativeThreadsCondVar**, select **Android Tools**
     | **Add Native Support**.
+  id: totrans-110
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 右键点击项目**NativeThreadsCondVar**，选择**Android Tools** | **Add Native Support**。
 - en: Add a Java file named `MainActivity.java` under the package `cookbook.chapter6.nativethreadscondvar`.
     This Java file simply loads the native library `NativeThreadsCondVar` and calls
     the native `jni_start_threads` method.
+  id: totrans-111
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter6.nativethreadscondvar`包下添加一个名为`MainActivity.java`的Java文件。这个Java文件简单加载了本地库`NativeThreadsCondVar`并调用了本地方法`jni_start_threads`。
 - en: 'Add two files named `mylog.h` and `NativeThreadsCondVar.cpp` under the `jni`
     folder. `NativeThreadsCondVar.cpp` contains the code to start two threads. The
     two threads will update a shared counter. A part of the code is shown as follows:'
+  id: totrans-112
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加两个名为`mylog.h`和`NativeThreadsCondVar.cpp`的文件。`NativeThreadsCondVar.cpp`包含了启动两个线程的代码。这两个线程将更新一个共享计数器。部分代码如下所示：
 - en: 'The `jni_start_threads` function initializes the mutex, conditional variable
     and creates two threads:'
+  id: totrans-113
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_start_threads`函数初始化互斥锁、条件变量并创建两个线程：'
 - en: '[PRE14]'
+  id: totrans-114
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'The `run_by_thread1` function is executed by the first native thread:'
+  id: totrans-115
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread1`函数由第一个本地线程执行：'
 - en: '[PRE15]'
+  id: totrans-116
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'The `run_by_thread2` function is executed by the second native thread:'
+  id: totrans-117
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread2`函数由第二个本地线程执行：'
 - en: '[PRE16]'
+  id: totrans-118
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Add an `Android.mk` file under the `jni` folder with the following content:'
+  id: totrans-119
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加一个名为`Android.mk`的文件，内容如下：
 - en: '[PRE17]'
+  id: totrans-120
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'Build and run the Android project, and use the following command to monitor
     the `logcat` output:'
+  id: totrans-121
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建并运行Android项目，使用以下命令监控`logcat`输出：
 - en: '[PRE18]'
+  id: totrans-122
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'The `logcat` output is shown as follows:'
+  id: totrans-123
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`logcat`输出如下所示：'
 - en: '![How to do it...](img/1505_06_06.jpg)'
+  id: totrans-124
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/1505_06_06.jpg)'
 - en: How it works...
+  id: totrans-125
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: While mutexes control access of shared data among threads, conditional variables
     allow threads to synchronize based on the actual value of data. The typical use
     case is one thread waits for a condition to be satisfied. Without a conditional
     variable, the thread needs to check for the condition continuously (often known
     as polling). Conditional variables allow us to handle the situation without the
     resource consuming polling.
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 当互斥锁控制线程间共享数据的访问时，条件变量允许线程根据数据的实际值进行同步。典型用例是一个线程等待条件被满足。没有条件变量，线程需要不断地检查条件（通常称为轮询）。条件变量允许我们在不消耗资源的轮询情况下处理这种情况。
 - en: Initialize and destroy conditional variables
+  id: totrans-127
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 初始化和销毁条件变量
 - en: 'The `pthread_cond_init` function is used to initialize a conditional variable.
     It has the following prototype:'
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread_cond_init`函数用于初始化条件变量。它具有以下原型：'
 - en: '[PRE19]'
+  id: totrans-129
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: The function initializes the conditional variable pointed by the `cond` input
     argument with attributes referred by `attr` argument. If `attr` is set to `NULL`,
     the default attributes are used.
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 该函数使用`attr`参数引用的属性初始化`cond`输入参数指向的条件变量。如果`attr`设置为`NULL`，则使用默认属性。
 - en: Similar to mutex, a macro `PTHREAD_COND_INITIALIZER` is defined in `pthread.h`
     to initialize a conditional variable with default attributes.
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 类似于互斥量，`pthread.h`中定义了一个宏`PTHREAD_COND_INITIALIZER`，用于使用默认属性初始化条件变量。
 - en: 'After we are done with the conditional variable, we can destroy it by calling
     `pthread_cond_destroy`, which has the following prototype:'
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 完成条件变量的使用后，我们可以通过调用`pthread_cond_destroy`来销毁它，该函数具有以下原型：
 - en: '[PRE20]'
+  id: totrans-133
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: In our sample code, we called these two functions to initialize and destroy
     a conditional variable named `cond`.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例代码中，我们调用了这两个函数来初始化和销毁名为`cond`的条件变量。
 - en: 'Using the conditional variable:'
+  id: totrans-135
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 使用条件变量：
 - en: 'The following three functions are commonly used to manipulate a conditional
     variable:'
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下三个函数通常用于操作条件变量：
 - en: '[PRE21]'
+  id: totrans-137
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: All the three functions accept a pointer to the conditional variable in use.
     The first function also takes a pointer to the associated mutex as the second
     argument. Note that a conditional variable must be used with an associated mutex.
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有这三个函数接受正在使用的条件变量的指针。第一个函数还接受关联互斥量的指针作为第二个参数。请注意，条件变量必须与关联的互斥量一起使用。
 - en: The first function should be called after the associated mutex is locked; otherwise
     the function behavior is undefined. It causes the calling thread to block on the
     conditional variable. In addition, the associated mutex is unlocked automatically
     and atomically so that another thread can use it.
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一个函数应在关联互斥量锁定后被调用；否则该函数行为是未定义的。它会使得调用线程在条件变量上阻塞。此外，关联的互斥量会自动且原子性地解锁，以便另一个线程可以使用它。
 - en: The second and third functions are used to unblock the threads that were previously
     blocked on a conditional variable. `pthread_cond_broadcast` will unblock all threads
     that are blocked on the conditional variable pointed by `cond`, while `pthread_cond_signal`
@@ -642,45 +937,64 @@
     by `cond`. In case there are multiple threads to unblock, the order is dependent
     on the scheduling policy, which we will discuss in the *Scheduling native threads
     at Android NDK* recipe later in this chapter.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: '第二个和第三个函数用于解除之前在条件变量上阻塞的线程。`pthread_cond_broadcast`将解除在`cond`指向的条件变量上阻塞的所有线程，而`pthread_cond_signal`将至少解除在`cond`上阻塞的一个线程。如果没有任何线程在由`cond`指定的条件变量上阻塞，这两个函数不起作用。如果有多个线程需要解除阻塞，其顺序取决于调度策略，这将在本章后面的*在Android
+    NDK中调度本地线程*的菜谱中讨论。 '
 - en: The usage of these functions is demonstrated in our sample code. In the `run_by_thread1`
     function, thread one will lock the associated mutex, and then wait on the conditional
     variable `cond`. This will cause thread one to release the mutex `mux`. In function
     `run_by_thread2`, thread two will obtain `mux` and increase the shared counter
     `cnt`.
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些函数的使用在我们的示例代码中有演示。在`run_by_thread1`函数中，线程一将锁定关联的互斥量，然后在条件变量`cond`上等待。这将导致线程一释放互斥量`mux`。在`run_by_thread2`函数中，线程二将获取`mux`并增加共享计数器`cnt`。
 - en: When `cnt` is increased to five, thread two calls `pthread_cond_signal` to unblock
     thread one and release `mux`. Thread one will lock `mux` automatically and atomically
     (note that no `pthread_mutex_lock` call is needed upon wake up), and then increase
     `cnt` from five to six, and finally exit. Thread two will continue to increase
     the `cnt` value to 10 and exit. This explains the preceding screenshot.
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 当`cnt`增加到五时，线程二调用`pthread_cond_signal`来解除线程一的阻塞并释放`mux`。线程一会自动且原子性地锁定`mux`（注意，在唤醒时不需要`pthread_mutex_lock`调用），然后将`cnt`从五增加到六，并最终退出。线程二将继续增加`cnt`的值到10并退出。这就解释了前面的截图。
 - en: Note
+  id: totrans-143
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: We put the `pthread_cond_wait(&cond, &mux)` function inside a while loop to
     handle spurious wakeup. Spurious wakeup refers to the case where a thread is woken
     up even though no thread signaled the condition. It is recommended that we always
     check the condition when `pthread_cond_wait` is returned. You can refer to [http://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_cond_wait.html](http://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_cond_wait.html)
     for more information.
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将 `pthread_cond_wait(&cond, &mux)` 函数放入一个 while 循环中以处理虚假唤醒。虚假唤醒是指即使没有线程信号条件，线程也会被唤醒的情况。建议我们总是在
+    `pthread_cond_wait` 返回时检查条件。你可以参考 [http://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_cond_wait.html](http://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_cond_wait.html)
+    了解更多信息。
 - en: There's more...
+  id: totrans-145
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: The sample project demonstrates how conditional variables are used for native
     threads synchronization. We will go through the details in the following section.
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例项目演示了条件变量如何用于本地线程同步。我们将在下一节中详细介绍。
 - en: Conditional variable attributes functions
+  id: totrans-147
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 条件变量属性函数
 - en: In our sample code, we created the conditional variable with default attributes
     by specifying the second argument to `pthread_cond_init` as `NULL`. `pthread.h`
     defines a few functions to initialize and manipulate conditional variable attributes.
@@ -689,19 +1003,30 @@
     these functions because they are not used often. Interested readers can refer
     to the `pthread.h` header file available at `platforms/android-<API level>/arch-arm/usr/include/`
     for more information.
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例代码中，通过将 `pthread_cond_init` 的第二个参数指定为 `NULL` 来使用默认属性创建条件变量。`pthread.h`
+    定义了一些函数来初始化和操作条件变量属性。这些函数包括 `pthread_condattr_init`、`pthread_condattr_getpshared`、`pthread_condattr_setpshared`
+    和 `pthread_condattr_destroy`。我们不讨论这些函数，因为它们不常使用。感兴趣的读者可以参考位于 `platforms/android-<API
+    level>/arch-arm/usr/include/` 的 `pthread.h` 头文件以获取更多信息。
 - en: Timed conditional variable functions
+  id: totrans-149
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 定时条件变量函数
 - en: '`pthread.h` also defines a few functions that allow us to specify a timeout
     value for waiting on a conditional variable. They are listed as follows:'
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread.h` 还定义了一些允许我们为条件变量的等待指定超时值的函数。它们如下所示：'
 - en: '[PRE22]'
+  id: totrans-151
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: The first two functions `pthread_cond_timedwait` and `pthread_cond_timedwait_monotonic_np`
     allow us to specify an absolute time value. When the system time equals or exceeds
     the specified time, a timeout error is returned. The difference between the two
@@ -711,226 +1036,334 @@
     may change upon clock synchronization), while the `CLOCK_MONOTONIC` clock is the
     absolute time elapsed since some fixed point in the past and it cannot be changed
     abruptly.
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 前两个函数 `pthread_cond_timedwait` 和 `pthread_cond_timedwait_monotonic_np` 允许我们指定一个绝对时间值。当系统时间等于或超过指定时间时，将返回超时错误。这两个函数之间的区别在于，第一个函数使用的是挂钟时间，而第二个函数使用的是
+    `CLOCK_MONOTONIC` 时钟。系统挂钟时间可以向前或向后跳跃（例如，配置为使用网络时间协议的机器的挂钟时间可能在时钟同步时发生变化），而 `CLOCK_MONOTONIC`
+    是自过去某个固定点以来经过的绝对时间，它不能突然改变。
 - en: Note
+  id: totrans-153
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Android `pthread.h` also defines a function `pthread_cond_timedwait_monotonic`,
     which is deprecated. It is functionally equivalent to `pthread_cond_timedwait_monotonic_np`.
     We should always use `pthread_cond_timedwait_monotonic_np` instead.
+  id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: Android `pthread.h` 还定义了一个函数 `pthread_cond_timedwait_monotonic`，该函数已被弃用。它在功能上等同于
+    `pthread_cond_timedwait_monotonic_np`。我们应该始终使用 `pthread_cond_timedwait_monotonic_np`。
 - en: The last two functions `pthread_cond_timedwait_relative_np` and `pthread_cond_timeout_np`
     allow us to specify a relative timeout value with respect to the current time.
     The difference is that the timeout value is specified as `timespec` structure
     in one function and as number of milliseconds in the other.
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后两个函数 `pthread_cond_timedwait_relative_np` 和 `pthread_cond_timeout_np` 允许我们指定一个相对于当前时间的相对超时值。不同之处在于，一个函数将超时值指定为
+    `timespec` 结构，而另一个则指定为毫秒数。
 - en: Note
+  id: totrans-156
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Several methods covered in this recipe end with `np`, which stands for "nonportable".
     This means these functions may not be implemented in other pthread libraries.
     If we are designing our program to also work on platforms other than Android,
     we should avoid using these functions.
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 本菜谱中介绍的一些方法以`np`结尾，表示“不可移植”。这意味着这些函数可能不会在其他pthread库中实现。如果我们设计的程序也想在其他非Android平台上工作，我们应该避免使用这些函数。
 - en: Synchronizing native threads with reader/writer locks at Android NDK
+  id: totrans-158
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Android NDK中使用读写锁同步本地线程
 - en: The previous two recipes cover thread synchronization with mutex and conditional
     variables. This recipe discusses reader/writer locks in Android NDK.
+  id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 前两个菜谱涵盖了使用互斥量和条件变量进行线程同步。本菜谱讨论了Android NDK中的读写锁。
 - en: Getting ready...
+  id: totrans-160
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作...
 - en: Readers are recommended to read the previous two recipes, *Synchronizing native
     threads with mutex at Android NDK* and *Synchronizing native threads with conditional
     variables at Android NDK*, before going through this one.
+  id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: 建议读者在阅读本节之前先阅读前两个菜谱，*在Android NDK中使用互斥量同步本地线程*和*在Android NDK中使用条件变量同步本地线程*。
 - en: How to do it...
+  id: totrans-162
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps will help you create an Android project that demonstrates
     the usage of the pthread reader/writer lock:'
+  id: totrans-163
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将帮助你创建一个展示pthread读写锁用法的Android项目：
 - en: Create an Android application named `NativeThreadsRWLock`. Set the package name
     as `cookbook.chapter6.nativethreadsrwlock`. Refer to the *Loading native libraries
     and registering native methods* recipe in [Chapter 2](ch02.html "Chapter 2. Java
     Native Interface"), *Java Native Interface* for more detailed instructions.
+  id: totrans-164
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`NativeThreadsRWLock`的Android应用。设置包名为`cookbook.chapter6.nativethreadsrwlock`。关于更详细的说明，请参考[第2章](ch02.html
+    "第2章。Java本地接口")中的*加载本地库和注册本地方法*部分，*Java Native Interface*。
 - en: Right-click on the project **NativeThreadsRWLock**, select **Android Tools**
     | **Add Native Support**.
+  id: totrans-165
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 右键点击项目**NativeThreadsRWLock**，选择**Android Tools** | **Add Native Support**。
 - en: Add a Java file named `MainActivity.java` under package `cookbook.chapter6.nativethreadsrwlock`.
     This Java file simply loads the native library `NativeThreadsRWLock` and calls
     the native method `jni_start_threads`.
+  id: totrans-166
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter6.nativethreadsrwlock`包下添加一个名为`MainActivity.java`的Java文件。这个Java文件简单加载了本地库`NativeThreadsRWLock`并调用了本地方法`jni_start_threads`。
 - en: 'Add two files named `mylog.h` and `NativeThreadsRWLock.cpp` under the `jni`
     folder. A part of the code in `NativeThreadsRWLock.cpp` is shown as follows:'
+  id: totrans-167
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加两个名为`mylog.h`和`NativeThreadsRWLock.cpp`的文件。`NativeThreadsRWLock.cpp`中的一部分代码如下所示：
 - en: '`jni_start_threads` starts `pNumOfReader` reader threads and `pNumOfWriter`
     writer threads:'
+  id: totrans-168
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_start_threads`启动`pNumOfReader`个读线程和`pNumOfWriter`个写线程：'
 - en: '[PRE23]'
+  id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'The `run_by_read_thread` function is executed by the reader threads:'
+  id: totrans-170
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_read_thread`函数由读线程执行：'
 - en: '[PRE24]'
+  id: totrans-171
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'The `run_by_write_thread` function is executed by the writer threads:'
+  id: totrans-172
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_write_thread`函数由写线程执行：'
 - en: '[PRE25]'
+  id: totrans-173
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Add an `Android.mk` file under the `jni` folder with the following content:'
+  id: totrans-174
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加一个`Android.mk`文件，内容如下：
 - en: '[PRE26]'
+  id: totrans-175
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Build and run the Android project, and use the following command to monitor
     the `logcat` output:'
+  id: totrans-176
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建并运行Android项目，并使用以下命令监控`logcat`输出：
 - en: '[PRE27]'
+  id: totrans-177
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'The `logcat` output is shown as follows:'
+  id: totrans-178
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`logcat`输出如下所示：'
 - en: '![How to do it...](img/1505_06_07.jpg)'
+  id: totrans-179
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/1505_06_07.jpg)'
 - en: How it works...
+  id: totrans-180
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'The reader/writer lock is internally implemented with a mutex and a conditional
     variable. It has the following rules:'
+  id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: 读写锁在内部实现时使用了互斥量和条件变量。它具有以下规则：
 - en: If a thread tries to acquire a read lock for a resource, it can succeed as long
     as no other threads hold a write lock for the resource.
+  id: totrans-182
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果一个线程尝试获取一个资源的读锁，只要没有其他线程持有该资源的写锁，它就可以成功。
 - en: If a thread tries to acquire a write lock for a resource, it can succeed only
     when no other threads hold a write or read lock for the resource.
+  id: totrans-183
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果一个线程尝试获取一个资源的写锁，只有当没有其他线程持有该资源的写锁或读锁时，它才能成功。
 - en: The reader/writer lock guarantees only one thread can modify (need to get the
     write lock) the resource, while permitting multiple threads to read the resource
     (need to get the read lock). It also makes sure no reads happen when the resource
     is being changed. In the following sections we describe the reader/writer lock
     functions provided by Android `pthread.h`.
+  id: totrans-184
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 读写锁保证只有一个线程可以修改（需要获取写锁）资源，同时允许多个线程读取资源（需要获取读锁）。它还确保在资源被更改时不会发生读取操作。以下部分我们将描述Android
+    `pthread.h`提供的读写锁功能。
 - en: Initialize and destroy a reader/writer lock
+  id: totrans-185
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 初始化和销毁读写锁
 - en: 'The following two functions are defined to initialize and destroy a reader/writer
     lock:'
+  id: totrans-186
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面定义了两个函数来初始化和销毁读写锁：
 - en: '[PRE28]'
+  id: totrans-187
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: '`pthread_rwlock_init` initializes a reader/writer lock pointed by the `rwlock`
     argument with the attributes referred by argument `attr`. If `attr` is set to
     `NULL`, the default attributes are used. `pthread_rwlock_destroy` accepts a pointer
     to a reader/writer lock and destroys it.'
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread_rwlock_init` 函数用于初始化由 `rwlock` 参数指向的读写锁，并使用 `attr` 参数引用的属性。如果 `attr`
+    设置为 `NULL`，将使用默认属性。`pthread_rwlock_destroy` 函数接受一个指向读写锁的指针，并销毁它。'
 - en: Note
+  id: totrans-189
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: There is also a macro `PTHREAD_RWLOCK_INITIALIZER` defined to initialize a reader/writer
     lock. The default attributes are used in this case.
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 还定义了一个宏 `PTHREAD_RWLOCK_INITIALIZER` 来初始化读写锁。在这种情况下使用默认属性。
 - en: Using a reader/writer lock
+  id: totrans-191
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 使用读写锁
 - en: 'The following two functions are defined to acquire a read and a write lock
     respectively:'
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面定义了两个函数来分别获取读锁和写锁：
 - en: '[PRE29]'
+  id: totrans-193
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: Both functions accept a pointer to the reader/writer lock and return a zero
     to indicate success. If the lock cannot be acquired, the calling thread will be
     blocked until the block is available or till an error occurs.
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 这两个函数都接受一个读写锁的指针，并返回零表示成功。如果无法获取锁，调用线程将被阻塞，直到锁可用或发生错误。
 - en: 'The following function is defined to unlock either read lock or write lock:'
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下函数定义用于解锁读锁或写锁：
 - en: '[PRE30]'
+  id: totrans-196
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: In our sample code, we demonstrated the usage of these functions. In `run_by_read_thread`
     function, the read threads need to acquire the read lock in order to access the
     value of the shared resource `sharedCnt`. In the `run_by_write_thread` function,
     the write threads need to acquire the write lock before updating the shared resource
     `sharedCnt`.
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例代码中，我们演示了这些函数的使用。在 `run_by_read_thread` 函数中，读线程需要获取读锁才能访问共享资源 `sharedCnt`
+    的值。在 `run_by_write_thread` 函数中，写线程在更新共享资源 `sharedCnt` 之前需要获取写锁。
 - en: 'If we remove the code which locks and unlocks the read and write lock, build
     the application, and rerun it, the output is as shown in the following screenshot:'
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们移除锁定和解锁读写的代码，构建应用程序，并重新运行它，输出将如下截图所示：
 - en: '![Using a reader/writer lock](img/1505_06_08.jpg)'
+  id: totrans-199
   prefs: []
   type: TYPE_IMG
+  zh: '![使用读写锁](img/1505_06_08.jpg)'
 - en: 'As shown in the output, the shared resource `sharedCnt` is updated to a value
     less than the final value when reader/writer lock is enabled. The reason is illustrated
     in the following diagram:'
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 如输出所示，当启用读写锁时，共享资源 `sharedCnt` 被更新为一个小于最终值的值。原因在下图中说明：
 - en: '![Using a reader/writer lock](img/1505_06_09.jpg)'
+  id: totrans-201
   prefs: []
   type: TYPE_IMG
+  zh: '![使用读写锁](img/1505_06_09.jpg)'
 - en: In this diagram, two writers get the same value (N) of the shared counter, and
     both update the value from N to N+1\. When they write the value back to the shared
     counter, the shared counter is updated from N to N+1 although it is updated twice
@@ -938,204 +1371,301 @@
     two reads of the `sharedCnt` (one before processing and one after processing)
     give us two different values because the writers have updated the value. This
     may not be desirable sometimes and that is why a read lock is necessary at times.
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个图表中，两个写者获取了共享计数器的相同值（N），并且都将其从 N 更新到 N+1。当它们将值写回共享计数器时，尽管两个写者两次更新，共享计数器仍从
+    N 更新到 N+1。这说明了为什么我们需要写锁。同时注意，由于写者更新了值，读线程对 `sharedCnt` 的两次读取（处理前一次和处理后一次）给出了两个不同的值。有时这可能不是我们想要的，这就是为什么有时需要读锁的原因。
 - en: There's more...
+  id: totrans-203
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: There are a few more read/write lock functions defined in `pthread.h`.
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 `pthread.h` 中还定义了一些其他的读写锁函数。
 - en: Timed read/write lock and trylock
+  id: totrans-205
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 定时的读/写锁和尝试锁
 - en: 'Android `pthread.h` defines the following two functions to allow the calling
     thread to specify a timeout value when trying to acquire the read or write lock:'
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓的 `pthread.h` 定义了以下两个函数，允许调用线程在尝试获取读锁或写锁时指定超时值：
 - en: '[PRE31]'
+  id: totrans-207
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'In addition, the following two functions are available for the calling thread
     to acquire read or write lock without blocking itself. If the lock is not available,
     the functions will return a nonzero value instead of blocking:'
+  id: totrans-208
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，以下两个函数允许调用线程在不阻塞自身的情况下获取读锁或写锁。如果锁不可用，这些函数将返回非零值而不是阻塞：
 - en: '[PRE32]'
+  id: totrans-209
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: Reader/writer lock attribute functions
+  id: totrans-210
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 读写锁属性函数
 - en: Android `pthread.h` defines a set of functions to initialize and manipulate
     a reader/writer lock attribute, which can be passed to `pthread_rwlock_init` as
     the second argument. These functions include `pthread_rwlockattr_init`, `pthread_rwlockattr_destroy`,
     `pthread_rwlockattr_setpshared`, and `pthread_rwlockattr_getpshared`. They are
     not used often in Android NDK development and therefore not discussed here.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: Android的`pthread.h`定义了一组函数来初始化和操作读写锁属性，可以作为第二个参数传递给`pthread_rwlock_init`。这些函数包括`pthread_rwlockattr_init`、`pthread_rwlockattr_destroy`、`pthread_rwlockattr_setpshared`和`pthread_rwlockattr_getpshared`。它们在Android
+    NDK开发中不常使用，因此这里不进行讨论。
 - en: Synchronizing native threads with semaphore at Android NDK
+  id: totrans-212
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Android NDK中用信号量同步本地线程。
 - en: We have covered mutex, conditional variables, and reader/writer lock in the
     previous three recipes. This is the last recipe on threads synchronization at
     Android NDK, and we will discuss semaphores.
+  id: totrans-213
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在前三个食谱中已经介绍了互斥锁、条件变量和读写锁。这是在Android NDK上关于线程同步的最后一个食谱，我们将讨论信号量。
 - en: Getting ready...
+  id: totrans-214
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作...
 - en: Readers are expected to read through the previous three recipes, *Synchronizing
     native threads with mutex at Android NDK*, *Synchronizing native threads with
     conditional variables at Android NDK*, and *Synchronizing native threads with
     reader/writer locks at Android NDK*, before this one.
+  id: totrans-215
   prefs: []
   type: TYPE_NORMAL
+  zh: 读者在阅读本食谱之前，应阅读前三个食谱，*在Android NDK中使用互斥锁同步本地线程*、*在Android NDK中使用条件变量同步本地线程*和*在Android
+    NDK中使用读写锁同步本地线程*。
 - en: How to do it...
+  id: totrans-216
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps will help you create an Android project that demonstrates
     the usage of pthread reader/writer lock:'
+  id: totrans-217
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将帮助您创建一个展示pthread读写锁使用的Android项目：
 - en: Create an Android application named `NativeThreadsSemaphore`. Set the package
     name as `cookbook.chapter6.nativethreadssemaphore`. Refer to the *Loading native
     libraries and registering native methods* recipe in [Chapter 2](ch02.html "Chapter 2. Java
     Native Interface"), *Java Native Interface* for more detailed instructions.
+  id: totrans-218
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`NativeThreadsSemaphore`的Android应用程序。将包名设置为`cookbook.chapter6.nativethreadssemaphore`。更多详细说明请参考[第2章](ch02.html
+    "第2章。Java本地接口")中的*加载本地库和注册本地方法*食谱，*Java Native Interface*。
 - en: Right-click on the project **NativeThreadsSemaphore**, select **Android Tools**
     | **Add Native Support**.
+  id: totrans-219
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 右键点击项目**NativeThreadsSemaphore**，选择**Android Tools** | **添加本地支持**。
 - en: Add a Java file named `MainActivity.java` under package `cookbook.chapter6.nativethreadssemaphore`.
     This Java file simply loads the native library `NativeThreadsSemaphore` and calls
     the native `jni_start_threads` method.
+  id: totrans-220
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter6.nativethreadssemaphore`包下添加一个名为`MainActivity.java`的Java文件。这个Java文件仅加载本地库`NativeThreadsSemaphore`并调用本地方法`jni_start_threads`。
 - en: 'Add two files named `mylog.h` and `NativeThreadsSemaphore.cpp` under the `jni`
     folder. A part of the code in `NativeThreadsSemaphore.cpp` is shown as follows:'
+  id: totrans-221
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加两个名为`mylog.h`和`NativeThreadsSemaphore.cpp`的文件。`NativeThreadsSemaphore.cpp`中的一部分代码如下所示：
 - en: '`jni_start_threads` creates `pNumOfConsumer` number of consumer threads, `pNumOfProducer`
     number of producer threads, and `numOfSlots` number of slots:'
+  id: totrans-222
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_start_threads`创建`pNumOfConsumer`个消费者线程，`pNumOfProducer`个生产者线程，以及`numOfSlots`个插槽：'
 - en: '[PRE33]'
+  id: totrans-223
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: '`run_by_consumer_thread` is the function executed by the consumer thread:'
+  id: totrans-224
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_consumer_thread`是由消费者线程执行的功能：'
 - en: '[PRE34]'
+  id: totrans-225
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: '`run_by_producer_thread` is the function executed by producer thread:'
+  id: totrans-226
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_producer_thread`是由生产者线程执行的功能：'
 - en: '[PRE35]'
+  id: totrans-227
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Add an `Android.mk` file under the `jni` folder with the following content:'
+  id: totrans-228
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加一个名为`Android.mk`的文件，内容如下：
 - en: '[PRE36]'
+  id: totrans-229
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'Build and run the Android project, and use the following command to monitor
     the `logcat` output:'
+  id: totrans-230
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建并运行Android项目，并使用以下命令监控`logcat`输出：
 - en: '[PRE37]'
+  id: totrans-231
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'The `logcat` output is shown in the following screenshot:'
+  id: totrans-232
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`logcat`输出如下截图所示：'
 - en: '![How to do it...](img/1505_06_10.jpg)'
+  id: totrans-233
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/1505_06_10.jpg)'
 - en: How it works...
+  id: totrans-234
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'Semaphores are essentially integer counters. Two primary operations are supported
     by a semaphore:'
+  id: totrans-235
   prefs: []
   type: TYPE_NORMAL
+  zh: 信号量本质上是一个整数计数器。信号量支持两种主要操作：
 - en: '**Wait**: It attempts to decrement the semaphore value. If wait is called on
     a semaphore of value zero, the calling thread is blocked until `post` is called
     somewhere else to increment semaphore value.'
+  id: totrans-236
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**等待（Wait）**：尝试减少信号量的值。如果在值为零的信号量上调用wait，调用线程将被阻塞，直到在其他地方调用`post`以增加信号量的值。'
 - en: '**Post**: It attempts to increment the semaphore value.'
+  id: totrans-237
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**发布（Post）**：尝试增加信号量的值。'
 - en: The semaphore related functions are defined in `semaphore.h` rather than `pthread.h`.
     Next, we describe a few key functions.
+  id: totrans-238
   prefs: []
   type: TYPE_NORMAL
+  zh: 信号量相关的函数定义在`semaphore.h`中，而不是`pthread.h`。接下来，我们将描述一些关键函数。
 - en: Note
+  id: totrans-239
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Interprocess mutex, conditional variable, and semaphore are not supported on
     Android. Android uses `Intent`, `Binder`, and so on for interprocess communication
     and synchronization.
+  id: totrans-240
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 不支持进程间互斥锁、条件变量和信号量。Android 使用 `Intent`、`Binder` 等进行进程间通信和同步。
 - en: Initialize and destroy a semaphore
+  id: totrans-241
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 初始化和销毁信号量
 - en: 'The following three functions are defined to initialize or destroy a semaphore:'
+  id: totrans-242
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下三个函数被定义用于初始化或销毁信号量：
 - en: '[PRE38]'
+  id: totrans-243
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: The first two functions are used to initialize a semaphore. They both initialize
     the semaphore pointed by the input argument `sem` with the value indicated by
     the argument `value`. The first function also accepts an argument `pshared`, which
     should be set to zero for thread synchronization. If it is set to nonzero, the
     semaphore can be shared between processes, which is not supported on Android and
     therefore not discussed.
+  id: totrans-244
   prefs: []
   type: TYPE_NORMAL
+  zh: 前两个函数用于初始化信号量。它们都使用输入参数 `value` 指示的值初始化指向输入参数 `sem` 的信号量。第一个函数还接受一个参数 `pshared`，对于线程同步应将其设置为零。如果设置为非零，信号量可以在进程间共享，这在
+    Android 上不支持，因此不进行讨论。
 - en: Using a semaphore
+  id: totrans-245
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 使用信号量
 - en: The following functions are defined to use a semaphore.
+  id: totrans-246
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下函数被定义用于使用信号量。
 - en: '[PRE39]'
+  id: totrans-247
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: The first two functions are used to wait on a semaphore. If the semaphore value
     is not zero, then the value is decreased by one. If the value is zero, the first
     function will return a nonzero value to indicate failure, while the second function
@@ -1143,293 +1673,416 @@
     value by one, and the last function is used to query the value of the semaphore.
     Note that the value is returned through the second input argument rather than
     the return value.
+  id: totrans-248
   prefs: []
   type: TYPE_NORMAL
+  zh: 前两个函数用于等待信号量。如果信号量的值不为零，则值会减一。如果值为零，第一个函数将返回非零值以表示失败，而第二个函数将阻塞调用线程。第三个函数用于将信号量的值增加一，最后一个函数用于查询信号量的值。注意，值是通过第二个输入参数返回，而不是通过返回值。
 - en: Note
+  id: totrans-249
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Android `semaphore.h` also defines a function named `sem_timedwait` to allow
     us to specify a timeout value while waiting on a semaphore.
+  id: totrans-250
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 中的 `semaphore.h` 也定义了一个名为 `sem_timedwait` 的函数，允许我们在等待信号量时指定一个超时值。
 - en: In our sample project, we used two semaphores `emptySem` and `fullSem`, and
     a mutex `mux`. The app will create a few producer threads and consumer threads.
     The `emptySem` semaphore is used to indicate the number of slots available to
     store the items produced by the producer thread, while `fullSem` refers to the
     number of items for the consumer thread to consume. The mutex `mux` is used to
     ensure no two threads can access the shared counter `numOfItems` at one time.
+  id: totrans-251
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例项目中，我们使用了两个信号量 `emptySem` 和 `fullSem`，以及一个互斥锁 `mux`。应用程序将创建一些生产者线程和消费者线程。`emptySem`
+    信号量用于指示可用于存储生产者线程生产的项目的空位数量，而 `fullSem` 指的是消费者线程可以消费的项目数量。互斥锁 `mux` 用于确保一次没有两个线程可以访问共享计数器
+    `numOfItems`。
 - en: The producer thread will need to wait on the `emptySem` semaphore. When it is
     unblocked, the producer has obtained an empty slot. It will lock `mux` and then
     update the shared count `numOfItems`, which means a new item has been produced.
     Therefore, it will call the `post` function on `fullSem` to increment its value.
+  id: totrans-252
   prefs: []
   type: TYPE_NORMAL
+  zh: 生产者线程将需要在 `emptySem` 信号量上等待。当它被解锁时，生产者获得了一个空位。它会锁定 `mux` 然后更新共享计数 `numOfItems`，这意味着产生了新的项目。因此，它将调用
+    `fullSem` 的 `post` 函数以增加其值。
 - en: On the other hand, the consumer thread will wait on `fullSem`. When it is unblocked,
     the consumer has consumed an item. It will lock `mux` and then update the shared
     count `numOfItems`. A new empty slot is available because of the item consumed,
     so the consumer thread will call post on `emptySem` to increment its value.
+  id: totrans-253
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一方面，消费者线程将在 `fullSem` 上等待。当它被解锁时，消费者已经消费了一个项目。它会锁定 `mux` 然后更新共享计数 `numOfItems`。由于消费了一个项目，一个新的空位变得可用，因此消费者线程将调用
+    `emptySem` 的 post 方法以增加其值。
 - en: Note
+  id: totrans-254
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Mutex `mux` can also be replaced by a binary semaphore. The possible values
     of a binary semaphore are restricted to zero and one.
+  id: totrans-255
   prefs: []
   type: TYPE_NORMAL
+  zh: 互斥锁 `mux` 也可以被二进制信号量替代。二进制信号量的可能值被限制为零和一。
 - en: Scheduling native threads at Android NDK
+  id: totrans-256
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在 Android NDK 中调度本地线程
 - en: This recipe discusses how to schedule native threads at Android NDK.
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱讨论如何在 Android NDK 中调度本地线程。
 - en: Getting ready...
+  id: totrans-258
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪...
 - en: Readers are suggested to read the *Manipulating classes in JNI* and *Calling
     static and instance methods from native code* recipes in [Chapter 2](ch02.html
     "Chapter 2. Java Native Interface"), *Java Native Interface*, and *Creating and
     terminating native threads at Android NDK* recipe in this chapter.
+  id: totrans-259
   prefs: []
   type: TYPE_NORMAL
+  zh: 建议读者阅读[第2章](ch02.html "第2章. Java Native Interface")中的*在JNI中操作类*和*从原生代码调用静态和实例方法*的食谱，以及本章中的*在Android
+    NDK中创建和终止原生线程*的食谱。
 - en: How to do it...
+  id: totrans-260
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps will help us create an Android project that demonstrates
     threads scheduling at Android NDK:'
+  id: totrans-261
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将帮助我们创建一个演示在Android NDK中线程调度的Android项目：
 - en: Create an Android application named `NativeThreadsSchedule`. Set the package
     name as `cookbook.chapter6.nativethreadsschedule`. Refer to the *Loading native
     libraries and registering native methods* recipe in [Chapter 2](ch02.html "Chapter 2. Java
     Native Interface"), *Java Native Interface* for more detailed instructions.
+  id: totrans-262
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`NativeThreadsSchedule`的Android应用程序。将包名设置为`cookbook.chapter6.nativethreadsschedule`。更多详细说明请参考[第2章](ch02.html
+    "第2章. Java Native Interface")中的*加载原生库和注册原生方法*部分，*Java Native Interface*。
 - en: Right-click on the project **NativeThreadsSchedule**, select **Android Tools**
     | **Add Native Support**.
+  id: totrans-263
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 右键点击项目**NativeThreadsSchedule**，选择**Android Tools** | **Add Native Support**。
 - en: Add a Java file named `MainActivity.java` under package `cookbook.chapter6.nativethreadsschedule`.
     This Java file simply loads the native library `NativeThreadsSchedule` and calls
     the native methods.
+  id: totrans-264
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter6.nativethreadsschedule`包下添加一个名为`MainActivity.java`的Java文件。这个Java文件简单加载了原生库`NativeThreadsSchedule`并调用原生方法。
 - en: 'Add five files named `mylog.h`, `NativeThreadsSchedule.h`, `NativeThreadsSchedule.cpp`,
     `SetPriority.cpp`, and `JNIProcessSetThreadPriority.cpp` under the `jni` folder.
     A part of the code in the last three files is shown as follows:'
+  id: totrans-265
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加五个名为`mylog.h`、`NativeThreadsSchedule.h`、`NativeThreadsSchedule.cpp`、`SetPriority.cpp`和`JNIProcessSetThreadPriority.cpp`的文件。最后三个文件的部分代码如下所示：
 - en: The `NativeThreadsSchedule.cpp` file contains the source code to demonstrate
     the threads scheduling functions defined in `pthread.h`
+  id: totrans-266
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`NativeThreadsSchedule.cpp`文件包含了在`pthread.h`中定义的线程调度函数的演示源代码'
 - en: '`jni_thread_scope` demonstrates how to set the native thread contention scope:'
+  id: totrans-267
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_thread_scope`展示了如何设置原生线程的争用范围：'
 - en: '[PRE40]'
+  id: totrans-268
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: '`jni_thread_fifo` demonstrates how to set the native thread scheduling policy
     and priority:'
+  id: totrans-269
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_thread_fifo`展示了如何设置原生线程的调度策略和优先级：'
 - en: '[PRE41]'
+  id: totrans-270
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: '`run_by_thread` is the actual function to be executed by each native thread:'
+  id: totrans-271
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread`是每个原生线程实际要执行的功能：'
 - en: '[PRE42]'
+  id: totrans-272
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: The `SetPriority.cpp` file contains the source code to configure thread nice
     value through `setpriority`
+  id: totrans-273
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SetPriority.cpp`文件包含了通过`setpriority`配置线程nice值的源代码'
 - en: 'The `jni_thread_set_priority` method creates and joins five native methods:'
+  id: totrans-274
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_thread_set_priority`方法创建了并加入了五个原生方法：'
 - en: '[PRE43]'
+  id: totrans-275
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'The `run_by_thread2` function is executed by each native thread:'
+  id: totrans-276
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread2`函数由每个原生线程执行：'
 - en: '[PRE44]'
+  id: totrans-277
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: The `JNIProcessSetThreadPriority.cpp` file contains the source code to configure
     thread nice value through the `android.os.P``rocess.setThreadPriority` Java method
+  id: totrans-278
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`JNIProcessSetThreadPriority.cpp`文件包含了通过`android.os.Process.setThreadPriority`
+    Java方法配置线程nice值的源代码'
 - en: 'The `jni_process_setThreadPriority` method creates and joins five native threads:'
+  id: totrans-279
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_process_setThreadPriority`方法创建了并加入了五个原生线程：'
 - en: '[PRE45]'
+  id: totrans-280
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'The `run_by_thread3` function is executed by each native thread. The thread
     nice value is set here:'
+  id: totrans-281
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread3`函数由每个原生线程执行。在这里设置线程的nice值：'
 - en: '[PRE46]'
+  id: totrans-282
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'Add an `Android.mk` file under the `jni` folder with the following content:'
+  id: totrans-283
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加一个`Android.mk`文件，内容如下：
 - en: '[PRE47]'
+  id: totrans-284
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'In `MainActivity.java`, disable all native methods except `jni_thread_scope`.
     Build the project and run it. Start a terminal and enter the following command
     to monitor the `logcat` output:'
+  id: totrans-285
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`MainActivity.java`中，除了`jni_thread_scope`，禁用所有原生方法。构建项目并运行它。启动一个终端并输入以下命令，以监控`logcat`的输出：
 - en: '[PRE48]'
+  id: totrans-286
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: 'The following screenshot shows the output:'
+  id: totrans-287
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 下面的截图显示了输出结果：
 - en: '![How to do it...](img/1505_06_11.jpg)'
+  id: totrans-288
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/1505_06_11.jpg)'
 - en: In `MainActivity.java`, disable all native methods except `jni_thread_fifo`.
     Build the project and run it. The `logcat` output is shown in the following screenshot:![How
     to do it...](img/1505_06_12.jpg)
+  id: totrans-289
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`MainActivity.java`中，除了`jni_thread_fifo`，禁用所有原生方法。构建项目并运行它。`logcat`的输出在下图的截图中显示：![如何操作...](img/1505_06_12.jpg)
 - en: In `MainActivity.java`, disable all native methods except `jni_thread_set_priority`.
     Build the project and run it. The `logcat` output is shown in the following screenshot:![How
     to do it...](img/1505_06_13.jpg)
+  id: totrans-290
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`MainActivity.java`中，除了`jni_thread_set_priority`之外，禁用所有本地方法。构建项目并运行它。`logcat`的输出显示在以下屏幕截图中：![如何操作...](img/1505_06_13.jpg)
 - en: In `MainActivity.java`, disable all native methods except `jni_process_setThreadPriority`.
     Build the project and run it. The `logcat` output is shown in the following screenshot:![How
     to do it...](img/1505_06_14.jpg)
+  id: totrans-291
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`MainActivity.java`中，除了`jni_process_setThreadPriority`之外，禁用所有本地方法。构建项目并运行它。`logcat`的输出显示在以下屏幕截图中：![如何操作...](img/1505_06_14.jpg)
 - en: How it works...
+  id: totrans-292
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它的工作原理...
 - en: 'We can schedule native threads by setting the scheduling contention scope,
     thread priority, and scheduling policy:'
+  id: totrans-293
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以通过设置调度竞争范围、线程优先级和调度策略来调度本地线程：
 - en: '**Scheduling contention scope**: It determines the threads that a thread must
     compete against when the scheduler schedules threads'
+  id: totrans-294
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**调度竞争范围**：它决定了当调度器调度线程时，线程必须与之竞争的线程'
 - en: '**Thread priority**: It determines which thread is more likely to be selected
     by the scheduler when a CPU is available'
+  id: totrans-295
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**线程优先级**：它决定了当CPU可用时，调度器更有可能选择哪个线程'
 - en: '**Scheduling policy**: It determines how the scheduler schedules threads with
     the same priority'
+  id: totrans-296
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**调度策略**：它决定了调度器如何调度具有相同优先级的线程'
 - en: 'One way to adjust these settings is through the thread attribute. The following
     functions are defined in `pthread.h` to initialize and destroy an instance of
     `pthread_attr_t`:'
+  id: totrans-297
   prefs: []
   type: TYPE_NORMAL
+  zh: 调整这些设置的一种方式是通过线程属性。以下函数在`pthread.h`中定义，用于初始化和销毁`pthread_attr_t`实例：
 - en: '[PRE49]'
+  id: totrans-298
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: In these two functions, the input argument is a pointer to a `pthread_attr_t`
     object. We will now describe contention scope, thread priority, and scheduling
     policy in detail.
+  id: totrans-299
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这两个函数中，输入参数是一个指向`pthread_attr_t`对象的指针。接下来我们将详细描述竞争范围、线程优先级和调度策略。
 - en: Scheduling contention scope
+  id: totrans-300
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 调度竞争范围
 - en: Two scopes are defined in a typical pthread implementation, namely `PTHREAD_SCOPE_SYSTEM`
     and `PTHREAD_SCOPE_PROCESS`. A system scope thread competes for the CPU with all
     other threads system-wide. On the other hand, a process scope thread is scheduled
     against other threads in the same process.
+  id: totrans-301
   prefs: []
   type: TYPE_NORMAL
+  zh: 在典型的pthread实现中定义了两种范围，即`PTHREAD_SCOPE_SYSTEM`和`PTHREAD_SCOPE_PROCESS`。系统范围的线程与系统范围内的所有其他线程竞争CPU。另一方面，进程范围的线程与同一进程中的其他线程进行调度。
 - en: 'Android Bionic `pthread.h` defines the following two functions to set and get
     the thread scope:'
+  id: totrans-302
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓Bionic `pthread.h`定义了以下两个函数用于设置和获取线程范围：
 - en: '[PRE50]'
+  id: totrans-303
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: The two functions accept a pointer to a pthread attribute object as the input
     argument. The `set` function also includes a second argument to let us pass the
     scope constant. These two functions return a zero to indicate success and a nonzero
     value to signal failure.
+  id: totrans-304
   prefs: []
   type: TYPE_NORMAL
+  zh: 这两个函数接受一个指向pthread属性对象的指针作为输入参数。`set`函数还包括第二个参数，让我们传递范围常量。这两个函数返回零表示成功，返回非零值表示失败。
 - en: It turns out `pthread_attr_setscope` with `PTHREAD_SCOPE_PROCESS` as second
     input argument is not supported by Android. In other words, Android native threads
     always have system scope. As shown in `jni_thread_scope` at `NativeThreadsSchedule.cpp`,
     calling `pthread_attr_setscope` with `PTHREAD_SCOPE_PROCESS` will return a nonzero
     value.
+  id: totrans-305
   prefs: []
   type: TYPE_NORMAL
+  zh: 结果显示，带有`PTHREAD_SCOPE_PROCESS`作为第二个输入参数的`pthread_attr_setscope`不被安卓支持。换句话说，安卓本地线程总是具有系统范围。如`NativeThreadsSchedule.cpp`中的`jni_thread_scope`所示，使用`PTHREAD_SCOPE_PROCESS`调用`pthread_attr_setscope`将返回非零值。
 - en: We demonstrated the usage of the two functions previously in the native method
     `jni_thread_scope`. We created two processes in the method. The child process
     runs five threads, and the parent process only runs a single thread. Because they
@@ -1437,316 +2090,455 @@
     of CPU time slices regardless of the process they belong to, and therefore they
     finish at roughly the same time as shown in the first `logcat` screenshot in step
     6 of the *How to do it...* section of this recipe.
+  id: totrans-306
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们之前在本地方法`jni_thread_scope`中演示了这两个函数的用法。我们在方法中创建了两个进程。子进程运行五个线程，而父进程只运行一个线程。因为它们都是系统范围的线程，所以无论它们属于哪个进程，调度器都会为它们分配大致相同的CPU时间片，因此它们都会在大致相同的时间完成，如本食谱的*如何操作...*部分的第6步中的第一个`logcat`屏幕截图所示。
 - en: Note
+  id: totrans-307
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: We called `fork` to create a process in our code. This is for demonstration
     purpose. It is strongly discouraged to create a native process with `fork` on
     Android because the native process won't be managed by the Android framework and
     a misbehaving native process can consume lots of CPU cycles and cause security
     vulnerabilities.
+  id: totrans-308
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在代码中调用了`fork`来创建一个进程。这仅用于演示目的。强烈建议不要在Android上使用`fork`创建本地进程，因为本地进程不会被Android框架管理，行为不当的本地进程可能会占用大量CPU周期并导致安全漏洞。
 - en: Scheduling policy and thread priority
+  id: totrans-309
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 调度策略和线程优先级
 - en: Each thread has an associated scheduling policy and priority. A thread with
     higher priority is more likely to be selected by the scheduler when a CPU is available.
     In case multiple threads have the same priority, the scheduling policy will determine
     how to schedule them. The policies defined in Android `pthread.h` include `SCHED_OTHER`,
     `SCHED_FIFO`, and `SCHED_RR`.
+  id: totrans-310
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个线程都关联有一个调度策略和优先级。当CPU可用时，优先级更高的线程更有可能被调度器选中。如果多个线程具有相同的优先级，调度策略将决定如何调度它们。在Android的`pthread.h`中定义的策略包括`SCHED_OTHER`、`SCHED_FIFO`和`SCHED_RR`。
 - en: Note
+  id: totrans-311
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意事项
 - en: The valid range of priority values is associated with the scheduling policy.
+  id: totrans-312
   prefs: []
   type: TYPE_NORMAL
+  zh: 优先级值的合法范围与调度策略相关联。
 - en: '`SCHED_FIFO` : In the **First In First Out (FIFO)** policy, a thread gets the
     CPU until it exits or blocks. If blocked, it is placed at the end of the queue
     for its priority and the front thread in the queue will be given to the CPU. The
     priority range allowed under this policy is 1 to 99.'
+  id: totrans-313
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SCHED_FIFO`：在**先进先出（FIFO）**策略中，线程将获得CPU直到它退出或阻塞。如果被阻塞，它将被放在其优先级队列的末尾，队列前面的线程将被交给CPU。此策略允许的优先级范围是1到99。'
 - en: '`SCHED_RR`: The **Round Robin (RR)** policy is similar to FIFO except that
     each thread is only allowed to run for a certain amount of time, known as quantum.
     When a thread finishes its quantum, it is interrupted and placed at the end of
     the queue for its priority. The priority range allowed under this policy is also
     1 to 99.'
+  id: totrans-314
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SCHED_RR`：**轮询（RR）**策略与FIFO类似，不同之处在于每个线程只允许运行一定时间，称为量子。当一个线程完成其量子，它将被中断并放在其优先级队列的末尾。此策略允许的优先级范围也是1到99。'
 - en: '`SCHED_OTHER`: This is the default scheduling policy. It also allows a thread
     to run only a limited amount of times, but the algorithm can be different and
     more complicated than `SCHED_RR`. All threads under this policy have a priority
     of 0.'
+  id: totrans-315
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SCHED_OTHER`：这是默认的调度策略。它也允许线程只运行有限次数，但算法可能不同于`SCHED_RR`，并且更为复杂。此策略下的所有线程优先级为0。'
 - en: 'People who are experienced with pthreads programming may be familiar with the
     pthreads policy and priority functions including:'
+  id: totrans-316
   prefs: []
   type: TYPE_NORMAL
+  zh: 熟悉pthread编程的人可能熟悉pthread策略和优先级函数，包括：
 - en: '`pthread_attr_setschedpolicy`'
+  id: totrans-317
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_attr_setschedpolicy`'
 - en: '`pthread_attr_getschedpolicy`'
+  id: totrans-318
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_attr_getschedpolicy`'
 - en: '`pthread_attr_setschedparam`'
+  id: totrans-319
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_attr_setschedparam`'
 - en: '`pthread_attr_getschedparam`'
+  id: totrans-320
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pthread_attr_getschedparam`'
 - en: These functions do not work on Android, as expected, although they are defined
     in the Android `pthread.h` header. Therefore, we will not discuss the details
     here.
+  id: totrans-321
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些函数在Android上不能按预期工作，尽管它们在Android的`pthread.h`头文件中有定义。因此，我们在这里不讨论细节。
 - en: In our sample project, we implemented a native method `jni_thread_fifo`, which
     attempts to set the scheduling policy as `SCHED_FIFO` and the thread priority.
     As shown in the second `logcat` screenshot, the threads are not affected by these
     settings.
+  id: totrans-322
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例项目中，我们实现了一个本地方法`jni_thread_fifo`，它试图将调度策略设置为`SCHED_FIFO`以及线程优先级。正如第二个`logcat`截图所示，这些设置并没有影响到线程。
 - en: In summary, all Android threads are system scope threads with 0 priority, and
     scheduling policy `SCHED_OTHER`.
+  id: totrans-323
   prefs: []
   type: TYPE_NORMAL
+  zh: 总结来说，所有Android线程都是系统范围的线程，优先级为0，调度策略为`SCHED_OTHER`。
 - en: Scheduling using nice value/level
+  id: totrans-324
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 使用nice值/级别进行调度
 - en: Nice value/level is another factor that can affect the scheduler. It is also
     often referred to as priority, but here we will use nice value to differentiate
     it with the thread priority we discussed earlier.
+  id: totrans-325
   prefs: []
   type: TYPE_NORMAL
+  zh: Nice值/级别是另一个可能影响调度器的因素。它也常被称为优先级，但在这里我们将使用nice值来与我们之前讨论的线程优先级区分开来。
 - en: 'We use the following two approaches to adjust the nice value:'
+  id: totrans-326
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用以下两种方法来调整nice值：
 - en: '**Calling setpriority**: This is demonstrated in `SetPriority.cpp`. We created
     five threads with different nice values, and the third `logcat` screenshot in
     step 8 of the *How to do it* section indicates the thread with lower nice values
     return first.'
+  id: totrans-327
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**调用setpriority**：这在`SetPriority.cpp`中有所展示。我们创建了五个具有不同nice值的线程，*如何操作*部分的第8步的第三个`logcat`截图显示，具有较低nice值的线程先返回。'
 - en: '**Calling android.os.Process.setThreadPriority**: This is illustrated in `JNIProcessSetThreadPriority.cpp`.
     As shown in the fourth `logcat` screenshot at step 9 of the *How to do it* section,
     we got similar result as calling `setpriority`. In fact, `setThreadPriority` calls
     `setpriority` internally.'
+  id: totrans-328
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**调用android.os.Process.setThreadPriority**：这在`JNIProcessSetThreadPriority.cpp`中有说明。如*如何操作*部分的第9步的第四个`logcat`截图所示，我们得到了与调用`setpriority`类似的结果。实际上，`setThreadPriority`内部调用了`setpriority`。'
 - en: Managing data for native threads at Android NDK
+  id: totrans-329
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Android NDK中管理原生线程数据
 - en: There are several options when we want to preserve thread-wide data across functions,
     including global variables, argument passing, and thread-specific data key. This
     recipe discusses all the three options with a focus on thread-specific data key.
+  id: totrans-330
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们想在函数间保存线程范围内的数据时，有几种选择，包括全局变量、参数传递和线程特定数据键。本食谱将讨论这三种选择，重点放在线程特定数据键上。
 - en: Getting ready...
+  id: totrans-331
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪...
 - en: Readers are recommended to read the *Creating and terminating native threads
     at Android NDK* recipe and the *Synchronizing native threads with mutex at Android
     NDK* recipe in this chapter before this one.
+  id: totrans-332
   prefs: []
   type: TYPE_NORMAL
+  zh: 建议读者在阅读本章中的*在Android NDK中创建和终止原生线程*食谱和*在Android NDK中使用互斥锁同步原生线程*食谱后再阅读本食谱。
 - en: How to do it...
+  id: totrans-333
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps will help us create an Android project that demonstrates
     data management at Android NDK:'
+  id: totrans-334
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将帮助我们创建一个展示Android NDK数据管理的项目：
 - en: Create an Android application named `NativeThreadsData`. Set the package name
     as `cookbook.chapter6.nativethreadsdata`. Please refer to the *Loading native
     libraries and registering native methods* recipe in [Chapter 2](ch02.html "Chapter 2. Java
     Native Interface"), *Java Native Interface* if you want more detailed instructions.
+  id: totrans-335
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`NativeThreadsData`的Android应用程序。将包名设置为`cookbook.chapter6.nativethreadsdata`。如果你需要更详细的说明，请参考[第2章](ch02.html
+    "第2章。Java Native Interface")，*Java Native Interface*中的*加载原生库和注册原生方法*食谱。
 - en: Right-click on the project **NativeThreadsData**, select **Android Tools** |
     **Add Native Support**.
+  id: totrans-336
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 右键点击项目**NativeThreadsData**，选择**Android Tools** | **添加原生支持**。
 - en: Add a Java file named `MainActivity.java` under package `cookbook.chapter6.nativethreadsdata`.
     This Java file simply loads the native library `NativeThreadsData` and calls the
     native methods.
+  id: totrans-337
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter6.nativethreadsdata`包下添加一个名为`MainActivity.java`的Java文件。这个Java文件只是加载了原生库`NativeThreadsData`并调用了原生方法。
 - en: 'Add `mylog.h` and `NativeThreadsData.cpp` files under the `jni` folder. The
     `mylog.h` contains the Android native `logcat` utility functions, while the `NativeThreadsData.cpp`
     file contains the native code to start multiple threads. A part of the code is
     shown as follows:'
+  id: totrans-338
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加`mylog.h`和`NativeThreadsData.cpp`文件。`mylog.h`包含Android原生`logcat`工具函数，而`NativeThreadsData.cpp`文件包含启动多个线程的原生代码。部分代码如下所示：
 - en: '`jni_start_threads` starts *n* number of threads, where *n* is specified by
     the variable `pNumOfThreads`:'
+  id: totrans-339
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`jni_start_threads`函数启动了*n*个线程，其中*n*由变量`pNumOfThreads`指定：'
 - en: '[PRE51]'
+  id: totrans-340
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'The `thread_step_1` function is executed by threads. It gets the data associated
     with the thread- specific key and uses it to count the number of times the mutex
     is locked:'
+  id: totrans-341
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`thread_step_1`函数由线程执行。它获取与线程特定键关联的数据，并使用它来计算互斥锁被锁定的次数：'
 - en: '[PRE52]'
+  id: totrans-342
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'The `thread_step_2` function is executed by threads. It gets the data associated
     with the thread-specific key and prints it out:'
+  id: totrans-343
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`thread_step_2`函数由线程执行。它获取与线程特定键关联的数据并打印出来：'
 - en: '[PRE53]'
+  id: totrans-344
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'The `run_by_thread` function is executed by threads:'
+  id: totrans-345
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`run_by_thread`函数由线程执行：'
 - en: '[PRE54]'
+  id: totrans-346
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'Add an `Android.mk` file under the `jni` folder with the following content:'
+  id: totrans-347
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加一个`Android.mk`文件，内容如下：
 - en: '[PRE55]'
+  id: totrans-348
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'Build and run the Android project, and use the following command to monitor
     the `logcat` output:'
+  id: totrans-349
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建并运行Android项目，并使用以下命令监控`logcat`输出：
 - en: '[PRE56]'
+  id: totrans-350
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: 'The `logcat` output is shown in the following screenshot:'
+  id: totrans-351
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`logcat`输出在下图中显示：'
 - en: '![How to do it...](img/1505_06_15.jpg)'
+  id: totrans-352
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/1505_06_15.jpg)'
 - en: How it works...
+  id: totrans-353
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'In our sample project, we demonstrated passing data using global variables,
     argument, and thread-specific data key:'
+  id: totrans-354
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例项目中，我们展示了使用全局变量、参数和线程特定数据键传递数据的方法：
 - en: The mutex `mux` is declared as a global variable, and each thread can access
     it.
+  id: totrans-355
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 互斥量 `mux` 被声明为一个全局变量，每个线程都可以访问它。
 - en: Each thread is assigned a thread number as input argument. In the function `run_by_thread`,
     each thread passes the accepted thread number to another function `thread_step_2`.
+  id: totrans-356
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 每个线程都被分配一个作为输入参数的线程编号。在 `run_by_thread` 函数中，每个线程将接收到的线程编号传递给另一个函数 `thread_step_2`。
 - en: We defined a thread-specific key `muxCntKey`. Each thread can associate its
     own value with the key. In our code, we used this key to store the number of times
     a thread locks the mutex `mux`.
+  id: totrans-357
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 我们定义了一个线程特定键 `muxCntKey`。每个线程都可以将自身的值与该键关联。在我们的代码中，我们使用这个键来存储一个线程锁定互斥量 `mux`
+    的次数。
 - en: Next we'll discuss the thread-specific data key in detail.
+  id: totrans-358
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来我们将详细讨论线程特定数据键。
 - en: Creation and deletion of thread-specific data key
+  id: totrans-359
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 创建和删除线程特定数据键
 - en: 'The following two functions are defined in `pthread.h` to create and delete
     a thread-specific data key respectively:'
+  id: totrans-360
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下两个函数在 `pthread.h` 中定义，分别用于创建和删除线程特定数据键：
 - en: '[PRE57]'
+  id: totrans-361
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: '`pthread_key_create` accepts a pointer to the `pthread_key_t` structure and
     a function pointer to a destruction function to be associated with each key value.
     The destruction function is optional and can be set to `NULL`. In our example,
     we called `pthread_key_create` to create the key named `muxCntKey`.'
+  id: totrans-362
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread_key_create` 函数接收一个指向 `pthread_key_t` 结构的指针和一个函数指针，该函数指针指向与每个键值相关联的销毁函数。销毁函数是可选的，可以被设置为
+    `NULL`。在我们的示例中，我们调用了 `pthread_key_create` 来创建名为 `muxCntKey` 的键。'
 - en: The `pthread_key_create` function returns zero to indicate success and some
     other values for failure. If successful, the first input argument `key` will be
     pointing to the newly created key, and the value `NULL` is associated with the
     new key in all active threads. If a new thread is created after the key creation,
     the value `NULL` is also associated with the key for the new thread.
+  id: totrans-363
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread_key_create` 函数返回零表示成功，其他值表示失败。如果成功，第一个输入参数 `key` 将指向新创建的键，并且所有活动线程中新的键关联的值是
+    `NULL`。如果在键创建后创建了一个新线程，新线程也会将 `NULL` 与键关联。'
 - en: When a thread exits, the associated value of the key is set to `NULL`, and then
     the destruction function associated with the key is called with the key's previously
     associated value as the sole input argument. In our sample code, we defined a
     destruction function `free_muxCnt` to free the memory of data associated with
     the key `muxCntKey`.
+  id: totrans-364
   prefs: []
   type: TYPE_NORMAL
+  zh: 当一个线程退出时，与键关联的值被设置为 `NULL`，然后调用与键关联的销毁函数，并将键之前关联的值作为唯一的输入参数。在我们的示例代码中，我们定义了一个销毁函数
+    `free_muxCnt`，用于释放与键 `muxCntKey` 关联的数据的内存。
 - en: '`pthread_key_delete` is relatively simple. It accepts a key created by `pthread_key_create`
     and deletes it. It returns zero for success and a nonzero value for failure.'
+  id: totrans-365
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread_key_delete` 的使用相对简单。它接收由 `pthread_key_create` 创建的键并删除它。成功时返回零，失败时返回非零值。'
 - en: Set and get thread-specific data
+  id: totrans-366
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 设置和获取线程特定数据
 - en: 'Android `pthread.h` defines the following two functions for thread-specific
     data management:'
+  id: totrans-367
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓的 `pthread.h` 为线程特定数据管理定义了以下两个函数：
 - en: '[PRE58]'
+  id: totrans-368
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: The `pthread_setspecific` function accepts a previously created data key and
     a pointer to data to be associated with the key. It returns a zero to indicate
     success and nonzero otherwise. Different threads can call this function to bind
     different values to the same key.
+  id: totrans-369
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread_setspecific` 函数接收一个先前创建的数据键和一个指向要与键关联的数据的指针。它返回零表示成功，否则返回非零值。不同的线程可以调用这个函数，将不同的值绑定到同一个键上。'
 - en: '`pthread_getspecific` accepts a previously created data and key and returns
     a pointer to the data associated with the key in the calling thread.'
+  id: totrans-370
   prefs: []
   type: TYPE_NORMAL
+  zh: '`pthread_getspecific` 函数接收一个先前创建的数据和键，并返回调用线程中与键关联的数据的指针。'
 - en: In the `run_by_thread` function of our sample code, we associate an integer
     variable initialized to zero to the `muxCntKey` key. In function `thread_step_1`,
     we get the integer variable associated with the key and use it to count the number
     of times `mux` is locked. In function `thread_step_2`, we again obtain the integer
     variable associated with `muxCntKey` and print its value.
+  id: totrans-371
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例代码中的 `run_by_thread` 函数中，我们将一个初始化为零的整数变量与 `muxCntKey` 键关联。在 `thread_step_1`
+    函数中，我们获取与键关联的整数变量，并使用它来计算 `mux` 被锁定的次数。在 `thread_step_2` 函数中，我们再次获取与 `muxCntKey`
+    关联的整数变量并打印其值。
