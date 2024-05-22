@@ -1,105 +1,156 @@
 - en: Chapter 6. Exploring SELinuxFS
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第6章. 探索 SELinuxFS
 - en: 'In the last few chapters, we saw SELinuxFS surface on numerous occasions. From
     its entry in `/proc/filesystems` to the policy load in the init daemon, it sees
     frequent use in an SELinux-enabled system. SELinuxFS is the kernel-to-userspace
     interface and the foundation on which higher userspace idioms and `libselinux`
     are built. In this chapter, we will explore the capabilities of this filesystem
     for a deeper understanding of how the system works. Specifically, we will:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的几章中，我们看到 SELinuxFS 在许多场合出现。从它在 `/proc/filesystems` 中的条目到 init 守护进程中的策略加载，在启用了
+    SELinux 的系统中经常使用。SELinuxFS 是内核到用户空间的接口，也是构建更高用户空间习惯用法和 `libselinux` 的基础。在本章中，我们将探索这个文件系统的功能，以更深入地了解系统的工作原理。具体来说，我们将：
 - en: Determine how to find the mount point of the SELinux filesystem
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 确定如何找到 SELinux 文件系统的挂载点
 - en: Extract status information about our current SELinux system
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 提取有关我们当前 SELinux 系统状态的信息
 - en: Modify our SELinux system status on the fly from the shell and through code
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在 shell 中即时修改我们的 SELinux 系统状态，并通过代码进行修改
 - en: Investigate ProcFS interfaces
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 调查 ProcFS 接口
 - en: Locating the filesystem
+  id: totrans-6
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 定位文件系统
 - en: 'The first thing we need to do is locate the mount point for the filesystem.
     `libselinux` mounts the filesystem in either of two places: `/selinux` (by default)
     or `/sys/fs/selinux`. However, this is not a strict requirement and can be altered
     with a call to void `set_selinuxmnt(char *mnt)`, which sets the SELinux mount
     point location. However, this should happen and should not need any adjustment
     in most circumstances.'
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要做的第一件事是定位文件系统的挂载点。`libselinux` 在两个地方之一挂载文件系统：默认为 `/selinux` 或 `/sys/fs/selinux`。然而，这不是一个严格的要求，可以通过调用
+    void `set_selinuxmnt(char *mnt)` 来更改，它设置 SELinux 挂载点的位置。然而，在大多数情况下，这应该发生，不需要任何调整。
 - en: 'The best way to find the mount point in the system is by running the mount
     command and finding the location of the filesystem. From the serial console, issue
     the following commands:'
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 在系统中找到挂载点的最佳方式是运行 mount 命令并找到文件系统的位置。在串行控制台，发出以下命令：
 - en: '[PRE0]'
+  id: totrans-9
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'As you can see, the mount point is `/sys/fs/selinux`. Let''s go to that directory
     by issuing the following command at the serial terminal prompt:'
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，挂载点是 `/sys/fs/selinux`。让我们通过在串行终端提示符下发出以下命令，前往那个目录：
 - en: '[PRE1]'
+  id: totrans-11
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: You are now in the root of the SELinux filesystem.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 你现在处于 SELinux 文件系统的根目录。
 - en: Interrogating the filesystem
+  id: totrans-13
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 询问文件系统
 - en: 'You can interrogate SELinuxFS to find out what the kernel''s highest supported
     policy version is. This is useful when you begin to work with systems you did
     not build from source. It is also useful when you do not have direct access to
     the KConfig file. It is important to note that both DAC and MAC permissions apply
     to this filesystem. With respect to MAC and SELinux, the access vectors for this
     are enumerated in class security in the policy file located at `external/sepolicy/access_vectors`:'
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以询问 SELinuxFS 以找出内核支持的最高策略版本是什么。当你开始使用不是从源代码构建的系统时，这很有用。当你没有直接访问 KConfig 文件时也很有用。需要注意的是，DAC
+    和 MAC 权限都适用于此文件系统。关于 MAC 和 SELinux，这方面的访问向量在策略文件 `external/sepolicy/access_vectors`
+    中的 security 类别中枚举：
 - en: '[PRE2]'
+  id: totrans-15
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Tip
+  id: totrans-16
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: In the previous command, and in several commands to follow, we do not just print
     the files with the `cat` command. This is because these files do not have a trailing
     newline at the end of the file. Without the newline, the command prompt following
     the command's execution would be at the end of the last line of the output. Wrapping
     the `cat` command with `echo` guarantees a newline. An alternate way to get the
     same effect is by using `cat policyvers ; echo`.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的命令中，以及接下来几个命令中，我们不仅仅使用 `cat` 命令打印文件。这是因为这些文件在文件末尾没有换行符。没有换行符，命令执行后的命令提示符将位于输出最后一行的末尾。将
+    `cat` 命令用 `echo` 包裹可以保证有换行符。获取同样效果的另一种方法是使用 `cat policyvers ; echo`。
 - en: 'As we expected, the supported version is 23\. As you recall, we set this value
     in [Chapter 4](ch04.html "Chapter 4. Installation on the UDOO"), *Installation
     on the UDOO* while configuring the kernel to enable SELinux using `make menuconfig`
     from the `kernel_imx` directory. This is also accessible by the `libselinux` API:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 正如我们所预期的，支持的版本是 23。正如你所记得的，我们在 [第4章](ch04.html "第 4 章. 在 UDOO 上安装") *在 UDOO
+    上安装* 中配置内核以使用 `make menuconfig` 启用 SELinux 时设置了此值，从 `kernel_imx` 目录中。这也可以通过 `libselinux`
+    API 访问：
 - en: '[PRE3]'
+  id: totrans-19
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: It should not require any elevated permissions and is readable by anyone on
     the system.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 它不应需要任何提升的权限，系统上的任何人都可以读取。
 - en: The enforce node
+  id: totrans-21
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 强制节点
 - en: 'In previous chapters, we discussed that SELinux operates in two modes, **enforcing**
     and **permissive**. Both modes log policy violations, however, enforcing mode
     causes the kernel to deny access to the resource and return an error to the calling
@@ -107,236 +158,351 @@
     this status—the file node `enforce`. Reading from this file returns the status
     `0` or `1` depending on whether we are running in permissive or enforcing mode,
     respectively:'
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，我们讨论了SELinux在两种模式下运行，**强制**和**宽容**。这两种模式都会记录策略违规，但是强制模式会导致内核拒绝访问资源，并向调用用户空间进程返回错误（例如，`EACCESS`）。SELinuxFS有一个接口来查询此状态——文件节点`enforce`。从该文件读取会根据我们是运行在宽容模式还是强制模式，返回状态`0`或`1`：
 - en: '[PRE4]'
+  id: totrans-23
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'As you can see, our system is in permissive mode. Android has a toolbox command
     for printing this as well. This command returns the status `Permissive` or `Enforcing`
     depending on whether we are running in a permissive or enforcing mode, respectively:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，我们的系统处于宽容模式。Android有一个toolbox命令用于打印此状态。这个命令会根据我们是运行在宽容模式还是强制模式，返回`Permissive`或`Enforcing`状态：
 - en: '[PRE5]'
+  id: totrans-25
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'You can also write to the `enforce` file. The DAC permissions for this filesystem
     are:'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 你也可以写入到`enforce`文件。此文件系统的DAC权限为：
 - en: '[PRE6]'
+  id: totrans-27
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Anyone can get the enforcing status, but to set it, you must be the root user.
     The MAC permission required for this is:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 任何人都可以获取强制状态，但要设置它，你必须要是root用户。进行此操作所需的MAC权限为：
 - en: '[PRE7]'
+  id: totrans-29
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'A command called `setenforce` can change the status:'
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 一个名为`setenforce`的命令可以更改此状态：
 - en: '[PRE8]'
+  id: totrans-31
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'To see what the command does, run it in `strace`:'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 要查看命令的作用，可以在`strace`中运行它：
 - en: '[PRE9]'
+  id: totrans-33
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: As we can see, the interface to `enforce` is as simple as writing `0` or `1`.
     The function in `libselinux` to do this is `int security_setenforce(int value)`.
     Another interesting artifact of the preceding command is we can see `procfs` was
     accessed. SELinux has some additional entries in `procfs` as well. Those will
     be covered further in this chapter.
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 如我们所见，写入`enforce`的接口非常简单，只需写入`0`或`1`。在`libselinux`中执行此操作的功能是`int security_setenforce(int
+    value)`。上述命令的另一个有趣之处是我们可以看到访问了`procfs`。SELinux在`procfs`中也有一些额外的条目。这些将在本章中进一步介绍。
 - en: The disable file interface
+  id: totrans-35
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 禁用文件接口
 - en: SELinux can also be disabled at runtime using the `disable` file interface.
     However, the kernel must be built with `CONFIG_SECURITY_SELINUX_DISABLE=y`. Our
     kernel was not built with this option. This file is write only by owner and has
     no specific MAC permission associated with it. We recommend keeping this option
     disabled. Additionally, SELinux can be disabled before a policy is loaded. Even
     when the option is enabled, once a policy is loaded, it is disabled.
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 在运行时，也可以使用`disable`文件接口禁用SELinux。但是，内核必须使用`CONFIG_SECURITY_SELINUX_DISABLE=y`进行构建。我们的内核没有使用此选项构建。此文件只能由所有者写入，并且没有与之关联的特定MAC权限。我们建议保持此选项禁用。此外，可以在加载策略之前禁用SELinux。即使启用了该选项，一旦加载了策略，它也会被禁用。
 - en: The policy file
+  id: totrans-37
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 策略文件
 - en: 'The `policy` file lets you read the current SELinux policy file that was loaded
     into the kernel. This can be read and saved to disk:'
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: '`policy`文件允许你读取当前加载到内核中的SELinux策略文件。这可以读取并保存到磁盘：'
 - en: '[PRE10]'
+  id: totrans-39
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'By enabling the `adb` interface, you can now extract it from the device and
     analyze it on the host with the standard SELinux tools. The DAC permissions on
     this file are owner: `root`, `read`. There is no SELinux permission specific to
     this file.'
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过启用`adb`接口，你现在可以从设备中提取它，并在宿主上使用标准的SELinux工具进行分析。此文件的DAC权限为所有者：`root`，`read`。对此文件没有特定的SELinux权限。
 - en: 'The inverse to the `policy` file is the `load` file. We have seen this file
     appear when the policy file is loaded by init using the `libselinux` API:'
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: '`policy`文件的对应文件是`load`文件。我们已经看到当通过`libselinux` API加载策略文件时，会出现这个文件：'
 - en: '[PRE11]'
+  id: totrans-42
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: The null file
+  id: totrans-43
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`null`文件'
 - en: The `null` file is used by SELinux to redirect unauthorized file accesses when
     domain transitions occur. Remember that a domain transition is when you transition
     from one context to another. In most cases, this occurs when a program performs
     a fork and exec function, but this could happen programmatically. In either case,
     the process has file references it can no longer access, and to help keep processes
     from crashing, they just write/read from the SELinux null device.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 当域转换发生时，SELinux使用`null`文件来重定向未授权的文件访问。记住，域转换是指从一种上下文转换到另一种上下文。在大多数情况下，这发生在程序执行fork和exec函数时，但也可能是程序化发生的。在任一情况下，进程都有无法再访问的文件引用，为了帮助防止进程崩溃，它们只需从SELinux空设备写入/读取。
 - en: The mls file
+  id: totrans-45
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`mls`文件'
 - en: 'One of the capabilities our system has is that our current policy is using
     **multilevel security** (**MLS**) support. This is either `0` or `1`, based on
     whether the loaded policy file is using it. Since we have it enabled, we would
     expect to see `1` from this file:'
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们系统的一个功能是当前策略正在使用**多级安全**（**MLS**）支持。这是基于加载的策略文件是否使用它，要么是`0`要么是`1`。由于我们已经启用它，我们预计会从这个文件看到`1`：
 - en: '[PRE12]'
+  id: totrans-47
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'The `mls` file is readable by all and has a corresponding SELinux API:'
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: '`mls`文件对所有用户可读，并有一个相应的SELinux API：'
 - en: '[PRE13]'
+  id: totrans-49
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: The status file
+  id: totrans-50
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 状态文件
 - en: 'The `version` file allows a mechanism by which you can be informed of updates
     that occur within SELinux. One such example would be when a policy reload occurs.
     A **userspace object manager** could cache decision results and use the `reload`
     event as a trigger to flush their cache. The `status` file is read only by everyone
     and has no specific MAC permissions. The `libselinux` API interface is:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: '`version`文件允许你了解SELinux内部发生的更新。例如，当策略重新加载时。一个**用户空间对象管理器**可以缓存决策结果，并使用`reload`事件作为触发器来刷新其缓存。`status`文件是只由所有人读取的，没有特定的MAC权限。`libselinux`
+    API接口是：'
 - en: '[PRE14]'
+  id: totrans-52
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: By checking the status structure, you can detect changes and flush the cache.
     Currently, however, you are missing this API in your `libselinux`, but we'll correct
     that in [Chapter 7](ch07.html "Chapter 7. Utilizing Audit Logs"), *Utilizing Audit
     Logs*.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过检查状态结构，你可以检测变化并刷新缓存。然而，目前你的`libselinux`中缺少这个API，但我们在[第7章](ch07.html "第7章.
+    利用审计日志")，*利用审计日志*中会纠正这个问题。
 - en: 'There are many SELinuxFS files in the file tree; our intent here was only to
     cover several files because of their importance or pertinence to what we''ve done
     and where we''re going. We did not cover:'
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 文件树中有许多SELinuxFS文件；我们这里只介绍了几个文件，因为它们的重要性或与我们已做工作及未来方向的相关性。我们没有涵盖：
 - en: '`access`'
+  id: totrans-55
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`access`'
 - en: '`checkreqprot`'
+  id: totrans-56
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`checkreqprot`'
 - en: '`commit_pending_bools`'
+  id: totrans-57
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`commit_pending_bools`'
 - en: '`context`'
+  id: totrans-58
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`context`'
 - en: '`create`'
+  id: totrans-59
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`create`'
 - en: '`deny_unknown`'
+  id: totrans-60
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`deny_unknown`'
 - en: '`member`'
+  id: totrans-61
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`member`'
 - en: '`reject_unknown`'
+  id: totrans-62
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`reject_unknown`'
 - en: '`relabel`'
+  id: totrans-63
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`relabel`'
 - en: The use of these files is not simple and is typically done by userspace object
     managers that are using the `libselinux` API to abstract the complexities.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用这些文件并不简单，通常是由使用`libselinux` API的用户空间对象管理器来完成，以抽象化复杂性。
 - en: Access Vector Cache
+  id: totrans-65
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 访问向量缓存
 - en: 'SELinuxFS also has some directories you can explore. The first is `avc`. This
     stands for "Access Vector Cache" and can be used to get statistics about the security
     server in the kernel:'
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: SELinuxFS还有一些你可以探索的目录。第一个是`avc`。它代表“访问向量缓存”，可以用来获取内核中安全服务器统计信息：
 - en: '[PRE15]'
+  id: totrans-67
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'All these files can be read with the `cat` command:'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有这些文件都可以使用`cat`命令读取：
 - en: '[PRE16]'
+  id: totrans-69
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: The `cache_stats` file is readable by all and requires no special MAC permissions.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: '`cache_stats`文件对所有用户可读，不需要特殊的MAC权限。'
 - en: 'The next file to look at is `hash_stats`:'
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个要查看的文件是`hash_stats`：
 - en: '[PRE17]'
+  id: totrans-72
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: The underlying data structure for the Access Vector Cache is a hash table; `hash_stats`
     lists the current properties. As we can see in the output of the preceding command,
     we have 512 slots in the table, with 284 of them in use. For collisions, we have
     the longest chain at 7 entries. This file is world readable and requires no special
     MAC permissions. You can modify the number of entries in this table through the
     `cache_threshold` file.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 访问向量缓存的基础数据结构是一个哈希表；`hash_stats`列出了当前的属性。从前一条命令的输出中可以看出，表中我们有512个槽位，其中284个正在使用中。在冲突处理中，最长的链有7个条目。这个文件是全局可读的，不需要特殊的MAC权限。你可以通过`cache_threshold`文件修改此表中的条目数。
 - en: 'The `cache_threshold` file is used to tune the number of entries in the `avc`
     hash table. It is world readable and owner writeable. It requires the SELinux
     permission `setsecparam`, and can be written to and read from with the following
     simple commands, respectively:'
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: '`cache_threshold`文件用于调整`avc`哈希表中的条目数。它是全局可读的，所有者可写的。它需要SELinux权限`setsecparam`，并且可以使用以下简单的命令分别进行写入和读取：'
 - en: '[PRE18]'
+  id: totrans-75
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: You can disable the cache by writing `0`. However, outside the benchmarking
     tests, this is not encouraged.
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以通过写入`0`来禁用缓存。然而，在基准测试之外，这不鼓励这样做。
 - en: The booleans directory
+  id: totrans-77
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 布尔值目录
 - en: 'The second directory to look into is `booleans`. An SELinux `boolean` allows
     policy statements to change dynamically via `boolean` conditions. By changing
     the `boolean` state, you can affect the behavior of the loaded policy. The current
@@ -345,11 +511,16 @@
     boolean. You can then read and write to these files to change the `boolean` state.
     The Android toolbox has been modified to include the `getsebool` and `setsebool`
     commands. The `libselinux` API also exposes these capabilities:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 第二个要查看的目录是`booleans`。SELinux的`boolean`允许策略声明通过`boolean`条件动态更改。通过改变`boolean`的状态，您可以影响已加载策略的行为。当前策略没有定义任何布尔值；因此这个目录是空的。在定义了布尔值的策略中，该目录将填充以每个布尔值命名的文件。然后，您可以读取和写入这些文件来改变`boolean`的状态。Android工具箱已经进行了修改，包含了`getsebool`和`setsebool`命令。`libselinux`
+    API也公开了这些功能：
 - en: '[PRE19]'
+  id: totrans-79
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Booleans are transactional. This means it is an all or nothing set. When you
     use `security_set_boolean*`, you must call `security_commit_booleans()` to make
     it take effect. Unlike Linux desktop systems, permanent booleans are not supported.
@@ -357,121 +528,182 @@
     if you are attempting Android **Compatibility Test Suite** (**CTS**) compliance,
     booleans will cause the tests to fail. Booleans can have varying DAC permissions
     based on the target, but they always require the SELinux permission, `setbool`.
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 布尔值是事务性的。这意味着它是一组“全有或全无”的设置。当您使用`security_set_boolean*`时，必须调用`security_commit_booleans()`使其生效。与Linux桌面系统不同，永久布尔值是不支持的。更改运行时值不会在重启后保留。另外，在Android上，如果您尝试达到Android
+    **兼容性测试套件** (**CTS**) 的合规性，布尔值将导致测试失败。布尔值可以根据目标具有不同的DAC权限，但它们总是需要SELinux权限，即`setbool`。
 - en: Tip
+  id: totrans-81
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: You must pass the Android Compatability Test Suite for Android branding. More
     on CTS can be found at [https://source.android.com/compatibility/cts-intro.html](https://source.android.com/compatibility/cts-intro.html).
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 您必须通过Android兼容性测试套件才能使用Android品牌。关于CTS的更多信息可以在[https://source.android.com/compatibility/cts-intro.html](https://source.android.com/compatibility/cts-intro.html)找到。
 - en: The class directory
+  id: totrans-83
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 类目录
 - en: 'The next directory to look at is `class`. The `class` directory contains all
     the classes defined in the `access_vectors` SELinux policy file or via the `class`
     keyword in the SELinux policy language. For each class defined in the policy,
     a directory exists with the same name. For instance, run the following on the
     serial terminal:'
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个要查看的目录是`class`。`class`目录包含了在`access_vectors` SELinux策略文件中定义的所有类，或者通过SELinux策略语言中的`class`关键字定义的类。对于策略中定义的每个类，都存在一个同名的目录。例如，在串行终端运行以下命令：
 - en: '[PRE20]'
+  id: totrans-85
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'As you can see from the preceding command, there are quite a few directories.
     Let''s examine the `property_service` directory. This directory was chosen because
     it is only one defined on Android. However, the files present in each directory
     are the same and include `index` and `perms`:'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 如您从前面的命令中看到的，有不少目录。让我们检查一下`property_service`目录。选择这个目录是因为它在Android上只有一个定义。然而，每个目录中存在的文件是相同的，包括`index`和`perms`：
 - en: '[PRE21]'
+  id: totrans-87
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'The mapping between string and some arbitrary integer that is defined in the
     SELinux kernel module is `index`. A directory that contains all the permissions
     possible for that class is `perms`:'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 字符串和SELinux内核模块中定义的某些任意整数之间的映射是`index`。包含该类的所有可能权限的目录是`perms`：
 - en: '[PRE22]'
+  id: totrans-89
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: As you can see, the `set` access vector is available for the `property_service`
     class. The `class` directory can be very beneficial to observe a policy file already
     loaded in a system.
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 如您所见，`property_service`类中可使用`set`访问向量。`class`目录可以非常有助于观察系统中已加载的策略文件。
 - en: The initial_contexts directory
+  id: totrans-91
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`initial_contexts`目录'
 - en: 'The next directory entry to peer into is `initial_contexts`. This is the static
     mapping of the initial security contexts, better known as **security identifier**
     (**sid**). This map tells the SELinux system which context should be used to start
     each kernel object:'
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个要查看的目录条目是`initial_contexts`。这是初始安全上下文的静态映射，更广为人知的是**安全标识符**（**sid**）。这个映射告诉SELinux系统应该使用哪个上下文来启动每个内核对象：
 - en: '[PRE23]'
+  id: totrans-93
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'We can see what the initial sid for `file` is by performing:'
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以通过执行以下操作来查看`file`的初始sid：
 - en: '[PRE24]'
+  id: totrans-95
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'This corresponds to the entry in `external/sepolicy/initial_sid_contexts`:'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 这对应于`external/sepolicy/initial_sid_contexts`中的条目：
 - en: '[PRE25]'
+  id: totrans-97
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: The policy_capabilities directory
+  id: totrans-98
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`policy_capabilities`目录'
 - en: 'The last directory to look into is `policy_capabilities`. This directory defines
     any additional capabilities the policy might have. For our current setup, we should
     have:'
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后需要查看的目录是`policy_capabilities`。这个目录定义了策略可能具有的任何附加功能。对于我们当前的设置，我们应该有：
 - en: '[PRE26]'
+  id: totrans-100
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Each file entry contains a boolean indicating whether the feature is enabled:'
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个文件条目都包含一个布尔值，指示功能是否启用：
 - en: '[PRE27]'
+  id: totrans-102
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: The entries are readable by all and writeable by none.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些条目对所有人可读，对任何人不可写。
 - en: ProcFS
+  id: totrans-104
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: ProcFS
 - en: 'We alluded to some of the procfs interfaces that are being exported. Much of
     what is discussed is the security contexts, so that means the shell should have
     some security context associated with it... but how do we achieve this? Since
     this is a general mechanism that all LSMs use, the security contexts are both
     read and written through procfs:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们之前提到了一些正在导出的procfs接口。讨论的大部分内容是安全上下文，这意味着shell应该与某些安全上下文相关联...但我们应该如何实现这一点？由于这是所有LSMs使用的通用机制，因此安全上下文通过procfs进行读取和写入：
 - en: '[PRE28]'
+  id: totrans-106
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'You can also get per-thread contexts as well:'
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 你也可以获取每个线程的上下文：
 - en: '[PRE29]'
+  id: totrans-108
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: Just replace `2278` with the thread ID you want.
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 只需将`2278`替换为你想要的线程ID。
 - en: The DAC permissions on the current file are read and write for everyone, but
     those files are typically very restricted by MAC permissions. Typically, only
     the process that owns the procfs entry can read the files, and you must have both
@@ -480,59 +712,87 @@
     have `getattr`. All of these permissions are attained from the security class,
     `process`. The `libselinux` API functions `getcon` and `setcon` allow you to manipulate
     `current`.
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 当前文件上的DAC权限对所有人都是读写权限，但这些文件通常受到MAC权限的严格限制。通常，只有拥有procfs条目的进程可以读取这些文件，并且你必须拥有标准的写权限以及`setcurrent`的组合权限。注意，使用**dyntransition**必须允许“从”和“到”域。要读取，你必须拥有`getattr`。所有这些权限都来自`process`安全类。`libselinux`
+    API函数`getcon`和`setcon`允许你操作`current`。
 - en: 'The `prev` file can be used to find the previous context you switched from.
     This file is not writeable:'
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: '`prev`文件可以用来查找你之前切换的上下文。这个文件是不可写的：'
 - en: '[PRE30]'
+  id: totrans-112
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: Our serial terminal's former domain or security context was `u:r:init:s0`.
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们串行终端的前一个域或安全上下文是`u:r:init:s0`。
 - en: The `exec` file is used to set the label for children processes. This is set
     before running an exec. All the permissions on these files are the same with respect
     to the MAC permissions used to actually set them. The caller attempting to set
     this must also hold `setexec` from the `process` class. The libselinux API `int
     setexeccon(security_context_t context)` and `int getexeccon(security_context_t
     *context)` can be used for setting and retrieving the label.
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: '`exec`文件用于为子进程设置标签。这在进行exec之前设置。所有这些文件的权限与实际设置它们时使用的MAC权限相同。尝试设置此项的调用者还必须持有来自`process`类的`setexec`。可以使用libselinux
+    API `int setexeccon(security_context_t context)`和`int getexeccon(security_context_t
+    *context)`来设置和检索标签。'
 - en: 'The `fscreate`, `keycreate`, and `sockcreate` files do similar things. When
     a process creates any one of the corresponding objects, `fs` objects (files, named
     pipes, or other objects), keys, or sockets, the values set here are used. The
     caller must also hold `setfscreate`, `setsockcreate`, and `setkeycreate` from
     the `process` class. The following SELinux API is used to alter these:'
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: '`fscreate`、`keycreate`和`sockcreate`文件执行类似操作。当进程创建任何对应的对象时，如`fs`对象（文件、命名管道或其他对象）、密钥或套接字，这里设置的值将被使用。调用者还必须持有来自`process`类的`setfscreate`、`setsockcreate`和`setkeycreate`。以下SELinux
+    API用于更改这些：'
 - en: '[PRE31]'
+  id: totrans-116
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: Where `*` can be `fs`, `key`, or `socket`.
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 其中`*`可以是`fs`、`key`或`socket`。
 - en: It's important to note that these special `process` class permissions give you
     the ability to change the `proc/attr` file. You still need to get through the
     DAC permissions and any SELinux permissions set on the file objects themselves.
     Then and only then do you need the additional permission, such as `setfscreate`.
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 需要注意的是，这些特殊的`process`类权限可以让你更改`proc/attr`文件。你仍然需要通过DAC权限以及文件对象上设置的任何SELinux权限。只有在完成这些之后，你才需要额外的权限，如`setfscreate`。
 - en: Java SELinux API
+  id: totrans-119
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Java SELinux API
 - en: Similar APIs to the C APIs discussed previously exist for Java as well. In this
     case, it is assumed you will build the code with the platform, as these are not
     public APIs shipped with the Android SDK. The API is located at `frameworks/base/core/java/android/os/SELinux.java`.
     However, this is a very limited subset of the API.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于之前讨论的C API，Java也有类似的API。在这种情况下，假设你将使用平台来构建代码，因为这些API并未随Android SDK一起公开提供。该API位于`frameworks/base/core/java/android/os/SELinux.java`。然而，这只是API的一个非常有限的部分。
 - en: Summary
+  id: totrans-121
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: In this chapter, we explored the interface between the kernel and userspace
     with respect to SELinux, and reinforced the concepts of access vector class and
     security context. In the next chapter, we will perform some upgrades to our system
@@ -541,5 +801,8 @@
     mode now. However, if you do it now via `setenforce 1` on a UDOO, your device
     will become unstable. On our system, for example, the browser fails to launch
     if we do this.
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们探讨了内核与用户空间之间关于SELinux的接口，并强化了访问向量类和安全上下文的概念。在下一章中，我们将对我们的系统进行一些升级，并查看审计日志，使我们离最终目标更近一步——在SELinux强制模式下可操作的设备。我们之所以说它是可操作的，是因为我们现在可以将其设置为强制模式。然而，如果你现在通过在UDOO上执行`setenforce
+    1`这样做，你的设备可能会变得不稳定。例如，在我们的系统上，如果我们这样做，浏览器将无法启动。

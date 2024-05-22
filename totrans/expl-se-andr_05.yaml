@@ -1,59 +1,85 @@
 - en: Chapter 5. Booting the System
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第五章 系统启动
 - en: 'Now that we have an SE for Android system, we need to see how we can make use
     of it, and get it into a usable state. In this chapter, we will:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们已经有了适用于 Android 系统的安全增强（SE），我们需要了解如何使用它，并将其置于可用状态。在本章中，我们将：
 - en: Modify the log level to gain more details while debugging
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 修改日志级别以在调试时获取更多详细信息
 - en: Follow the boot process relative to the policy loader
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 跟踪与策略加载相关的启动过程
 - en: Investigate SELinux APIs and SELinuxFS
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 调查 SELinux API 和 SELinuxFS
 - en: Correct issues with the maximum policy version number
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 更正最大策略版本号的问题
 - en: Apply patches to load and verify an NSA policy
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 应用补丁以加载和验证 NSA 策略
 - en: 'You might have noticed some disturbing error messages `dmesg` in [Chapter 4](ch04.html
     "Chapter 4. Installation on the UDOO"), *Installation on the UDOO*. To refresh
     your memory, here are some of them:'
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能在 [第四章](ch04.html "第四章 UDOO上的安装")，*UDOO上的安装* 中注意到一些令人不安的错误信息 `dmesg`。为了刷新你的记忆，以下是一些错误信息：
 - en: '[PRE0]'
+  id: totrans-8
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: It would appear that even though SELinux is enabled, we don't quite have an
     error-free system. At this point, we need to understand what causes this error,
     and what we can do to rectify it. At the end of this chapter, we should be able
     to identify the boot process of an SE for Android device with respect to policy
     loading, and how that policy is loaded into the kernel. We will then address the
     policy version error.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 即使启用了 SELinux，看起来我们的系统仍然不是没有错误的。在这一点上，我们需要了解是什么原因导致了这个错误，以及我们可以做些什么来纠正它。在本章结束时，我们应该能够识别
+    SE for Android 设备在策略加载方面的启动过程，以及如何将策略加载到内核中。然后，我们将解决策略版本错误。
 - en: Policy load
+  id: totrans-10
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 策略加载
 - en: An Android device follows a boot sequence similar to that of the *NIX booting
     sequence. The boot loader boots the kernel, and the kernel finally executes the
     init process. The init process is responsible for managing the boot process of
     the device through init scripts and some hard coded logic in the daemon. Like
     all processes, init has an entry point at the main function. This is where the
     first userspace process begins. The code can be found by navigating to `system/core/init/init.c`.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 设备遵循类似于 *NIX 启动序列的启动顺序。引导加载程序启动内核，内核最终执行 init 进程。init 进程负责通过 init 脚本和守护程序中的一些硬编码逻辑来管理设备的启动过程。与所有进程一样，init
+    在 main 函数有一个入口点。这是第一个用户空间进程开始的地方。通过导航到 `system/core/init/init.c` 可以找到代码。
 - en: 'When the init process enters `main` (refer to the following code excerpt),
     it processes `cmdline`, mounts some `tmpfs` filesystems such as `/dev`, and some
     pseudo-filesystems such as `procfs`. For SE for Android devices, init was modified
@@ -63,61 +89,90 @@
     a ramdisk built into `boot.img`. The policy can be found in this root filesystem
     at `/sepolicy` on the UDOO or target device. At this point, the init process calls
     a function to load the policy from the disk and sends it to the kernel, as follows:'
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 当 init 进程进入 `main`（参考以下代码摘录）时，它会处理 `cmdline`，挂载一些 `tmpfs` 文件系统，如 `/dev`，以及一些伪文件系统，如
+    `procfs`。对于 Android 设备的 SE，init 被修改为尽可能在启动过程的早期加载策略到内核中。在 SELinux 系统中，策略不是构建到内核中的；它位于一个单独的文件中。在
+    Android 中，早期启动时挂载的唯一文件系统是根文件系统，它是构建到 `boot.img` 中的 ramdisk。策略可以在 UDOO 或目标设备上的根文件系统中找到，位于
+    `/sepolicy`。此时，init 进程调用一个函数从磁盘加载策略并将其发送到内核，如下所示：
 - en: '[PRE1]'
+  id: totrans-13
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'In the preceding code, you will notice the very nice log message, `SELinux:
     Disabled due to failed policy load`, and wonder why we didn''t see this when we
     ran `dmesg` before. This code executes before `setlevel` in `init.rc` is executed.'
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: '在前面的代码中，你会注意到一个非常友好的日志信息，`SELinux: Disabled due to failed policy load`，并想知道为什么我们在之前运行
+    `dmesg` 时没有看到这个信息。这段代码在 `init.rc` 中的 `setlevel` 执行之前执行。'
 - en: The default init log level is set by the definition of `KLOG_DEFAULT_LEVEL`
     in `system/core/include/cutils/klog.h`. If we really wanted to, we could change
     that, rebuild, and actually see that message.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 默认的 init 日志级别由 `system/core/include/cutils/klog.h` 中 `KLOG_DEFAULT_LEVEL` 的定义设置。如果我们真的想改变它，我们可以修改它，重新构建，并实际看到那条信息。
 - en: Now that we have identified the initial path of the policy load, let's follow
     it on its course through the system. The `selinux_android_load_policy()` function
     can be found in the Android fork of `libselinux`, which is in the UDOO Android
     source tree. The library can be found at `external/libselinux`, and all of the
     Android modifications can be found in `src/android.c`.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们已经确定了策略加载的初始路径，那么让我们跟随它通过系统的过程。`selinux_android_load_policy()`函数可以在Android版本的`libselinux`中找到，位于UDOObian源树中。该库可以在`external/libselinux`中找到，所有Android的修改都可以在`src/android.c`中找到。
 - en: The function starts by mounting a pseudo-filesystem called **SELinuxFS**. If
     you recall, this was one of the new filesystems mentioned in `/proc/filesystems`
     that we saw in [Chapter 4](ch04.html "Chapter 4. Installation on the UDOO"), *Installation
     on the UDOO*. In systems that do not have `sysfs` mounted, the mount point is
     `/selinux`; on systems that have `sysfs` mounted, the mount point is `/sys/fs/selinux`.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 函数首先挂载一个名为**SELinuxFS**的伪文件系统。如果您回想一下，这是我们在[第4章](ch04.html "第4章. 在UDOObian上的安装")，*在UDOObian上的安装*中看到的`/proc/filesystems`中提到的新文件系统之一。在没有挂载`sysfs`的系统上，挂载点是`/selinux`；在挂载了`sysfs`的系统上，挂载点是`/sys/fs/selinux`。
 - en: 'You can check `mountpoints` on a running system using the following command:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 您可以使用以下命令在运行中的系统上检查`mountpoints`：
 - en: '[PRE2]'
+  id: totrans-19
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'SELinuxFS is an important filesystem as it provides the interface between the
     kernel and userspace for controlling and manipulating SELinux. As such, it has
     to be mounted for the policy load to work. The policy load uses the filesystem
     to send the policy file bytes to the kernel. This happens in the `selinux_android_load_policy()`
     function:'
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: SELinuxFS是一个重要的文件系统，因为它提供了内核与用户空间之间控制和管理SELinux的接口。因此，为了使策略加载工作，必须挂载它。策略加载使用文件系统将策略文件字节发送到内核。这发生在`selinux_android_load_policy()`函数中：
 - en: '[PRE3]'
+  id: totrans-21
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'The `set_selinuxmnt(car *mnt)` function changes a global variable in `libselinux`
     so that other routines can find the location of this vital interface. From there
     it calls another helper function, `selinux_android_reload_policy()`, which is
     located in the same `libselinux` `android.c` file. It loops through an array of
     possible policy locations in priority order. This array is defined as follows:'
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: '`set_selinuxmnt(car *mnt)`函数改变了`libselinux`中的一个全局变量，以便其他例程可以找到这个重要接口的位置。从那里它调用了另一个辅助函数`selinux_android_reload_policy()`，该函数位于相同的`libselinux`
+    `android.c`文件中。它按优先顺序遍历一个可能的策略位置数组。这个数组定义如下：'
 - en: '[PRE4]'
+  id: totrans-23
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Since only the root filesystem is mounted, it chooses `/sepolicy` at this time.
     The other path is for dynamic runtime reloads of policy. After acquiring a valid
     file descriptor to the policy file, the system is memory mapped into its address
@@ -125,23 +180,34 @@
     function is defined in `load_policy.c`. Here, the map parameter is the pointer
     to the beginning of the policy file, and the size parameter is the size of the
     file in bytes:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于此时只挂载了根文件系统，因此它选择了`/sepolicy`。其他路径用于策略的动态运行时重新加载。在获取到策略文件的有效的文件描述符后，系统将其内存映射到它的地址空间，并调用`security_load_policy(map,
+    size)`将其加载到内核中。这个函数定义在`load_policy.c`中。这里，map参数是指向策略文件开头的指针，size参数是文件的大小（以字节为单位）：
 - en: '[PRE5]'
+  id: totrans-25
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'The security load policy opens the `<selinuxmnt>/load` file, which in our case
     is `/sys/fs/selinux/load`. At this point, the policy is written to the kernel
     via this pseudo file:'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 安全加载策略会打开`<selinuxmnt>/load`文件，在我们的案例中是`/sys/fs/selinux/load`。在这个阶段，策略通过这个伪文件写入到内核中：
 - en: '[PRE6]'
+  id: totrans-27
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: Fixing the policy version
+  id: totrans-28
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 修复策略版本
 - en: At this point, we have a clear idea of how the policy is loaded into the kernel.
     This is very important. SELinux integration with Android began in Android 4.0,
     so when porting to various forks and fragments, this breaks, and code is often
@@ -150,13 +216,17 @@
     also useful to understand the system as a whole, so when modifications need to
     be made, you'll know where to look and how things work. At this point, we're ready
     to correct the policy versions.
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，我们对如何将策略加载到内核中有了清晰的认识。这非常重要。SELinux与Android的集成始于Android 4.0，因此在移植到各种分支和片段时，这会中断，并且经常缺少代码。然而，理解系统的所有部分，无论多么粗略，都将帮助我们在野外遇到问题时进行纠正和发展。这些信息也有助于理解整个系统，因此当需要修改时，您将知道在哪里查找以及事物是如何工作的。在这一点上，我们准备纠正策略版本。
 - en: The logs and kernel config are clear; only policy versions up to 23 are supported,
     and we're trying to load policy version 26\. This will probably be a common problem
     with Android considering kernels are often out of date.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 日志和内核配置都很清楚；只支持到23的策略版本，我们试图加载26的策略版本。这可能是Android的一个常见问题，因为内核往往过时。
 - en: There is also an issue with the 4.3 sepolicy shipped by Google. Some changes
     by Google made it a bit more difficult to configure devices as they tailored the
     policy to meet their release goals. Essentially, the policy allows nearly everything
@@ -165,80 +235,120 @@
     rules to allow everything so denial logs do not get generated. To correct this,
     we can use a more complete policy from the NSA. Replace `external/sepolicy` with
     the download from [https://bitbucket.org/seandroid/external-sepolicy/get/seandroid-4.3.tar.bz2](https://bitbucket.org/seandroid/external-sepolicy/get/seandroid-4.3.tar.bz2).
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: Google提供的4.3版本sepolicy也存在问题。Google的一些更改使得配置设备变得更加困难，因为他们调整了策略以满足发布目标。实际上，该策略几乎允许所有操作，因此生成的拒绝日志非常少。策略中的一些域通过每个域的宽容声明完全宽容，这些域也有规则允许所有操作，因此不会生成拒绝日志。为了纠正这个问题，我们可以使用来自NSA的更完整的策略。将`external/sepolicy`替换为从[https://bitbucket.org/seandroid/external-sepolicy/get/seandroid-4.3.tar.bz2](https://bitbucket.org/seandroid/external-sepolicy/get/seandroid-4.3.tar.bz2)下载的内容。
 - en: 'After we extract the NSA''s policy, we need to correct the policy version.
     The policy is located in `external/sepolicy` and is compiled with a tool called
     `check_policy`. The `Android.mk` file for sepolicy will have to pass this version
     number to the compiler, so we can adjust this here. On the top of the file, we
     find the culprit:'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 提取NSA的策略后，我们需要更正策略版本。策略位于`external/sepolicy`中，并使用一个名为`check_policy`的工具进行编译。sepolicy的`Android.mk`文件将不得不将此版本号传递给编译器，因此我们可以在这里进行调整。在文件顶部，我们找到了罪魁祸首：
 - en: '[PRE7]'
+  id: totrans-33
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'Since the variable is overridable by the `?=` assignment. We can override this
     in `BoardConfig.mk`. Edit `device/fsl/imx6/BoardConfigCommon.mk`, adding the following
     `POLICYVERS` line to the bottom of the file:'
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于该变量可以通过`?=`赋值被覆盖，我们可以在`BoardConfig.mk`中重写这个设置。编辑`device/fsl/imx6/BoardConfigCommon.mk`，在文件底部添加以下`POLICYVERS`行：
 - en: '[PRE8]'
+  id: totrans-35
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Since the policy is on the `boot.img` image, build the policy and `bootimage`:'
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于策略在`boot.img`镜像中，因此需要构建策略和`bootimage`：
 - en: '[PRE9]'
+  id: totrans-37
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Eject the SD card, place it into the UDOO, and boot.
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 弹出SD卡，将其插入UDOО，并启动。
 - en: Tip
+  id: totrans-39
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: 'The first of the preceding commands should produce the following log output:'
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 前述命令中的第一条应该产生如下日志输出：
 - en: '[PRE10]'
+  id: totrans-41
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'At this point, by checking the SELinux logs using `dmesg`, we can see the following:'
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，通过使用`dmesg`检查SELinux日志，我们可以看到以下内容：
 - en: '[PRE11]'
+  id: totrans-43
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Another command we need to run is `getenforce`. The `getenforce` command gets
     the SELinux enforcing status. It can be in one of three states:'
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还需要运行的另一个命令是`getenforce`。`getenforce`命令获取SELinux的强制状态。它可能处于三种状态之一：
 - en: '**Disabled**: No policy is loaded or there is no kernel support'
+  id: totrans-45
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**禁用**: 没有加载策略或没有内核支持'
 - en: '**Permissive**: Policy is loaded and the device logs denials (but is not in
     enforcing mode)'
+  id: totrans-46
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**宽容**: 加载了策略，设备记录拒绝操作（但不在强制模式）'
 - en: '**Enforcing**: This state is similar to the permissive state except that policy
     violations result in EACCESS being returned to userspace'
+  id: totrans-47
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**强制**: 这个状态与宽容状态类似，不同之处在于策略违规会导致EACCESS返回给用户空间'
 - en: 'One of the goals while booting an SELinux system is to get to the enforcing
     state. Permissive is used for debugging, as follows:'
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 在启动SELinux系统时，其中一个目标就是达到强制（enforcing）状态。调试时使用宽容（permissive）模式，如下所示：
 - en: '[PRE12]'
+  id: totrans-49
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: Summary
+  id: totrans-50
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 概述
 - en: In this chapter, we covered the important policy load flow through the init
     process. We also changed the policy version to suit our development efforts and
     kernel version. From there, we were able to load the NSA policy and verify that
@@ -246,5 +356,8 @@
     APIs and their interactions with SELinuxFS. In the next chapter, we will examine
     the filesystem and then move forward in our quest to get the system into enforcing
     mode.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们介绍了通过init进程加载重要策略的工作流程。我们还更改了策略版本以适应我们的开发努力和内核版本。从那里，我们能够加载NSA策略并验证系统已加载它。本章还展示了一些SELinux
+    API及其与SELinuxFS的交互。在下一章中，我们将检查文件系统，然后继续努力将系统设置为强制模式。
