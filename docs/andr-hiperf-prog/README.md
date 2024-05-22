@@ -8,9 +8,9 @@
 > 
 > 不接受，不拒绝，不主动，不负责。
 
-* [在线阅读](https://android2.apachecn.org)
-* [在线阅读（Gitee）](https://apachecn.gitee.io/doc-template/)
-* [ApacheCN 学习资源](http://docs.apachecn.org/)
+* [在线阅读](https://android2.opendoccn.org)
+* [在线阅读（Gitee）](https://opendoccn.gitee.io/doc-template/)
+* [opendoccn 学习资源](http://docs.opendoccn.org/)
 
 ## 贡献指南
 
@@ -26,36 +26,36 @@
 
 ### 其他
 
-*   在我们的 [apachecn/apachecn-android-zh-pt2](https://github.com/apachecn/apachecn-android-zh-pt2) github 上提 issue.
-*   发邮件到 Email: `apachecn@163.com`.
-*   在我们的 [组织学习交流群](http://www.apachecn.org/organization/348.html) 中联系群主/管理员即可.
+*   在我们的 [opendoccn/freelearn-android-pt2-zh](https://github.com/opendoccn/freelearn-android-pt2-zh) github 上提 issue.
+*   发邮件到 Email: `opendoccn@163.com`.
+*   在我们的 [组织学习交流群](http://www.opendoccn.org/organization/348.html) 中联系群主/管理员即可.
 
 ## 下载
 
 ### Docker
 
 ```
-docker pull apachecn0/apachecn-android-zh-pt2
-docker run -tid -p <port>:80 apachecn0/apachecn-android-zh-pt2
+docker pull opendoccn0/freelearn-android-pt2-zh
+docker run -tid -p <port>:80 opendoccn0/freelearn-android-pt2-zh
 # 访问 http://localhost:{port} 查看文档
 ```
 
 ### PYPI
 
 ```
-pip install apachecn-android-zh-pt2
-apachecn-android-zh-pt2 <port>
+pip install freelearn-android-pt2-zh
+freelearn-android-pt2-zh <port>
 # 访问 http://localhost:{port} 查看文档
 ```
 
 ### NPM
 
 ```
-npm install -g apachecn-android-zh-pt2
-apachecn-android-zh-pt2 <port>
+npm install -g freelearn-android-pt2-zh
+freelearn-android-pt2-zh <port>
 # 访问 http://localhost:{port} 查看文档
 ```
 
 ## 赞助我们
 
-![](http://data.apachecn.org/img/about/donate.jpg)
+![](http://data.opendoccn.org/img/about/donate.jpg)

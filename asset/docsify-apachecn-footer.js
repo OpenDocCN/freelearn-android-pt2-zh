@@ -5,7 +5,7 @@
     var footer = `
         <hr/>
         <div align="center">
-          <p><a href="http://www.apachecn.org/" target="_blank"><font face="KaiTi" size="6" color="red">我们一直在努力</font></a><p>
+          <p><a href="http://www.opendoccn.org/" target="_blank"><font face="KaiTi" size="6" color="red">我们一直在努力</font></a><p>
           <p><a href="https://github.com/${unRepo}" target="_blank">${unRepo}</a></p>
           <p><iframe align="middle" src="https://ghbtns.com/github-btn.html?user=${un}&repo=${repo}&type=watch&count=true&v=2" frameborder="0" scrolling="0" width="100px" height="25px"></iframe>
           <iframe align="middle" src="https://ghbtns.com/github-btn.html?user=${un}&repo=${repo}&type=star&count=true" frameborder="0" scrolling="0" width="100px" height="25px"></iframe>
