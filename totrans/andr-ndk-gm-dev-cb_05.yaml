@@ -1,55 +1,79 @@
 - en: Chapter 5. Cross-platform Audio Streaming
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第五章 跨平台音频流
 - en: '|   | *Try turning off the sound in your favorite game.* |   |'
+  id: totrans-1
   prefs: []
   type: TYPE_TB
+  zh: '|   | *尝试关闭你最喜欢的游戏中的声音。* |   |'
 - en: '|   | --*Viktor Latypov* |'
+  id: totrans-2
   prefs: []
   type: TYPE_TB
+  zh: '|   | --*维克多·拉蒂波夫* |'
 - en: 'In this chapter we will cover the following recipes:'
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章我们将介绍以下内容：
 - en: Initializing OpenAL and playing the .wav files
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 初始化OpenAL并播放.wav文件
 - en: Abstracting basic audio components
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 抽象基本音频组件
 - en: Streaming sounds
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 流式声音
 - en: Decoding Ogg Vorbis files
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 解码Ogg Vorbis文件
 - en: Decoding tracker music using ModPlug
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用ModPlug解码跟踪器音乐
 - en: Introduction
+  id: totrans-9
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: We are looking for a truly portable implementation of the sound playback for
     desktop PCs and mobile devices. We propose using the OpenAL library, since it
     is a well-established library on a desktop, and using it will make easier porting
     of existing games to Android. In this chapter we organize a small multithreaded
     sound streaming library.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在寻找一种真正可移植的实现方案，以在桌面电脑和移动设备上进行声音播放。我们建议使用OpenAL库，因为它在桌面端已经相当成熟，使用它将使得将现有游戏移植到Android更加容易。在本章中，我们将组织一个小型的多线程声音流媒体库。
 - en: Audio playback is inherently an asynchronous process, so the decoding and control
     of sound hardware should be done on a separate thread and controlled from other
     dedicated threads. For example, when a player presses a fire button, or a character
     in an arcade game hits the ground, we might just ask the system to start playback
     of an audio file. The latency of this operation in games usually does not matter
     so much.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 音频播放本质上是一个异步过程，因此解码和控制声音硬件应该在单独的线程上完成，并从其他专用线程进行控制。例如，当玩家按下开火按钮，或者在街机游戏中一个角色撞击地面时，我们可能只是要求系统开始播放一个音频文件。在游戏中，这个操作的延迟通常不是很重要。
 - en: 'From the digital perspective, a monaural or monophonic sound (mono for short),
     is nothing more than a long one-dimensional array of values representing a continuous
     signal. Stereophonic or multichannel sounds are represented by a few channels
@@ -57,32 +81,44 @@
     by the sample from the other channel and so on. OpenAL expects us to submit this
     data as a sequence of buffers. The main concepts of OpenAL library are devices,
     contexts, listeners, audio sources, and sound buffers:'
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 从数字角度来看，单声道或单声道声音（简称mono），不过是表示连续信号的长时间一维数组。立体声或多声道声音由几个声道表示，并以交错数组的形式存储，其中一个声道的采样紧接着另一个声道的采样，依此类推。OpenAL期望我们以一系列缓冲区的形式提交这些数据。OpenAL库的主要概念包括设备、上下文、监听器、音频源和声音缓冲区：
 - en: '![Introduction](img/7785_05_1.jpg)'
+  id: totrans-13
   prefs: []
   type: TYPE_IMG
+  zh: '![简介](img/7785_05_1.jpg)'
 - en: The sound produced in a virtual environment is played back through the speakers
     after processing by a sequence of filters. The material covered in this chapter
     will allow you to create a portable audio subsystem for your game.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 在虚拟环境中产生的声音经过一系列滤波器处理后，通过扬声器播放。本章涵盖的内容将允许你为你的游戏创建一个可移植的音频子系统。
 - en: Initializing OpenAL and playing the .wav files
+  id: totrans-15
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 初始化OpenAL并播放.wav文件
 - en: In this recipe, we present the simplest possible example to play uncompressed
     audio files in **PCM** format (**pulse-code modulation**, [http://en.wikipedia.org/wiki/Pulse-code_modulation](http://en.wikipedia.org/wiki/Pulse-code_modulation)).
     This example just plays a single file in an infinite loop. We will create a single
     device, a single device context, and an audio source. All of this is done in a
     single dedicated thread, but we should not worry about multithreading issues because
     OpenAL functions are guaranteed to be thread-safe.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个食谱中，我们展示了播放未压缩音频文件的最简单示例，这些文件采用**PCM**格式（**脉冲编码调制**，[http://en.wikipedia.org/wiki/Pulse-code_modulation](http://en.wikipedia.org/wiki/Pulse-code_modulation)）。这个示例只是在无限循环中播放单个文件。我们将创建一个单一设备、一个单一设备上下文和一个音频源。所有这些都在一个专用线程中完成，但我们不应该担心多线程问题，因为OpenAL函数是保证线程安全的。
 - en: Getting ready
+  id: totrans-17
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: The source code and build scripts for the OpenAL library can be found in the
     `0_OpenAL` folder, and precompiled static libraries are included with each of
     the examples for this chapter. For Windows, we use dynamic linking with OpenAL.
@@ -90,172 +126,230 @@
     in the [Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
     a Virtual Filesystem*. The complete source of the example for this recipe can
     be found in the `0_AL_On_Android` folder.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-19
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The class `SoundThread`, where we implement the actual playback, is as follows:'
+  id: totrans-20
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE0]'
+  id: totrans-21
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'First we declare handles to the OpenAL audio device and device context:'
+  id: totrans-22
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE1]'
+  id: totrans-23
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Then, we declare handles to the OpenAL audio source and buffer:'
+  id: totrans-24
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE2]'
+  id: totrans-25
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'The `Run()` member function does all the work that includes initialization,
     de-initialization, and submission of audio data into OpenAL:'
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE3]'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'We initialize the pointers to OpenAL functions:'
+  id: totrans-28
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE4]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Then we create the device and device context:'
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE5]'
+  id: totrans-31
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Finally, we select our newly created device context as the current one:'
+  id: totrans-32
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE6]'
+  id: totrans-33
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Now, we begin the creation of the audio source:'
+  id: totrans-34
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE7]'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'We set a constant maximum playback volume of `1.0`, which is called **gain**
     in OpenAL:'
+  id: totrans-36
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE8]'
+  id: totrans-37
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'To hear something, we must load the file containing the sound data:'
+  id: totrans-38
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE9]'
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'We use our memory-mapped files and ask our iStream object about the file size:'
+  id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE10]'
+  id: totrans-41
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'To avoid handling the complete **RIFF WAVE** file format, we prepare a specific
     file containing a single block of uncompressed audio data; the format of this
     data is a 22 kHz monophonic 16-bit sound. We pass `Data+sizeof(sWAVHeader)` as
     the audio data, and the size of the audio data is obviously `DataSize-sizeof(sWAVHeader)`:'
+  id: totrans-42
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE11]'
+  id: totrans-43
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Then we call the `IsPlaying()` function in a spin loop to detect when OpenAL
     stops playing the sound:'
+  id: totrans-44
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE12]'
+  id: totrans-45
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Once the sound playback is complete, we delete all the objects we have created:'
+  id: totrans-46
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE13]'
+  id: totrans-47
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Finally, we unload the OpenAL library on Windows:'
+  id: totrans-48
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE14]'
+  id: totrans-49
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'On Android, it is very important to free the allocated resource and release
     the audio device. Otherwise, audio will keep playing in the background. To avoid
     writing Java code in this small example, we just terminate our native activity
     with the `exit()` call:'
+  id: totrans-50
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE15]'
+  id: totrans-51
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'The code above uses the function `IsPlaying()` to check if the audio source
     is busy:'
+  id: totrans-52
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE16]'
+  id: totrans-53
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'The function `PlayBuffer()` feeds the audio data to the audio source:'
+  id: totrans-54
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE17]'
+  id: totrans-55
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'The code above uses the size of the `sWAVHeader` structure to determine the
     offset of the audio data:'
+  id: totrans-56
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Note
+  id: totrans-57
   prefs:
   - PREF_IND
   - PREF_H3
@@ -263,106 +357,138 @@
 - en: 'The alignment of structure fields should be set to `1` for `sWAVHeader`. Our
     declaration is compatible with Clang and GCC compilers from Android NDK and MinGW.
     Use #pragma pack for VisualStudio.'
+  id: totrans-58
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE18]'
+  id: totrans-59
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Later we reuse this structure for the loading of the`.wav` files.
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
 - en: How it works...
+  id: totrans-61
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'First, we declare the global variables holding our virtual filesystem and the
     `SoundThread` object:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE19]'
+  id: totrans-63
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'We create our usual application template and in the `OnStart()` callback function,
     we start a thread that initializes the OpenAL library:'
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE20]'
+  id: totrans-65
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: See also
+  id: totrans-66
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: '[Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting Common
     Libraries*'
+  id: totrans-67
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Implementing portable memory-mapped files* recipe in [Chapter 4](ch04.html
     "Chapter 4. Organizing a Virtual Filesystem"), *Organizing a Virtual Filesystem*
+  id: totrans-68
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Abstracting basic audio components
+  id: totrans-69
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: In the previous recipe, we learned how to initialize OpenAL and how to play
     the uncompressed `.wav` files. Here, we present the `AudioSource` and `AudioThread`
     classes which help us to manage the initialization process.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-71
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: Check out the example `0_AL_On_Android` in the supplementary materials to understand
     the basic concepts of OpenAL.
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-73
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'Let''s carefully move the initialization of OpenAL to another thread called
     `AudioThread`:'
+  id: totrans-74
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE21]'
+  id: totrans-75
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'The code at the beginning of the `Run()` method performs the initialization
     of a default OpenAL device and creates an audio context:'
+  id: totrans-76
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE22]'
+  id: totrans-77
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'We set the flag that tells other threads if they can use our audio subsystem:'
+  id: totrans-78
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE23]'
+  id: totrans-79
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Then we enter an infinite loop where we call the `Env_Sleep()` function, whose
     source code is explained as follows, to avoid using 100 percent utilization of
     CPU:'
+  id: totrans-80
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE24]'
+  id: totrans-81
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Note
+  id: totrans-82
   prefs:
   - PREF_IND
   - PREF_H3
@@ -373,272 +499,365 @@
     that contains 16-bit mono samples at a sampling rate of `44100` Hz gives us approximately
     *65535 / (44100 × 16 / 8) ≈ 0.7* seconds of audio playback. Stereo playback cuts
     this time in half.
+  id: totrans-83
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'Finally, we release the OpenAL objects:'
+  id: totrans-84
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE25]'
+  id: totrans-85
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'The rest of the declaration simply contains all the required fields and the
     initialization flag:'
+  id: totrans-86
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE26]'
+  id: totrans-87
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'The `Env_Sleep()` function used in the code just makes the thread inactive
     for a given amount of milliseconds. It is implemented using the `Sleep()` system
     call in Windows and the `usleep()` function in Android:'
+  id: totrans-88
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE27]'
+  id: totrans-89
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Playing the`.wav` files is not enough for us, since we want to support different
     audio formats. So, we have to split the audio playback and the actual decoding
     of file formats into two separate entities. We are ready to introduce the `iWaveDataProvider`
     class whose subclasses serve as data sources for our audio playback classes:'
+  id: totrans-90
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE28]'
+  id: totrans-91
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'The main routines of this class enable access to the decoded audio data:'
+  id: totrans-92
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE29]'
+  id: totrans-93
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'Here is how we can get the internal OpenAL audio format identifier for the
     data from this provider:'
+  id: totrans-94
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE30]'
+  id: totrans-95
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Also, we store the information about the audio format here:'
+  id: totrans-96
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE31]'
+  id: totrans-97
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'As we already know, an audio source must be created to produce sounds. This
     functionality is implemented in the `AudioSource` class, which wraps the OpenAL
     function calls from the previous recipe. This class uses the `iWaveDataProvider`
     instance as the audio data source:'
+  id: totrans-98
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE32]'
+  id: totrans-99
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'The constructor just creates an OpenAL source handle and sets the default parameters:'
+  id: totrans-100
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE33]'
+  id: totrans-101
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'The destructor stops the playback and performs the cleanup:'
+  id: totrans-102
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE34]'
+  id: totrans-103
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'The `Play()` method switches the OpenAL source into the playing state:'
+  id: totrans-104
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE35]'
+  id: totrans-105
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'The `Stop()` method switches the OpenAL source into the stopped state. The
     playback can be resumed after stop ping only from the beginning of the sound buffer:'
+  id: totrans-106
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE36]'
+  id: totrans-107
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'The `IsPlaying()` method checks if the source is playing audio. The implementation
     comes from the previous recipe:'
+  id: totrans-108
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE37]'
+  id: totrans-109
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'A small `SetVolume()` method changes the playback volume of the source. Accepted
     float values are in the range of `0.0…1.0`:'
+  id: totrans-110
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE38]'
+  id: totrans-111
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'The main routine, which feeds the data to the audio source, is `BindWaveform()`.
     This function stores a smart pointer to the data provider and generates an OpenAL
     buffer object:'
+  id: totrans-112
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE39]'
+  id: totrans-113
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: 'The private section of the `AudioSource` class contains a reference to an audio
     data provider and an internal OpenAL source and buffer handle:'
+  id: totrans-114
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE40]'
+  id: totrans-115
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'To be able to read the sound from the file, we implement the `iWaveDataProvider`
     interface in the `WavProvider` class:'
+  id: totrans-116
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE41]'
+  id: totrans-117
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'The only field this class contains is a smart pointer to a `Blob` object, containing
     the file data:'
+  id: totrans-118
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE42]'
+  id: totrans-119
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'A simple pulse-code modulated `.wav` file consists of the `sWAVHeader` structure
     at the beginning and the audio data, which can be directly fed into the OpenAL
     audio source. The constructor of the `WavProvider` class extracts the information
     about the audio data:'
+  id: totrans-120
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE43]'
+  id: totrans-121
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'The destructor is empty, since our `Blob` object is wrapped into a smart pointer:'
+  id: totrans-122
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE44]'
+  id: totrans-123
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'The `iWaveDataProvider` interface is simple, and here we just implement two
     member functions. `GetWaveData()` returns a pointer to the audio data:'
+  id: totrans-124
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE45]'
+  id: totrans-125
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'The `GetWaveDataSize()` method subtracts the file header size from the total
     file size:'
+  id: totrans-126
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE46]'
+  id: totrans-127
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: And we are done with the audio playback and decoding for now.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-129
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: Now we can demonstrate how to use all the audio classes together. As usual,
     we create an empty application template, which can be found in the `1_AL_Abstraction`
     folder.
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
 - en: 'In order to be able to use OpenAL, we must declare a global `AudioThread` instance:'
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE47]'
+  id: totrans-132
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'We start this thread in the `OnStart()` callback function:'
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE48]'
+  id: totrans-134
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: 'In this example, we implement the `SoundThread` class whose `Run()` method
     does all the playback. On this thread, we must wait for `g_Audio` to get initialized:'
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE49]'
+  id: totrans-136
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'Now we can create the audio source:'
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE50]'
+  id: totrans-138
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: 'Finally, we need to create a `WavProvider` object, which decodes audio files,
     attach it to the `Src` source, start playback and wait for its completion:'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE51]'
+  id: totrans-140
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'After the sound playback is finished, we reset the `Src` pointer to `NULL`
     and send the termination signal to the `g_Audio` thread:'
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE52]'
+  id: totrans-142
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'To obtain the `Data` object, we have to implement the following function, which
     reads the file contents into a memory block:'
+  id: totrans-143
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE53]'
+  id: totrans-144
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: We use the global initialized instance of `FileSystem`, the `g_FS` object. Please
     note that on the Android OS, we cannot use the standard paths and therefore resort
     to our virtual file system implementation.
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
 - en: There's more…
+  id: totrans-146
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -649,579 +868,772 @@
     only one buffer, but when we get to streaming the sound, we have to take care
     of the buffers queue. The following code should be added to the `AudioSource`
     class to implement pausing:'
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE54]'
+  id: totrans-148
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'For infinite sound looping, we can implement the `LoopSound()` method in the
     `AudioSource` class:'
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE55]'
+  id: totrans-150
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'The Android OS runs on multiple hardware architectures, and this can cause
     some additional difficulties when reading the `.wav` files. If the CPU we are
     running on has a big-endian architecture, we have to swap the bytes in the fields
     of the `sWAVHeader` structure. The modified constructor of the `WavProvider` class
     looks like the following:'
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE56]'
+  id: totrans-152
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: 'Big-endian memory byte order requires lower and higher bytes of 16-bit values
     to be swapped:'
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE57]'
+  id: totrans-154
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: 'Here we use the `__BIG_ENDIAN__` preprocessor symbol provided by the GCC compiler
     to detect the big-endian CPU. The two `SwapBytes()` functions change the order
     of the bytes in the unsigned word and double word:'
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE58]'
+  id: totrans-156
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: See also
+  id: totrans-157
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: '*Decoding Ogg Vorbis files*'
+  id: totrans-158
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Streaming sounds
+  id: totrans-159
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: We have learned how to play short audio samples, and now we are ready to organize
     sound streaming. This recipe explains how to organize a buffer queue to allow
     on-the-fly sound generation and streaming.
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-161
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: We suppose that the reader is already familiar with our `AudioSource` and `iWaveDataProvider`
     classes described in the previous recipe.
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-163
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'First, we enrich `iWaveDataProvider` with the additional methods `IsStreaming()`,
     which indicates that the data from this provider should be read in small chunks,
     and `StreamWaveData()`, which actually reads a single chunk:'
+  id: totrans-164
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE59]'
+  id: totrans-165
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: 'Next we write a derived class, which contains an intermediate buffer for decoded
     or generated sound data. It does not implement `StreamWaveData()`, but implements
     the `GetWaveData()` and `GetWaveDataSize()` methods:'
+  id: totrans-166
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE60]'
+  id: totrans-167
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: 'The `FBufferUsed` field holds the number of bytes used in the `FBuffer` vector.
     Now we modify the `AudioSource` class to support our new streaming data providers.
     We do not want cracks or interruptions in the playback process, so we use a queue
     of buffers instead of the single buffer that we used in a single-block sound playback.
     To do this, we first declare a buffer counter and an array of buffer IDs:'
+  id: totrans-168
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE61]'
+  id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: 'We leave the implementations of the `LoopSound()`, `Stop()`, `Pause()`, `IsPlaying()`,
     and `SetVolume()` member functions, constructor, and destructor unchanged. The
     `BindWaveform()` method now generates buffers if the associated wave data provider
     supports streaming:'
+  id: totrans-170
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE62]'
+  id: totrans-171
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: 'The `Play()` method invokes the `alSourcePlay()` function and adds buffers
     to the queue in the streaming mode:'
+  id: totrans-172
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE63]'
+  id: totrans-173
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: 'Fill both audio buffers and submit them into the OpenAL API:'
+  id: totrans-174
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE64]'
+  id: totrans-175
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'Now that we are using more than one buffer, we change `FBufferID` to `FBufferID[0]`
     in the `UnqueueAll()` method:'
+  id: totrans-176
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE65]'
+  id: totrans-177
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: 'Finally, as streaming is a continuous process and not a fire-and-forget operation,
     we provide the `Update()` method, which pulls an appropriate amount of data from
     `iWaveDataProvider`:'
+  id: totrans-178
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE66]'
+  id: totrans-179
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: 'In the `Update()` method, we use the `StreamBuffer()` member function, which
     does the job of filling the buffer with decoded or generated data from the provider:'
+  id: totrans-180
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE67]'
+  id: totrans-181
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: 'The `BUFFER_SIZE` constant is set to be big enough to hold the data for a couple
     of seconds of streamed data:'
+  id: totrans-182
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE68]'
+  id: totrans-183
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: Note
+  id: totrans-184
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
 - en: 'The value `352800` is derived as follows:'
+  id: totrans-185
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '*2 channels × 44,100 samples per second × 2 bytes per sample × 2 seconds =
     352,800 bytes*.'
+  id: totrans-186
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-187
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The code in this recipe does not implement the `StreamWaveData()` method. To
     hear something from the speakers, we write the `ToneGenerator` class, which generates
     a pure sine wave as the output data. This class is derived from `StreamingWaveDataProvider`:'
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE69]'
+  id: totrans-189
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: 'The parameters of the signal and an internal sample counter are declared first:'
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE70]'
+  id: totrans-191
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: 'The constructor sets the sound data parameters and pre-allocates the buffer
     space:'
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE71]'
+  id: totrans-193
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: 'The main routine of this class calculates the sine function, keeping track
     of the current sample index to make the queue of sound buffers contain all the
     values:'
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE72]'
+  id: totrans-195
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: 'The argument `t` for the sine function is calculated from the local index `i`
     and the phase value named `LastOffset`:'
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE73]'
+  id: totrans-197
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: 'The following lines convert a single floating-point value to a signed word.
     Such conversion is necessary because the digital audio hardware only works with
     integer data:'
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE74]'
+  id: totrans-199
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: 'Next we increment the generated sample counter while keeping it inside the
     `0…FSignalFreq-1` range:'
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE75]'
+  id: totrans-201
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: 'At the end, the number of generated bytes is returned:'
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE76]'
+  id: totrans-203
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE76]'
 - en: 'We can now use the `AudioSource` class to stream the sound. Once the audio
     source is created, we attach a new streaming provider that generates a 440 Hz
     sine waveform:'
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE77]'
+  id: totrans-205
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE77]'
 - en: 'In the infinite loop, we constantly update the source, forcing it to generate
     sound data:'
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE78]'
+  id: totrans-207
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE78]'
 - en: There's more…
+  id: totrans-208
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: It is easy to notice that in the `ToneGenerator::StreamWaveData()` member function,
     we can use any formula, not just the sine function. We encourage the reader to
     experiment and create some sort of software synthesizer.
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
 - en: Decoding Ogg Vorbis files
+  id: totrans-210
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: Ogg Vorbis is a widely used, free, open, and patent-free audio compression format.
     It is comparable to other formats used to store and play digital music, such as
     MP3, VQF, and AAC.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-212
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: The reader should be familiar with the sound streaming technique from the previous
     recipe. The details on the `.ogg` container file format and the Vorbis audio compression
     algorithm can be found at [http://xiph.org](http://xiph.org).
+  id: totrans-213
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it...
+  id: totrans-214
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'We add the `IsEOF()` method to the `iWaveDataProvider` interface. This is used
     to inform `AudioSource` when the sound is finished:'
+  id: totrans-215
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE79]'
+  id: totrans-216
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE79]'
 - en: 'Another method we add is `Seek()`, which rewinds the audio stream:'
+  id: totrans-217
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE80]'
+  id: totrans-218
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE80]'
 - en: 'In the `DecodingProvider` class, we implement the `StreamWaveData()` member
     function, which reads the decoded sound data from a source memory block using
     the `ReadFromFile()` method:'
+  id: totrans-219
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE81]'
+  id: totrans-220
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE81]'
 - en: 'The `FLoop` flag tells the decoder to rewind if an end of stream is encountered
     and start playback again from the beginning:'
+  id: totrans-221
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE82]'
+  id: totrans-222
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE82]'
 - en: 'The main streaming routine attempts to read more data from the source memory
     block:'
+  id: totrans-223
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE83]'
+  id: totrans-224
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE83]'
 - en: 'We fill an unused part of the buffer with zeros to avoid the noise:'
+  id: totrans-225
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE84]'
+  id: totrans-226
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE84]'
 - en: 'At the end of file, we return zero as the decoded data size:'
+  id: totrans-227
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE85]'
+  id: totrans-228
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE85]'
 - en: 'Next, we try to read from the source until we collect the `Size` bytes:'
+  id: totrans-229
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE86]'
+  id: totrans-230
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE86]'
 - en: 'If we have the data, increment the counter:'
+  id: totrans-231
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE87]'
+  id: totrans-232
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE87]'
 - en: 'If the number of bytes is zero, we have reached the end of the file:'
+  id: totrans-233
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE88]'
+  id: totrans-234
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE88]'
 - en: 'The `FLoop` flag tells us to rewind the stream to the beginning:'
+  id: totrans-235
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE89]'
+  id: totrans-236
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE89]'
 - en: 'Otherwise, we have an error in the stream:'
+  id: totrans-237
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE90]'
+  id: totrans-238
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE90]'
 - en: 'The number of bytes buffered is now the number of bytes read from the file:'
+  id: totrans-239
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE91]'
+  id: totrans-240
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE91]'
 - en: 'The `ReadFromFile()` function is purely virtual here, and the implementations
     are in the derived classes:'
+  id: totrans-241
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE92]'
+  id: totrans-242
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE92]'
 - en: 'In [Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting Common
     Libraries*, we compiled Ogg and Vorbis static libraries. We use them now in the
     `OggProvider` class, which implements the actual sound data decoding:'
+  id: totrans-243
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE93]'
+  id: totrans-244
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE93]'
 - en: 'The state of the decoder resides in three variables:'
+  id: totrans-245
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE94]'
+  id: totrans-246
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE94]'
 - en: 'The constructor initializes Ogg and Vorbis libraries. The `Callbacks` structure
     contains pointers to the functions, which allows the Ogg library to read the data
     from our memory block using our virtual filesystem streams:'
+  id: totrans-247
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE95]'
+  id: totrans-248
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE95]'
 - en: 'Fill in the `Callbacks` structure and initialize the file reader:'
+  id: totrans-249
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE96]'
+  id: totrans-250
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE96]'
 - en: 'Declare the `vorbis_info` structure to read the duration of an audio stream.
     Store the information about the stream:'
+  id: totrans-251
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE97]'
+  id: totrans-252
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE97]'
 - en: 'The `FBitsPerSample` structure is set to 16 bits, and later we tell the decoder
     to output the sound data as a 16 bit signal:'
+  id: totrans-253
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE98]'
+  id: totrans-254
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE98]'
 - en: 'In the destructor, `FVorbisFile` is cleared:'
+  id: totrans-255
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE99]'
+  id: totrans-256
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE99]'
 - en: 'The `ReadFromFile()` function uses the OGG library for stream decoding:'
+  id: totrans-257
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE100]'
+  id: totrans-258
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE100]'
 - en: 'Here, we assume that we are running on a little-endian CPU, such as Intel Atom,
     Intel Core, or some other ARM processor usually encountered in mobile Android
     devices ([http://en.wikipedia.org/wiki/Endianness](http://en.wikipedia.org/wiki/Endianness)).
     If this is not the case, for example, the processor is a PowerPC or MIPS in a
     big-endian mode, you should provide `1` as an argument to the `OGG_ov_read()`
     function:'
+  id: totrans-259
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE101]'
+  id: totrans-260
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE101]'
 - en: 'The `Seek()` member function rewinds the stream to the specified time:'
+  id: totrans-261
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE102]'
+  id: totrans-262
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE102]'
 - en: 'At the end of the class definition, the `OGG_Callbacks.h` file is included
     where static callback functions are implemented:'
+  id: totrans-263
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE103]'
+  id: totrans-264
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE103]'
 - en: The functions in the `OGG_Callbacks.h` file implement a `FILE*`-like interface,
     which the OGG library uses to read our memory block. We pass an instance of `OggProvider`
     as the `void* DataSource` argument in all of these functions.
+  id: totrans-265
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'The `OGG_ReadFunc()` function reads the specified number of bytes and checks
     for the end of the data:'
+  id: totrans-266
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE104]'
+  id: totrans-267
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE104]'
 - en: 'The `OGG_SeekFunc()` function sets the current read position equal to the value
     of `Offset`:'
+  id: totrans-268
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE105]'
+  id: totrans-269
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE105]'
 - en: 'Prevent the position from outrunning the end of stream:'
+  id: totrans-270
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE106]'
+  id: totrans-271
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE106]'
 - en: 'Since we use the memory block as a data source, the `OGG_CloseFunc()` function
     returns zero immediately because we don''t need to close any handles:'
+  id: totrans-272
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE107]'
+  id: totrans-273
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE107]'
 - en: 'The `OGG_TellFunc()` function returns the current read position:'
+  id: totrans-274
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE108]'
+  id: totrans-275
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE108]'
 - en: How it works…
+  id: totrans-276
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'We initialize the OpenAL as in the previous recipes and bind `OggProvider`
     as a data source for the `AudioSource` instance:'
+  id: totrans-277
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE109]'
+  id: totrans-278
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE109]'
 - en: 'Update the audio source in a loop, just as we do with `ToneGenerator`:'
+  id: totrans-279
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE110]'
+  id: totrans-280
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE110]'
 - en: The `LoadFileAsBlob()` function is the same as the one we used to load`.wav`
     files.
+  id: totrans-281
   prefs: []
   type: TYPE_NORMAL
 - en: Decoding tracker music using ModPlug
+  id: totrans-282
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -1238,70 +1650,93 @@
     `Notes` correspond to the playback speed of a sample. We use the **libmodplug**
     library to decode the most popular tracker music file formats, such as `.it`,
     `.xm`, and `.mod`.
+  id: totrans-283
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-284
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: Check out the most recent version of libmodplug at [http://modplug-xmms.sourceforge.net](http://modplug-xmms.sourceforge.net).
+  id: totrans-285
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it...
+  id: totrans-286
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The ModPlug library allows us to implement another class derived from `DecodingProvider`,
     called `ModPlugProvider`. The library supports direct decoding of the memory blocks,
     so we don''t have to implement any kind of I/O callbacks:'
+  id: totrans-287
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE111]'
+  id: totrans-288
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE111]'
 - en: 'As a state, this class contains the `ModPlugFile` structure:'
+  id: totrans-289
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE112]'
+  id: totrans-290
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE112]'
 - en: 'The sole constructor initializes the `ModPlugFile` field:'
+  id: totrans-291
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE113]'
+  id: totrans-292
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE113]'
 - en: 'The destructor unloads the file:'
+  id: totrans-293
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE114]'
+  id: totrans-294
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE114]'
 - en: 'The `ReadFromFile()` method calls the ModPlug''s reading function:'
+  id: totrans-295
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE115]'
+  id: totrans-296
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE115]'
 - en: 'To rewind the source stream, we use the `ModPlug_Seek()` member function:'
+  id: totrans-297
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE116]'
+  id: totrans-298
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE116]'
 - en: How it works...
+  id: totrans-299
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -1309,13 +1744,16 @@
     we suggest modifying the `3_AL_PlayingOGG` source code. The only required modification
     is the replacement of `OggProvider` by `ModPlugProvider`. For testing, you have
     the `test.it` file in the `3_AL_PlayingOGG` folder.
+  id: totrans-300
   prefs: []
   type: TYPE_NORMAL
 - en: See also
+  id: totrans-301
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: '*Decoding Ogg Vorbis files*'
+  id: totrans-302
   prefs:
   - PREF_UL
   type: TYPE_NORMAL

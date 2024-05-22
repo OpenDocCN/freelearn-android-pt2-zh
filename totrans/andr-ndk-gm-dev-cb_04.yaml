@@ -1,92 +1,130 @@
 - en: Chapter 4. Organizing a Virtual Filesystem
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第四章 组织虚拟文件系统
 - en: '***File**: An object that can be written to, or read from, or both. A file
     has certain attributes, including type. Common types of files include regular
     files and directories. Other types of files, such as symbolic links, may be supported
     by the implementation.*'
+  id: totrans-1
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
+  zh: '***文件*：可以写入、读取或同时进行两者的对象。文件具有某些属性，包括类型。常见的文件类型包括普通文件和目录。其他类型的文件，如符号链接，可能由实现支持。*'
 - en: ''
+  id: totrans-2
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
 - en: '***Filesystem**: A collection of files and certain of their attributes.*'
+  id: totrans-3
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
+  zh: '***文件系统*：一系列文件及其某些属性的集合。*'
 - en: ''
+  id: totrans-4
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
 - en: '*(Boost documentation, [http://www.boost.org](http://www.boost.org))*'
+  id: totrans-5
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
+  zh: （Boost文档，[http://www.boost.org](http://www.boost.org)）
 - en: 'In this chapter we will cover:'
+  id: totrans-6
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Abstracting file streams
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 抽象文件流
 - en: Implementing portable memory-mapped files
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 实现可移植的内存映射文件
 - en: Implementing file writers
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 实现文件写入器
 - en: Working with in-memory files
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用内存文件
 - en: Implementing mount points
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 实现挂载点
 - en: Enumerating files in the .zip archives
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 列举.zip档案中的文件
 - en: Decompressing files from the .zip archives
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 从.zip压缩文件中解压文件
 - en: Loading resources asynchronously
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 异步加载资源
 - en: Storing application data
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 存储应用程序数据
 - en: Introduction
+  id: totrans-16
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: Files are the building blocks of any computer system. This chapter deals with
     portable handling of read-only application resources, and provides recipes to
     store the application data. We also use the code from [Chapter 3](ch03.html "Chapter 3. Networking"),
     *Networking,* to organize asynchronous loading of resources from the `.zip` archives.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 文件是任何计算机系统的构建块。本章处理只读应用程序资源的可移植处理，并提供存储应用程序数据的方案。我们还使用[第三章](ch03.html "第三章 网络通信")*网络通信*中的代码，组织从`.zip`档案中异步加载资源。
 - en: Let us briefly consider the problems covered in this chapter. The first one
     is the access to application data files. Often, application data for desktop operating
     systems resides in the same folder as the executable file. With Android, things
     get a little more complicated. The application files are packaged in the `.apk`
     file, and we simply cannot use the standard `fopen()`-like functions, or the `std::ifstream`
     and `std::ofstream` classes.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们简要考虑本章所涉及的问题。第一个问题是访问应用程序数据文件。通常，桌面操作系统的应用程序数据与可执行文件位于同一文件夹中。在Android上，事情会变得有些复杂。应用程序文件被打包在`.apk`文件中，我们根本无法使用标准的`fopen()`类函数，或者`std::ifstream`和`std::ofstream`类。
 - en: The second problem results from the different rules for the filenames and paths.
     Windows and Linux-based systems use different path separator characters, and provide
     different low-level file access APIs.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 第二个问题源于文件名和路径的不同规则。Windows和基于Linux的系统使用不同的路径分隔符字符，并提供不同的低级文件访问API。
 - en: The third problem comes from the fact that file I/O operations can easily become
     the slowest part in the whole application. User experience can become problematic
     if interaction lags are involved. To avoid delays, we should perform the I/O on
@@ -94,120 +132,174 @@
     thread. To implement this, we have all the tools required, as discussed in [Chapter
     3](ch03.html "Chapter 3. Networking"), *Networking* — worker threads, tasks, mutexes,
     and asynchronous event queues.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 第三个问题源于文件I/O操作很容易成为整个应用程序中最慢的部分。如果涉及到交互延迟，用户体验可能会出现问题。为了避免延迟，我们应该在单独的线程上执行I/O操作，并在另一个线程上处理`Read()`操作的结果。为了实现这一点，我们拥有所需的所有工具，如[第三章](ch03.html
+    "第三章 网络通信")*网络通信*所述——工作线程、任务、互斥量和异步事件队列。
 - en: We start with abstract I/O interfaces, implement a portable `.zip` archives
     handling approach, and proceed to asynchronous resources loading.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们从抽象的I/O接口开始，实现可移植的`.zip`档案处理方法，并继续进行异步资源加载。
 - en: Abstracting file streams
+  id: totrans-22
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 抽象文件流
 - en: File I/O APIs differ slightly between Windows and Android (POSIX) operating
     systems, and we have to hide these differences behind a consistent set of C++
     interfaces. All libraries we have compiled in [Chapter 2](ch02.html "Chapter 2. Porting
     Common Libraries"), *Porting Common Libraries* use their own callbacks and interfaces.
     In order to unify them, we shall write adapters in this and subsequent chapters.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 文件I/O API在Windows和Android（POSIX）操作系统之间略有不同，我们必须将这些差异隐藏在一系列一致的C++接口后面。我们在[第二章](ch02.html
+    "第二章 移植通用库")*移植通用库*中编译的所有库都使用它们自己的回调和接口。为了统一它们，我们将在本章及后续章节中编写适配器。
 - en: Getting ready
+  id: totrans-24
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Please make sure you are familiar with the UNIX concept of the file and memory
     mapping. Wikipedia may be a good start ([http://en.wikipedia.org/wiki/Memory-mapped_file](http://en.wikipedia.org/wiki/Memory-mapped_file)).
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 请确保你熟悉UNIX关于文件和内存映射的概念。维基百科可能是一个不错的起点（[http://en.wikipedia.org/wiki/Memory-mapped_file](http://en.wikipedia.org/wiki/Memory-mapped_file)）。
 - en: How to do it...
+  id: totrans-26
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'From now on, our programs will read input data using the following simple interface.
     The base class `iObject` is used to add an intrusive reference counter to instances
     of this class:'
+  id: totrans-27
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从现在开始，我们的程序将使用以下简单的接口来读取输入数据。基类`iObject`用于向此类实例添加侵入式引用计数器：
 - en: '[PRE0]'
+  id: totrans-28
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'The following are a few methods that take advantage of memory-mapped files:'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 以下是一些利用内存映射文件的方法：
 - en: '[PRE1]'
+  id: totrans-30
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: This interface supports both memory-mapped access using the `MapStream()` and
     `MapStreamFromCurrentPos()` member functions, and sequential access with the `BlockRead()`
     and `Seek()` methods.
+  id: totrans-31
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 此接口支持使用`MapStream()`和`MapStreamFromCurrentPos()`成员函数进行内存映射访问，以及使用`BlockRead()`和`Seek()`方法的顺序访问。
 - en: 'To write some data to the storage, we use an output stream interface, as follows
     (again, the base class `iObject` is used to add a reference counter):'
+  id: totrans-32
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了将一些数据写入存储，我们使用了如下的输出流接口（同样，基类`iObject`用于添加引用计数器）：
 - en: '[PRE2]'
+  id: totrans-33
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'The `Seek()`, `GetFileSize()`, `GetFilePos()`, and filename-related methods
     of the `iIStream` interface can be implemented in a single class called `FileMapper`:'
+  id: totrans-34
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`iIStream`接口的`Seek()`、`GetFileSize()`、`GetFilePos()`以及与文件名相关的方法可以在一个名为`FileMapper`的单一类中实现：'
 - en: '[PRE3]'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Read a continuous block of data from this stream and return the number of bytes
     actually read:'
+  id: totrans-36
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从此流中读取连续的数据块，并返回实际读取的字节数：
 - en: '[PRE4]'
+  id: totrans-37
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Return zero if we have already read everything:'
+  id: totrans-38
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果我们已经读取了所有内容，则返回零：
 - en: '[PRE5]'
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Advance the current position and return the number of copied bytes:'
+  id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 前进当前位置并返回复制的字节数：
 - en: '[PRE6]'
+  id: totrans-41
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'The `FileMapper` uses the following `iRawFile` interface to abstract the data
     access:'
+  id: totrans-42
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`FileMapper`使用以下`iRawFile`接口来抽象数据访问：'
 - en: '[PRE7]'
+  id: totrans-43
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Along with the trivial `GetFileName()` and `SetFileName()` methods implemented
     here, in the following recipes we implement the `GetFileData()` and `GetFileSize()`
     methods.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了这里实现的琐碎的`GetFileName()`和`SetFileName()`方法，在以下食谱中，我们实现了`GetFileData()`和`GetFileSize()`方法。
 - en: How it works...
+  id: totrans-45
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: The `iIStream::BlockRead()` method is useful when handling non-seekable streams.
     For the fastest access possible, we use memory-mapped files implemented in the
     following recipe. The `MapStream()` and `MapStreamFromCurrentPos()` methods are
@@ -216,319 +308,482 @@
     The `iOStream::Write()` method works similar to the standard `ofstream::write()`
     function. Refer to the project `1_AbstractStreams` for the full source code of
     this and the following recipe.
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: '`iIStream::BlockRead()`方法在处理不可查找流时非常有用。为了尽可能快地访问，我们使用了以下食谱中实现的内存映射文件。`MapStream()`和`MapStreamFromCurrentPos()`方法旨在方便地提供对内存映射文件的访问。这些方法返回一个指向内存的指针，你的文件或文件的一部分就在这里映射。`iOStream::Write()`方法与标准的`ofstream::write()`函数类似。有关此食谱及以下食谱的完整源代码，请参考项目`1_AbstractStreams`。'
 - en: There's more...
+  id: totrans-47
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: The important problem while programming for multiple platforms, in our case
     for Windows and Linux-based Android, is the conversion of filenames.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 在为多个平台编程时，对我们来说，在Windows和基于Linux的Android上，文件名转换是一个重要的问题。
 - en: 'We define the following `PATH_SEPARATOR` constant, using OS-specific macros,
     to determine the path separator character in the following way:'
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们定义了以下`PATH_SEPARATOR`常量，使用特定于操作系统的宏，以以下方式确定路径分隔符字符：
 - en: '[PRE8]'
+  id: totrans-50
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'The following simple function helps us to make sure we use valid filenames
     for our operating system:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下简单的函数帮助我们确保为我们的操作系统使用有效的文件名：
 - en: '[PRE9]'
+  id: totrans-52
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: See also
+  id: totrans-53
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Implementing portable memory-mapped files*'
+  id: totrans-54
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*实现可移植的内存映射文件*'
 - en: '*Working with in-memory files*'
+  id: totrans-55
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*使用内存中文件*'
 - en: Implementing portable memory-mapped files
+  id: totrans-56
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 实现可移植的内存映射文件
 - en: Modern operating systems provide a powerful mechanism called the memory-mapped
     files. In short, it allows us to map the contents of the file into the application
     address space. In practice, this means we can treat files as usual arrays and
     access them using C pointers.
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 现代操作系统提供了一个强大的机制，称为内存映射文件。简而言之，它允许我们将文件内容映射到应用程序地址空间。在实践中，这意味着我们可以像使用普通数组一样处理文件，并使用C指针访问它们。
 - en: Getting ready
+  id: totrans-58
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: To understand the implementation of the interfaces from the previous recipe
     we recommend to read about memory mapping. The overview of this mechanism implementation
     in Windows can be found on the MSDN page at [http://msdn.microsoft.com/en-us/library/ms810613.aspx](http://msdn.microsoft.com/en-us/library/ms810613.aspx).
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了理解前一个食谱中接口的实现，我们建议阅读有关内存映射的内容。在 MSDN 页面可以找到此机制在 Windows 中的实现概述，链接为：[http://msdn.microsoft.com/en-us/library/ms810613.aspx](http://msdn.microsoft.com/en-us/library/ms810613.aspx)。
 - en: To find out more about memory mapping, the reader may refer to the `mmap()`
     function documentation.
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 要了解更多关于内存映射的信息，读者可以参考 `mmap()` 函数的文档。
 - en: How to do it...
+  id: totrans-61
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: In Windows, memory-mapped files are created using the `CreateFileMapping()`
     and `MapViewOfFile()` API calls. Android uses the `mmap()` function, which works
     pretty much the same way. Here we declare the `RawFile` class implementing the
     `iRawFile` interface.
+  id: totrans-62
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 Windows 中，内存映射文件是通过 `CreateFileMapping()` 和 `MapViewOfFile()` API 调用创建的。Android
+    使用 `mmap()` 函数，其工作方式几乎相同。这里我们声明实现了 `iRawFile` 接口的 `RawFile` 类。
 - en: '`RawFile` holds a pointer to a memory-mapped file and its size:'
+  id: totrans-63
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`RawFile` 持有一个指向内存映射文件的指针及其大小：'
 - en: '[PRE10]'
+  id: totrans-64
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'For the Windows version, we use two handles for the file and memory-mapping
     object, and for the Android, we use only the file handle:'
+  id: totrans-65
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 对于 Windows 版本，我们使用两个句柄分别指向文件和内存映射对象，而对于 Android，我们只使用文件句柄：
 - en: '[PRE11]'
+  id: totrans-66
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'We use the following function to open the file and create the memory mapping:'
+  id: totrans-67
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们使用以下函数来打开文件并创建内存映射：
 - en: '[PRE12]'
+  id: totrans-68
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'At first, we need to obtain a valid file descriptor associated with the file:'
+  id: totrans-69
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，我们需要获取与文件关联的有效文件描述符：
 - en: '[PRE13]'
+  id: totrans-70
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Using the file descriptor, we can create a file mapping. Here we omit error
     checks for the sake of clarity. However, the example in the supplementary materials
     contains more error checks:'
+  id: totrans-71
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用文件描述符，我们可以创建一个文件映射。这里为了清晰起见，我们省略了错误检查。但是，补充材料中的示例包含了更多的错误检查：
 - en: '[PRE14]'
+  id: totrans-72
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'The correct deinitialization function closes all the handles:'
+  id: totrans-73
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 正确的逆初始化函数会关闭所有的句柄：
 - en: '[PRE15]'
+  id: totrans-74
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'The main functions of the `iRawFile` interface, `GetFileData` and `GetFileSize`,
     have trivial implementation here:'
+  id: totrans-75
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`iRawFile` 接口的主要函数 `GetFileData` 和 `GetFileSize` 在这里有简单的实现：'
 - en: '[PRE16]'
+  id: totrans-76
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: How it works...
+  id: totrans-77
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: 'To use the `RawFile` class we create an instance and wrap it into a `FileMapper`
     class instance:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使用 `RawFile` 类，我们需要创建一个实例并将其包裹进 `FileMapper` 类的实例中：
 - en: '[PRE17]'
+  id: totrans-79
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'The `FM` object can be used with any function supporting the `iIStream` interface.
     The hierarchy of all our `iRawFile` implementations looks like what is shown in
     the following figure:'
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: '`FM` 对象可以与任何支持 `iIStream` 接口的功能一起使用。我们所有的 `iRawFile` 实现层次结构如下所示：'
 - en: '![How it works...](img/7785_04_1.jpg)'
+  id: totrans-81
   prefs: []
   type: TYPE_IMG
+  zh: '![它是如何工作的...](img/7785_04_1.jpg)'
 - en: Implementing file writers
+  id: totrans-82
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 实现文件写入器
 - en: Quite frequently, our application might want to store some of its data on the
     disk. Another typical use case we have already encountered is the downloading
     of some file from the network into a memory buffer. Here, we implement two variations
     of the `iOStream` interface for the ordinary and in-memory files.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常情况下，我们的应用程序可能希望将其一些数据存储在磁盘上。我们已经遇到过的另一个典型用例是从网络下载文件到内存缓冲区。这里，我们为普通文件和内存文件实现了
+    `iOStream` 接口的两种变体。
 - en: How to do it...
+  id: totrans-84
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Let us derive the `FileWriter` class from the `iOStream` interface. We add
     the `Open()` and `Close()` member functions on top of the `iOStream` interface
     and carefully implement the `Write()` operation. Our output stream implementation
     does not use memory-mapped files and uses ordinary file descriptors, as shown
     in the following code:'
+  id: totrans-85
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让我们从 `iOStream` 接口派生 `FileWriter` 类。我们在 `iOStream` 接口的基础上添加了 `Open()` 和 `Close()`
+    成员函数，并仔细实现了 `Write()` 操作。我们的输出流实现不使用内存映射文件，而是使用普通文件描述符，如下代码所示：
 - en: '[PRE18]'
+  id: totrans-86
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'We split Android and Windows-specific code paths using defines:'
+  id: totrans-87
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们使用定义分割 Android 和 Windows 特定的代码路径：
 - en: '[PRE19]'
+  id: totrans-88
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'The same technique is used in the other methods. The difference between both
     OS systems is is trivial, so we decided to keep everything inside a single class
     and separate the code using defines:'
+  id: totrans-89
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 同样的技术在其他方法中也被使用。两个操作系统之间的差异微不足道，因此我们决定将所有内容放在一个单一类别中，并通过定义来分隔代码：
 - en: '[PRE20]'
+  id: totrans-90
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: Note
+  id: totrans-91
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: However, things may get more complex if you decide to support more operating
     systems. It can be a good refactoring exercise.
+  id: totrans-92
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 然而，如果你决定支持更多的操作系统，事情可能会变得更加复杂。这将是一个很好的重构练习。
 - en: '[PRE21]'
+  id: totrans-93
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: How it works…
+  id: totrans-94
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的…
 - en: 'Now we can also present an implementation of the `iOStream` that stores everything
     in a memory block. To store arbitrary data in a memory block, we declare the `Blob`
     class, as shown in the following code:'
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们还可以展示一个将所有内容存储在内存块中的 `iOStream` 实现。为了在内存块中存储任意数据，我们声明了 `Blob` 类，如下代码所示：
 - en: '[PRE22]'
+  id: totrans-96
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'Set the blob data pointer to some external memory block:'
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 将 Blob 数据指针设置到某个外部内存块：
 - en: '[PRE23]'
+  id: totrans-98
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Direct access to data inside this blob:'
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 直接访问此 Blob 内的数据：
 - en: '[PRE24]'
+  id: totrans-100
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'Get the current size of the blob:'
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 获取 Blob 的当前大小：
 - en: '[PRE25]'
+  id: totrans-102
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Check if this blob is responsible for managing the dynamic memory it uses:'
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查这个 Blob 是否负责管理它使用的动态内存：
 - en: '[PRE26]'
+  id: totrans-104
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Increase the size of the blob and add more data to it. This method is very
     useful in a network downloader:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 增加 Blob 的大小并向其中添加更多数据。这个方法在网络下载器中非常有用：
 - en: '[PRE27]'
+  id: totrans-106
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'There are lots of other methods in this class. You can find the full source
     code in the `Blob.h` file. We use this `Blob` class, and declare the `MemFileWriter`
     class, which implements our `iOStream` interface, in the following way:'
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个类中还有很多其他方法。你可以在 `Blob.h` 文件中找到完整的源代码。我们使用这个 `Blob` 类，并声明了 `MemFileWriter`
+    类，它以下列方式实现我们的 `iOStream` 接口：
 - en: '[PRE28]'
+  id: totrans-108
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'Change the absolute position inside a file, where new data will be written
     to:'
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 改变文件内部的绝对位置，新数据将写入此处：
 - en: '[PRE29]'
+  id: totrans-110
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'Check if we are allowed to resize the blob:'
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查我们是否允许调整 Blob 的大小：
 - en: '[PRE30]'
+  id: totrans-112
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'And try to resize it:'
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 并尝试调整它的大小：
 - en: '[PRE31]'
+  id: totrans-114
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Write data to the current position of this file:'
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 将数据写入此文件的当前位置：
 - en: '[PRE32]'
+  id: totrans-116
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'Ensure there is enough space:'
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 确保有足够的空间：
 - en: '[PRE33]'
+  id: totrans-118
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'Write the actual data:'
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 写入实际数据：
 - en: '[PRE34]'
+  id: totrans-120
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: We omit the trivial implementations of `GetFileName()`, `GetFilePos()`, `GetMaxSize()`,
     `SetContainer()`, `GetContainer()`, `GetMaxSize()`, and `SetMaxSize()` member
     functions, along with fields declarations. You will find the full source code
     of them in the code bundle of the book.
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们省略了 `GetFileName()`、`GetFilePos()`、`GetMaxSize()`、`SetContainer()`、`GetContainer()`、`GetMaxSize()`
+    和 `SetMaxSize()` 成员函数的简单实现以及字段声明。你可以在本书的代码包中找到它们的完整源代码。
 - en: See also
+  id: totrans-122
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Working with in-memory files*'
+  id: totrans-123
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*使用内存文件工作*'
 - en: Working with in-memory files
+  id: totrans-124
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用内存文件工作
 - en: Sometimes it is very convenient to be able to treat some arbitrary in-memory
     runtime generated data as if it were in a file. As an example, let's consider
     using a JPEG image downloaded from a photo hosting, as an OpenGL texture. We do
@@ -536,169 +791,247 @@
     also do not want to write separate code for loading images from memory. Since
     we have our abstract `iIStream` and `iRawFile` interfaces, we just implement the
     latter to support memory blocks as the data source.
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 有时能够将某些任意的运行时生成的内存数据当作文件来处理非常方便。例如，考虑使用从照片托管服务下载的 JPEG 图像作为 OpenGL 纹理。我们不需要将其保存到内部存储中，因为这是浪费
+    CPU 时间。我们也不想编写从内存加载图像的单独代码。由于我们有抽象的 `iIStream` 和 `iRawFile` 接口，我们只需实现后者以支持内存块作为数据源。
 - en: Getting ready
+  id: totrans-126
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: In the previous recipes, we already used the `Blob` class, which is a simple
     wrapper around a `void*` buffer.
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的食谱中，我们已经使用了 `Blob` 类，它是一个围绕 `void*` 缓冲区的简单包装。
 - en: How to do it...
+  id: totrans-128
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Our `iRawFile` interface consists of two methods: `GetFileData()` and `GetFileSize()`.
     We just delegate these calls to an instance of `Blob`:'
+  id: totrans-129
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们的 `iRawFile` 接口包括两个方法：`GetFileData()` 和 `GetFileSize()`。我们只需将这些调用委托给 `Blob`
+    的一个实例：
 - en: '[PRE35]'
+  id: totrans-130
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Sometimes it is useful to avoid the overhead of using a `Blob` object, and
     for such cases we provide another class, `MemRawFile`, that holds a raw pointer
     to a memory block and optionally takes care of the memory allocation:'
+  id: totrans-131
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 有时避免使用 `Blob` 对象的开销很有用，为此我们提供了另一个类 `MemRawFile`，它持有一个指向内存块的原始指针，并可选地负责内存分配：
 - en: '[PRE36]'
+  id: totrans-132
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: How it works...
+  id: totrans-133
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: We use the `MemRawFile` as an adapter for the memory block extracted from a
     `.zip` file and `ManagedMemRawFile` as the container for data downloaded from
     photo sites.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用 `MemRawFile` 作为从 `.zip` 文件提取的内存块的适配器，以及 `ManagedMemRawFile` 作为从照片网站下载的数据的容器。
 - en: See also
+  id: totrans-135
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '[Chapter 3](ch03.html "Chapter 3. Networking"), *Networking*'
+  id: totrans-136
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第3章](ch03.html "第3章.网络"), *网络*'
 - en: '[Chapter 6](ch06.html "Chapter 6. Unifying OpenGL ES 3 and OpenGL 3"), *Unifying
     OpenGL ES 3 and OpenGL3*'
+  id: totrans-137
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第6章](ch06.html "第6章.统一OpenGL ES 3和OpenGL 3"), *统一OpenGL ES 3和OpenGL3*'
 - en: Implementing mount points
+  id: totrans-138
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 实现挂载点
 - en: It is convenient to access all of the application's resources as if they all
     were in the same folder tree, no matter where they actually come from—from an
     actual file, a `.zip` archive on disk, or an in-memory archive downloaded over
     a network. Let us implement an abstraction layer for this kind of access.
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样很方便，无论应用程序资源的实际来源如何——来自实际文件、磁盘上的 `.zip` 存档，还是通过网络下载的内存中存档——都可以像它们都在同一个文件夹树中一样访问。让我们为此类访问实现一个抽象层。
 - en: Getting ready
+  id: totrans-140
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: We assume that the reader is familiar with the concepts of NTFS reparse points
     ([http://en.wikipedia.org/wiki/NTFS_reparse_point](http://en.wikipedia.org/wiki/NTFS_reparse_point)),
     UNIX symbolic links ([http://en.wikipedia.org/wiki/Symbolic_link](http://en.wikipedia.org/wiki/Symbolic_link)),
     and directory mounting procedures ([http://en.wikipedia.org/wiki/Mount_(Unix)](http://en.wikipedia.org/wiki/Mount_(Unix))).
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们假设读者熟悉 NTFS 重解析点（[http://en.wikipedia.org/wiki/NTFS_reparse_point](http://en.wikipedia.org/wiki/NTFS_reparse_point)）、UNIX
+    符号链接（[http://en.wikipedia.org/wiki/Symbolic_link](http://en.wikipedia.org/wiki/Symbolic_link)）和目录挂载过程（[http://en.wikipedia.org/wiki/Mount_(Unix)](http://en.wikipedia.org/wiki/Mount_(Unix))）的概念。
 - en: How to do it...
+  id: totrans-142
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何实现...
 - en: Our folders tree will consist of abstract mount points. A single mount point
     can correspond to a path to an existing OS folder, a `.zip` archive on disk, a
     path inside a `.zip` archive, or it can even represent a removed network path.
+  id: totrans-143
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们的文件夹树将由抽象的挂载点组成。一个单独的挂载点可以对应于现有操作系统文件夹的路径、磁盘上的 `.zip` 存档、`.zip` 存档内的路径，甚至可以表示已移除的网络路径。
 - en: Note
+  id: totrans-144
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Try to extend the proposed framework with network paths mount points.
+  id: totrans-145
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 尝试将建议的框架扩展到网络路径挂载点。
 - en: '[PRE37]'
+  id: totrans-146
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'Check if the file exists at this mount point:'
+  id: totrans-147
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检查此挂载点下是否存在文件：
 - en: '[PRE38]'
+  id: totrans-148
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'Convert a virtual filename, which is the name of this file in our folders tree,
     to a full filename behind this mount point:'
+  id: totrans-149
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将虚拟文件名（这是我们文件夹树中此文件的名称）转换为此挂载点后的完整文件名：
 - en: '[PRE39]'
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: 'We will need to create a file reader that can be used with the `FileMapper`
     class, for the specified virtual file inside this mount point:'
+  id: totrans-151
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们需要创建一个文件阅读器，以便与 `FileMapper` 类一起使用，用于此挂载点内指定的虚拟文件：
 - en: '[PRE40]'
+  id: totrans-152
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'For physical folders we provide a simple implementation that creates instances
     of the `FileMapper` class with the reference to `iRawFile`:'
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 对于物理文件夹，我们提供了一个简单的实现，该实现创建 `FileMapper` 类的实例，并引用 `iRawFile`：
 - en: '[PRE41]'
+  id: totrans-154
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'Create the reader to access the data inside this mount point:'
+  id: totrans-155
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个阅读器以访问此挂载点内的数据：
 - en: '[PRE42]'
+  id: totrans-156
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'The collection of mount points will be called `FileSystem`, as shown in the
     following code:'
+  id: totrans-157
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 挂载点的集合将被命名为 `FileSystem`，如下代码所示：
 - en: '[PRE43]'
+  id: totrans-158
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: How it works...
+  id: totrans-159
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The `MapName()` member function transforms a given virtual filename into a form
     that can be passed to the `CreateReader()` method.
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: '`MapName()` 成员函数将给定的虚拟文件名转换成可以传递给 `CreateReader()` 方法的形式。'
 - en: The `FS_IsFullPath()` function checks if the path starts with the `/` character
     on Android, or contains the `:\` substring on Windows. The `Str_AddTrailingChar()`
     function ensures we have a path separator at the end of the given path.
+  id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: '`FS_IsFullPath()` 函数检查路径是否以 Android 上的 `/` 字符或 Windows 上的 `:\` 子字符串开头。`Str_AddTrailingChar()`
+    函数确保我们在给定路径的末尾有一个路径分隔符。'
 - en: The `FileSystem` object acts as a container of the mount points, and redirects
     the file reader creation to the appropriate points. The `Mount` method determines
     the type of the mount point. If the `PhysicalPath` ends with either `.zip` or
@@ -709,63 +1042,99 @@
     the `iMountPoint::MapName()` method for the filename to make it usable with the
     underlying OS I/O functions. Here we omit the trivial details of the `FMountPoints`
     vector management.
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: '`FileSystem` 对象充当挂载点的容器，并将文件阅读器的创建重定向到适当的点。`Mount` 方法确定挂载点的类型。如果 `PhysicalPath`
+    以 `.zip` 或 `.apk` 子字符串结尾，将创建 `ArchiveMountPoint` 类的实例，否则将实例化 `PhysicalMountPoint`
+    类。`FileExists()` 方法遍历活动的挂载点，并调用 `iMountPoint::FileExists()` 方法。`VirtualNameToPhysical()`
+    函数找到适当的挂载点，并调用 `iMountPoint::MapName()` 方法，以使文件名能够与底层操作系统 I/O 函数一起使用。这里我们省略了 `FMountPoints`
+    向量管理的琐碎细节。'
 - en: There's more...
+  id: totrans-163
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Using our `FileSystem::AddAlias` method, we can create a special mount point
     that decorates a filename:'
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用我们的 `FileSystem::AddAlias` 方法，我们可以创建一个装饰文件名的特殊挂载点：
 - en: '[PRE44]'
+  id: totrans-165
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'Set the alias path:'
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 设置别名路径：
 - en: '[PRE45]'
+  id: totrans-167
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'Set a prefix to be appended to each file in this mount point:'
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 设置一个前缀，以附加到此挂载点中的每个文件：
 - en: '[PRE46]'
+  id: totrans-169
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'Set a pointer to another mount point, which is hidden behind the alias:'
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 设置一个指向隐藏在别名背后的另一个挂载点的指针：
 - en: '[PRE47]'
+  id: totrans-171
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: This decorator class will add the `FAlias` string before any filename passed
     into it. This simple mount point is useful when developing for both Android and
     Windows, because in Android `.apk`, the files reside lower in the folder hierarchy
     than they do in a Windows development folder. Later we determine the folder, where
     our Android application resides, and mount it using the `AliasMountPoint` class.
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个装饰器类会在任何传递给它的文件名前添加`FAlias`字符串。这个简单的挂载点在同时为Android和Windows开发时很有用，因为在Android的`.apk`文件中，文件位于比Windows开发文件夹更低的文件夹层次结构中。稍后我们确定Android应用程序所在的文件夹，并使用`AliasMountPoint`类进行挂载。
 - en: 'As a reminder, the following is the class diagram of our `iMountPoint` interface
     and its implementations:'
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为提醒，以下是我们`iMountPoint`接口及其实现的类图：
 - en: '![There''s more...](img/7785_04_2.jpg)'
+  id: totrans-174
   prefs: []
   type: TYPE_IMG
+  zh: '![更多内容...](img/7785_04_2.jpg)'
 - en: See also
+  id: totrans-175
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Decompressing files from the .zip archives*'
+  id: totrans-176
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*从`.zip`归档中解压缩文件*'
 - en: Enumerating files in the .zip archives
+  id: totrans-177
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 列举`.zip`归档中的文件
 - en: To incorporate the contents of a `.zip` file seamlessly into our filesystem,
     we need to read the archive contents and be able to access each file individually.
     Since we are developing our own file I/O library, we use the `iIStream` interface
@@ -775,332 +1144,489 @@
     access in your game more complex on a desktop computer without an emulator. To
     make our native code portable to previous Android versions and other mobile operating
     systems, we will craft our own assets reader.
+  id: totrans-178
   prefs: []
   type: TYPE_NORMAL
+  zh: 要将`.zip`文件的内容无缝地整合到我们的文件系统中，我们需要读取归档内容，并能够单独访问每个文件。由于我们正在开发自己的文件I/O库，我们使用`iIStream`接口来访问`.zip`文件。NDK提供了一种从C++应用程序读取`.apk`资产的方法（请参阅NDK文件夹中的`usr/include/android/asset_manager.h`）。然而，它仅在Android
+    2.3上可用，并且会使在桌面计算机（没有模拟器）上调试游戏中的文件访问变得更加复杂。为了使我们的本地代码可移植到之前的Android版本和其他移动操作系统，我们将构建自己的资产读取器。
 - en: Note
+  id: totrans-179
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Android applications are distributed as `.apk` packages, which are basically
     just renamed `.zip` archives, containing a special folder structure and metadata
     inside them.
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: Android应用程序作为`.apk`包分发，这些包基本上只是重命名的`.zip`归档，其中包含特殊的文件夹结构和元数据。
 - en: Getting ready
+  id: totrans-181
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: We use the `zlib` library and the `MiniZIP` project to access the content of
     a `.zip` archive. The most recent versions can be downloaded from [http://www.winimage.com/zLibDll/minizip.html](http://www.winimage.com/zLibDll/minizip.html).
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用`zlib`库和`MiniZIP`项目来访问`.zip`压缩文件的内容。最新版本可以从以下链接下载：[http://www.winimage.com/zLibDll/minizip.html](http://www.winimage.com/zLibDll/minizip.html)。
 - en: How to do it...
+  id: totrans-183
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The `zlib` library is designed to be extensible. It does not assume every developer
     uses only the `fopen()` calls or the `std::ifstream` interface. To read the data
     from our own containers with the `iIStream` interface, we cast the `iIStream`
     instances to the `void*` pointers and write a set of routines that are passed
     to `zlib`. These routines resemble the standard `fopen()`-like interface and essentially
     only redirect the `zlib` to our `iIStream` classes:'
+  id: totrans-184
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`zlib`库被设计为可扩展的。它并不假设每个开发者只使用`fopen()`调用或`std::ifstream`接口。要从我们自己的带有`iIStream`接口的容器中读取数据，我们将`iIStream`实例转换为`void*`指针，并编写一组传递给`zlib`的例程。这些例程类似于标准的`fopen()`式接口，本质上只是将`zlib`重定向到我们的`iIStream`类：'
 - en: '[PRE48]'
+  id: totrans-185
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: 'Read compressed data from a `.zip` file. This indirection actually allows to
     access archives inside the other archives:'
+  id: totrans-186
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从`.zip`文件中读取压缩数据。这种间接访问实际上允许访问其他归档中的归档：
 - en: '[PRE49]'
+  id: totrans-187
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'Return the current position inside a `.zip` file:'
+  id: totrans-188
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 返回`.zip`文件内的当前位置：
 - en: '[PRE50]'
+  id: totrans-189
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: 'Advance to the specified position. The offset value is relative to the current
     position (`SEEK_CUR`), file start (`SEEK_SET`), or file end (`SEEK_END`):'
+  id: totrans-190
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 移动到指定的位置。偏移值相对于当前位置（`SEEK_CUR`）、文件开始（`SEEK_SET`）或文件结束（`SEEK_END`）：
 - en: '[PRE51]'
+  id: totrans-191
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'We do not close or handle errors, so the `fclose()` and `ferror()` callbacks
     are empty:'
+  id: totrans-192
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们没有关闭或处理错误，所以`fclose()`和`ferror()`回调是空的：
 - en: '[PRE52]'
+  id: totrans-193
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'Finally, the pointers to all functions are stored in the `zlib_filefunc64_def`
     structure that is passed instead of the usual `FILE*` to all functions of `MiniZIP`.
     We write a simple routine to fill this structure, as shown in the following code:'
+  id: totrans-194
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，所有函数的指针存储在`zlib_filefunc64_def`结构中，该结构代替了`MiniZIP`所有函数中的常规`FILE*`。我们编写了一个简单的例程来填充这个结构，如下面的代码所示：
 - en: '[PRE53]'
+  id: totrans-195
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'Once we have implemented the `fopen()` interface, we can provide the code snippet
     to enumerate the files in the archive represented by the `iIStream` object. This
     is one of the two essential functions in the `ArchiveReader` class:'
+  id: totrans-196
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现了`fopen()`接口后，我们可以提供代码片段以枚举由`iIStream`对象表示的归档中的文件。这是`ArchiveReader`类中的两个基本函数之一：
 - en: '[PRE54]'
+  id: totrans-197
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'Iterate through all the files in this archive:'
+  id: totrans-198
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 遍历此归档中的所有文件：
 - en: '[PRE55]'
+  id: totrans-199
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'Store the encountered filenames in a vector of our own structures:'
+  id: totrans-200
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将遇到的文件名存储在我们自己的结构体向量中：
 - en: '[PRE56]'
+  id: totrans-201
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: 'The array of `sFileInfo` structures is stored in the `ArchiveReader` instances:'
+  id: totrans-202
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`sFileInfo`结构的数组存储在`ArchiveReader`实例中：'
 - en: '[PRE57]'
+  id: totrans-203
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: 'Assign the source stream and enumerate the files:'
+  id: totrans-204
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 分配源流并枚举文件：
 - en: '[PRE58]'
+  id: totrans-205
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: 'Extract a single file from the archive into the `FOut` stream. This means we
     can extract compressed files directly into the memory:'
+  id: totrans-206
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从归档中提取单个文件到`FOut`流中。这意味着我们可以直接将压缩文件提取到内存中：
 - en: '[PRE59]'
+  id: totrans-207
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: 'Free everything and optionally close the source stream:'
+  id: totrans-208
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 释放所有资源，并可选择性地关闭源流：
 - en: '[PRE60]'
+  id: totrans-209
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: 'Check if such a file exists in the archive:'
+  id: totrans-210
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检查归档中是否存在这样的文件：
 - en: '[PRE61]'
+  id: totrans-211
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: 'The following code is the `sFileInfo` structure mentioned in the preceding
     point, that defines where a file is located inside a `.zip` archive:'
+  id: totrans-212
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以下代码是前一点提到的`sFileInfo`结构，它定义了文件在`.zip`归档中的位置：
 - en: '[PRE62]'
+  id: totrans-213
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: 'First, we need an offset to the file data inside the archive:'
+  id: totrans-214
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，我们需要归档内部文件数据的偏移量：
 - en: '[PRE63]'
+  id: totrans-215
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: 'Then we need a size of the uncompressed file:'
+  id: totrans-216
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，我们需要未压缩文件的大小：
 - en: '[PRE64]'
+  id: totrans-217
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'And a size of the compressed file, to let the `zlib` library know when to stop
     decoding:'
+  id: totrans-218
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以及压缩文件的大小，让`zlib`库知道何时停止解码：
 - en: '[PRE65]'
+  id: totrans-219
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: 'Don''t forget a pointer to the compressed data itself:'
+  id: totrans-220
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 不要忘记指向压缩数据本身的指针：
 - en: '[PRE66]'
+  id: totrans-221
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: We do not provide the complete source for the `ArchiveReader` class, however,
     do encourage you to look into the accompanying source code. The second essential
     function, the `ExtractSingleFile()`, is presented in the following recipe.
+  id: totrans-222
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们没有提供`ArchiveReader`类的完整源代码，但鼓励您查看随附的源代码。第二个基本函数`ExtractSingleFile()`将在下一个食谱中介绍。
 - en: How it works...
+  id: totrans-223
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'We use the `ArchiveReader` class to write the `ArchiveMountPoint` that provides
     seamless access to the contents of a `.zip` file:'
+  id: totrans-224
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用`ArchiveReader`类编写`ArchiveMountPoint`，它提供了对`.zip`文件内容的无缝访问：
 - en: '[PRE67]'
+  id: totrans-225
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: 'Create a reader interface to access the content of the archive:'
+  id: totrans-226
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建一个读取器接口以访问归档的内容：
 - en: '[PRE68]'
+  id: totrans-227
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: 'Check if a specified file exists inside this archive mount point:'
+  id: totrans-228
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查此归档挂载点内是否存在指定的文件：
 - en: '[PRE69]'
+  id: totrans-229
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: The `ArchiveReader` class takes care of the memory management and returns a
     ready-to-use instance of `MemRawFile`.
+  id: totrans-230
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ArchiveReader`类负责内存管理，并返回一个立即可用的`MemRawFile`实例。'
 - en: See also
+  id: totrans-231
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Decompressing files from the .zip archives*'
+  id: totrans-232
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*从.zip压缩包中解压文件*'
 - en: '[Chapter 5](ch05.html "Chapter 5. Cross-platform Audio Streaming"), *Cross-platform
     Audio Streaming*'
+  id: totrans-233
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第5章](ch05.html "第5章.跨平台音频流"), *跨平台音频流*'
 - en: Decompressing files from the .zip archives
+  id: totrans-234
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 从.zip压缩包中解压文件
 - en: We have the `Enumerate_ZIP()` function to iterate through individual files inside
     a `.zip` archive, and now it is time to extract its contents.
+  id: totrans-235
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们有`Enumerate_ZIP()`函数来遍历`.zip`归档内的单个文件，现在是提取其内容的时候了。
 - en: Getting ready
+  id: totrans-236
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: This code uses the same set of `fopen()`-like functions from the previous recipe.
+  id: totrans-237
   prefs: []
   type: TYPE_NORMAL
+  zh: 这段代码使用了与前一个食谱相同的`fopen()`类函数。
 - en: How to do it...
+  id: totrans-238
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following helper function does the job of file extraction and is used in
     the `ArchiveReader::ExtractSingleFile()` method:'
+  id: totrans-239
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以下辅助函数负责文件提取，并在`ArchiveReader::ExtractSingleFile()`方法中使用：
 - en: '[PRE70]'
+  id: totrans-240
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: 'Pass the supplied password to the `zlib` library:'
+  id: totrans-241
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将提供的密码传递给`zlib`库：
 - en: '[PRE71]'
+  id: totrans-242
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: 'The following is the actual decompression loop:'
+  id: totrans-243
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以下是实际的解压缩循环：
 - en: '[PRE72]'
+  id: totrans-244
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: 'And the `ExtractSingleFile()` function performs the extraction of a single
     file from an archive into an output stream:'
+  id: totrans-245
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`ExtractSingleFile()`函数负责从归档中提取单个文件到输出流中：'
 - en: '[PRE73]'
+  id: totrans-246
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: 'Decompress the data through the following code:'
+  id: totrans-247
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过以下代码解压缩数据：
 - en: '[PRE74]'
+  id: totrans-248
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: How it works...
+  id: totrans-249
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The `ExtractSingleFile()` method uses the `zlib` and `MiniZIP` libraries. In
     the accompanying material, we have included the `libcompress.c` and `libcompress.h`
     files that contain the amalgamated `zlib`, `MiniZIP,` and `libbzip2` sources.
+  id: totrans-250
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ExtractSingleFile()`方法使用了`zlib`和`MiniZIP`库。在随附材料中，我们包含了`libcompress.c`和`libcompress.h`文件，其中包含了合并的`zlib`、`MiniZIP`和`libbzip2`源代码。'
 - en: 'The `2_MountPoints` example contains the `test.cpp` file with the code to iterate
     an archive file:'
+  id: totrans-251
   prefs: []
   type: TYPE_NORMAL
+  zh: '`2_MountPoints`示例包含了`test.cpp`文件，其中包含了遍历归档文件的代码：'
 - en: '[PRE75]'
+  id: totrans-252
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: The `ArchiveReader` instance contains all the information about the contents
     of the `test.zip` file.
+  id: totrans-253
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ArchiveReader`实例包含了有关`test.zip`文件内容的所有信息。'
 - en: Loading resources asynchronously
+  id: totrans-254
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 异步加载资源
 - en: The preface of this book tells us we are going to develop an asynchronous resources
     loading system in this chapter. We have completed all of the preparations for
     this. We are now equipped with secure memory management, task queues, and finally,
     the `FileSystem` abstraction with archive file support.
+  id: totrans-255
   prefs: []
   type: TYPE_NORMAL
+  zh: 本书的序言告诉我们，在本章中我们将开发一个异步资源加载系统。我们已经为此完成了所有准备工作。我们现在配备了安全的内存管理、任务队列，以及最终带有归档文件支持的`FileSystem`抽象。
 - en: 'What we want to do now is to combine all of this code to implement a seemingly
     simple thing: create an application that renders a textured quad and updates its
     texture on-the-fly. An application starts, a white quad appears on the screen,
@@ -1112,267 +1638,394 @@
     objects in [Chapter 6](ch06.html "Chapter 6. Unifying OpenGL ES 3 and OpenGL 3"),
     *Unifying OpenGL ES 3 and OpenGL 3,* all of the rendering state must be changed
     only in the same thread that created the texture—in our main thread.'
+  id: totrans-256
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们想要做的是，将所有这些代码结合起来实现一个看似简单的事情：创建一个应用程序，渲染一个带有纹理的四边形，并在运行中更新其纹理。应用程序启动后，屏幕上出现一个白色四边形，然后，一旦纹理文件从磁盘加载，四边形的纹理就会改变。这相对容易做到——我们只需运行在这里实现的`LoadImage`任务，一旦此任务完成，我们就在主线程上获得完成事件，主线程还拥有一个事件队列。我们不能只用一个互斥锁来更新纹理数据，因为在[第六章](ch06.html
+    "第六章. 统一OpenGL ES 3和OpenGL 3")，*统一OpenGL ES 3和OpenGL 3*中使用OpenGL纹理对象时，所有渲染状态只能在创建纹理的同一个线程中改变——在我们的主线程中。
 - en: Getting ready
+  id: totrans-257
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: We strongly encourage you to review all of the multithreading techniques from
     [Chapter 3](ch03.html "Chapter 3. Networking"), *Networking*. The simple rendering
     techniques we use here are covered in the in the `App3` example in [Chapter 3](ch03.html
     "Chapter 3. Networking"), *Establishing a Build Environment*, and in the `App4`
     example in [Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting
     Common Libraries*.
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们强烈建议你复习[第三章](ch03.html "第三章. 网络编程")，*网络编程*中提到的所有多线程技术。我们在这里使用的简单渲染技术已在`App3`示例中介绍，该示例位于[第三章](ch03.html
+    "第三章. 网络编程")，*建立构建环境*部分，以及在[第二章](ch02.html "第二章. 移植通用库")，*移植通用库*中的`App4`示例中。
 - en: How to do it...
+  id: totrans-259
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Here we build the foundation for the resources management. We need the concept
     of a bitmap stored in a memory. It is implemented in the `Bitmap` class, as shown
     in the following code:'
+  id: totrans-260
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在这里我们为资源管理奠定了基础。我们需要内存中存储位图的概念。它在`Bitmap`类中实现，如下代码所示：
 - en: '[PRE76]'
+  id: totrans-261
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE76]'
 - en: 'Image dimensions and raw pixel data are set as follows:'
+  id: totrans-262
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 图像尺寸和原始像素数据设置如下：
 - en: '[PRE77]'
+  id: totrans-263
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE77]'
 - en: 'Here we use a C-style array:'
+  id: totrans-264
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在这里我们使用C风格数组：
 - en: '[PRE78]'
+  id: totrans-265
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE78]'
 - en: The `read_bmp_mem()` function from [Chapter 2](ch02.html "Chapter 2. Porting
     Common Libraries"), *Porting Common Libraries,* is used once again, but this time
     the memory buffer comes from an `iIStream` object. In [Chapter 6](ch06.html "Chapter 6. Unifying
     OpenGL ES 3 and OpenGL 3"), *Unifying OpenGL ES 3 and OpenGL 3* we add the `Texture`
     class to handle all of the OpenGL complexities, but right now we simply render
     the instance of a `Bitmap` class.
+  id: totrans-266
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们再次使用了[第二章](ch02.html "第二章. 移植通用库")中的`read_bmp_mem()`函数，但这次内存缓冲区来自一个`iIStream`对象。在[第六章](ch06.html
+    "第六章. 统一OpenGL ES 3和OpenGL 3")，*统一OpenGL ES 3和OpenGL 3*中，我们添加了`Texture`类来处理所有OpenGL复杂性，但现在我们只是渲染了一个`Bitmap`类的实例。
 - en: 'Next, we implement the asynchronous loading operation:'
+  id: totrans-267
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来，我们实现异步加载操作：
 - en: '[PRE79]'
+  id: totrans-268
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE79]'
 - en: 'The `LoadCompleteCapsule` class is a `iAsyncCapsule`-derived class that has
     the overriden `Run()` method:'
+  id: totrans-269
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`LoadCompleteCapsule`类是一个派生自`iAsyncCapsule`的类，它覆盖了`Run()`方法：'
 - en: '[PRE80]'
+  id: totrans-270
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE80]'
 - en: 'To load a `Bitmap` object, we implement the following function:'
+  id: totrans-271
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了加载一个`Bitmap`对象，我们实现了以下函数：
 - en: '[PRE81]'
+  id: totrans-272
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE81]'
 - en: 'We use three global objects: the filesystem `g_FS`, the event queue `g_Events`,
     and the loader thread `g_Loader`. We initialize them at the beginning of our program.
     At first, we start `FileSystem`:'
+  id: totrans-273
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们使用三个全局对象：文件系统`g_FS`、事件队列`g_Events`和加载器线程`g_Loader`。我们在程序开始时初始化它们。首先，我们启动`FileSystem`：
 - en: '[PRE82]'
+  id: totrans-274
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE82]'
 - en: 'The `iAsyncQueue` and `WorkerThread` objects are created, just as in [Chapter
     3](ch03.html "Chapter 3. Networking"), *Networking*:'
+  id: totrans-275
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`iAsyncQueue` 和 `WorkerThread` 对象被创建，正如在[第3章](ch03.html "第3章. 网络通信")，*网络通信*中一样：'
 - en: '[PRE83]'
+  id: totrans-276
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE83]'
 - en: 'Finally, we can load the bitmap:'
+  id: totrans-277
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，我们可以加载位图：
 - en: '[PRE84]'
+  id: totrans-278
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE84]'
 - en: At this point `Bmp` is a ready-to-use object that will be automatically updated
     on another thread. Of course, it is not thread-safe to use the `Bmp->FBitmapData`,
     since it might be destroyed while we read it, or only partially updated. To overcome
     these difficulties, we have to introduce so-called **proxy objects** that we use
     in [Chapter 6](ch06.html "Chapter 6. Unifying OpenGL ES 3 and OpenGL 3"), *Unifying
     OpenGL ES 3 and OpenGL 3*.
+  id: totrans-279
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，`Bmp` 是一个准备使用的对象，它将在另一个线程上自动更新。当然，使用 `Bmp->FBitmapData` 不是线程安全的，因为在我们读取它时可能会被销毁，或者只部分更新。为了克服这些困难，我们必须引入所谓的**代理对象**，我们在[第6章](ch06.html
+    "第6章. 统一OpenGL ES 3和OpenGL 3")，*统一OpenGL ES 3和OpenGL 3*中使用它。
 - en: There's more
+  id: totrans-280
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多
 - en: The complete example can be found in `3_AsyncTextures`. It implements the asynchronous
     images loading technique described in this recipe.
+  id: totrans-281
   prefs: []
   type: TYPE_NORMAL
+  zh: 完整的示例可以在 `3_AsyncTextures` 中找到。它实现了本章中描述的异步图像加载技术。
 - en: See also
+  id: totrans-282
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '[Chapter 5](ch05.html "Chapter 5. Cross-platform Audio Streaming"), *Cross-platform
     Audio Streaming*'
+  id: totrans-283
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第5章](ch05.html "第5章. 跨平台音频流"), *跨平台音频流*'
 - en: '[Chapter 3](ch03.html "Chapter 3. Networking"), *Networking*'
+  id: totrans-284
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第3章](ch03.html "第3章. 网络通信"), *网络通信*'
 - en: Storing application data
+  id: totrans-285
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 存储应用程序数据
 - en: An application should be able to save its temporary and persistent data. Sometimes
     data should be written into a folder on external storage accessible by other applications.
     Let's find out how to get the path to this folder on Android and Windows, and
     do this in a portable way.
+  id: totrans-286
   prefs: []
   type: TYPE_NORMAL
+  zh: 应用程序应该能够保存其临时和持久数据。有时数据应该写入外部存储器上的一个文件夹，其他应用程序可以访问该文件夹。让我们找出如何在 Android 和 Windows
+    上以可移植的方式获取此文件夹的路径。
 - en: Getting ready
+  id: totrans-287
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: If your Android smartphone unmounts its external storage while connected to
     a desktop computer, make sure you disconnect it and wait for the storage to be
     remounted.
+  id: totrans-288
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你的 Android 智能手机在连接到台式电脑时卸载了外部存储，确保你断开连接并等待存储器重新挂载。
 - en: How to do it...
+  id: totrans-289
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'We need to write some Java code to accomplish this task. First, we will ask
     the `Environment` for the external storage directory and its suffix, so we can
     distinguish our data from other applications:'
+  id: totrans-290
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们需要编写一些 Java 代码来完成这个任务。首先，我们会向 `Environment` 询问外部存储目录及其后缀，这样我们就可以将我们的数据与其他应用程序区分开来：
 - en: '[PRE85]'
+  id: totrans-291
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE85]'
 - en: Note
+  id: totrans-292
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The `Suffix` value can be chosen at will. You can use whatever value you desire.
+  id: totrans-293
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`Suffix` 值可以随意选择。你可以使用你希望的任何值。'
 - en: This is quite simple; however, we have to perform some additional checks to
     make sure this path is really there. On some devices, for example, without external
     storage, it will be unavailable.
+  id: totrans-294
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这很简单；然而，我们必须执行一些额外的检查，以确保此路径确实存在。例如，在一些没有外部存储的设备上，它将不可用。
 - en: '[PRE86]'
+  id: totrans-295
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE86]'
 - en: 'Check, if the storage is mounted and can be written to:'
+  id: totrans-296
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检查存储是否已挂载并且可以写入：
 - en: '[PRE87]'
+  id: totrans-297
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE87]'
 - en: 'Check if the storage is writable:'
+  id: totrans-298
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检查存储是否可写：
 - en: '[PRE88]'
+  id: totrans-299
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE88]'
 - en: 'Pass the path to our C++ code:'
+  id: totrans-300
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将路径传递给我们的 C++ 代码：
 - en: '[PRE89]'
+  id: totrans-301
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE89]'
 - en: How it works...
+  id: totrans-302
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'Native code implements the JNI call `OnCreateNative()` this way:'
+  id: totrans-303
   prefs: []
   type: TYPE_NORMAL
+  zh: 本地代码以这种方式实现 JNI 调用 `OnCreateNative()`：
 - en: '[PRE90]'
+  id: totrans-304
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE90]'
 - en: 'There is also a small helper function to convert Java strings to `std::string`,
     which we will use frequently:'
+  id: totrans-305
   prefs: []
   type: TYPE_NORMAL
+  zh: 还有一个小助手函数将 Java 字符串转换为 `std::string`，我们会经常使用它：
 - en: '[PRE91]'
+  id: totrans-306
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE91]'
 - en: 'Check the application `6_StoringApplicationData` from the code bundle of the
     book. On Android, it will output a line similar to the following into the system
     log:'
+  id: totrans-307
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看本书代码包中的应用程序 `6_StoringApplicationData`。在 Android 上，它将输出类似于以下内容的行到系统日志：
 - en: '[PRE92]'
+  id: totrans-308
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE92]'
 - en: 'On Windows, it will print the following into the application console:'
+  id: totrans-309
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Windows 上，它将以下内容打印到应用程序控制台：
 - en: '[PRE93]'
+  id: totrans-310
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE93]'
 - en: There's more...
+  id: totrans-311
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Don''t forget to add the `WRITE_EXTERNAL_STORAGE` permission to your `AndroidManifest.xml`
     for your application to be able to write to the external storage:'
+  id: totrans-312
   prefs: []
   type: TYPE_NORMAL
+  zh: 不要忘记将 `WRITE_EXTERNAL_STORAGE` 权限添加到你的 `AndroidManifest.xml`，以便你的应用程序能够写入外部存储：
 - en: '[PRE94]'
+  id: totrans-313
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE94]'
 - en: Otherwise, the previous code will always fall back to the internal storage.
+  id: totrans-314
   prefs: []
   type: TYPE_NORMAL
+  zh: 否则，之前的代码将始终回退到内部存储。
 - en: See also
+  id: totrans-315
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '[Chapter 8](ch08.html "Chapter 8. Writing a Match-3 Game"), *Writing a Match-3
     Game*'
+  id: totrans-316
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第8章](ch08.html "第8章. 编写一个匹配-3游戏"), *编写一个匹配-3游戏*'

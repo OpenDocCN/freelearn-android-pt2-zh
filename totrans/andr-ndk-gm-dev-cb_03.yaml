@@ -1,54 +1,80 @@
 - en: Chapter 3. Networking
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第三章. 网络
 - en: 'In this chapter, we will cover:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Fetching list of photos from Flickr and Picasa
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 从Flickr和Picasa获取照片列表（注意：此行为重复，在翻译中应避免重复输出）
 - en: Downloading images from Flickr and Picasa
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 从Flickr和Picasa下载图片
 - en: Performing cross-platform multithreading
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 执行跨平台多线程操作
 - en: Synchronizing native cross-platform threads
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 同步跨平台原生线程
 - en: Managing memory using reference counting
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用引用计数管理内存
 - en: Implementing asynchronous task queues
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 实现异步任务队列
 - en: Handling asynchronous callbacks invocation
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 处理异步回调调用
 - en: Working with the network asynchronously
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 异步处理网络工作
 - en: Detecting a network address
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 检测网络地址
 - en: Writing the HTTP server
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 编写HTTP服务器
 - en: Introduction
+  id: totrans-12
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: 'Networking is an inherently asynchronous and unpredictable area in terms of
     timing. One may not be sure about the reliability of the connection. Even when
     we use the **TCP** protocol, there is no guarantee on the delivery time, and nothing
@@ -58,28 +84,38 @@
     data size, and gracefully handle the errors that occur. Without delving into the
     details of the HTTP protocol implementation, we use the libcurl library and concentrate
     on higher-level tasks related to game development.'
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 在时间上，网络本质上是一个异步且不可预测的领域。我们无法确信连接的可靠性。即使使用 **TCP** 协议，也不能保证数据的送达时间，且应用程序在等待套接字中的数据时完全有可能冻结。为了开发响应迅速且安全的应用程序，我们必须解决许多问题：我们需要完全控制下载过程，限制下载数据的大小，并优雅地处理出现的错误。在不深入HTTP协议实现细节的情况下，我们使用libcurl库，专注于与游戏开发相关的高级任务。
 - en: At first, we look at the Picasa and Flickr REST APIs to download image lists
     and form direct URLs to photos. Then, we get to the thread-safe asynchronous programming
     and finally we implement a simple HTTP server for debugging purposes using the
     pure Berkeley sockets interface.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们查看Picasa和Flickr的REST API，以下载图像列表并构建到照片的直接URL。然后，我们探讨线程安全的异步编程，最后使用纯Berkeley套接字接口实现一个简单的HTTP服务器，用于调试目的。
 - en: The examples of this chapter related to multithreaded programming are Windows-only,
     but at the end of the chapter, we shall combine everything to create the Android
     `App5` example with a built-in web server.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章节关于多线程编程的示例仅限于Windows平台，但到了章节末尾，我们将整合所学内容，创建内置Web服务器的Android `App5` 示例。
 - en: Fetching list of photos from Flickr and Picasa
+  id: totrans-16
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 从Flickr和Picasa获取照片列表
 - en: In the previous chapter, we built the libcurl library. As a refresher on how
     to download a web page, refer to the `1_CurlDownloader` example in the accompanying
     materials for this chapter.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一章节，我们构建了libcurl库。为了回顾如何下载网页，请参考本章配套材料中的 `1_CurlDownloader` 示例。
 - en: The information about using Picasa and Flickr in C++ is somewhat limited, but
     calling the **REST** (**Representational State Transfer**) APIs of these sites
     is no different from downloading web pages. All we have to do is form a correct
@@ -88,161 +124,236 @@
     form of authentication using **oAuth**, but for the read-only access, it is sufficient
     to use only the application key, which is available through the simple online
     registration.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 关于在C++中使用Picasa和Flickr的信息相对有限，但调用这些网站的 **REST** （**表现层状态转移**）API与下载网页没有区别。我们需要做的是为图像列表构建正确的URL，从此URL下载XML文件，然后解析此文件以构建单个图像URL列表。通常，REST
+    API需要某种形式的 **oAuth** 认证，但对于只读访问，仅使用通过简单在线注册即可获得的应用程序密钥就足够了。
 - en: Note
+  id: totrans-19
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The example code in this recipe only forms the URLs and it is up to the reader
     to download the actual image list. We also do not provide an application key here,
     and we encourage the reader to obtain a key and test the code.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱中的示例代码仅用于构建URL，读者需要自行下载实际图像列表。同时，这里没有提供应用程序密钥，我们鼓励读者获取密钥并测试代码。
 - en: Getting ready
+  id: totrans-21
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Every application must sign its requests to the Flickr server with a unique
     key, obtained through a simple registration process. An application key and a
     secret key are long hexadecimal numbers similar to: `14fc6b12345678901234567890d69c8d`.
     Create your own Yahoo ID account and obtain application keys at the following
     site: [http://www.flickr.com/services/api/misc.api_keys.html](http://www.flickr.com/services/api/misc.api_keys.html).
     If you already have a Yahoo ID account, proceed directly to [http://www.flickr.com/services/apps/create](http://www.flickr.com/services/apps/create).'
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个应用程序都必须使用通过简单注册过程获得的唯一密钥对其请求进行签名。应用程序密钥和秘密密钥是类似`14fc6b12345678901234567890d69c8d`的长十六进制数字。创建您的Yahoo
+    ID账户并在以下网站获取应用程序密钥：[http://www.flickr.com/services/api/misc.api_keys.html](http://www.flickr.com/services/api/misc.api_keys.html)。如果您已经有了Yahoo
+    ID账户，直接前往[http://www.flickr.com/services/apps/create](http://www.flickr.com/services/apps/create)。
 - en: The Picasa photo hosting provides free access to the RSS feeds and does not
     require client applications to use any authentication keys.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: Picasa照片托管服务提供了对RSS订阅的免费访问，并不要求客户端应用程序使用任何认证密钥。
 - en: How to do it…
+  id: totrans-24
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'We would like to keep up with the latest photo trends, so we want to fetch
     a list of the most upvoted images, or a list of the most recently added images.
     To access such lists, Flickr provides the `flickr.interestingness.getList` and
     `flickr.photos.getRecent` methods, and Picasa provides two RSS feeds: `featured`
     and `all`. The example screenshot of the recent photos in the Flickr RSS feed
     is as follows:![How to do it…](img/7785OS_03_01.jpg)'
+  id: totrans-25
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们希望跟上最新的照片趋势，因此我们想要获取点赞数最多的图片列表，或者最近添加的图片列表。为了访问这些列表，Flickr提供了`flickr.interestingness.getList`和`flickr.photos.getRecent`方法，而Picasa提供了两个RSS订阅：`featured`和`all`。以下是Flickr
+    RSS订阅中最近照片的示例截图：![如何操作…](img/7785OS_03_01.jpg)
 - en: 'To form the required URLs for Flickr and Picasa, we implement two functions.
     One for Flickr:'
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了形成Flickr和Picasa所需的URL，我们实现了两个函数。一个是针对Flickr的：
 - en: '[PRE0]'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'A list may be large and contain many pages. We can choose a page by an index:'
+  id: totrans-28
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 列表可能很大，包含很多页面。我们可以通过索引选择一个页面：
 - en: '[PRE1]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'And the other function is for Picasa:'
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 另一个函数是针对Picasa的：
 - en: '[PRE2]'
+  id: totrans-31
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Depending on the list we want, we pass either the `FlickrFavoritesURL` or `FlickrRecentURL`
     constants as the `BaseURL` parameter of the `Flickr_GetListURL()` function and
     either the `PicasaFavoritesURL` or `PicasaRecentURL` constants as the `BaseURL`
     parameter of the `Picasa_GetListURL()` function.
+  id: totrans-32
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 根据我们想要的列表，我们将`FlickrFavoritesURL`或`FlickrRecentURL`常量作为`Flickr_GetListURL()`函数的`BaseURL`参数传递，将`PicasaFavoritesURL`或`PicasaRecentURL`常量作为`Picasa_GetListURL()`函数的`BaseURL`参数传递。
 - en: 'Here is the complete list of the required string constants:'
+  id: totrans-33
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这里是需要字符串常量的完整列表：
 - en: '[PRE3]'
+  id: totrans-34
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: The `MaxResults` parameter limits the number of images in the list. The `PageIndex`
     parameter specifies how many result pages to skip, and the `SearchQuery` string
     can be used to fetch only the images with a given text in their description.
+  id: totrans-35
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`MaxResults`参数限制了列表中的图片数量。`PageIndex`参数指定跳过多少个结果页面，而`SearchQuery`字符串可以用来获取描述中包含给定文本的图片。'
 - en: The Flickr version uses the `AppKey` global string constant which should contain
     the obtained application key.
+  id: totrans-36
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: Flickr版本使用了应包含获取的应用程序密钥的全局字符串常量`AppKey`。
 - en: How it works…
+  id: totrans-37
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的…
 - en: 'We form the URL; in this case, it is the first page of the user upvoted images
     from Flickr:'
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们形成了URL；在这种情况下，它是Flickr用户点赞图片的第一页：
 - en: '[PRE4]'
+  id: totrans-39
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Then, we may pass this URL to our HTTP downloader and receive an XML file with
     the list of images. The same can be done with Picasa; note the one-based page
     indexing:'
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们可以将这个URL传递给我们的HTTP下载器，并接收到包含图片列表的XML文件。对Picasa也可以这样做；注意基于1的页面索引：
 - en: '[PRE5]'
+  id: totrans-41
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: The complete sources code of these functions is found in the `PhotoAPI.cpp`
     file from the `2_FlickrAndPicasa` folder.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些函数的完整源代码可以在`2_FlickrAndPicasa`文件夹中的`PhotoAPI.cpp`文件中找到。
 - en: There's more…
+  id: totrans-43
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: The provided examples do not contain a valid application key for Flickr. Also
     remember, that according to Flickr's license agreement, your application may not
     show more than fifteen images on one screen.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 提供的示例不包含Flickr的有效应用程序密钥。另外，根据Flickr的许可协议，您的应用程序在一个屏幕上可能不会显示超过十五张图片。
 - en: There is an extensive documentation of the Flickr API residing at [http://www.flickr.com/services/api/](http://www.flickr.com/services/api/).
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[http://www.flickr.com/services/api/](http://www.flickr.com/services/api/)上有关于Flickr
+    API的广泛文档。
 - en: See also
+  id: totrans-46
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Downloading images from Flickr and Picasa*'
+  id: totrans-47
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*从Flickr和Picasa下载图片*'
 - en: Downloading images from Flickr and Picasa
+  id: totrans-48
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 从Flickr和Picasa下载图片
 - en: We have a list of images in the XML format, which we downloaded in the Fetching
     lists of photos from Flickr and Picasa recipe. Let's download the actual photos
     from the photo hosting.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们有一个以XML格式下载的图片列表，我们在Flickr和Picasa获取照片列表的食谱中下载了它。现在让我们从照片托管服务中下载实际的照片。
 - en: Getting ready
+  id: totrans-50
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Here, we need the image list from Flickr or Picasa to get started. Use the previous
     recipe to download that list.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里，我们需要从Flickr或Picasa获取图片列表以开始操作。使用上一个食谱下载该列表。
 - en: How to do it…
+  id: totrans-52
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: Once we have retrieved the list, we extract individual image IDs from it. Having
     these IDs allows us to form the URLs for individual images. Flickr uses a complicated
     image URL formation process and Picasa stores the URLs directly. Both services
@@ -250,224 +361,330 @@
     XML responses using our tiny ad hoc parser. However, if you already use some kind
     of XML or JSON parsing library in your project, you are encouraged to use it for
     this task too.
+  id: totrans-53
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 获取列表后，我们从列表中提取单个图像ID。拥有这些ID允许我们形成单个图像的URL。Flickr使用复杂的图像URL形成过程，而Picasa直接存储URL。这两种服务都可以生成XML和JSON格式的响应。我们将向您展示如何使用我们的小型临时解析器解析XML响应。但是，如果你的项目中已经使用某种XML或JSON解析库，我们也鼓励你用它来完成这项任务。
 - en: 'To parse the Flickr XML list, we use the following function:'
+  id: totrans-54
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 要解析Flickr XML列表，我们使用以下函数：
 - en: '[PRE6]'
+  id: totrans-55
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Parse the string in an ad-hoc way. You can use your favorite XML library instead
     of this loop:'
+  id: totrans-56
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 用临时方法解析字符串。你可以使用你喜欢的XML库代替这个循环：
 - en: '[PRE7]'
+  id: totrans-57
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'The function for the Picasa RSS feed, in the XML format, looks as follows:'
+  id: totrans-58
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: Picasa RSS订阅功能的XML格式如下所示：
 - en: '[PRE8]'
+  id: totrans-59
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'We parse the supplied string using a similar ad-hoc code:'
+  id: totrans-60
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们使用类似的临时代码解析提供的字符串：
 - en: '[PRE9]'
+  id: totrans-61
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'The auxiliary function `ExtractURLAttribute()` is used to extract values of
     individual attributes from XML tags:'
+  id: totrans-62
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 辅助函数`ExtractURLAttribute()`用于从XML标签中提取单个属性的值：
 - en: '[PRE10]'
+  id: totrans-63
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Scan the string until the end:'
+  id: totrans-64
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 扫描字符串直到末尾：
 - en: '[PRE11]'
+  id: totrans-65
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Finally, to form a Flickr URL for the image in the selected resolution we use
     this function:'
+  id: totrans-66
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，为了形成选定分辨率的Flickr图片URL，我们使用这个函数：
 - en: '[PRE12]'
+  id: totrans-67
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'First, we need to prepare parameters using the address from `InURL`:'
+  id: totrans-68
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，我们需要使用来自`InURL`的地址准备参数：
 - en: '[PRE13]'
+  id: totrans-69
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Combine everything into the resulting string:'
+  id: totrans-70
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将所有内容组合成最终字符串：
 - en: '[PRE14]'
+  id: totrans-71
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Add the suffix to the resulting string, which determines the size of a requested
     photo, and a `.jpg` extension:'
+  id: totrans-72
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 向结果字符串添加后缀，以确定请求照片的大小，并添加`.jpg`扩展名：
 - en: '[PRE15]'
+  id: totrans-73
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'For Picasa, we modify the image URL from the list by inserting a different
     code path:'
+  id: totrans-74
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 对于Picasa，我们通过插入不同的代码路径来修改列表中的图片URL：
 - en: '[PRE16]'
+  id: totrans-75
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'When we need the same image in different resolutions, we provide the `ImgSizeType`
     parameter of the type `PhotoSize`, which can take the following values:'
+  id: totrans-76
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当我们需要同一张图片的不同分辨率时，我们提供了类型为`PhotoSize`的`ImgSizeType`参数，它可以取以下值：
 - en: '[PRE17]'
+  id: totrans-77
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: These values are not related to Flickr or Picasa naming conventions and are
     used internally for our convenience (and API independence).
+  id: totrans-78
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这些值与Flickr或Picasa的命名约定无关，仅内部方便使用（且与API独立）。
 - en: How it works…
+  id: totrans-79
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'We have the list of images from the previous recipe:'
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们有来自上一个食谱的图片列表：
 - en: '[PRE18]'
+  id: totrans-81
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'Then, for the URL for the first image:'
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，对于第一张图片的URL：
 - en: '[PRE19]'
+  id: totrans-83
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Finally, use the downloader to get the image located at `ImageURL`.
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，使用下载器获取位于`ImageURL`的图片。
 - en: There's more…
+  id: totrans-85
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: There are sets of rules on both Flickr and Picasa sites, which discourage massive
     automated downloads of full-size images (not more than one per second), and any
     application we develop should strictly follow these rules.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: Flickr和Picasa网站都有一套规则，禁止大规模自动下载全尺寸图片（每秒不超过一张），我们开发的应用程序应严格遵守这些规则。
 - en: One nice thing about the code for this recipe, is that it can be modified to
     support the well-known `Yandex.Fotki` photo site or other similar photo hosting
     services, which provide RSS feeds. We leave it as a do-it-yourself exercise for
     the reader.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个食谱代码的一个好处是，它可以被修改以支持知名的`Yandex.Fotki`照片网站或其他类似的提供RSS订阅的照片托管服务。我们将其留给读者作为一个自助练习。
 - en: Performing cross-platform multithreading
+  id: totrans-88
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 执行跨平台多线程操作
 - en: To continue improving the user experience, we should make long-running tasks
     asynchronous, with fine-grained control over their execution. To do so, we implement
     an abstraction layer on top of the operating systems' threads.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了继续提升用户体验，我们应该使长时间运行的任务异步化，并对其执行进行细粒度控制。为此，我们在操作系统线程之上实现了一个抽象层。
 - en: Getting ready
+  id: totrans-90
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Android NDK threads are based on POSIX threads. Take a look at the header file
     `platforms\android-14\arch-arm\usr\include\pthread.h` in your NDK folder.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: Android NDK线程基于POSIX线程。查看你的NDK文件夹中的`platforms\android-14\arch-arm\usr\include\pthread.h`头文件。
 - en: How to do it...
+  id: totrans-92
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Let''s start with declarations of thread handle types:'
+  id: totrans-93
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们从线程句柄类型的声明开始：
 - en: '[PRE20]'
+  id: totrans-94
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'Then, we declare the thread interface:'
+  id: totrans-95
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，我们声明线程接口：
 - en: '[PRE21]'
+  id: totrans-96
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'The entry point prototype differs for Windows and Android, but only in the
     return type:'
+  id: totrans-97
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: Windows和Android的入口点原型在返回类型上有所不同：
 - en: '[PRE22]'
+  id: totrans-98
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'A portable implementation of the `iThread::Start()` method is done the following
     way:'
+  id: totrans-99
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`iThread::Start()`方法的可移植实现如下：'
 - en: '[PRE23]'
+  id: totrans-100
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: How it works...
+  id: totrans-101
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'To demonstrate the usage of the implemented thread class, we define a new thread,
     which prints out a message every second:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了演示实现的线程类的使用，我们定义了一个每秒输出一条消息的新线程：
 - en: '[PRE24]'
+  id: totrans-103
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Now, the implementation of a simple multithreaded application in C++ is not
     much harder than in Java.
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，用C++实现一个简单的多线程应用程序并不比用Java难多少。
 - en: Synchronizing native cross-platform threads
+  id: totrans-105
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 同步跨平台的本地线程
 - en: Synchronization is required to prevent different threads from accessing shared
     resources simultaneously. A piece of code that accesses a shared resource—that
     must not be concurrently accessed by more than one thread—is called a critical
@@ -476,604 +693,900 @@
     critical section. In Windows applications, critical sections are part of the WinAPI
     and in Android, we use mutexes from the `pthread` library, which serve the same
     purpose.
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了防止不同线程同时访问共享资源，需要进行同步。访问共享资源的一段代码——不能被多个线程同时访问——被称为关键段（[http://en.wikipedia.org/wiki/Critical_section](http://en.wikipedia.org/wiki/Critical_section)）。为了避免竞态条件，在关键段的入口和出口需要一种机制。在Windows应用程序中，关键段是WinAPI的一部分，在Android中，我们使用`pthread`库中的互斥锁，它们起到相同的作用。
 - en: Getting ready
+  id: totrans-107
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Android native synchronization primitives are POSIX-based. They include thread's
     management functions, mutexes, conditional variables, and barriers. Take a look
     at the header file `platforms\android-14\arch-arm\usr\include\pthread.h` in your
     NDK folder.
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: Android的原生同步原语是基于POSIX的。它们包括线程管理函数、互斥锁、条件变量和屏障。查看你的NDK文件夹中的`platforms\android-14\arch-arm\usr\include\pthread.h`头文件。
 - en: How to do it...
+  id: totrans-109
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Let''s create an API-independent abstraction to synchronize threads:'
+  id: totrans-110
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让我们创建一个与API无关的线程同步抽象：
 - en: '[PRE25]'
+  id: totrans-111
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Locking and unlocking a mutex is also different in Windows and Android:'
+  id: totrans-112
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在Windows和Android中锁定和解锁互斥锁也是不同的：
 - en: '[PRE26]'
+  id: totrans-113
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: How it works...
+  id: totrans-114
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'Using the **Resource Acquisition Is Initialization** (**RAII**) C++ idiom,
     we can define the `Lock` class:'
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用**资源获取即初始化**（**RAII**）的C++习惯用法，我们可以定义`Lock`类：
 - en: '[PRE27]'
+  id: totrans-116
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Then, using mutexes is straightforward:'
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，使用互斥锁就很直接了：
 - en: '[PRE28]'
+  id: totrans-118
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: We use mutexes extensively almost everywhere in the subsequent chapters of this
     book.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本书的后续章节中，几乎到处都广泛使用了互斥锁。
 - en: See also
+  id: totrans-120
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Implementing asynchronous task queues*'
+  id: totrans-121
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*实现异步任务队列*'
 - en: Managing memory using reference counting
+  id: totrans-122
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用引用计数管理内存
 - en: When working in the native code environment, every memory allocation event is
     handled by the developer. Tracking all the allocations in a multithreaded environment
     becomes notoriously difficult. The C++ language provides a way to avoid manual
     object deallocation using smart pointers. Since we are developing mobile applications,
     we cannot afford to use the whole **Boost** library just to include smart pointers.
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本地代码环境中工作时，每个内存分配事件都由开发者处理。在多线程环境中跟踪所有分配变得异常困难。C++语言提供了一种避免使用智能指针手动对象析构的方法。由于我们正在开发移动应用程序，我们不能仅仅为了包含智能指针而使用整个**Boost**库。
 - en: Note
+  id: totrans-124
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: 'You can use the Boost library with Android NDK. The main two reasons we avoid
     it in our small examples are as follows: a drastically increased compilation time
     and the desire for showing how basic things can be implemented yourself. If your
     project already includes Boost, you are advised to use smart pointers from that
     library. The compilation is straightforward and does not require special steps
     for porting.'
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以在Android NDK中使用Boost库。我们在小型示例中避免使用它的主要原因有两个：编译时间大幅增加以及展示如何自己实现基本事物。如果你的项目已经包含了Boost，建议你使用该库中的智能指针。编译过程简单，不需要特殊的移植步骤。
 - en: Getting ready
+  id: totrans-126
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'We need a simple intrusive counter to be embedded into all of our reference-countered
     classes. Here, we provide a lightweight implementation of such a counter:'
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要一个简单的侵入式计数器，嵌入到我们所有引用计数类中。这里，我们提供了一个此类计数器的轻量级实现：
 - en: '[PRE29]'
+  id: totrans-128
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: This code is portable between Windows, Android, and other systems with the `gcc`
     or `clang` toolchains.
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 此代码在Windows、Android以及其他使用 `gcc` 或 `clang` 工具链的系统中可移植。
 - en: How to do it...
+  id: totrans-130
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The implementation of our intrusive smart pointer class is as follows:'
+  id: totrans-131
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们侵入式智能指针类的实现如下：
 - en: '[PRE30]'
+  id: totrans-132
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Here, we call a helper to do the atomic increment of an intrusive counter.
     This allows us to use this smart pointer with incomplete types:'
+  id: totrans-133
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在这里，我们调用一个助手来进行侵入式计数器的原子递增。这使得我们可以使用此智能指针处理不完整类型：
 - en: '[PRE31]'
+  id: totrans-134
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'The same trick is applied to the atomic decrement operation:'
+  id: totrans-135
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 同样的技巧也应用于原子减量操作：
 - en: '[PRE32]'
+  id: totrans-136
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'We need a constructor for an implicit type conversion from `T*`:'
+  id: totrans-137
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们需要一个构造函数，用于从 `T*` 进行隐式类型转换：
 - en: '[PRE33]'
+  id: totrans-138
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'We also need an assignment operator:'
+  id: totrans-139
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们还需要一个赋值运算符：
 - en: '[PRE34]'
+  id: totrans-140
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'The dereference operator (`->`) is one of the crucial features of any smart
     pointer:'
+  id: totrans-141
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 解引用运算符（`->`）是任何智能指针的关键特性之一：
 - en: '[PRE35]'
+  id: totrans-142
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Mimic a `dynamic_cast` behavior:'
+  id: totrans-143
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 模仿 `dynamic_cast` 的行为：
 - en: '[PRE36]'
+  id: totrans-144
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'The comparison operator is also implemented:'
+  id: totrans-145
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 还实现了比较运算符：
 - en: '[PRE37]'
+  id: totrans-146
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'Sometimes, we need to pass a value of a smart pointer to a third-party C API.
     We need to retrieve an internal pointer to do it:'
+  id: totrans-147
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 有时，我们需要将智能指针的值传递给第三方C API。为此，我们需要获取内部指针：
 - en: '[PRE38]'
+  id: totrans-148
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: Refer to the example `4_ReferenceCounting_ptr` from the book's supplementary
     materials for the full source code.
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 请参考书中补充材料中的示例 `4_ReferenceCounting_ptr` 以获取完整的源代码。
 - en: How it works...
+  id: totrans-150
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'The minimalistic example that demonstrates the usage of our smart pointer is
     as follows:'
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是一个演示我们智能指针使用方法的简约示例：
 - en: '[PRE39]'
+  id: totrans-152
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: An allocated object of `SomeClass` is assigned to the smart pointer `Ptr`. At
     the end of `Test()`, the smart pointer is automatically destroyed, and the number
     of references to the allocated object becomes zero. As such, the allocated object
     is destroyed implicitly with the `delete()` call, thereby avoiding memory leaks.
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SomeClass` 的分配对象被赋值给智能指针 `Ptr`。在 `Test()` 结尾，智能指针自动销毁，分配对象引用数变为零。因此，通过 `delete()`
+    调用隐式销毁分配对象，从而避免内存泄漏。'
 - en: There's more...
+  id: totrans-154
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'We extensively check our smart pointers to be non-null and we want to use the
     traditional syntax like the following:'
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们广泛检查我们的智能指针非空，并且我们希望使用如下传统语法：
 - en: '[PRE40]'
+  id: totrans-156
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'This can be achieved without adding a conversion operator to another usable
     type. The following is how it is done using a private inner class:'
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 这可以在不向另一个可用类型添加转换运算符的情况下实现。以下是使用私有内部类完成的方式：
 - en: '[PRE41]'
+  id: totrans-158
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: Basically, the condition `if ( SomeSmartPointer )` will cast a smart pointer
     to a pointer to the `clProtector` class. However, the C++ compiler will prevent
     you from misusing it. The `operator delete( void* )` operator of `clProtector`
     should be declared but not defined, preventing the user from creating the instances
     of `clProtector`.
+  id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 基本上，条件 `if ( SomeSmartPointer )` 会将智能指针转换为指向 `clProtector` 类的指针。然而，C++编译器将防止你误用它。`clProtector`
+    的 `operator delete( void* )` 应该声明但不要定义，防止用户创建 `clProtector` 的实例。
 - en: 'One common problem with smart pointers is the cyclic reference problem. When
     an object `A` holds a reference to an object `B`, and at the same time the object
     `B` holds a reference to the object `A`, the reference counter of both objects
     cannot be zero. This situation is quite common for the container classes and can
     be avoided by using a raw pointer to the containing object, not a smart pointer.
     See the following code as an example:'
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 智能指针常见的一个问题就是循环引用问题。当对象`A`持有一个指向对象`B`的引用，同时对象`B`也持有一个指向对象`A`的引用时，这两个对象的引用计数都不能为零。对于容器类来说，这种情况很常见，可以通过使用指向包含对象的原始指针而不是智能指针来避免。以下代码就是一个例子：
 - en: '[PRE42]'
+  id: totrans-161
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'A raw pointer to the parent object:'
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 指向父对象的原始指针：
 - en: '[PRE43]'
+  id: totrans-163
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'A list of garbage-collected elements:'
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 被垃圾收集的元素列表：
 - en: '[PRE44]'
+  id: totrans-165
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: See also
+  id: totrans-166
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Implementing asynchronous task queues*'
+  id: totrans-167
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*实现异步任务队列*'
 - en: Implementing asynchronous task queues
+  id: totrans-168
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 实现异步任务队列
 - en: We want to execute a list of tasks asynchronously from the main thread but retain
     their order relative to each other. Let's implement a queue for such tasks.
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们希望从主线程异步执行一系列任务，但保持它们之间的相对顺序。让我们为此实现一个任务队列。
 - en: Getting ready
+  id: totrans-170
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: We need mutexes and smart pointers from the previous recipes to do this, since
     the queue needs synchronization primitives to keep its internal data structures
     consistent, and it needs smart pointers to prevent tasks from leaking.
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要前一个食谱中的互斥量和智能指针来做这件事，因为队列需要同步原语来保持其内部数据结构的一致性，并且需要智能指针来防止任务泄露。
 - en: How to do it...
+  id: totrans-172
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The interface for tasks we want to put into the worker thread is as follows:'
+  id: totrans-173
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们想要放入工作线程的任务接口如下：
 - en: '[PRE45]'
+  id: totrans-174
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'The `Run()` method contains a payload of our task. It is where all the useful
     work is done:'
+  id: totrans-175
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Run()` 方法包含了我们任务的有效载荷。所有有用的工作都在这里完成：'
 - en: '[PRE46]'
+  id: totrans-176
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'A task cannot be safely terminated from outside, since the foreign code does
     not know the current state of the task and what kind of work it is doing now.
     So, the `Exit()` method just sets an appropriate flag, which means we want to
     exit:'
+  id: totrans-177
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 由于外部代码不知道任务的当前状态以及它现在正在做什么样的工作，因此不能从外部安全地终止任务。所以，`Exit()` 方法只是设置一个适当的标志，这意味着我们想要退出：
 - en: '[PRE47]'
+  id: totrans-178
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'We can check this flag inside the `Run()` method by calling `IsPendingExit()`:'
+  id: totrans-179
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们可以在 `Run()` 方法内部通过调用 `IsPendingExit()` 来检查这个标志：
 - en: '[PRE48]'
+  id: totrans-180
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: 'Tasks should be distinguishable from each other. That is what IDs are for:'
+  id: totrans-181
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 任务应该能够相互区分。这就是 ID 的作用：
 - en: '[PRE49]'
+  id: totrans-182
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'And here, is the interface of the worker thread (the complete implementation
     can be found in the book''s download pack):'
+  id: totrans-183
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这里是工作线程的接口（完整的实现可以在本书的下载包中找到）：
 - en: '[PRE50]'
+  id: totrans-184
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: 'We can enqueue and cancel tasks at will:'
+  id: totrans-185
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们可以随意入队和取消任务：
 - en: '[PRE51]'
+  id: totrans-186
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'The `ExtractTask()` private method is used to access the list of tasks atomically:'
+  id: totrans-187
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`ExtractTask()` 私有方法用于原子地访问任务列表：'
 - en: '[PRE52]'
+  id: totrans-188
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: How it works...
+  id: totrans-189
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'We start a single worker thread and run a simple task. The key difference from
     running three separate threads is that all the tasks are executed sequentially
     and a common resource, which is the output window in our case, is also used sequentially
     without the need for handling concurrent access:'
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们启动一个单独的工作线程并运行一个简单任务。与运行三个独立线程的关键区别在于，所有任务都是顺序执行的，并且一个公共资源（在我们的例子中是输出窗口）也是顺序使用，无需处理并发访问：
 - en: '[PRE53]'
+  id: totrans-191
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'Add three tasks one by one:'
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: 逐个添加三个任务：
 - en: '[PRE54]'
+  id: totrans-193
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'Tasks are never executed in parallel, only sequentially. Use a simple spinlock
     to wait for completion of all tasks:'
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 任务永远不会并行执行，而是顺序执行。使用一个简单的自旋锁来等待所有任务的完成：
 - en: '[PRE55]'
+  id: totrans-195
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: Handling asynchronous callbacks invocation
+  id: totrans-196
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 处理异步回调调用
 - en: One simple situation we may encounter in multithreaded programming is when we
     need to run a method on another thread. For example, when a download task completes
     on a worker thread, the main thread may want to be notified of the task completion,
     to parse the downloaded data. In this recipe we will implement a mechanism for
     such notifications.
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 在多线程编程中，我们可能会遇到的一个简单情况是需要在另一个线程上运行一个方法。例如，当工作线程上的下载任务完成时，主线程可能希望被通知任务完成，以解析下载的数据。在本食谱中，我们将实现这样的通知机制。
 - en: Getting ready
+  id: totrans-198
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Understanding of the **asynchronous event** concept is important before we proceed
     to the implementation details. When we say asynchronous, we mean that something
     occurs unpredictably and has no determined timing. For example, we cannot predict
     how long it will take our task to download a URL—that is it; the task completes
     asynchronously and should invoke a **callback** asynchronously.
+  id: totrans-199
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们继续实现细节之前，理解**异步事件**的概念很重要。当我们说异步时，我们指的是某件事发生不可预测并且没有确定的时间。例如，我们无法预测下载 URL
+    需要多长时间——这就是任务；任务异步完成并应异步调用**回调**。
 - en: How to do it…
+  id: totrans-200
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The message for us should be a method call. We will hide a method call behind
     this interface:'
+  id: totrans-201
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 对我们来说，消息应该是一个方法调用。我们将一个方法调用隐藏在这个接口后面：
 - en: '[PRE56]'
+  id: totrans-202
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: 'A pointer to an instance of such type represents a prepared method call. We
     define a queue of `iAsyncCapsule` with the following implementation:'
+  id: totrans-203
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 此类型的实例指针表示一个准备好的方法调用。我们定义了一个 `iAsyncCapsule` 队列，以下是其实现：
 - en: '[PRE57]'
+  id: totrans-204
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: 'Enqueue an event:'
+  id: totrans-205
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 入队一个事件：
 - en: '[PRE58]'
+  id: totrans-206
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: 'The events demultiplexer, as described in the `Reactor` pattern ([http://en.wikipedia.org/wiki/Reactor_pattern](http://en.wikipedia.org/wiki/Reactor_pattern)):'
+  id: totrans-207
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如 `Reactor` 模式（[http://en.wikipedia.org/wiki/Reactor_pattern](http://en.wikipedia.org/wiki/Reactor_pattern)）中描述的事件多路分解器：
 - en: '[PRE59]'
+  id: totrans-208
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: 'This is an even-odd trick to prevent copying the entire queue. We keep two
     queues and switch between them:'
+  id: totrans-209
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这是一个奇偶技巧，用来防止复制整个队列。我们保留两个队列并在它们之间切换：
 - en: '[PRE60]'
+  id: totrans-210
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: 'Note the mutex''s scope above. We should not invoke callbacks while the mutex
     is locked:'
+  id: totrans-211
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 注意上面互斥锁的作用域。我们在互斥锁锁定时不应调用回调：
 - en: '[PRE61]'
+  id: totrans-212
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: How it works…
+  id: totrans-213
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'We start two threads. One handles incoming events by making a call to the `DemultiplexEvents()`
     function in an endless loop:'
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们启动两个线程。一个通过在无限循环中调用 `DemultiplexEvents()` 函数来处理传入事件：
 - en: '[PRE62]'
+  id: totrans-215
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: 'And the other thread produces asynchronous events:'
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个线程生成异步事件：
 - en: '[PRE63]'
+  id: totrans-217
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: 'Our response to an event is implemented in the `TestCall` class:'
+  id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们对事件的响应在 `TestCall` 类中实现：
 - en: '[PRE64]'
+  id: totrans-219
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'The `main()` function starts both threads and waits infinitely (you can press
     *Ctrl* + *Break* to stop it):'
+  id: totrans-220
   prefs: []
   type: TYPE_NORMAL
+  zh: '`main()` 函数启动两个线程并无限期等待（你可以按 *Ctrl* + *Break* 来停止它）：'
 - en: '[PRE65]'
+  id: totrans-221
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: 'You should see this output:'
+  id: totrans-222
   prefs: []
   type: TYPE_NORMAL
+  zh: 你应该看到以下输出：
 - en: '[PRE66]'
+  id: totrans-223
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: The `printf()` function might not be thread-safe, but our queue ensures the
     calls to it do not interfere with each other.
+  id: totrans-224
   prefs: []
   type: TYPE_NORMAL
+  zh: '`printf()` 函数可能不是线程安全的，但我们的队列确保对它的调用不会相互干扰。'
 - en: Working with the network asynchronously
+  id: totrans-225
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 异步处理网络工作
 - en: Networking is essentially a set of unpredictable and asynchronous operations.
     Let's do it asynchronously in a separate thread to prevent stalls on the UI thread,
     which may result in ANR behavior on Android.
+  id: totrans-226
   prefs: []
   type: TYPE_NORMAL
+  zh: 网络本质上是一组不可预测和异步的操作。让我们在单独的线程中异步执行，以防止在 UI 线程上发生停滞，这可能导致 Android 上的 ANR 行为。
 - en: Getting ready
+  id: totrans-227
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Here, we need all that we have implemented in the previous recipes of this
     chapter: smart pointers, worker threads, libcurl downloader, and asynchronous
     events queue.'
+  id: totrans-228
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里，我们需要用到本章前面食谱中实现的所有内容：智能指针、工作线程、libcurl 下载器以及异步事件队列。
 - en: How to do it…
+  id: totrans-229
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'We derive the `DownloadTask` class, which performs an HTTP request using the
     libcurl library, from `iTask`. Here, we implement its method `Run()`, which sets
     up the libcurl library and performs a network operation:'
+  id: totrans-230
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们从 `iTask` 派生 `DownloadTask` 类，它使用 libcurl 库执行 HTTP 请求。在这里，我们实现其方法 `Run()`，该方法设置
+    libcurl 库并执行网络操作：
 - en: '[PRE67]'
+  id: totrans-231
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: 'Setup parameters for libcurl:'
+  id: totrans-232
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 设置 libcurl 的参数：
 - en: '[PRE68]'
+  id: totrans-233
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: 'Disable SSL keys verification:'
+  id: totrans-234
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 禁用 SSL 密钥验证：
 - en: '[PRE69]'
+  id: totrans-235
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: 'Perform a network operation synchronously. The call `curl_easy_perform()` blocks
     the current thread until the result is obtained from the network, or an error
     occurs:'
+  id: totrans-236
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 同步执行网络操作。`curl_easy_perform()` 调用会阻塞当前线程，直到从网络获取结果或发生错误：
 - en: '[PRE70]'
+  id: totrans-237
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: 'Read the result and clean up for the library:'
+  id: totrans-238
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 读取结果并为库清理：
 - en: '[PRE71]'
+  id: totrans-239
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: 'Tell the downloader to invoke completion callback for this task:'
+  id: totrans-240
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 告诉下载器为此任务调用完成回掉：
 - en: '[PRE72]'
+  id: totrans-241
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: How it works…
+  id: totrans-242
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'We provide a snippet that downloads a response from the Flickr echo service
     and handles the task completion on the main thread:'
+  id: totrans-243
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们提供了一个代码片段，该片段从 Flickr 回声服务下载响应并在主线程上处理任务完成：
 - en: '[PRE73]'
+  id: totrans-244
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: 'Print the result to the console window:'
+  id: totrans-245
   prefs: []
   type: TYPE_NORMAL
+  zh: 将结果打印到控制台窗口：
 - en: '[PRE74]'
+  id: totrans-246
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: 'Wait for incoming events:'
+  id: totrans-247
   prefs: []
   type: TYPE_NORMAL
+  zh: 等待传入事件：
 - en: '[PRE75]'
+  id: totrans-248
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: See also
+  id: totrans-249
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Downloading images from Flickr and Picasa*'
+  id: totrans-250
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*从 Flickr 和 Picasa 下载图片*'
 - en: Detecting a network address
+  id: totrans-251
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 检测网络地址
 - en: To communicate with a web server, we need to specify its IP address. In a limited
     mobile environment, it is not convenient to ask the user for the IP address and
     we have to detect the address ourselves (and not involving any non-portable code).
@@ -1081,127 +1594,194 @@
     from the Windows API and the `getifaddrs()` function from POSIX. The Android runtime
     library provides its own implementation of `getifaddrs()`, which is included in
     the `App5` sources in the `DetectAdapters.cpp` file.
+  id: totrans-252
   prefs: []
   type: TYPE_NORMAL
+  zh: 要与网页服务器通信，我们需要指定其 IP 地址。在受限的移动环境中，向用户询问 IP 地址不方便，我们必须自己检测地址（且不涉及任何不可移植的代码）。在接下来的
+    `App5` 示例中，我们使用了来自 Windows API 的 `GetAdaptersAddresses()` 函数以及 POSIX 的 `getifaddrs()`
+    函数。Android 运行时库提供了自己的 `getifaddrs()` 实现，该实现包含在 `App5` 源文件中的 `DetectAdapters.cpp`
+    文件中。
 - en: Getting ready
+  id: totrans-253
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Let''s declare a structure to hold the information describing a network adapter:'
+  id: totrans-254
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们声明一个结构来保存描述网络适配器的信息：
 - en: '[PRE76]'
+  id: totrans-255
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE76]'
 - en: 'This is the internal system name of the network adapter:'
+  id: totrans-256
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是网络适配器的内部系统名称：
 - en: '[PRE77]'
+  id: totrans-257
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE77]'
 - en: 'The IP address of the adapter is as follows:'
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: 适配器的 IP 地址如下：
 - en: '[PRE78]'
+  id: totrans-259
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE78]'
 - en: 'The unique identification number of the adapter:'
+  id: totrans-260
   prefs: []
   type: TYPE_NORMAL
+  zh: 适配器的唯一识别号码：
 - en: '[PRE79]'
+  id: totrans-261
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE79]'
 - en: How to do it...
+  id: totrans-262
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'We provide detailed code for the Android version of the `Net_EnumerateAdapters()`
     function in the following code. It enumerates all of the network adapters available
     in the system:'
+  id: totrans-263
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们在下面的代码中提供了 Android 版本的 `Net_EnumerateAdapters()` 函数的详细代码。它枚举了系统中可用的所有网络适配器：
 - en: '[PRE80]'
+  id: totrans-264
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE80]'
 - en: 'The `getifaddrs()` function creates a linked list of structures that describe
     network interfaces of the local system:'
+  id: totrans-265
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`getifaddrs()` 函数创建一个描述本地系统网络接口的结构链表：'
 - en: '[PRE81]'
+  id: totrans-266
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE81]'
 - en: 'Iterate through the linked list:'
+  id: totrans-267
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 遍历链表：
 - en: '[PRE82]'
+  id: totrans-268
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE82]'
 - en: 'Treat IPv4 and IPv6 addressed differently:'
+  id: totrans-269
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 分别处理 IPv4 和 IPv6 地址：
 - en: '[PRE83]'
+  id: totrans-270
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE83]'
 - en: 'Convert the network address structure into a C-string and save it in the `Adapters`
     vector:'
+  id: totrans-271
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将网络地址结构转换为C字符串，并将其保存在`Adapters`向量中：
 - en: '[PRE84]'
+  id: totrans-272
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE84]'
 - en: 'Release the linked list:'
+  id: totrans-273
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 释放链表：
 - en: '[PRE85]'
+  id: totrans-274
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE85]'
 - en: How it works...
+  id: totrans-275
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'To enumerate all the adapters in a console window we use a simple loop:'
+  id: totrans-276
   prefs: []
   type: TYPE_NORMAL
+  zh: 要在控制台窗口中枚举所有适配器，我们使用一个简单的循环：
 - en: '[PRE86]'
+  id: totrans-277
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE86]'
 - en: The Android implementation of this code is in the `App5` project.
+  id: totrans-278
   prefs: []
   type: TYPE_NORMAL
+  zh: 这段代码的Android实现在`App5`项目中。
 - en: There's more...
+  id: totrans-279
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Fortunately, the code above works for any POSIX system and the `App5` example
     also provides a Windows version of `Net_EnumerateAdapters()`. On Android, we have
     to enable the `ACCESS_NETWORK_STATE` and `INTERNET` permissions for our application;
     otherwise, the system will not allow us to access the Internet. This is done in
     the `AndroidManifest.xml` file of the `App5` example, using the following lines:'
+  id: totrans-280
   prefs: []
   type: TYPE_NORMAL
+  zh: 幸运的是，上述代码适用于任何POSIX系统，`App5`示例还提供了Windows版本的`Net_EnumerateAdapters()`。在Android上，我们必须为我们的应用程序启用`ACCESS_NETWORK_STATE`和`INTERNET`权限；否则，系统将不允许我们访问互联网。这在`App5`示例的`AndroidManifest.xml`文件中完成，使用以下几行：
 - en: '[PRE87]'
+  id: totrans-281
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE87]'
 - en: Don't forget to put these lines into the manifest of your application, which
     intends to work with the network.
+  id: totrans-282
   prefs: []
   type: TYPE_NORMAL
+  zh: 不要忘记将这些行放入打算与网络工作的应用程序的清单中。
 - en: Writing the HTTP server
+  id: totrans-283
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 编写HTTP服务器
 - en: When dealing with mobile development, we will eventually run our games on a
     real device. Until then, we have to use some debugging tools. Of course, we might
     set up remote debugging with `gdb`, but as soon as most critical bugs related
@@ -1212,36 +1792,51 @@
     we can implement an embedded web server with an interface to fine-tune some internal
     parameters of your application. This recipe contains an outline of `App5`, which
     implements such a web server.
+  id: totrans-284
   prefs: []
   type: TYPE_NORMAL
+  zh: 在处理移动开发时，我们最终要在真实设备上运行游戏。在此之前，我们必须使用一些调试工具。当然，我们可能会设置远程调试`gdb`，但当大多数与访问违规相关的关键错误被消除后，逻辑错误或与竞态条件相关的错误就会出现，这些问题难以追踪，并且需要多次对应用程序进行一些琐碎的更改并重新部署。为了能够直接在Android设备上快速更改应用程序的运行时行为，我们可以实现一个嵌入式Web服务器，并通过界面微调应用程序的一些内部参数。此配方包含了`App5`的概要，它实现了这样的Web服务器。
 - en: Getting ready
+  id: totrans-285
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Writing an HTTP server from scratch is not easy, so we use a freely available
     simple server by René Nyffenegger from the following web page: [http://www.adp-gmbh.ch/win/misc/webserver.html](http://www.adp-gmbh.ch/win/misc/webserver.html).'
+  id: totrans-286
   prefs: []
   type: TYPE_NORMAL
+  zh: 从零开始编写HTTP服务器并不容易，因此我们使用了René Nyffenegger提供的免费简单服务器，可以从以下网页获取：[http://www.adp-gmbh.ch/win/misc/webserver.html](http://www.adp-gmbh.ch/win/misc/webserver.html)。
 - en: We use most of these sources directly, and our more or less refined version
     which supports Android is included in the `App5` example. The most important difference
     from the original is the usage of an abstract socket API built on top of **WinSock**
     and **Android BSD** sockets. We recommend that you take a closer look at the `Sockets.h`
     and `Sockets.cpp` files in the `App5` sources.
+  id: totrans-287
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们直接使用这些资源的大部分，并在`App5`示例中包含了支持Android的更精致版本。与原始版本最重要的区别在于，我们使用了基于**WinSock**和**Android
+    BSD**套接字的抽象套接字API。我们建议您仔细查看`App5`源中的`Sockets.h`和`Sockets.cpp`文件。
 - en: How to do it…
+  id: totrans-288
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The HTTP server is started on a separate thread, which is a descendant of the
     `iThread` class. The main loop of the server is simple:'
+  id: totrans-289
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: HTTP服务器在一个单独的线程上启动，该线程是`iThread`类的后代。服务器的主循环很简单：
 - en: '[PRE88]'
+  id: totrans-290
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE88]'
 - en: We await an incoming connection, and when the `Accept()` method succeeds, a
     new `HTTPRequestThread` is started. This thread reads data from the newly created
     socket and fills in the `sHTTPServerRequest` structure. Finally, this request
@@ -1249,74 +1844,112 @@
     field with the content of an HTML page. In the end, this data is sent to the client.
     The code is linear, but a little lengthy to present it here. We refer the reader
     to the `HTTP.cpp` file for the details.
+  id: totrans-291
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们等待传入的连接，当`Accept()`方法成功时，将启动一个新的`HTTPRequestThread`。此线程从新创建的套接字读取数据并填充`sHTTPServerRequest`结构。最后，在`HandleRequest()`方法中处理此请求，通过填充`sHTTPServerRequest::FData`字段来发送HTML页面的内容。最终，这些数据被发送到客户端。代码是线性的，但在这里呈现有些过长。我们建议读者查看`HTTP.cpp`文件以了解详细信息。
 - en: How it works…
+  id: totrans-292
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: To utilize the server, we have created the `HTTPServerThread` instance and provided
     an implementation of the `SetVariableValue()` and `GetVariableValue()` functions
     in the `HTTP.cpp` file, which are empty by default. The server startup code is
     located in the `OnStart()` function.
+  id: totrans-293
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了使用这个服务器，我们在`HTTP.cpp`文件中创建了`HTTPServerThread`实例，并实现了`SetVariableValue()`和`GetVariableValue()`函数，默认情况下这些函数是空的。服务器启动代码位于`OnStart()`函数中。
 - en: 'We create the server instance:'
+  id: totrans-294
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们创建服务器实例：
 - en: '[PRE89]'
+  id: totrans-295
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE89]'
 - en: 'Then, we use the detected adapter address:'
+  id: totrans-296
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们使用检测到的适配器地址：
 - en: '[PRE90]'
+  id: totrans-297
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE90]'
 - en: 'Finally, we start the web server thread:'
+  id: totrans-298
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们启动网页服务器线程：
 - en: '[PRE91]'
+  id: totrans-299
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE91]'
 - en: By default, the server starts at the IP address `127.0.0.1` and the port is
     `8080`.
+  id: totrans-300
   prefs: []
   type: TYPE_NORMAL
+  zh: 默认情况下，服务器启动的IP地址是`127.0.0.1`，端口号是`8080`。
 - en: 'After we start `App5` on an Android device, we can connect to it from a desktop
     computer with any web browser: just type its IP address and the port. The IP address
     is detected by the web server at startup and is displayed at the top of the device
     screen.'
+  id: totrans-301
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android设备上启动`App5`之后，我们可以通过任何桌面电脑的网页浏览器连接到它：只需输入其IP地址和端口号。IP地址由网页服务器在启动时检测，并显示在设备屏幕顶部。
 - en: 'The following is a browser screenshot with the output from our tiny web server:'
+  id: totrans-302
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是我们的微型网页服务器输出的浏览器截图：
 - en: '![How it works…](img/7785OS_03_02.jpg)'
+  id: totrans-303
   prefs: []
   type: TYPE_IMG
+  zh: '![工作原理…](img/7785OS_03_02.jpg)'
 - en: Accessing our Android web server from a desktop web browser.
+  id: totrans-304
   prefs: []
   type: TYPE_NORMAL
+  zh: 从桌面网页浏览器访问我们的Android网页服务器。
 - en: There's more…
+  id: totrans-305
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: '`App5` works on both Windows and Android, but there are subtleties related
     to the network configuration.'
+  id: totrans-306
   prefs: []
   type: TYPE_NORMAL
+  zh: '`App5`既可以在Windows上运行，也可以在Android上运行，但与网络配置相关的细节需要注意。'
 - en: If we are using a 3G or similar cellular network, most likely we do not have
     an external IP address, so to allow our web server to be visible in the browser
     we should stick to a Wi-Fi connection.
+  id: totrans-307
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们使用3G或类似的蜂窝网络，很可能我们没有外部IP地址，因此为了让我们的网页服务器在浏览器中可见，我们应该坚持使用Wi-Fi连接。
 - en: See also
+  id: totrans-308
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Downloading images from Flickr and Picasa*'
+  id: totrans-309
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*从Flickr和Picasa下载图片*'
