@@ -1,0 +1,535 @@
+- en: Chapter 3. Drawing and Drawables in Android Canvas
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter our goal is to learn about the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing on a Canvas
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing on a View
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing on a SurfaceView
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawables
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawables from resource images
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawables from resource XML
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Shape Drawables
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android provides us with 2D drawing APIs that enable us to draw our custom drawing
+    on the Canvas. When working with 2D drawings, we will either draw on view or directly
+    on the surface or Canvas. Using View for our graphics, the drawing is handled
+    by the system's normal View hierarchy drawing process. We only define our graphics
+    to be inserted in the View; the rest is done automatically by the system. While
+    using the method to draw directly on the Canvas, we have to manually call the
+    suitable drawing Canvas methods such as `onDraw()` or `createBitmap()`. This method
+    requires more efforts and coding and is a bit more complicated, but we have everything
+    in control such as the animation and everything else like being in control of
+    the size and location of the drawing and the colors and the ability to move the
+    drawing from its current location to another location through code. The implementation
+    of the `onDraw()` method can be seen in the drawing on the view section and the
+    code for `createBitmap()` is shown in the *Drawing on a Canvas* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will use the drawing on the View method if we are dealing with static graphics—static
+    graphics do not change dynamically during the execution of the application—or
+    if we are dealing with graphics that are not resource hungry as we don't wish
+    to put our application performance at stake. Drawing on a View can be used for
+    designing eye-catching simple applications with static graphics and simple functionality—simple
+    attractive backgrounds and buttons. It's perfectly okay to draw on View using
+    the main UI thread as these graphics are not a threat to the overall performance
+    of our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The drawing on a Canvas method should be used when working with heavy graphics
+    that change dynamically like those in games. In this scenario, the Canvas will
+    continuously redraw itself to keep the graphics updated. We can draw on a Canvas
+    using the main UI thread, but as we discussed in maximum possible detail in [Chapter
+    2](ch02.html "Chapter 2. Drawing Threads"), *Drawing Threads*, when working with
+    heavy, resource-hungry, dynamically changing graphics, the application will continuously
+    redraw itself. It is better to use a separate thread to draw these graphics. Keeping
+    such graphics on the main UI thread will not make them go into the non-responding
+    mode, and after working so hard we certainly won't like this. So this choice should
+    be made very carefully.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing on a Canvas
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A Canvas is an interface, a medium that enables us to actually access the surface,
+    which we will use to draw our graphics. The Canvas contains all the necessary
+    drawing methods needed to draw our graphics. The actual internal mechanism of
+    drawing on a Canvas is that, whenever anything needs to be drawn on the Canvas,
+    it's actually drawn on an underlying blank bitmap image. By default, this bitmap
+    is automatically provided for us. But if we want to use a new Canvas, then we
+    need to create a new bitmap image and then a new Canvas object while providing
+    the already created bitmap to the constructor of the Canvas class. A sample code
+    is explained as follows. Initially, the bitmap is drawn but not on the screen;
+    it's actually drawn in the background on an internal Canvas. But to bring it to
+    the front, we need to create a new Canvas object and provide the already created
+    bitmap to it to be painted on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Drawing on a View
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If our application does not require heavy system resources or fast frame rates,
+    we should use `View.onDraw()`. The benefit in this case is that the system will
+    automatically give the Canvas its underlying bitmap as well. All we need is to
+    make our drawing calls and be done with our drawings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will create our class by extending it from the `View` class and will define
+    the `onDraw()` method in it. The `onDraw()` method is where we will define whatever
+    we want to draw on our Canvas. The Android framework will call the `onDraw()`
+    method to ask our View to draw itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `onDraw()` method will be called by the Android framework on a need basis;
+    for example, whenever our application wants to draw itself, this method will be
+    called. We have to call the `invalidate()` method whenever we want our view to
+    redraw itself. This means that, whenever we want our application''s view to be
+    redrawn, we will call the `invalidate()` method and the Android framework will
+    call the `onDraw()` method for us. Let''s say we want to draw a line, then the
+    code would be something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Inside the `onDraw()` method, we will use all kinds of facilities that are provided
+    by the Canvas class such as the different drawing methods made available by the
+    Canvas class. We can also use drawing methods from other classes as well. The
+    Android framework will draw a bitmap on the Canvas for us once our `onDraw()`
+    method is complete with all our desired functionality. If we are using the main
+    UI thread, we will call the `invalidate()` method, but if we are using another
+    thread, then we will call the `postInvalidate()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing on a SurfaceView
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `View` class provides a subclass `SurfaceView` that provides a dedicated
+    drawing surface within the hierarchy of the View. The goal is to draw using a
+    secondary thread so that the application won't wait for the resources to be free
+    and ready to redraw. The secondary thread has access to the `SurfaceView` object
+    that has the ability to draw on its own Canvas with its own redraw frequency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will start by creating a class that will extend the `SurfaceView` class.
+    We should implement an interface `SurfaceHolder.Callback`. This interface is important
+    in the sense that it will provide us with the information when a surface is created,
+    modified, or destroyed. When we have timely information about the creation, change,
+    or destruction of a surface, we can make a better decision on when to start drawing
+    and when to stop. The secondary thread class that will perform all the drawing
+    on our Canvas can also be defined in the `SurfaceView` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To get information, the `Surface` object should be handled through `SurfaceHolder`
+    and not directly. To do this, we will get the Holder by calling the `getHolder()`
+    method when the `SurfaceView` is initialized. We will then tell the `SurfaceHolder`
+    object that we want to receive all the callbacks; to do this, we will call `addCallBacks()`.
+    After this, we will override all the methods inside the `SurfaceView` class to
+    get our job done according to our functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next step is to draw the surface's Canvas from inside the second thread;
+    to do this, we will pass our `SurfaceHandler` object to the thread object and
+    will get the Canvas using the `lockCanvas()` method. This will get the Canvas
+    for us and will lock it for the drawing from the current thread only. We need
+    to do this because we don't want an open Canvas that can be drawn by another thread;
+    if this is the situation, it will disturb all our graphics and drawings on the
+    Canvas. When we are done with drawing our graphics on the Canvas, we will unlock
+    the Canvas by calling the `unlockCanvasAndPost()` method and will pass our Canvas
+    object. To have a successful drawing, we will need repeated redraws; so we will
+    repeat this locking and unlocking as needed and the surface will draw the Canvas.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To have a uniform and smooth graphic animation, we need to have the previous
+    state of the Canvas; so we will retrieve the Canvas from the `SurfaceHolder` object
+    every time and the whole surface should be redrawn each time. If we don't do so,
+    for instance, not painting the whole surface, the drawing from the previous Canvas
+    will persist and that will destroy the whole look of our graphic-intense application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A sample code would be the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Drawables
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The two-dimensional graphics and drawing library that Android provides is called
+    **Drawable**. The exact package name is `android.graphics.drawable`. This package
+    provides all the necessary classes for drawing our 2D graphics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In general, a Drawable is an abstraction for something that can be drawn. Android
+    provides a number of classes that extends the `Drawable` class to define special
+    types of Drawable graphics. The complete list can be found at [http://developer.android.com/reference/android/graphics/drawable/package-summary.html](http://developer.android.com/reference/android/graphics/drawable/package-summary.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Drawables can be defined and instantiated in three ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From an image saved in the `resource` folder of our project
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: From an XML file
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: From the normal class constructor
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the context of this book, we will explain only the first two methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawables from a resource image
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This is the quickest and simplest method to add graphics to our application.
+    We have already explained the different important folders of our project and discussed
+    in detail which folder contains what kind of files in [Chapter 1](ch01.html "Chapter 1. Getting
+    Started with Android Canvas"), *Getting Started with Android Canvas*. By the end
+    of this chapter, we will know how to copy an image to the `resource` folder and
+    where to find the `resource` folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will use the image that we have already copied in the `res/drawable` folder
+    in our applications project in [Chapter 1](ch01.html "Chapter 1. Getting Started
+    with Android Canvas"), *Getting Started with Android Canvas*. The image name is
+    `lacm_5396_01_14.png` and the exact location is `res/drawable-xhdpi`. One important
+    point here is that the supported formats are PNG, JPEG, and GIF. The most preferable
+    format to use is PNG and the least preferable is GIF. Whenever we put an image
+    in the `res/drawable` folder, during the build process, the image will be compressed
+    with lossless compression to save system memory; this process is automatic. The
+    compressed images normally retain the same quality but of a much lesser size.
+    If we don't want the system to compress our images, we should copy our images
+    to the `res/raw` folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will use the same application source code from [Chapter 1](ch01.html "Chapter 1. Getting
+    Started with Android Canvas"), *Getting Started with Android Canvas*, to explain
+    this section of the chapter. We will open our project `MyFirstCanvasApp`. This
+    is the code before we make any changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will open our layout file `activity_my_first_canvas_app_main.xml` in **Design**
+    view. We will delete the already placed **ImageView** object from the Activity
+    that we added in [Chapter 1](ch01.html "Chapter 1. Getting Started with Android
+    Canvas"), *Getting Started with Android Canvas*. Now we will open our code file
+    again and will add the following lines of code to the preceding code step-by-step.
+    In our main activity class, we will define a `LinearLayout` object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will be our custom layout on which we want to display our image using
+    this code. Then, inside our main activity class, we will instantiate the `LinearLayout`
+    object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next we will add the following lines of code to our file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding block of code, first, we have defined an `ImageView` object.
+    Then we set the source to an image that we want our `ImageView` object to display.
+    In the next line, we have adjusted the View bounds so that the `ImageView` bounds
+    match the width and height of the source image. The `setLayoutParams` method will
+    help us wrap the view borders around the image content even if there is a difference
+    in the dimensions. After this, we will supply our `ImageView` control to our custom
+    layout using the code line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the last line, we will set the activity layout to our custom layout. To
+    do this, we will set the content view to our custom layout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we will test our application in the emulator and then we will see the
+    following on the emulator screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Drawables from a resource image](img/5396_03_1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If we compare this output image on the activity screen to what we had in [Chapter
+    1](ch01.html "Chapter 1. Getting Started with Android Canvas"), *Getting Started
+    with Android Canvas*, there is not much difference in what we see. We achieved
+    the same output in [Chapter 1](ch01.html "Chapter 1. Getting Started with Android
+    Canvas"), *Getting Started with Android Canvas*, very easily. Then, why have we
+    gone through all this complicated coding to achieve the same output in this chapter?
+  prefs: []
+  type: TYPE_NORMAL
+- en: We went through all the hard work and complicated code because in [Chapter 1](ch01.html
+    "Chapter 1. Getting Started with Android Canvas"), *Getting Started with Android
+    Canvas*, we hardcoded the `ImageView` object to display only one image that we
+    have defined in the **Properties** tab in the **Design** view. Now, when we deleted
+    the `ImageView` object from the screen in the **Design** view and started coding,
+    there was nothing on the screen in the **Design** view at that time. What we did
+    in the preceding example was create our own custom layout that will host our graphics
+    and drawing. We created an `ImageView` object and supplied it with a source image
+    and, set its other properties. Later on, we added the `ImageView` object to our
+    custom layout and at the end, we asked the activity to appear on the screen without
+    a custom-created layout and the automatic layout. The code gives us the flexibility
+    to keep our graphics application dynamic. We can supply our application with run-time
+    images controlled from our code logic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The complete code looks like this now:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we want our resource image to be handled as a Drawable, we will create a
+    `Drawable` object from our resource image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we need to understand that each resource in our `Resources` object can
+    maintain only one state at a time. If we are using the same resource image in
+    two different instances and we update the property of one instance, the image
+    in the second instance will also reflect that change. So, whenever we are dealing
+    with multiple instances of our `Drawable` object, instead of changing the Drawable
+    itself, we can create a tween animation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawables from resource XML
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For those developers who have a little background of Android development, know
+    that every activity in our application has an XML layout file. In this file, every
+    View or control that we drag-and-drop on the Activity has an XML markup defined.
+    So, we assume that the developers that are reading this book know how the user
+    interface works while developing for Android. Objects can be defined and initialized
+    in XML. If we are dealing with a graphic whose properties do not depend on what
+    we plan to do in our code, or perhaps the graphic is static, it's a good way to
+    define the graphic object in XML. Once the graphic is instantiated, its properties
+    can always be tweaked according to need.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will save the file in `res/drawable`, define the Drawable in XML, and get
+    the Drawable by calling `Resouces.getDrawable()`. This method will take the resource
+    ID as an argument from our XML file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To exemplify, and to understand which Drawable can use this method and how we
+    can have a look at the menu that's automatically created in our application, note
+    the method in the preceding code `onCreateOptionMenu()`. When we click on the
+    **Menu** button on the screen or from the hardware keys, we see a small menu at
+    the bottom of the screen, named **Settings**. The menu has no functionality at
+    this point. Now if we check the code of `onCreateOptionMenu()`, we see a call
+    to the `inflate()` method. We can define any Drawable in XML that supports the
+    `inflate()` method. The previously mentioned menu is a simple example of this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The **Settings** menu can be seen in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Drawables from resource XML](img/5396_03_2.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Let's say we want to go for an expand-collapse transition Drawable; the following
+    code will get the job done for us in XML. This XML code will be saved in the `res/drawable
+    expand_collapse.xml` file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `expand` and `collapse` files are two different images saved in the `drawable`
+    folder in our project. Now to get this transition working, we will need the following
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: First, we created a `resources` object from resources and asked the object to
+    get everything from these resources (the resources are all the images and XML
+    files that we have saved in the subfolders of the `res` folder in our project).
+    Then, we created a `TransitionDrawable` object and asked the object to get the
+    `expand_collapse` file from the `res/drawable` folder. After this, we will create
+    an `ImageView` object that will get another view named `toggle_image`. In the
+    last line of the preceding code, we set the Drawable type to the already-created
+    transition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now including the following line of code will run the transition with a speed
+    of once per second:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We won''t go into too much detail about these transitions and animations as
+    animation by itself is a very lengthy topic. But I can explain some key types
+    of animation that can be done in Android while working with graphics to give the
+    reader an idea of the domain and what animation covers. The types of animation
+    in Android are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Property animation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: View animation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawable animation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Shape Drawables
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Whenever we want to draw certain shapes dynamically or programmatically on our
+    Canvas, Shape Drawables come in handy. With Shape Drawables, we can draw circles
+    and all forms of circles such as ovals, squares, rectangles, and many other shapes.
+    To explain Shape Drawables, we will start a new project just the way we did in
+    [Chapter 1](ch01.html "Chapter 1. Getting Started with Android Canvas"), *Getting
+    Started with Android Canvas*. We will name our project `MyShapeDrawablesApp` and
+    go through the same steps as in the first chapter using a blank starting activity.
+    Our objective of this exercise is to draw an oval on the screen with some color
+    filled within it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To do this, we will add another class inside our main activity class just before
+    the ending bracket. We will name our class `MyCustomDrawableView` that will extend
+    the `View` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Inside the constructor of this class, we will define our drawing. We will define
+    a `ShapeDrawable` object and provide the `OvalShape()` method to its constructor
+    as an argument to define the type of shape:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, we will get the paint object and set the color for our `ShapeDrawable`
+    object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'After that, we will define the dimensions of the object that is to be drawn.
+    Let''s say we want to draw an oval shape. The first `x, y` are the points from
+    where it will start and the next are the width and height of the oval, as shown:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We will close the constructor at this point and will define the `onDraw()` method
+    for our object. Inside this method, we will call the `draw()` method for our object.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The next step would be to create an object of our custom class in the main
+    activity class and set the content view to our new custom class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We will run the application in the emulator.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The following screenshot shows a green oval drawn on the Canvas:![Shape Drawables](img/5396_03_3.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The complete code for the `MyShapeDrawablesMainActivity.java` file is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter we have learned about the `Canvas` class, its methods, properties,
+    and how we can use them to draw. We have also learned about the `View` and `SurfaceView`
+    classes and learned how to draw using both of these classes and which one to use
+    in which scenario. We have also learned about Drawables and some of the different
+    ways of using them to draw such as from images in the resources or from the XML
+    code in resources and drawing shapes using code. We also saw a functional example
+    while working with Shape Drawables and Drawing on a Canvas. The source code for
+    both the example applications is downloadable from the *Packt Publishing* website.
+    In the next chapter, we will discuss 9-patch (also known as NinePatch) images
+    in detail. We will develop a working application using a 9-patch image and will
+    discuss its importance in designing layouts for our mobile applications.
+  prefs: []
+  type: TYPE_NORMAL

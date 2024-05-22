@@ -1,0 +1,1138 @@
+- en: Chapter 9. Alternative Testing Tactics
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Up to this point, we have analyzed the most common and accessible tactics to
+    implement testing in our projects. However, there are a few missing pieces in
+    our puzzle, which we'll hope to cover in this final chapter. The Android ecosystem
+    is always moving forward, with the advent of Android Studio and Gradle. The toolbox
+    for testing is also always being added too. In this area, we'll look at some third-party
+    libraries that can help us expand our testing framework; such as Robolectric for
+    Android testing on the JVM, as well as potential bleeding edge and future developments,
+    like Fork; imagine threading for your tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will be covering the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Jacoco code coverage
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Robotium
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing on host's JVM
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Robolectric
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Fest
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Spoon/Fork
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Code coverage
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Perhaps Android's Achilles' heel would be the lack of documentation, and the
+    number of places you have to visit to get the complete version of what you are
+    trying to find, or what's even worse, in many cases the official documentation
+    is incorrect, or has not been updated to match the current release. The documentation
+    for the new Gradle build system is very sparse on the ground, and this is where
+    most people start when trying to read up on code coverage; so let's light up a
+    few dark corners.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Code coverage is a measure used in software testing that describes the amount
+    of source code that was actually tested by the test suite, and to what degree,
+    following some criteria. As code coverage inspects the code directly, it is therefore
+    a form of white box testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: White-box testing (also known as clear box testing, glass box testing, transparent
+    box testing, and structural testing), is a method of testing software that tests
+    internal structures or workings of an application, as opposed to its functionality
+    (say black-box testing).
+  prefs: []
+  type: TYPE_NORMAL
+- en: From the several tools available, providing code coverage analysis for Java
+    we are using Jacoco, an open-source toolkit for measuring and reporting Java code
+    coverage that is supported by the Android project. The infrastructure to start
+    using it for your own projects is already there, therefore, minimizing the effort
+    needed to implement it. Jacoco supersedes the EMMA code coverage tool, while taking
+    knowledge from lessons learned in this endeavor, and being built by the same team.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Jacoco distinguishes itself from other tools by going after a distinctive feature
+    combination; support for large-scale enterprise software development, while keeping
+    individual developer's work fast and iterative. This is fundamental in a project
+    the size of Android, and Jacoco shines at its best, providing code coverage for
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Jacoco features
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Java, the Android Gradle plugin and the Gradle build system, all have native
+    support for Jacoco. From the latest Jacoco version available at this book''s release,
+    paraphrasing its documentation, the most distinctive set of features are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Jacoco can instrument classes for coverage either offline (before they are loaded)
+    or on the fly (using an instrumenting application classloader).
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Supported coverage types: class, method, line, branch, and instruction. Jacoco
+    can detect when a single source code line is covered only partially.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Coverage stats are aggregated at method, class, package, and "all classes" levels.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Output report types: plain text, HTML, XML. All report types support drill-down
+    to a user-controlled detail depth. The HTML report supports source code linking.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Output reports can highlight items with coverage levels, below user-provided
+    thresholds.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Coverage data obtained in different instrumentation or test runs can be merged
+    together.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Jacoco does not require access to the source code and degrades gracefully with
+    decreasing amounts of debug information available in the input classes.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Jacoco is relatively fast; the runtime overhead of added instrumentation is
+    small (5 to 20%), and the bytecode instrumentor itself is very fast (mostly limited
+    by file I/O speed). Memory overhead is a few hundred bytes per Java class.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Temperature converter code coverage
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The Android Gradle plugin has support for Jacoco code coverage out of the box.
+    The setup involves selecting which build flavor you want to obtain coverage reports
+    for, and selecting your Jacoco version. We want to instrument our `debug` flavor
+    so that we can have coverage without affecting release code. Under the `android`
+    closure, add these lines to your `android/build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The Jacoco version does not actually have to be added here, however, the version
+    of Jacoco shipping with Android is currently behind the latest release. The latest
+    version of the Jacoco coverage library can be found on their GitHub page at [https://github.com/jacoco/jacoco](https://github.com/jacoco/jacoco)
+    or Maven central. Therefore, it is recommended that you make the version explicit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Generating code coverage analysis report
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: You will need to have an emulator running as Jacoco instruments your android
+    tests, and these are run on a device so an emulator is appropriate. When the tests
+    are complete, a code coverage report is generated on the device and then pulled
+    to your local machine. If you choose to use a real device instead of an emulator,
+    it will need to be rooted. Otherwise this pull of the reports will fail with a
+    `Permission Denied` exception.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run code coverage from the command line as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Alternatively, you can use this command if you have multiple flavors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This following message verifies that our tests have been run and the coverage
+    data is retrieved:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: This has created the report files inside the `/app/build/outputs/reports/coverage/debug/`
+    directory. If you use multiple flavors, your path will be slightly different.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now before we go any further, if you haven't realized yet, we have not only
+    been generating the report for the Android app module, but we also have code in
+    our Java `core` module. Let's create a report for this as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With Gradle having support for Jacoco, we only need to apply the Jacoco plugin
+    to our `code/build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: More configurations are possible with the same closure that we are using for
+    our Android module. Details of properties that can be changed are found on the
+    Gradle Jacoco plugin website at [http://gradle.org/docs/current/userguide/jacoco_plugin.html](http://gradle.org/docs/current/userguide/jacoco_plugin.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, if you run the `./gradlew` command tasks, you should see a new Gradle
+    task that is generated, `jacocoTestReport`. Run this task to generate code coverage
+    for our core module:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: This has created the report files inside the `/core/build/reports/jacoco/test/`
+    directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Excellent! Now we have code coverage reports for both our `app` code and our
+    `core` code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It is possible to take both of these reports and merge them into one file. You
+    will most likely have to work with the XML output to do this. This is left as
+    a task for the reader but take a look on the Jacoco website and the Gradle plugin
+    site for hints (it has been done before).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's open the `app` modules `index.html` to display the coverage analysis report.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Generating code coverage analysis report](img/00045.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The information presented in the report includes coverage metrics in a way that
+    allows drilling down into data, in a top-down fashion, starting with all classes,
+    and going all the way to the level of individual methods and source lines (in
+    the HTML report).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The fundamental component of code coverage in Jacoco is the basic block; all
+    other types of coverage are derived from the basic block coverage in some way.
+    Line coverage is mostly used to link to the source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This table describes the important pieces of information in the Jacoco coverage
+    report:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Label | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Element | The name of the class or package. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Missed Instructions, Coverage | A visual indicator showing the number of
+    instructions not covered by tests (in red), next to the percentage of instructions
+    covered by tests. Example: `if(x = 1 && y = 2)` would be two instructions but
+    one line of code. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Missed Branches, Coverage | A visual indicator of the number of branches
+    not covered by tests (in red), next to the percentage of branches covered. Think
+    of an if/else statement as two branches.The number of branches in a method is
+    a good measure of its complexity. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Missed, Cxty | The number of complex paths (cyclomatic complexity) missed,
+    next to the total complexity. A complexity path is defined as a sequence of bytecode
+    instructions, without any jumps or jump targets. Adding a branch to the code (an
+    `if` statement) would add two pathways (true or false), thus making the complexity
+    increase by 1\. However, adding an instruction (`x = 1;`) would not increase the
+    complexity. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Missed, Lines | The number of lines not executed by any test, next to the
+    total number of lines. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Missed, Methods | The number of methods missed, next to the total number
+    of methods. This is a basic Java method that is composed by a given number of
+    basic paths. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Missed, Classes | The number of classes without a single test, next to the
+    total number of classes. |'
+  prefs: []
+  type: TYPE_TB
+- en: We can drill-down from the package to classes, to specific methods, and the
+    lines covered are presented in green, uncovered ones appear in red, while partially
+    covered ones are in yellow.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is an example of the report for the **core/** `TemperatureConverter` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Generating code coverage analysis report](img/00046.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this report, we can see that the class `TemperatureConverter` is not 100%
+    covered. When we look into the code, it is the constructor that is never tested.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Do you know why? Think for a moment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Yes, because a private constructor is never called. This is a utility class
+    that is not supposed to be instantiated at all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you can imagine creating a new class with just a static method, you don't
+    often create the private constructor; it would be left as the non-visible default
+    public constructor. In this case, I have been rather diligent and wrote this private
+    constructor, because I was a good boy scout at the time (and still am!).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can see here not only how this analysis is helping us to test our code and
+    find potential bugs, but also to improve the design.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we consider this private constructor as a sensible piece of code not to
+    be running tests upon, we can see now that even though the class is not yet 100
+    percent covered and thus not green, we can be assured that this constructor won't
+    be invoked from any other class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'I think a very important lesson here is; *100 percent code coverage does not
+    have to be your goal*. Understanding your domain and the architecture of your
+    application allows you to make much more reachable and realistic estimates for
+    the amount of code coverage that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Gives you the confidence to change code without repercussions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gives you belief that the product you were asked to deliver, is the product
+    you have created
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Covering the exceptions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Continuing with our examination of the coverage report will lead us to discover
+    another block that is not exercised by our current tests. The block in question
+    is the last catch in the following try-catch block in `app/TemperatureConverterActivity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: First things first, why are we catching generic `Exception`? Let's make this
+    more specific to the error we are expecting to handle. That way we don't handle
+    exceptions we aren't expecting, and also if someone reads the code they will know
+    explicitly what we are trying to do here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we know what code is causing us not to have full test coverage, we know
+    what tests to write to throw this exception and update our test suite and our
+    Jacoco report:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We should provide a test, or better a pair of tests, one for each temperature
+    unit that given an invalid temperature verifies that the error is displayed. The
+    following is the test in `TemperatureConverterActivityTests` for the Celsius case,
+    and you can easily convert it to provide the Fahrenheit case:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We request the focus for the field under test. As we did before, we should achieve
+    this by using a Runnable on the UI thread otherwise we will receive an exception.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then set the invalid temperature and retrieve the error message to verify that
+    it is not null. Running the end-to-end process again, we can attest that the path
+    is now covered, giving us total coverage as intended.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the iterative process you should follow to change as much as possible
+    of the code to green. As was said before, when the line of code is not green,
+    as long as you have considered the options and are still confident in changing
+    other code while this path is untested, then that is ok.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Robotium
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One component of the vast emerging robotic fauna is Robotium ([http://robotium.org](http://robotium.org)),
+    a test framework created to simplify the writing of tests, requiring minimal knowledge
+    of the application under test. Robotium is mainly oriented to writing powerful
+    and robust automatic black-box test cases for Android applications. It can cover
+    function, system, and acceptance test scenarios, even spanning multiple Android
+    activities of the same application automatically. Robotium can also be used to
+    test applications that we don't have the source code for, or even pre-installed
+    applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's put Robotium to work creating some new tests for `TemperatureConverter`.
+    To keep our tests organized, we create a new package named `com.blundell.tut.robotium`
+    in our `TemperatureConverter` project, under the `androidTest` directory. We will
+    initially be testing `TemperatureConverterActivity`, it is reasonable to call
+    it `TemperatureConverterActivityTests,` even though we already have a class with
+    the same name in another package also extending `ActivityInstrumentationTestCase2`.
+    After all, this class will contain tests for this same Activity too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding Robotium
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s add Robotium to our project, we''ll only be using it in test cases and
+    so it should go on the `testcase` classpath. As of this writing, the latest version
+    of Robotium is 5.2.1\. In `app/build.gradle`, we add the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Creating the test cases
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: From the previous chapters, we know that if we are creating test cases for an
+    Activity that should run connected to the system infrastructure, we should base
+    it on `ActivityInstrumentationTestCase2`, and that is what we are going to do.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The testFahrenheitToCelsiusConversion() test
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'More or less the test cases have the same structure as other Instrumentation-based
+    tests. The main difference is that we need to instantiate Robotium''s Solo in
+    the test `setUp(),` and clean up Robotium in the `tearDown()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: To instantiate Solo, we have to pass a reference to the `Instrumentation` class
+    and to the Activity under test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the other hand, to clean up Solo we should call the `finishOpenedActivities()`
+    method. This will finalize Solo and then finish our Activity, and we then invoke
+    `super.tearDown()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Solo provides a variety of methods to drive UI tests and some assertions. Let''s
+    start by re-implementing the `testFahrenheitToCelsiusConversion()` that we previously
+    implemented using the conventional approach, but in this case using Solo facilities:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is pretty similar, however, the first difference you may have noticed
+    is that in this case we are not getting references to the UI elements as we previously
+    did in the `setUp()` method, using `findViewById()` to locate the view. However,
+    we are using one of the biggest advantages of Solo, which is locating the views
+    for us using some criteria. In this case, the criterion is the order in which
+    the EditText appears. The `solo.clearEditText(int index)` method expects an integer
+    index of the position on the screen starting from `0`. Consequently, we should
+    add these constants to the test case, just like in our user interface the Celsius
+    field is on top, and Fahrenheit beneath:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: The other Robotium methods follow the same convention, and we are supplying
+    these constants when necessary. This test is very similar to the one in `com.blundell.tut.TemperatureConverterActivityTest,`
+    but you may have noticed that there is a subtle difference. Robotium is located
+    at a much higher level and we don't have to worry about as many internals or implementation
+    details; for example, when in our previous test we invoked `celciusInput.requestFocus()`
+    to trigger the conversion mechanism, here we just simulate what the user does
+    and issue a `solo.clickOnEditText(CELSIUS)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We simplified the test sensibly, but the biggest advantage of using Solo is
+    yet to come.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing between Activities
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As Robotium is situated at a much higher level, and we don't deal with implementation
+    details, it is not our problem if a new Activity is launched when we click on
+    an Android widget; we only treat this case from the UI perspective.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, I am going to discuss some functionality theoretically. This has not yet
+    been created and is left up to the user as a further step, if you so wish.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have a working temperature converter, it would be nice if we could
+    let the user decide up to how many decimal places they want to see a conversion.
+    Allowing the user to change this option, via an Android Dialog, sounds like a
+    sensible option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our purpose is to change the value of decimal places preference to five, and
+    verify that the change actually took place. Because of the high level of Robotium,
+    this test is readable and understandable without actually having the functionality
+    implemented. This is an example of a BDD approach to implement this feature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following code snippet illustrates the details of the test:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are no gory details about how shared preferences and options menus are
+    implemented. We only test its functionality. We start by pressing the **MENU**
+    key and clicking on **Preferences**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wow, we just specified the menu item title and that's it!
+  prefs: []
+  type: TYPE_NORMAL
+- en: The new Activity has started, but we don't have to worry about that implementation
+    detail. We continue and click on **Decimal** **places**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We verify that some field containing a number, the prior value of this preference,
+    appeared. Do you remember what I said about regular expressions? They always come
+    in handy in one way or another, to match any decimal integer number (any digit
+    followed by zero or more digits). Then, we clear the field and verify that it
+    was in fact cleared.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We enter the string, representing the number we want to use as a preference,
+    5 in this case. Click on the **OK** button and the preference is saved.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we need to verify that it actually happened. The same procedure is
+    used to get the menu and the field. Finally, we verify that the actual number
+    is already there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You may wonder where `DECIMAL_PLACES` come from. We previously defined `CELSIUS`
+    and `FAHRENHEIT` index constants for the fields on the screen, and this is the
+    same case, because this will be the third EditText we should define in our class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tests can be run from your IDE or the command line, according to your preferences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing on the host's JVM
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We left this subject for the end of this chapter, as it seems this is the *Holy
+    Grail* of the Android platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android is based on a virtual machine named **Dalvik**, after a village in Iceland,
+    optimized for mobile resources with limited capabilities such as constrained amount
+    of memory and processor speed. Thus representative of a mobile device but certainly
+    a very different environment than our memory rich and speedy host computers, typically
+    having plenty of memory and processor speed to enjoy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ordinarily, we run our applications and tests on an emulator or device. These
+    targets have a much slower real or emulated CPU. Thus, running our tests is a
+    time-consuming activity, mainly when our project starts to grow. Applying Test-driven
+    Development techniques compels us to run hundreds of tests to verify every change
+    we introduced.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It's worth noticing that this technique can be used only as a workaround during
+    the development process to speed things up, and it should never replace final
+    testing on the real platform, as incompatibilities between the Dalvik and JavaSE
+    runtime may affect the accuracy of the tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We are half way there already with the creation of our core module. Now we are
+    in the Java world and free to run our tests on the JVM (and use JUnit4, coming
+    to an Android near you soon). There is one-way dependency from the `app` Android
+    module to the core Java module. Allowing us to free ourselves from the shackles
+    of Android testing, encumbrance when running tests in the `core` module.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Later, we should find out a method that allows us to intercept the standard
+    compilation-dexing-running on an emulator or a device sequence, and be able to
+    run Android on our host computer directly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Comparing the performance gain
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A quick reminder about the speed gain when running these Java-only tests compared
+    to Android instrumentation tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The distinction is evident. There is no emulator start up, or any device communication,
+    and therefore the speed gain is important. Analyzing the evidence, we can find
+    out these differences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running all tests in my development computer takes 0.005 seconds; with some
+    tests taking so little time that they are not even accounted for, and are displayed
+    as 0.000 seconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If I move these tests to our app module, and run the same tests on the emulator,
+    this makes the huge difference evident. These same tests took 0.443 seconds to
+    run, almost 100 times more, and that's a huge difference if you consider hundreds
+    of tests running, tens of times a day.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is also good to notice that other advantages exist, besides the speed gain,
+    and they are the availability of years of Java, tooling, library, and plugin creation,
+    including several mock frameworks and code analysis tools.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding Android to the picture
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We intentionally left Android outside our picture. Let's analyze what happens
+    if we include a simple Android test inside `core`. Remember that for an Android
+    test to compile `android.jar` from the SDK, it should also be added to the modules'
+    libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And here is what we obtain:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Adding the `android.jar` to the class path for core is slightly awkward and
+    longwinded. It is not something that is done by default. This is a good thing
+    as it stops us accidentally using Android-specific classes when writing code inside
+    core.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The reason is that `android.jar` provides only the API, not the implementation.
+    All methods have the same implementation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we want to circumvent this limitation to test some classes outside of the
+    Android operating system, we should create an `android.jar` that mocks every class.
+    However, we would also find problems for subclasses of Android classes, like `TemperatureConverterApplication`.
+    This would be a daunting task and a significant amount of work, so we should look
+    for another solution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Robolectric
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Robolectric** ([http://robolectric.org](http://robolectric.org)) is a unit
+    test framework that intercepts the loading of Android classes and rewrites the
+    method bodies. Robolectric re-defines Android methods so they return default values,
+    such as `null`, `0`, or `false`. If available, it forwards method calls to shadow
+    objects, mimicking Android behavior.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A large number of shadow objects are provided, but this is far from complete
+    coverage, however, it is improving constantly. This should also lead you to treat
+    it as an evolving open source project, for which you should be ready to contribute
+    to make it better, but also to depend on it with caution because you may discover
+    that what you need for your tests has not been implemented yet. This is not in
+    any way to diminish its existing prospects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing Robolectric
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Robolectric can be installed by using the latest Robolectric JAR from the Maven
+    central repository. At the time of this writing, the latest available is version
+    2.4:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Usually, adding a dependency is as simple as this one line, however, with Robolectric
+    a bit of jiggery pokery is needed for it to work with the Gradle build types.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, Robolectric tests require their own module to run in. This is nothing
+    new. Create a new Java module, we''ll call it `robolectric-tests`. Keep the package
+    the same as always `com.blundell.tut`. Now, we have to modify the `robolectric-tests/build.gradle,`
+    so we can hook Robolectric in place of the `android.jar`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is a big chunk of configuration to take in, let's break it down into steps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Firstly, we define the module name for our Android application, and then we
+    name the flavor that we will want to test against.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `EvaluationDependsOn` class tells Gradle to ensure that our application
+    module is evaluated before our tests, this stops any strange errors from order
+    of execution quirks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we apply the java plugin as per normal convention for a Java project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The dependencies closure is where we add all of the Android dependencies to
+    our classpath. First, we add the selected build variant of our module, `debug`,
+    then the classpath and its dependencies, also ensuring we have system dependencies
+    from our Android plugin.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, we apply JUnit4 and Robolectric as test dependencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Remember, if you have multiple product flavors and build types, then this configuration
+    needs the full build variant adding to the script. It would be pretty straightforward
+    to amend this build script.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding resources
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'When you run your tests, Robolectric attempts to look up your `AndroidManifest.xml`
+    so it can find resources for your application, and know about your target SDK
+    version, among other properties. With the current Robolectric version and our
+    choice of using a separate module, Robolectric cannot find your resources or your
+    Android manifest. You can still write tests and get feedback without this optional
+    step, but you may find some strangeness when accessing classes that use resources;
+    for example, `R.string.hello_world,` and will get messages like this in your console:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This can be fixed by doing as it says with an `@Config` annotation, or creating
+    a custom test runner that specifies the manifest location or as we choose to do
+    here, creating a configuration file and adding it to your classpath. Inside the
+    `robolectric-tests` module, create the folder `/src/test/resources,` and create
+    a file `org.robolectric.Config.properties`. This will contain our Android manifest
+    location; it will also contain our minimum SDK version, as we don''t state this
+    in our manifest. It will have these contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Robolectric attempts to look up your minimum SDK inside the `AndroidManifest.xml`.
+    However, with the Gradle build system you do not declare it here, but declare
+    it in the `app/build.gradle`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We are now set up and ready to create some Robolectric tests!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing some tests
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We will get acquainted with Robolectric by reproducing some of the tests we
+    wrote before. One good example can be re-writing the `EditNumber` tests. Let''s
+    create a new `EditNumberTests` class, this time in the newly created project,
+    and copy the tests from the `EditNumberTests` class in the `TemperatureConverterTest`
+    project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are highlighting the most important changes. The first one is to specify
+    the test runner JUnit that will delegate the processing of the tests to, by using
+    the annotation `@RunWith`. In this case, we need to use `RobolectricTestRunner.class`
+    as the runner. Then we create an `EditText` class, using a Robolectric Context,
+    as this is a class that couldn't be instantiated without some help. Finally, a
+    `DELTA` value is specified in `testGetNumber` as `assertEquals` since, the floating
+    point number requires it in JUnit 4\. Additionally, we added the `@Test` annotation
+    to mark the method as tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The other test methods that existed in the original `EditNumberTests` cannot
+    be implemented, or simply fail for a variety of reasons. For example, as we mentioned
+    before, Robolectric classes return default values, such as `null`, `0`, `false`,
+    and so on, and this is the case for `Editable.Factory.getInstance(),` which returns
+    null and causes the test to fail; because there is no other way of creating an
+    `Editable` object, we are at a dead end.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, the `InputFilter` that `EditNumber` sets is non functional. It is
+    futile to create a test that expects some behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The alternative to these shortcomings would be to create `Shadow` classes, but
+    this requires alteration of the Robolectric source and the creation of `Robolectric.shadowOf()`
+    methods. This procedure is described in the documentation that you may follow,
+    if you are interested in applying this approach to your tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having identified these issues, we can proceed to run the tests, and they will
+    run in the host's JVM with no need to start or communicate with an emulator or
+    device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Google's march on shadows
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: For some reason, Google does not *like* Robolectric, they've never acknowledged
+    that it works, or never said that it's a solution to a problem. If they ignore
+    the solution, then that means the problem of slow running tests doesn't exist,
+    right. They seem to feel that Robolectric detracts from Android, and so have kind
+    of publicly given it the cold shoulder. Surreptitiously pushing it away by ignoring
+    its existence, that is up until now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Google has created exactly what we said before, an `android.jar` file with default
+    method implementations. This means no more `stub!` errors when accessing a method.
+    Further, they have removed all of the `final` modifiers from classes, allowing
+    mocking Frameworks to have a field day. Unfortunately, at the time of this writing
+    it is undocumented. No surprise! I don't want to give usage steps, as while undocumented
+    these will be changing rapidly. However, what I will say is, if Google got this
+    right, then it means for the testing scenario described previously, Robolectric
+    is out of the window, and we can use the standard Android testing SDKs. The same
+    principles will apply, and so I think it's still valuable if you understand how
+    Robolectric works. You can apply this understanding to the future that I cannot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Fest
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Another weapon for our testing arsenal is better testing assertions. Have you
+    noticed how sometimes stacktraces for failed tests are really unfriendly and/or
+    mystically wrong? They give you little information about the real failure and
+    you end up confused, having to read the entire source to fathom out how to fix
+    the problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As an example, look at this assertion:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We are asserting that a collection of objects after some task has a size of
+    three, look at our error message when the test fails:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Ok, that kind of makes sense, but it''s a bit abstract. What item is missing
+    from our list? I am going to have to run the tests again to find out, or I could
+    add a custom error message:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Giving me the error message:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: That error message is much better. It shows I'm missing `C` from my list. However,
+    looking back at the assertion, it's getting kind of unreadable. Sometimes, at
+    a glance, it might even appear like I am trying to assert whether that initial
+    string is equal to the other vars, the parameter ordering does not help at all.
+    What if I had another object that doesn't so easily implement `toString`? I would
+    need to create more custom code to print a nice error message, probably repeating
+    myself quite a lot with boiler plate error messages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Stop all that worrying right now! Take a look at how we can do the same assertion
+    with Fest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, our error message looks like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Nice, with no extra effort by us, we get an error message showing us what is
+    in the list and how the sizes differentiate. Also looking back at the assertion,
+    it's much more readable and even coding it was easier with the fluid interface.
+    This improves the readability of our test code, and speeds up debugging and test
+    fixing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After doing this change, I came to realize we actually might have wanted to
+    test the contents of the List, but due to the encumbrance of the JUnit assertions,
+    we were not bothering. Fest to the rescue once more:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Think how we would have had to do that with JUnit assertions, and I think you'll
+    appreciate the power of Fest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Fest comes in multiple flavors for assertions on different libraries; these
+    include the java flavor, as shown previously, and an Android flavor, which allows
+    you to do fluid-style interface assertions on Android components, like Views and
+    Fragments. Here is an example of JUnit asserting visibility, and then Fest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Adding either library to your project is just another Gradle dependency, the
+    latest versions can be found on Maven central. Here is the example for Java fest,
+    the latest at the time of writing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Note, that Android Fest has been rebranded into Assert-J and is split into many
+    dependencies depending on what you want to test. The assertions will work exactly
+    the same way. More information and instructions to add as a dependency can be
+    found at [https://github.com/square/assertj-android](https://github.com/square/assertj-android).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Spoon
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Device fragmentation is always talked about around Android and it is something
+    you should be considerate of. The number of different devices and form factors
+    means you really need to be confident that your application runs well, on all
+    the aforementioned. Spoon is right here to help; Spoon ([http://square.github.io/spoon](http://square.github.io/spoon))
+    is an open-source project that gives you a test runner that allows instrumentation
+    tests to be run on all connected devices in parallel. It also allows you to take
+    screenshots as the tests are running. Not only does this speed up your testing
+    and feedback cycle, it also allows you to potentially visually see where tests
+    went wrong.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Spoon can be added to your project with this dependency:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can then take screenshots inside your tests, allowing you to see the state
+    of your application when you are also asserting behavior:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you take the screenshot right before your assertion, you can use the screenshots
+    to help you determine failures. Another cool feature is Spoon will collate your
+    screenshots from one test into an animated GIF. so you can watch the sequence
+    of events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Spoon is then run from the command line, using this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You can find your APK files inside the `/build/` folder. If you need more information
+    of using the APK files in this way, and testing from the command line, take a
+    look back at [Chapter 7](part0068_split_000.html#page "Chapter 7. Behavior-driven
+    Development"), *Behavior-driven Development*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Fork
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Another humorous name for a library, but stick with it reader, this similarity
+    is not just a co-incidence. After telling you how amazing Spoon is at speeding
+    up your tests by running all your instrumentation tests in parallel on all connected
+    devices, well here comes Fork, to tell you that this naïve scheduling (their words
+    not mine), is a burden on yourself and your CI. Fork can run your tests even faster!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fork increases your tests' speed by introducing a concept called **Device Pools**.
+    In simple terms, imagine you had two identical devices, which are two Sony Xperia
+    Z1s running Android 5.0\. Fork will take your test suite and split it in half,
+    running half the tests on each device. Thus, it saves you 50 percent of the test
+    run speed (roughly excluding warm up/setup time).
+  prefs: []
+  type: TYPE_NORMAL
+- en: These device pools come in different flavors for things such as, api level,
+    smallest width, tablet devices, or manual pools, where you declare the device
+    serial id you want to use. More information about device pools and custom parameters
+    for the fork task can be found at [http://goo.gl/cIm6GQ](http://goo.gl/cIm6GQ).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Fork can be used with Gradle, by adding the plugin to your build script and
+    applying it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, you can run fork tests instead of your normal instrumentation tests with
+    this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you have multiple flavors in your project, you can see what fork tasks are
+    available with the command: **./gradlew tasks | grep fork**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Spoon and Fork are powerful tools, and combined now with your knowledge of instrumentation
+    tests, unit testing, benchmarking, and code analysis, you can put together a robust,
+    informational, and well-rounded test suite, which gives you confidence and agility
+    when it comes to writing your Android applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter has been a little more involved than previous ones, with the sole
+    intention of facing realistic situations and state-of-the-art Android testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We started by enabling code coverage through Jacoco, running our tests, and
+    obtaining a detailed code coverage analysis report.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We then used this report to improve our test suite. Writing tests to cover code
+    we were not aware had not been tested. This led us to better tests, and in some
+    cases improved the design of the project under test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We introduced Robotium, a very useful tool to ease the creation of test cases
+    for our Android applications, and we improved some tests with it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then we analyzed one of the hottest topics in Android testing; testing on the
+    development host JVM, optimizing, and reducing considerably the time needed to
+    run the tests. Something that is highly desirable when we are applying Test-driven
+    Development to our process. Within this scope, we analyzed Robolectric and created
+    some tests as demonstrations to get you started on these techniques.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To round off our knowledge, we looked at Fest and some cutlery these can help
+    us have more expressive tests, improved feedback, and a more powerful overall
+    test suite.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have reached the end of this journey through the available methods and tools
+    for Android testing. You should now be much better prepared to start applying
+    this to your own projects. The results will be visible as soon as you begin to
+    use them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, I hope that you have enjoyed reading this book as much as I did writing
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Happy testing!
+  prefs: []
+  type: TYPE_NORMAL

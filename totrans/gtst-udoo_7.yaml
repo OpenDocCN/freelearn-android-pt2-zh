@@ -1,0 +1,797 @@
+- en: Chapter 7. Using Android APIs for Human Interaction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The advent of personal computers in the 1980s started a new challenge: making
+    computers and computation useful for and usable by hobbyists, students, and, in
+    more general terms, technology enthusiasts. These people needed an easy way to
+    control their machines, so human and computer interaction quickly became an open
+    research field aimed at improving usability and resulting in the development of
+    graphical user interfaces and new input devices. In the last decade, other interaction
+    patterns such as voice recognition, voice synthesis, motion tracking, and many
+    others were used in commercial applications, a great improvement that indirectly
+    caused the evolution of objects such as phones, tablets, and glasses into a new
+    kind of smarter devices.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The goal of this chapter is to take advantage of these new interaction patterns
+    using a subset of Android APIs enhancing the Chronotherm prototype with a new
+    set of features, thus making it a little bit smarter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extending prototypes with Android APIs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using voice recognition to control our prototype
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Giving feedback to users through voice synthesis
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Extending prototypes with Android APIs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Chronotherm application is designed to turn on a boiler when the detected
+    temperature exceeds the user's temperature setpoint. In the previous prototype,
+    we created a settings page in which users can set their preferences for each hour
+    of the day. We can extend the prototype behavior, giving our users the ability
+    to store more than one setpoint configuration. In this way, we could provide preset
+    management that users can activate according to different factors such as the
+    day of the week or the current season.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While adding this feature, we have to bear in mind that this isn't a desktop
+    application, so we should avoid the creation of a new bunch of overwhelming user
+    interfaces. The Chronotherm application could be deployed in the users home and,
+    because they are usually noiseless places, we can take into consideration the
+    use of **voice recognition** to get the users input. This approach will remove
+    the need for other activities to create or edit stored presets. In the meantime,
+    we have to take into account that we need to provide feedback when the voice recognition
+    process ends so that users know whether their command was accepted or not. Even
+    if we can solve this problem using small popups or notifications, we can provide
+    a better user experience using **voice synthesis** to give feedback to our users.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Voice recognition and synthesis are features that we can use to give a new kind
+    of interaction to our applications. However, we have to bear in mind that these
+    components could create serious accessibility issues for people with visual, physical,
+    or hearing loss limitations. Every time we want to create a good project, we have
+    to work really hard to make beautiful applications that can be used by everyone.
+    Android helps us a lot with the **accessibility framework**, so, for future projects,
+    remember to follow all best practices available at [https://developer.android.com/guide/topics/ui/accessibility/index.html](https://developer.android.com/guide/topics/ui/accessibility/index.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Android SDK exposes a set of APIs that we can use to interact with the installed
+    text-to-speech service and voice input methods, but **Vanilla Android** shipped
+    in UDOO does not provide them out of the box. For our code to work, we need to
+    install an application for voice recognition and another one implementing text-to-speech
+    functionalities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, almost any Android device on the market comes with such applications
+    already installed as part of the **Google Mobile Services** suite. For more details
+    on this topic, follow the link [http://www.udoo.org/guide-how-to-install-gapps-on-udoo-running-android/](http://www.udoo.org/guide-how-to-install-gapps-on-udoo-running-android/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Improving user settings
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we proceed with our implementation of the voice recognition service,
+    we need to change how settings are stored in our physical application. At the
+    moment, we're using the Chronotherm application's shared preferences in which
+    we store the chosen setpoint for each `SeekBar` class. According to new requirements,
+    this is no longer suitable for our application because we need to persist different
+    setpoints for each preset. Moreover, we need to persist the current activated
+    preset and all these changes force us to design a new user interface together
+    with a new settings system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can take a look at the following screenshot to find what changes we should
+    take:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Improving user settings](img/1942OS_07_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The first required step is to update our user interface. Following the suggestion
+    in the above mock-up, we should:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add a new `TextView` at the top of the layout that shows the name of the current
+    preset. The name should be changed while loading the activity and whenever the
+    user activates a new preset.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To achieve the preceding layout, update the `activity_overview.xml` file under
+    `res/layout/` with the following changes inside the header `LinearLayout` where
+    the `TextClock` and the `boiler_status` views are located:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Change the `TextClock` view, replacing the `layout_width` attribute with the
+    highlighted code and adding the `layout_weight` attribute:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Change the layout of the `boiler_status` `TextView` as we did in the previous
+    step:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following `TextView` between the preceding components to show the activated
+    preset:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the top of the `Overview` class, add the reference for the `current_preset`
+    view with the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `Overview` `onCreate` callback, get the view reference with the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The following screenshot is what we obtain through the preceding layout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Improving user settings](img/1942OS_07_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Storing preset configurations
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'As previously discussed, we should change how user setpoints are stored and
+    retrieved within the Chronotherm application. The idea is to isolate access to
+    the application''s shared preferences in a new `Preset` class that exposes the
+    following methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A `set()` method to save a setpoint configuration corresponding to a preset
+    name. The array of setpoint values is serialized in a comma-separated string and
+    saved using the preset name as the key.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A `get()` method to return stored setpoints for the given preset name. The setpoint
+    string is deserialized and returned as an array of values.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A `getCurrent()` method to return the name of the latest activated preset.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A `setCurrent()` method to promote the given preset name as the latest activated
+    preset.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To create the `Preset` class, proceed with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `Preset` class in the `chronotherm` package.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add the following declarations at the top of the `Preset` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We put the preferences name we used in the previous chapter in a variable called
+    `SHARED_PREF`. The `CURRENT_PRESET` key is used to get or set the currently used
+    preset. The `NO_PRESET` assignment defines the value that is returned by default
+    when no presets are found. This handles the first application run case showing
+    the **NO PRESET ACTIVATED** screen when no preset is found.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the `set()` method at the bottom of the `Preset` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The preceding method expects the `values` array that represents the user's setpoints
+    for the given preset `name` variable. We use the `TextUtils` class to serialize
+    the values array in a comma-separated string while using the preset `name` variable
+    as the key.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the `get()` method at the bottom of the `Preset` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We fill the `values` array with the setpoints retrieved through the preset `name`
+    variable. We know the values are comma-serialized, so we split and parse the string,
+    adding each value to the preceding array. If we do not find any match with the
+    given preset `name` variable, we return an empty array.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the `getCurrent()` method at the bottom of the class to return the currently
+    activated preset:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `setCurrent()` method at the bottom of the class to store the currently
+    activated preset:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now that we have a formal representation of the user's presets, we should adapt
+    both the activities to reflect the latest changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using presets among activities
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We begin with the `Overview` activity that should load the current preset during
+    the activity''s resuming phase. If a preset is activated, we should change the
+    `current_preset` `TextView` with the preset name. To achieve this step, we should
+    replace the `readPreferences` method with the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next step is to adapt the `Settings` activity with a new behavior, summarized
+    in the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When users open the `Settings` activity, the voice recognition system should
+    ask for preset name.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the given preset is found, we should load the preset's setpoints and update
+    all temperature bars. When users save the new preferences, the old setpoints are
+    updated.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the given preset is not found, there is no need to update the temperature
+    bars. When users save the new preferences, a new preset entry is stored with the
+    given setpoints.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We still don''t have all the components needed to implement the first step
+    because we''re missing the voice recognition implementation. In the meantime,
+    we can update how presets are stored and retrieved in this activity through the
+    following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the top of the class, add the highlighted variable that will store the recognized
+    preset name:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the `onCreate()` callback of the `Settings` activity, remove the `readPreferences()`
+    method's call.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Update the `readPreferences()` member function so it loads values for the given
+    preset name (when available) and returns values denoting whether this preset is
+    found or not. We can implement this behavior with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Update the `savePreferences()` method so it uses the `Preset` class to store
+    or update the given setpoints:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Through these steps, we have changed preset management in both activities. We
+    still need to complete the `Settings` activity because we're missing the recognition
+    phase. We will complete these steps later, after the implementation of voice recognition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The last, missing step in adapting the Chronotherm application to the new preset
+    management is to change the temperature check in the `SensorThread` parameter.
+    Indeed, the `isBelowSetpoint` method should retrieve the values of the activated
+    preset matching this setpoint with the last temperature reading. If any preset
+    is selected, it should turn off the boiler by default. We could achieve this behavior
+    by changing the `isBelowSetpoint` method with the highlighted code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This ends the `Preset` configuration process and now we can proceed with implementing
+    voice recognition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing voice recognition
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that our prototype can handle different presets, we should provide a fast
+    way to change, create, or edit user presets through voice recognition. One of
+    the easiest ways to manage voice recognition is to use Android's `Intent` messaging
+    object to delegate this action to another application component. As we discussed
+    at the beginning of the chapter, if we install and configure a compliant voice
+    input application, Android can use it for voice recognition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The main goal is to provide an abstract class that will be extended by our
+    activities in order to manage recognition callback, while avoiding code repetition.
+    The overall design is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We should provide a common interface for activities that need voice recognition.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We should provide a `startRecognition()` method to launch the recognition activity
+    through the `Intent` object.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We should implement the `onActivityResult()` callback that will be called by
+    the launched activity when voice recognition ends. In this callback, we use the
+    best among all the results produced during the voice recognition process.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Job delegation is one of the most useful features of the Android operating system.
+    If you need more information about how it works under the hood, take a look at
+    the Android official documentation at [http://developer.android.com/guide/components/intents-filters.html](http://developer.android.com/guide/components/intents-filters.html).
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The preceding abstraction to reuse voice recognition capability can be achieved
+    with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add in the `IRecognitionListener` interface in the `chronotherm` package that
+    defines the `onRecognitionDone()` callback used to send back the result to the
+    caller activity. We can achieve this with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new package called `voice` and add a new abstract class called `RecognizerActivity`.
+    This class should be defined as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a public method to initialize the recognition phase, delegating the responsibility
+    for retrieving the results, with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `requestCode` parameter is the recognition `Intent` identifier and is used
+    by the caller activity to properly identify the result and how to handle it. The
+    `what` parameter is used to provide an on-screen message if the external application
+    supports it.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the `onActivityResult()` callback to extract the best result and pass it
+    to the caller activity through the common interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Using voice recognition to add or edit presets
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Through the `RecognizerActivity` class, we delegate the hard work to the Android
+    framework. According to the nature of the activity, we should handle results in
+    different ways. We start using voice inputs with the `Settings` activity asking
+    the name of the preset we want to create or edit during the activity creation
+    phase. If the preset exists, we should load stored setpoints and update them during
+    the save process. Otherwise, we should create a new record in our preferences.
+    To achieve this behavior, perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From the `Settings` class, extend `RecognizerActivity` in line with the following
+    snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Declare the intent request code that we will use to identify and handle the
+    recognized result. At the top of the class, add the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the bottom of the `onCreate()` callback, add the following code to start
+    voice recognition as soon as possible:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the `onRecognitionDone()` callback, required by the `IRecognitionListener`
+    interface previously defined, to handle the results returned from the recognition
+    intent. At the bottom of the class, add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If the recognition is related to the `VOICE_SETTINGS` intent code, the `bestMatch`
+    argument is passed to the `readPreferences` parameter that loads and sets all
+    temperature bars with preset setpoints. The `mEditingPreset` variable is set so
+    that we can reuse the preset name during the save process.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: We have made all required changes for the `Settings` activity and now can proceed
+    to use voice recognition in the `Overview` activity to load and set the activated
+    preset.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using voice recognition to change active presets
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now that users can store different presets, we have to provide a way to change
+    activated setpoints in the `Overview` activity. Previously, we added a `TextView`
+    class showing the name of the current preset; to keep the interface lean, we could
+    use this component also to start voice recognition. The user can change the active
+    preset through the current flow:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When users click on the **TextView** option, the system should start voice recognition
+    to get the preset name.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the preset is found, the activated preset should be replaced with the one
+    chosen by the user and the `Overview` temperature bars should be updated.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the preset is not found, nothing should happen.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To achieve the preceding interaction flow, proceed with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we did for the `Settings` activity, extend the `RecognizerActivity` class
+    from the `Overview` class, in line with the following snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Declare the intent request code that we will use to identify and handle the
+    recognized result. At the top of the class, add the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the bottom of the class, add a method to start the preset name recognition:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the `onRecognitionDone()` callback to handle the results returned
+    from the recognition intent. Within this method, we call the `setPreset()` member
+    function to update the active preset and load temperature setpoints, if the given
+    preset is found. At the bottom of the class, add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the `setPreset()` method to handle the best recognized result. At
+    the bottom of the class, add the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Connect the `changePreset()` method that starts voice recognition with the
+    `TextView` component. In the `activity_overview.xml` file under `res/layout/`,
+    make the `current_preset` view clickable with the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With this last section, we have created an abstraction to handle voice recognition
+    through Android intents and we have updated the `Settings` and the `Overview`
+    activities to use it. Now we can upload the Chronotherm application and start
+    using the application again with presets and voice recognition features.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Improving user interaction with voice synthesis
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Even if the Chronotherm application is working correctly, we have at least
+    one more thing to do: providing proper feedback to let users know the action that
+    was taken. Indeed, both activities fail to provide any visual feedback about what
+    the recognized input is; for this reason, we decided to introduce the voice synthesis
+    API within the initial design.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because we want to share the synthesis procedure across different activities,
+    we could create a manager that abstracts the synthesis API with a common initialization.
+    The idea is to provide a class that exposes the method to start voice recognition
+    with the given string; we implement it in the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `VoiceManager` class inside the `voice` package.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Initialize the class with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This class implements the `OnInitListener` interface that defines the callback
+    that should be invoked after initializing the `TextToSpeech` engine. We store
+    the current `TextToSpeech` instance that we will use in the following snippets
+    as a variable.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Override the `onInit()` method so that it sets the US locale if the `TextToSpeech`
+    instance service initialization is successful:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the class constructor in which we should initialize the text-to-speech
+    service with the given activity `Context`. Inside the class, write the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the `speak()` method that proxies the given text to the `TextToSpeech`
+    instance, by adding the following code at the bottom of the class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `TextToSpeech.speak` method uses a queuing strategy to make this method
+    asynchronous. When it's called, the synthesis request is appended in the queue
+    and, when the service is initialized, it will get processed. The queue mode could
+    be defined as the second parameter of the speak method. We can find more information
+    about the text-to-speech service at
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[http://developer.android.com/reference/android/speech/tts/TextToSpeech.html](http://developer.android.com/reference/android/speech/tts/TextToSpeech.html)'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Providing feedback to users
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We should now adapt our activities to use the simple abstraction implemented
+    in the preceding class. We begin with the `Overview` activity in which we should
+    initialize the `VoiceManager` instance and use it in the `setPreset()` method
+    to provide proper feedback whether we have found the recognized preset or not.
+    To use the synthesis API in the `Overview` activity, perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the top of the class, add the highlighted code between the declaration of
+    variables:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the bottom of the `onCreate()` callback, initialize the `VoiceManager` instance
+    as shown in the following code snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Update the `setPreset()` method with the highlighted code so that it calls
+    the synthesis API to provide feedback during preset activation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The prototype is almost done and we only need to repeat the preceding steps
+    for the `Settings` activity. In this activity, we should initialize the `VoiceManager`
+    parameter and make use of the synthesis API in the `onRecognitionDone()` callback.
+    There we should provide feedback to users about what the recognized preset is
+    and whether it''s going to be created or edited according to retrieved setpoints.
+    To use the synthesis API in the `Settings` activity, perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the top of the class, declare the `VoiceManager` variable in line with the
+    highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the bottom of the `onCreate()` callback, initialize the `VoiceManager` instance:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Update the `onRecognitionDone()` callback so that it calls the synthesis API
+    to provide proper feedback:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We have completed enhancing our prototype with voice recognition and synthesis.
+    The last, missing task is to upload the application again and check whether everything
+    works as expected. Then we can update the Chronotherm application in the `app/build.gradle`
+    file with a `0.2.0` version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we managed to introduce numerous features with little work.
+    We learned how to produce a lean and quick user interface with the help of voice
+    recognition and synthesis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We started our journey creating a new way to store the user's presets, one that
+    required refactoring for both activities and for `SensorThread` temperature checking.
+    We proceed with the first implementation of voice recognition and, to simplify
+    our work, we created a generic activity class extended from the `Settings` and
+    `Overview` activities. This allowed us to abstract some common behavior, making
+    it easy to call the recognition intent within different parts of our code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the last step, we prepared the voice synthesis manager to easily use the
+    Android text-to-speech engine. Indeed, we use this component to provide feedback
+    after the recognition process, when users are changing their settings and the
+    current activated preset.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will add network capabilities to the Chronotherm application
+    so that it will be able to retrieve forecast data; using this information, we
+    will make a slightly better algorithm to decide whether to turn our boiler on
+    or off.
+  prefs: []
+  type: TYPE_NORMAL

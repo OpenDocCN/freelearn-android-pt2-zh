@@ -1,0 +1,202 @@
+- en: Chapter 2. Drawing Threads
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A thread is the smallest sequence of instructions that can be managed by the
+    operating system independently. Normally, a single task is achieved in a single
+    thread in a single process but, if we want to change the normal behavior and want
+    multiple tasks to run at the same time, we will use multi-threading. The threads
+    share the same process resources but are executed independently. If the system
+    has a single processor, it may appear that the tasks are being processed at the
+    same time, but they are not. In reality, with a single processor, the allocation
+    of processing threads is switched from thread to thread but the switching is so
+    fast that it appears to be processed at the same time. If the system has multiple
+    processors, two threads can be executed at the same time—in parallel to each other.
+    Multi-threading is an execution model in which more than one thread can be executed
+    in a single process. Threads can be used in a number of ways and each has its
+    own importance; for example, either to execute multiple tasks at the same time
+    or just to move away the load from the main thread if something needs to be processed
+    in the background and the frontend stays responsive and active. This is the ideal
+    situation for Android applications as we have to keep the maximum possible load
+    away from the main thread and keep the frontend responsive and active. If we don't
+    do this and retain heavy operations that consume a lot of processor power and
+    memory, the application may end up nonresponsive or even ask us for a forced close.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The objective of this chapter is to clear the understanding of threads in Android.
+    We will not dig deep into the details of threads and their coding, but will have
+    a basic understanding of threads in Android. What are the known issues with this?
+    Why are Android threads important in terms of drawing and Canvas? We will see
+    a simple structure of code through which we want our tasks to run on another thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: All applications run on a single thread in Android. All instructions run in
+    a sequence, meaning that the second instruction will not start unless the first
+    one is finished. This main thread is also called the **UI** (**User Interface**)
+    thread as it is responsible for drawing all the objects or views on the screen
+    and processing all events, such as screen touches and button clicks. Now the problem
+    is that, if we have two operations scheduled to run in the same default thread
+    or UI thread and the first operation takes too long to finish, the system will
+    ask the user to forcibly close the application or wait for the process to complete.
+    This scenario is called **ANR** (**Application Not Responding**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The need for drawing threads
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We know we will work with images, drawings, and other graphics processing and
+    we also know that they are pretty heavy on system resources. So we would like
+    to design our application very carefully, keeping performance in mind. What if
+    we overlook this point and put all our images, bitmaps, graphics, and other graphics
+    processing items on the default UI thread? This is the way new Android developers
+    work—keep everything in the code of the default activity, meaning keep the entire
+    load on the UI thread. The default activity is the activity that we want to load
+    first when our application runs. The UI thread is the main thread of execution
+    of our application. This is the thread where most of the code of the application
+    runs. Application components such as `Activities`, `Services`, `ContentPorviders`,
+    and `BroadcastReceivers` are created in this thread. What will happen in this
+    case? Even if our application is the most useful and most attractive application
+    on the planet, it won't last a day. Every time users run our application, it will
+    end up nonresponsive. A few angry comments from users on Play Store, and our application
+    is done. We will lose the idea, as by that time it will be public, and we will
+    also lose our audience. To cope up with this problem, we will take away all the
+    hard work and heavy load from the main UI thread to another thread. Ideally, when
+    this runs, it will look like all the threads are running in parallel, but that's
+    only in the case of multiple CPUs. If there is only a single CPU but multithreading
+    is supported, the system will decide which thread to start and which to stop,
+    but no thread will be permanently stopped. So the control will switch between
+    the running threads and it will look as if all threads are running in parallel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The issue with multithreading in Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will put our heavy, resource-consuming operations on a separate thread, but
+    in Android this generates a problem and that is the reason why no other thread
+    is allowed to update the main UI thread that is responsible for all UI elements
+    and processes. To cope up with this issue, we need to sync it with the current
+    state of the UI thread. Android provides a class that specifically deals with
+    this issue. It's called the `AsyncTask` class. We will discuss this later in this
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Thread class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The `Thread` and `Runnable` classes are the basic classes that enable us to
+    use multithreading, but they have a very limited functionality but still do provide
+    the base for `AsyncTask`, `HandlerThread`, `IntentService.Thread`, and `ThreadPoolExecuter`.
+    These classes automatically manage threads and can run multiple threads in parallel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is a piece of sample code of the `Runnable` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we want our thread to run in the background, we will add the following line
+    to the `run()` method mentioned previously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Let's say we have our `Runnable` class. We still won't be able to display anything
+    on the user interface because only the UI thread executes the UI objects such
+    as views. Objects running on the UI thread have access to other objects. Now the
+    tasks that are running on our thread are not on the UI thread and therefore they
+    don't have access to UI objects. To give our tasks access to the UI objects on
+    the UI thread, we must use something with which we can move data from the background
+    thread to the UI thread. If a thread is running in the background and it needs
+    to change something on the UI, it can't do that by itself but will use the facility
+    provided by `runOnUiThread`, which will enable us to run the code inside a background
+    thread on the main UI thread. Optionally, we can use `Handler` objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Downloading the example code**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can download the example code files for all Packt books you have purchased
+    from your account at [http://www.packtpub.com](http://www.packtpub.com). If you
+    purchased this book elsewhere, you can visit [http://www.packtpub.com/support](http://www.packtpub.com/support)
+    and register to have the files e-mailed directly to you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handler objects that run on the UI thread
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To code `Handler` objects that run on the UI thread, firstly a `Handler` object
+    should be defined on the UI thread and then the data should be stored in a `Task`
+    object. The status of the object should be sent up the hierarchy of objects. When
+    we are done with this, the data should be moved to the UI thread. We do all this
+    to achieve our goal of running tasks on another thread in the background and when
+    needed communicate with the main UI thread to get our desired output. However,
+    this requires a lot of efforts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Handler objects that run on the UI thread](img/5396_02_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: AsyncTask
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To significantly reduce workload and complications, Android provides the `AsyncTask`
+    class. This class will allocate our tasks to run on another thread in the background
+    and when needed will communicate with the UI thread automatically, saving us the
+    time and effort we will spend on `Handler` objects. To get the job done, we will
+    create a class that will extend `AsyncTask`, will put in our functionality, and
+    will execute our application. `AsyncTask` will do a lot for us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter we have learned about the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The thread structure of a simple Android application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The role of the UI thread and its power
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The need to keep heavy resource-consuming operations away from the main UI thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The limitations of threads that are not the UI thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to handle problems using `Handler` objects and communicate with the UI thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The code structure of a class that implements the `Runnable` interface, which
+    enables us to use threading
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The facility that Android provides us in the form of the `AsyncTask` class;
+    we also learned about its importance
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the next chapter we will learn about the `Drawable` class and drawing on
+    Canvas using images from resources and XML. Drawing on `View` and `SurfaceView`
+    and drawing of basic shapes such as circles will also be covered.
+  prefs: []
+  type: TYPE_NORMAL

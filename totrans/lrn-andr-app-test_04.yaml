@@ -1,0 +1,895 @@
+- en: Chapter 4. Managing Your Android Testing Environment
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we have a complete understanding of the available Android testing SDK
+    and have a nice range of testing recipes ready to assert and verify our app's
+    behavior, it is time to provide different conditions to run our tests, explore
+    other tests, or even use the application manually to understand what the end user
+    experience would be.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating Android Virtual Devices (AVD) to provide different conditions and configurations
+    for an application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Understanding the different configurations that we can specify while creating
+    AVDs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to run AVDs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to create headless emulators
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unlocking the screen to be able to run all the tests
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Simulating real-life network conditions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Speeding up your AVD with HAXM
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Alternatives to the Android Virtual Device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Running monkey to generate events to send to the application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating Android Virtual Devices
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To have the best chance of detecting problems related to the device on which
+    the application is running, you need the widest possible coverage of device features
+    and configurations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While final and conclusive tests should always be run on real devices, with
+    the ever-increasing number of devices and form factors, it is virtually impossible
+    that you will have one device of each to test your application. There are also
+    device farms in the cloud to test on a variety of devices (Google for `cloud device
+    testing`), but sometimes, their cost is above the average developer budget. Android
+    provides a way of emulating, more or less verbatim, a great variety of features
+    and configuration just for the convenience of different AVD configurations (an
+    emulator).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: All the examples in this chapter are run from OSX 10.9.4 (Mavericks) 32 bit
+    using Android SDK Tools 23.0.5 with platform 4.4.2 (API 20) installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create an AVD, you can use the `android avd` command from a terminal, or
+    from inside Android Studio, using **Tools** | **Android** | **AVD** **Manager**
+    or its shortcut icon. If you run the AVD Manager from a terminal, you get a GUI
+    that is slightly different than what you get by running from Android Studio, but
+    they both do the same job. We're going to be using the AVD Manager from Android
+    Studio as this is the most likely use case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'By clicking on the icon, you can access the **AVD Manager**. Here, you press
+    the **Create Device...** button to create a new AVD, and the following dialog
+    box is presented:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating Android Virtual Devices](img/00014.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now, you can select a profile phone for the hardware (let's pick Nexus 5), hit
+    **Next**, and select an Android version (KitKat x86). Hit **Next** again, and
+    you get a summary of your device. You can click on **Finish** and you create the
+    AVD using the default values. However, if you need to support specific configurations,
+    you can specify different hardware properties. Let's change the AVD name to `testdevice`.
+    Even more properties are available by using the **Show Advanced Settings** button.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A wide range of properties can be set. Some highlights are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ram size / SD card size
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Emulate or use your webcam as front / back camera
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Change the network speed / simulate latency
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting the scale is also very useful to test your application in a window that
+    resembles the size of a real device. It is a very common mistake to test your
+    application in an AVD with a window size that is at least twice the size of a
+    real device, and using a mouse pointer, believing that everything is fine, to
+    later realize on a physical device with a screen of 5 or 6 inches that some items
+    on the UI are impossible to touch with your finger.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, it is also helpful to test your application under the same conditions
+    repeatedly. To be able to test under the same conditions again and again, it is
+    sometimes helpful to delete all the information that was entered in the previous
+    sessions. If this is the case, ensure **Store a snapshot for faster startup**
+    is unticked so as to start afresh every time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running AVDs from the command line
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Wouldn't it be nice if we could run different AVDs from the command line and
+    perhaps automate the way we run or script our tests?
+  prefs: []
+  type: TYPE_NORMAL
+- en: By freeing the AVD from its UI window, we open a whole new world of automation
+    and scripting possibilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Well, let's explore these alternatives.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Headless emulator
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A headless emulator (its UI window is not displayed) comes in very handy when
+    we run automated tests and nobody is looking at the window, or the interaction
+    between the test runner and the application is so fast that we hardly see anything.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, it is worth mentioning that, sometimes, you can't understand why some
+    tests fail until you see the interaction on the screen, so use your own judgment
+    when selecting a running mode for your emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One thing that we may have noticed while running AVDs is that their network
+    communication ports are assigned at runtime, incrementing the last used port by
+    `2` and starting with `5554`. This is used to name the emulator and set its serial
+    number; for example, the emulator using port `5554` becomes `emulator-5554`. This
+    is very useful when we run AVDs during the development process because we don't
+    have to pay attention to port assignment. However, it can be very confusing and
+    difficult to track which test runs on which emulator if we are running more than
+    one simultaneously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In such cases, we will be specifying manual ports to keep the specific AVD under
+    our control.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Usually, when we are running tests on more than one emulator at the same time,
+    not only do we want to detach the window, but also avoid sound output. We will
+    add options for this as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The command line to launch the test AVD that we just created is as follows,
+    and the port must be an integer between 5554 and 5584:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can now check whether the device is in the device list:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next step is to install the application and the tests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we can use the specified serial number to run the tests on it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Disabling the keyguard
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We can see the tests being run without them requiring any intervention and access
+    to the emulator GUI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sometimes, you might receive some errors for tests that are not failing if you
+    run in a more standard approach, like in a standard emulator launched from your
+    IDE. In such cases, one of the reasons is that the emulator might be locked at
+    the first screen, and we need to unlock it to be able to run tests that involve
+    the UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To unlock the screen, you can use the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The lock screen can also be disabled programmatically. In the instrumentation
+    test class, you should add the following code, most probably in `setup()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will dismiss the keyguard for these tests and has the added advantage of
+    not needing any extra security permissions or changes to the app under test (which
+    the deprecated alternative does, see [http://developer.android.com/reference/android/app/KeyguardManager.html](http://developer.android.com/reference/android/app/KeyguardManager.html)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Cleaning up
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'On certain occasions, you also need to clean up services and processes that
+    are started after running tests. This prevents the results of the latter from
+    being influenced by the ending conditions of the previous tests. In these cases,
+    it is always better to start from a known condition, freeing all the used memory,
+    stopping services, reloading resources, and restarting processes, which is achievable
+    by warm-booting the emulator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This command line opens the emulator shell for our emulator, and runs the stop
+    and start commands, or as people say, turning it off and on again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The output of these commands can be monitored using the `logcat` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You will see messages like these:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Terminating the emulator
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Once we finish working with one of the headless emulator instances, we start
+    using the command mentioned earlier. We use the following command line to kill
+    it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will stop the emulator from freeing the used resources and terminating
+    the emulator process on the host computer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additional emulator configurations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sometimes, what we need to test is outside the reach of the options that can
+    be set when the AVD is created or configured.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the cases could be the need to test our application under different locales.
+    Let's say we want to test our application on a Japanese phone—an emulator, with
+    the language and country set to Japanese and Japan respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have the ability to pass these properties in the emulator command line.
+    The `-prop` command line option allows us to set any of the properties we could
+    set:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To verify that our settings were successful, we can use the `getprop` command
+    to verify them, for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you want to clear all the user data after playing with the persistent settings,
+    you can use the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: After this, the emulator will start afresh.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: More information and a list of available properties for setting the emulator
+    hardware options can be found at [http://developer.android.com/tools/devices/managing-avds-cmdline.html#hardwareopts](http://developer.android.com/tools/devices/managing-avds-cmdline.html#hardwareopts).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Simulating network conditions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It is extremely important to test under different network conditions, but it
+    is neglected more often than not. This can lead to misconceptions that the application
+    behaves differently because we use the host network that presents a different
+    speed and latency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Android emulator supports network throttling, for example, to support slower
+    network speeds and higher connection latencies. This can be selected when you
+    first create your AVD, but can also be done in the emulator at any time from the
+    command line using the `-netspeed` `<speed>` and `-netdelay` `<delay>` options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The complete list of supporting options is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For network speed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Option | Description | Speeds [kbits/s] |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed gsm` | GSM/CSD | Up: 14.4, down: 14.4 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed hscsd` | HSCSD | Up: 14.4, down: 43.2 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed gprs` | GPRS | Up: 40.0, down: 80.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed edge` | EDGE/EGPRS | Up: 118.4, down: 236.8 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed umts` | UMTS/3G | Up: 128.0, down: 1920.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed hsdpa` | HSDPA | Up: 348.0, down: 14400.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed full` | No limit | Up: 0.0, down: 0.0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed <num>` | Select both the upload and download speed | Up: as specified,
+    down: as specified |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netspeed <up>:<down>` | Select the individual up and down speed | Up: as
+    specified, down: as specified |'
+  prefs: []
+  type: TYPE_TB
+- en: 'For latency:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Option | Description | Delay [msec] |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netdelay` `gprs` | GPRS | Min 150, max 550 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netdelay` `edge` | EDGE/EGPRS | Min 80, max 400 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netdelay` `umts` | UMTS/3G | Min 35, max 200 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netdelay` `none` | No latency | Min 0, max 0 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netdelay` `<num>` | Select exact latency | Latency as specified |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-netdelay` `<min>:<max>` | Select min and max latencies | Minimum and maximum
+    latencies as specified |'
+  prefs: []
+  type: TYPE_TB
+- en: 'If the values are not specified, the emulator uses the following default values:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The default network speed is full
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The default network latency is none
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This is an example of an emulator using these options to select the GSM network
+    speed of 14.4 kbits/sec and a GPRS latency of 150 to 500 msecs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once the emulator is running, you can verify these network settings or change
+    them interactively using the Android console inside a Telnet client:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After we are connected, we can type the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: You can use the emulator to test applications using network services either
+    manually or in an automated way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In some cases, this not only involves throttling the network speed but also
+    changing the state of the GPRS connection to investigate how the application behaves
+    and copes with these situations. To change this status, we can also use the Android
+    console in a running emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, to unregister the emulator from the network, we can use:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After receiving the **OK** subprompt, we can set the data network mode as unregistered
+    by issuing the following command. This will turn off all data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After testing the application under this condition, you can connect it again
+    by using the following command line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To verify the status, you can use the following command lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Speeding up your AVD with HAXM
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When using Android Virtual Devices, you'll notice that they aren't the most
+    responsive of emulators. This is due to the fact that the AVD emulator does not
+    support hardware GL, and so the GL code gets translated into ARM software, which
+    gets run on hardware emulated by QEMU (QEMU is the hosted virtual machine monitor
+    that AVDs run on top of). Google has been working on this problem, and now, efficient
+    use of the host GPU is boosting speed (SDK 17). Responsiveness has improved on
+    this and above levels of emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another speed boost can be gained by using Intel's Hardware Accelerated Execution
+    Manager (HAXM). You can get a 5 to 10 times speed boost on your AVDs that run
+    x86 as it will execute the CPU commands natively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: HAXM works by allowing the CPU commands to be run on your hardware (that is
+    your Intel CPU), whereas earlier, QEMU would be simulating the CPU, and all commands
+    would be through software, which is why the original architecture is cumbersome.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As per the requirements, you need to have an Intel-based processor with VT (Virtualization
+    Technology) support and an x86-based emulator with minimum SDK 10 (Gingerbread).
+    Intel claims that most Intel processors from 2005 onwards will support VT offloading
+    as standard.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Installation is straightforward; download HAXM from the extras section of the
+    Android SDK Manager, locate the downloaded file, and follow the installer instructions.
+    You can clarify a successful installation by running this command from a terminal:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you get a message that contains `com.intel.kext.intelhaxm`, you've installed
+    and can now run your speedy x86 emulator. There is nothing else you have to do,
+    just ensure the CPU/ABI of your Android emulator is x86 and HAXM will be running
+    in the background for you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alternatives to the AVD
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Android Virtual Device is not your only way of running Android apps. There
+    are now a few solutions you can choose from. A quick search on Google can bring
+    up this list (I won't write it here as they can quickly get out of date). One
+    of these that I personally recommend is the GenyMotion emulator. This is an Android
+    emulator that uses x86 architecture virtualization to make it much more efficient.
+    It runs much faster and smoother than the AVD. The downside being it is only free
+    for personal use, and as of this writing, it does not emulate all the sensors
+    of a device, but I know they are busy working on this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running monkey
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You might know about the infinite monkey theorem. This theorem states that a
+    monkey that hits keys at random on a typewriter keyboard for an infinite amount
+    of time will eventually type a given text, such as the complete works of William
+    Shakespeare. The Android version of this theorem states that a monkey that produces
+    random touches on a device could crash your application in, well, much less than
+    an infinite amount of time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With this, Android features a monkey application ([http://goo.gl/LSWg85](http://goo.gl/LSWg85))
+    that will generate the random events instead of a real monkey.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The simplest way to run monkey against our application to generate random events
+    is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You will be receiving this output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: The monkey will send events only to the specified package (`-p`), in this case
+    `com.blundell.tut`, in a very verbose manner (`-v` `-v`). The count of events
+    sent will be 1000.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The client-server monkey
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There is another way of running monkey. It also presents a client-server model
+    that ultimately allows for the creation of scripts that control what events are
+    sent and does not rely only on random generation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Usually, the port used by monkey is `1080`, but you can use another one if
+    it better suits your preferences:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we need to redirect the emulator port:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we are ready to send events. To do it manually, we can use a Telnet client:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the connection is established, we can type the specific monkey command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: To finish, exit the telnet command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we need to exercise the application repeatedly, it is much more convenient
+    to create a script with the commands we want to send. A monkey script could look
+    like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The API for monkey tap is `tap <x pixel position> <y pixel position>`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Therefore, if you are not running an emulator with the same § resolution as
+    the one your monkey command was recorded with, you could get incorrect touch events
+    from your monkey.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After having started the example application for this chapter, we can run this
+    script to exercise the user interface. To start the application, you can use the
+    emulator window and click on its launcher icon or use the command line that states
+    the activity you want to start, which is the only alternative if the emulator
+    is headless, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is informed in the log by this line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once the application has started, you can send the events using the script
+    and the `netcat` utility:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will send the events contained in the script file to the emulator. These
+    are the following events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Touch and select the edit text input.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Type `Hello World`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Tap the button to show the toast.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Touch and select the edit text again.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Delete its content.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Type `Monkey`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Tap the button to show the toast **Hello Monkey**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In this manner, simple scripts that consist of touch events and key presses
+    can be created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Test scripting with monkeyrunner
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The possibilities of monkey are fairly limited, and the lack of flow control
+    restricts its use to very simple cases.To circumvent these limitations, a new
+    project was created, which was named monkeyrunner. Notwithstanding this, the name
+    is almost the same and leads to a huge amount of confusion because they are not
+    related in any way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Monkeyrunner, which is already included in the latest versions of the Android
+    SDK, is a tool that provides an API for the purpose of writing scripts that externally
+    control an Android device or emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Monkeyrunner is built on top of Jython ([http://jython.org/](http://jython.org/)),
+    a version of the Python programming language ([http://python.org/](http://python.org/)),
+    which is designed to run on the Java platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'According to its documentation, the monkeyrunner tool provides these unique
+    features for Android testing. These are just the highlights of the complete list
+    of features, examples, and reference documentation that can be obtained from the
+    monkeyrunner home page ([http://developer.android.com/tools/help/monkeyrunner_concepts.html](http://developer.android.com/tools/help/monkeyrunner_concepts.html)):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Multiple device control**: The `monkeyrunner` API can apply one or more test
+    suites across multiple devices or emulators. You can physically attach all the
+    devices or start up all the emulators (or both) at once, connect to each one in
+    turn programmatically, and then run one or more tests. You can also start up an
+    emulator configuration programmatically, run one or more tests, and then shut
+    down the emulator.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Functional testing**: `monkeyrunner` can run an automated start-to-finish
+    test of an Android application. You provide input values with keystrokes or touch
+    events, and view the results as screenshots.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Regression testing**: `monkeyrunner` can test the application stability by
+    running an application and comparing its output screenshots to a set of screenshots
+    that are known to be correct.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Extensible automation**: Since `monkeyrunner` is an API toolkit, you can
+    develop an entire system of Python-based modules and programs to control Android
+    devices. Besides using the `monkeyrunner` API itself, you can use the standard
+    Python OS and subprocess modules to call Android tools such as Android Debug Bridge.
+    You can also add your own classes to the `monkeyrunner` API. This is described
+    in more detail in the online documentation under Extending monkeyrunner with plugins.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Getting test screenshots
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Currently, one of the most evident uses of monkeyrunner is getting screenshots
+    of the application under test to be further analyzed or compared.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These screenshots can be obtained with the help of the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Import the required modules.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create the connection with the device.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Check whether the device is connected.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Start the activity.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add some delay for the activity start up.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Type 'hello'.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add some delay to allow for the events to be processed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Obtain the screenshots.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Save it to a file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Press **BACK** to exit the Activity.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The following is the code for the script needed to perform the preceding steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once this script runs, you will find the screenshot of the activity in `/tmp/device.png`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Record and playback
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If you need something simpler, there is no need to manually create these scripts.
+    To simplify the process, the `monkey_recorder.py` script, which is included in
+    the Android source repository in the SDK project ([http://goo.gl/6Qv0z0](http://goo.gl/6Qv0z0)),
+    can be used to record event descriptions that are later interpreted by another
+    script called `monkey_playback.py`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run `monkey_recorder.py` from the command line, and you will be presented with
+    this UI:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Record and playback](img/00015.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This interface has a toolbar with buttons to insert different commands in the
+    recorded script:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Button | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Wait** | This denotes how many seconds to wait.This number is requested
+    by a dialog box. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Press a Button** | This sends the **MENU**, **HOME**, **RECENTS**, and
+    **SEARCH** buttons. Press the **Down** or **Up** event. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Type Something** | This sends a string. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Fling** | This sends a fling event in the specified direction, distance,
+    and number of steps. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Export Actions** | This saves the script. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| **Refresh Display** | This refreshes the copy of the screenshot that is displayed.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: 'Once the script is completed, save it, let''s say as `script.mr`, and then,
+    you can re-run it by using this command line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, all the events will be replayed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we covered all the alternatives we had to expose our application
+    and its tests to a wide range of conditions and configurations, ranging from different
+    screen sizes, the availability of devices such as cameras or keyboards, to simulating
+    real-life network conditions to detect problems in our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also analyzed all of the options we have in order to be able to control emulators
+    remotely when they are detached from its window. This prepares the foundation
+    of doing test first development, and we will come back to this topic in [Chapter
+    6](part0061_split_000.html#page "Chapter 6. Practicing Test-driven Development"),
+    *Practicing Test-driven Development*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We discussed the speed of the AVD and saw how we can improve this, as well as
+    looked at emulator choices in GenyMotion and HAXM. Finally, some scripting alternatives
+    were introduced, and examples to get you started were provided.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will discover continuous integration—a way of working
+    that relies on the ability to automatically run all the test suites and configure,
+    start, and stop emulators in order to automate the complete build process.
+  prefs: []
+  type: TYPE_NORMAL

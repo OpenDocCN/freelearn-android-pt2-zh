@@ -1,0 +1,1464 @@
+- en: Chapter 2. Understanding Testing with the Android SDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We now know how to create tests inside an Android project and how to run these
+    tests. It is now time to start digging a bit deeper to recognize the building
+    blocks available to create more useful tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this second chapter, we will be covering the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Common assertions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: View assertions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Other assertion types
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Helpers to test User Interfaces
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Mock objects
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Instrumentation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: TestCase class hierarchies
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using external libraries
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We will be analyzing these components and showing examples of their use when
+    applicable. The examples in this chapter are intentionally split from the original
+    Android project that contains them. This is done to let you concentrate and focus
+    only on the subject being presented, though the complete examples in a single
+    project can be downloaded as explained later. Right now, we are interested in
+    the trees and not the forest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Along with the examples presented, we will be identifying reusable common patterns
+    that will help you in the creation of tests for your own projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The demonstration application
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A very simple application has been created to demonstrate the use of some of
+    the tests in this chapter. The source for the application can be downloaded from
+    XXXXXXXXXXXXX.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following screenshot shows this application running:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The demonstration application](img/00013.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: When reading the explanation of the tests in this chapter, at any point, you
+    can refer to the demo application that is provided in order to see the test in
+    action. The previous simple application has a clickable link, text input, click
+    on a button and a defined layout UI, we can test these one by one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assertions in depth
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Assertions are methods that check for a condition that can be evaluated. If
+    the condition is not met, the assertion method will throw an exception, thereby
+    aborting the execution of the test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The JUnit API includes the class `Assert`. This is the base class of all the
+    `TestCase` classes that hold several assertion methods useful for writing tests.
+    These inherited methods test for a variety of conditions and are overloaded to
+    support different parameter types. They can be grouped together in the following
+    different sets, depending on the condition checked, for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: assertEquals
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: assertTrue
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: assertFalse
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: assertNull
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: assertNotNull
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: assertSame
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: assertNotSame
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: fail
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The condition tested is pretty obvious and is easily identifiable by the method
+    name. Perhaps the ones that deserve some attention are `assertEquals()` and `assertSame()`.
+    The former, when used on objects, asserts that both objects passed as parameters
+    are equally calling the objects' `equals()` method. The latter asserts that both
+    objects refer to the same object. If, in some case, `equals()` is not implemented
+    by the class, then `assertEquals()` and `assertSame()` will do the same thing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When one of these assertions fails inside a test, an `AssertionFailedException`
+    is thrown, and this indicates that the test has failed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Occasionally, during the development process, you might need to create a test
+    that you are not implementing at that precise time. However, you want to flag
+    that the creation of the test was postponed (we did this in [Chapter 1](part0014_split_000.html#page
+    "Chapter 1. Getting Started with Testing"), *Getting Started with Testing*, when
+    we added just the test method stubs). In such cases, you can use the `fail()`
+    method, which always fails and uses a custom message that indicates the condition:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Still, there is another common use for `fail()` that is worth mentioning. If
+    we need to test whether a method throws an exception, we can surround the code
+    with a try-catch block and force a fail if the exception was not thrown. For example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: JUnit4 has the annotation `@Test(expected=Exception.class)`, and this supersedes
+    the need for using `fail()` when testing exceptions. With this annotation, the
+    test will only pass if the expected exception is thrown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Custom messages
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It is worth knowing that all `assert` methods provide an overloaded version
+    including a custom `String` message. Should the assertion fail, this custom message
+    will be printed by the test runner, instead of a default message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The premise behind this is that, sometimes, the generic error message does not
+    reveal enough details, and it is not obvious how the test failed. This custom
+    message can be extremely useful to easily identify the failure once you are looking
+    at the test report, so it's highly recommended as a best practice to use this
+    version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is an example of a simple test that uses this recommendation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding example, we can see another practice that would help you organize
+    and understand your tests easily. This is the use of explicit names for variables
+    that hold the actual values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: There are other libraries available that have better default error messages
+    and also a more fluid interface for testing. One of these that is worth looking
+    at is Fest ([https://code.google.com/p/fest/](https://code.google.com/p/fest/)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Static imports
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Though basic assertion methods are inherited from the Assert base class, some
+    other assertions need specific imports. To improve the readability of your tests,
+    there is a pattern to statically import the assert methods from the corresponding
+    classes. Using this pattern instead of having:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can simplify it by adding the static import:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: View assertions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The assertions introduced earlier handle a variety of types as parameters, but
+    they are only intended to test simple conditions or simple objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, we have `asertEquals(short expected, short actual)` to test `short`
+    values, `assertEquals(int expected, int actual)` to test integer values, `assertEquals(Object
+    expected, Object expected)` to test any `Object` instance, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Usually, while testing user interfaces in Android, you will face the problem
+    of more sophisticated methods, which are mainly related with Views. In this respect,
+    Android provides a class with plenty of assertions in `android.test.ViewAsserts`
+    (see [http://developer.android.com/reference/android/test/ViewAsserts.html](http://developer.android.com/reference/android/test/ViewAsserts.html)
+    for more details), which test relationships between Views and their absolute and
+    relative positions on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These methods are also overloaded to provide different conditions. Among the
+    assertions, we can find the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`assertBaselineAligned`: This asserts that two Views are aligned on their baseline;
+    that is, their baselines are on the same y location.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertBottomAligned`: This asserts that two views are bottom aligned; that
+    is, their bottom edges are on the same y location.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertGroupContains`: This asserts that the specified group contains a specific
+    child once and only once.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertGroupIntegrity`: This asserts the specified group''s integrity. The
+    child count should be >= 0 and each child should be non-null.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertGroupNotContains`: This asserts that the specified group does not contain
+    a specific child.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertHasScreenCoordinates`: This asserts that a View has a particular x and
+    y position on the visible screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertHorizontalCenterAligned`: This asserts that the test View is horizontally
+    center aligned with respect to the reference view.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertLeftAligned`: This asserts that two Views are left aligned; that is,
+    their left edges are on the same x location. An optional margin can also be provided.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertOffScreenAbove`: This asserts that the specified view is above the visible
+    screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertOffScreenBelow`: This asserts that the specified view is below the visible
+    screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertOnScreen`: This asserts that a View is on the screen.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertRightAligned`: This asserts that two Views are right-aligned; that is,
+    their right edges are on the same x location. An optional margin can also be specified.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertTopAligned`: This asserts that two Views are top aligned; that is, their
+    top edges are on the same y location. An optional margin can also be specified.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertVerticalCenterAligned`: This asserts that the test View is vertically
+    center-aligned with respect to the reference View.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following example shows how you can use `ViewAssertions` to test the user
+    interface layout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `assertOnScreen` method uses an origin to start looking for the requested
+    Views. In this case, we are using the top-level window decor View. If, for some
+    reason, you don't need to go that high in the hierarchy, or if this approach is
+    not suitable for your test, you may use another root View in the hierarchy, for
+    example `View.getRootView()`, which, in our concrete example, would be `editText.getRootView()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Even more assertions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If the assertions that are reviewed previously do not seem to be enough for
+    your tests' needs, there is still another class included in the Android framework
+    that covers other cases. This class is `MoreAsserts` ([http://developer.android.com/reference/android/test/MoreAsserts.html](http://developer.android.com/reference/android/test/MoreAsserts.html)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These methods are also overloaded to support different parameter types. Among
+    the assertions, we can find the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`assertAssignableFrom`: This asserts that an object is assignable to a class.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertContainsRegex`: This asserts that an expected Regex matches any substring
+    of the specified `String`. It fails with the specified message if it does not.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertContainsInAnyOrder`: This asserts that the specified `Iterable` contains
+    precisely the elements expected, but in any order.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertContainsInOrder`: This asserts that the specified `Iterable` contains
+    precisely the elements expected, but in the same order.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertEmpty`: This asserts that an `Iterable` is empty.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertEquals`: This is for some `Collections` not covered in JUnit asserts.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertMatchesRegex`: This asserts that the specified `Regex` exactly matches
+    the `String` and fails with the provided message if it does not.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertNotContainsRegex`: This asserts that the specified Regex does not match
+    any substring of the specified String, and fails with the provided message if
+    it does.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertNotEmpty`: This asserts that some Collections not covered in JUnit asserts
+    are not empty.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`assertNotMatchesRegex`: This asserts that the specified `Regex` does not exactly
+    match the specified String, and fails with the provided message if it does.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`checkEqualsAndHashCodeMethods`: This is a utility used to test the `equals()`
+    and `hashCode()` results at once. This tests whether `equals()` that is applied
+    to both objects matches the specified result.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following test checks for an error during the invocation of the capitalization
+    method called via a click on the UI button:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: If you are not familiar with regular expressions, invest some time and visit
+    [http://developer.android.com/reference/java/util/regex/package-summary.html](http://developer.android.com/reference/java/util/regex/package-summary.html)
+    because it will be worth it!
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this particular case, we are looking for the word `ERROR` contained in the
+    result with a case-insensitive match (setting the flag `i` for this purpose).
+    That is, if for some reason, capitalization doesn't work in our application, and
+    it contains an error message, we can detect this condition with the assertion.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Note that because this is a test that modifies the user interface, we must
+    annotate it with `@UiThreadTest`; otherwise, it won''t be able to alter the UI
+    from a different thread, and we will receive the following exception:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The TouchUtils class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sometimes, when testing UIs, it is helpful to simulate different kinds of touch
+    events. These touch events can be generated in many different ways, but probably
+    `android.test.TouchUtils` is the simplest to use. This class provides reusable
+    methods to generate touch events in test cases that are derived from `InstrumentationTestCase`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The featured methods allow a simulated interaction with the UI under test. The
+    `TouchUtils` class provides the infrastructure to inject the events using the
+    correct UI or main thread, so no special handling is needed, and you don't need
+    to annotate the test using `@UIThreadTest`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'TouchUtils supports the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Clicking on a View and releasing it
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tapping on a View (touching it and quickly releasing)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Long-clicking on a View
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Dragging the screen
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Dragging Views
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following test represents a typical usage of `TouchUtils`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This test does the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Repositions the list at the beginning to start from a known condition
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Scrolls the list
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Checks for the first visible position to see that it was correctly scrolled
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Even the most complex UIs can be tested in that way, and it would help you detect
+    a variety of conditions that could potentially affect the user experience.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mock objects
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have seen the mock objects provided by the Android testing framework in [Chapter
+    1](part0014_split_000.html#page "Chapter 1. Getting Started with Testing"), *Getting
+    Started with Testing*, and evaluated the concerns about not using real objects
+    to isolate our tests from the surrounding environment.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next chapter deals with Test-driven Development, and if we were Test-driven
+    Development purists, we can argue about the use of mock objects and be more inclined
+    to use real ones. Martin Fowler calls these two styles the *classical* and *mockist*
+    Test-driven Development dichotomy in his great article *Mocks aren't stubs*, which
+    can be read online at [http://www.martinfowler.com/articles/mocksArentStubs.html](http://www.martinfowler.com/articles/mocksArentStubs.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Independent of this discussion, we are introducing mock objects as one of the
+    available building blocks because, sometimes, using mock objects in our tests
+    is recommended, desirable, useful, or even unavoidable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Android SDK provides the following classes in the subpackage `android.test.mock`
+    to help us:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`MockApplication`: This is a mock implementation of the `Application` class.
+    All methods are non-functional and throw `UnsupportedOperationException`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MockContentProvider`: This is a mock implementation of `ContentProvider`.
+    All methods are non-functional and throw `UnsupportedOperationException`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MockContentResolver`: This is a mock implementation of the `ContentResolver`
+    class that isolates the test code from the real content system. All methods are
+    non-functional and throw `UnsupportedOperationException`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MockContext`: This is a mock context class, and this can be used to inject
+    other dependencies. All methods are non-functional and throw `UnsupportedOperationException`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MockCursor`: This is a mock Cursor class that isolates the test code from
+    real Cursor implementation. All methods are non-functional and throw `UnsupportedOperationException`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MockDialogInterface`: This is a mock implementation of the `DialogInterface`
+    class. All methods are non-functional and throw `UnsupportedOperationException`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MockPackageManager`: This is a mock implementation of the `PackageManager`
+    class. All methods are non-functional and throw `UnsupportedOperationException`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MockResources`: This is a mock `Resources` class.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: All of these classes have non-functional methods that throw `UnsupportedOperationException`
+    when used. If you need to use some of these methods, or if you detect that your
+    test is failing with this `Exception`, you should extend one of these base classes
+    and provide the required functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An overview of MockContext
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This mock can be used to inject other dependencies, mocks, or monitors into
+    the classes under test. Extend this class to provide your desired behavior, overriding
+    the correspondent methods. The Android SDK provides some prebuilt mock `Context`
+    objects, each of which has a separate use case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The IsolatedContext class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In your tests, you might find the need to isolate the Activity under test from
+    other Android components to prevent unwanted interactions. This can be a complete
+    isolation, but sometimes, this isolation avoids interacting with other components,
+    and for your Activity to still run correctly, some connection with the system
+    is required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For those cases, the Android SDK provides `android.test.IsolatedContext`, a
+    mock `Context` that not only prevents interaction with most of the underlying
+    system but also satisfies the needs of interacting with other packages or components
+    such as `Services` or `ContentProviders`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Alternate route to file and database operations
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In some cases, all we need is to be able to provide an alternate route to the
+    file and database operations. For example, if we are testing the application on
+    a real device, we perhaps don't want to affect the existing database but use our
+    own testing data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Such cases can take advantage of another class that is not part of the `android.test.mock`
+    subpackage but is part of `android.test` instead, that is, `RenamingDelegatingContext`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This class lets us alter operations on files and databases by having a prefix
+    that is specified in the constructor. All other operations are delegated to the
+    delegating Context that you must specify in the constructor too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Suppose our `Activity` under test uses a database we want to control, probably
+    introducing specialized content or fixture data to drive our tests, and we don't
+    want to use the real files. In this case, we create a `RenamingDelegatingContext`
+    class that specifies a prefix, and our unchanged Activity will use this prefix
+    to create any files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, if our Activity tries to access a file named `birthdays.txt`, and
+    we provide a `RenamingDelegatingContext` class that specifies the prefix `test`,
+    then this same Activity will access the file `testbirthdays.txt` instead when
+    it is being tested.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The MockContentResolver class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `MockContentResolver` class implements all methods in a non-functional way
+    and throws the exception `UnsupportedOperationException` if you attempt to use
+    them. The reason for this class is to isolate tests from the real content.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's say your application uses a `ContentProvider` class to feed your Activity
+    information. You can create unit tests for this `ContentProvider` using `ProviderTestCase2`,
+    which we will be analyzing shortly, but when we try to produce functional or integration
+    tests for the Activity against `ContentProvider`, it's not so evident as to what
+    test case to use. The most obvious choice is `ActivityInstrumentationTestCase2`,
+    mainly if your functional tests simulate user experience because you might need
+    the `sendKeys()` method or similar methods, which are readily available on these
+    tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first problem you might encounter then is that it's unclear as to where
+    to inject a `MockContentResolver` in your test to be able to use test data with
+    your `ContentProvider`. There's no way to inject a `MockContext` either.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This problem will be solved in [Chapter 3](part0037_split_000.html#page "Chapter 3. Baking
+    with Testing Recipes"), *Baking with Testing Recipes* where further details are
+    provided.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The TestCase base class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This is the base class of all other test cases in the JUnit framework. It implements
+    the basic methods that we were analyzing in the previous examples (`setUp()`).
+    The `TestCase` class also implements the `junit.framework.Test` interface, meaning
+    it can be run as a JUnit test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Your Android test cases should always extend `TestCase` or one of its descendants.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The default constructor
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: All test cases require a default constructor because, sometimes, depending on
+    the test runner used, this is the only constructor that is invoked, and is also
+    used for serialization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to the documentation, this method is not intended to be used by "mere
+    mortals" without calling `setName(String name)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Therefore, to appease the Gods, a common pattern is to use a default test case
+    name in this constructor and invoke the `given name` constructor afterwards:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Downloading the example code**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can download the example code files from your account at [http://www.packtpub.com](http://www.packtpub.com)
+    for all the Packt Publishing books you have purchased. If you purchased this book
+    elsewhere, you can visit [http://www.packtpub.com/support](http://www.packtpub.com/support)
+    and register to have the files e-mailed directly to you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The given name constructor
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This constructor takes a name as an argument to label the test case. It will
+    appear in test reports and would be of much help when you try to identify where
+    failed tests have come from.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The setName() method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There are some classes that extend `TestCase` that don't provide a given name
+    constructor. In such cases, the only alternative is to call `setName(String name)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The AndroidTestCase base class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This class can be used as a base class for general-purpose Android test cases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Use it when you need access to Android resources, databases, or files in the
+    filesystem. Context is stored as a field in this class, which is conveniently
+    named `mContext` and can be used inside the tests if needed, or the `getContext()`
+    method can be used too.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tests based on this class can start more than one Activity using `Context.startActivity()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are various test cases in Android SDK that extend this base class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ApplicationTestCase<T extends Application>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ProviderTestCase2<T extends ContentProvider>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ServiceTestCase<T extends Service>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When using the `AndroidTestCase` Java class, you inherit some base assertion
+    methods that can be used; let's look at these in more detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The assertActivityRequiresPermission() method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The signature for this method is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Description
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'This assertion method checks whether the launching of a particular Activity
+    is protected by a specific permission. It takes the following three parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`packageName`: This is a string that indicates the package name of the activity
+    to launch'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`className`: This is a string that indicates the class of the activity to launch'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`permission`: This is a string with the permission to check'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Activity is launched and then `SecurityException` is expected, which mentions
+    that the required permission is missing in the error message. The actual instantiation
+    of an activity is not handled by this assertion, and thus, an Instrumentation
+    is not needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'This test checks the requirement of the `android.Manifest.permission.WRITE_EXTERNAL_STORAGE`
+    permission, which is needed to write to external storage, in the `MyContactsActivity`
+    Activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Always use the constants that describe the permissions from `android.Manifest.permission`,
+    not the strings, so if the implementation changes, your code will still be valid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The assertReadingContentUriRequiresPermission method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The signature for this method is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Description
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This assertion method checks whether reading from a specific URI requires the
+    permission provided as a parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It takes the following two parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`uri`: This is the Uri that requires a permission to query'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`permission`: This is a string that contains the permission to query'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If a `SecurityException` class is generated, which contains the specified permission,
+    this assertion is validated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'This test tries to read contacts and verifies that the correct `SecurityException`
+    is generated:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The assertWritingContentUriRequiresPermission() method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The signature for this method is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Description
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This assertion method checks whether inserting into a specific `Uri` requires
+    the permission provided as a parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It takes the following two parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`uri`: This is the Uri that requires a permission to query'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`permission`: This is a string that contains the permission to query'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If a `SecurityException` class is generated, which contains the specified permission,
+    this assertion is validated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'This test tries to write to Contacts and verifies that the correct `SecurityException`
+    is generated:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Instrumentation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Instrumentation is instantiated by the system before any of the application
+    code is run, thereby allowing monitoring of all the interactions between the system
+    and the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As with many other Android application components, instrumentation implementations
+    are described in the `AndroidManifest.xml` under the tag `<instrumentation>`.
+    However, with the advent of Gradle, this has now been automated for us, and we
+    can change the properties of the instrumentation in the app''s `build.gradle`
+    file. The `AndroidManifest` file for your tests will be automatically generated:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The values mentioned in the preceding code are also the defaults if you do not
+    declare them, meaning that you don't have to have any of these parameters to start
+    writing tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `testApplicationId` attribute defines the name of the package for your tests.
+    As a default, it is your application under the test package name + `tests`. You
+    can declare a custom test runner using `testInstrumentationRunner`. This is handy
+    if you want to have tests run in a custom way, for example, parallel test execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are also many other parameters in development, and I would advise you
+    to keep your eyes upon the Google Gradle plugin website ([http://tools.android.com/tech-docs/new-build-system/user-guide](http://tools.android.com/tech-docs/new-build-system/user-guide)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ActivityMonitor inner class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As mentioned earlier, the Instrumentation class is used to monitor the interaction
+    between the system and the application or the Activities under test. The inner
+    class Instrumentation `ActivityMonitor` allows the monitoring of a single Activity
+    within an application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Let''s pretend that we have a TextView in our Activity that holds a URL and
+    has its auto link property set:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we want to verify that, when clicked, the hyperlink is correctly followed
+    and some browser is invoked, we can create a test like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we will do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create an IntentFilter for intents that would open a browser.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add a monitor to our Instrumentation based on the `IntentFilter` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on the hyperlink.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Wait for the activity (hopefully the browser).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Verify that the monitor hits were incremented.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remove the monitor.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Using monitors, we can test even the most complex interactions with the system
+    and other Activities. This is a very powerful tool to create integration tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The InstrumentationTestCase class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The `InstrumentationTestCase` class is the direct or indirect base class for
+    various test cases that have access to Instrumentation. This is the list of the
+    most important direct and indirect subclasses:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ActivityTestCase`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ProviderTestCase2<T extends ContentProvider>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`SingleLaunchActivityTestCase<T extends Activity>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`SyncBaseInstrumentation`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ActivityInstrumentationTestCase2<T extends Activity>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ActivityUnitTestCase<T extends Activity>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `InstrumentationTestCase` class is in the `android.test` package, and extends
+    `junit.framework.TestCase`, which extends `junit.framework.Assert`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The launchActivity and launchActivityWithIntent methods
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'These utility methods are used to launch Activities from a test. If the Intent
+    is not specified using the second option, a default Intent is used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The template class parameter `T` is used in `activityCls` and as the return
+    type, limiting its use to Activities of that type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you need to specify a custom Intent, you can use the following code that
+    also adds the `intent` parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: The sendKeys and sendRepeatedKeys methods
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While testing Activities' UI, you will face the need to simulate interaction
+    with qwerty-based keyboards or DPAD buttons to send keys to complete fields, select
+    shortcuts, or navigate throughout the different components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is what the different `sendKeys` and `sendRepeatedKeys` are used for.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is one version of `sendKeys` that accepts integer keys values. They can
+    be obtained from constants defined in the `KeyEvent` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, we can use the `sendKeys` method in this way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we are sending `H`, `E`, and `Y` letter keys and then the `ENTER` key
+    using their integer representations to the Activity under test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Alternatively, we can create a string by concatenating the keys we desire to
+    send, discarding the `KEYCODE` prefix, and separating them with spaces that are
+    ultimately ignored:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we did exactly the same as in the previous test but we used a `String
+    "H 3* EY DPAD_DOWN ENTER"`. Note that every key in the `String` can be prefixed
+    by a repeating factor followed by `*` and the key to be repeated. We used `3*E`
+    in our previous example, which is the same as `E E E`, that is, three times the
+    letter `E`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If sending repeated keys is what we need in our tests, there is also another
+    alternative that is precisely intended for these cases:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is the same test implemented in a different manner. The repetition number
+    precedes each key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The runTestOnUiThread helper method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `runTestOnUiThread` method is a helper method used to run portions of a
+    test on the UI thread. We used this inside the method `requestMessageInputFocus()`;
+    so that we can set the focus on our EditText before waiting for the application
+    to be idle, using `Instrumentation.waitForIdleSync()`. Also, the `runTestOnUiThread`
+    method throws an exception, so we have to deal with this case:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Alternatively, as we have discussed before, to run a test on the UI thread,
+    we can annotate it with `@UiThreadTest`. However, sometimes, we need to run only
+    parts of the test on the UI thread because other parts of it are not suitable
+    to run on that thread, for example, database calls, or we are using other helper
+    methods that provide the infrastructure themselves to use the UI thread, for example
+    the `TouchUtils` methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ActivityTestCase class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This is mainly a class that holds common code for other test cases that access
+    Instrumentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can use this class if you are implementing a specific behavior for test
+    cases and the existing alternatives don't fit your requirements. This means you
+    are unlikely to use this class unless you want to implement a new base class for
+    other tests to use. For example, consider a scenario where Google brings out a
+    new component and you want to write tests around it (like `SuperNewContentProvider`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If this is not the case, you might find the following options more suitable
+    for your requirements:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`ActivityInstrumentationTestCase2<T extends Activity>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ActivityUnitTestCase<T extends Activity>`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The abstract class `android.test.ActivityTestCase` extends `android.test.InstrumentationTestCase`
+    and serves as a base class for other different test cases, such as `android.test.ActivityInstrumentationTestCase`,
+    `android.test.ActivityInstrumentationTestCase2`, and `android.test.ActivityUnitTestCase`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `android.test.ActivityInstrumentationTestCase` test case is a deprecated
+    class since Android API Level 3 (Android 1.5) and should not be used in newer
+    projects. Even though it was deprecated long ago, it has a great name for auto
+    import, so be careful!
+  prefs: []
+  type: TYPE_NORMAL
+- en: The scrubClass method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `scrubClass` method is one of the protected methods in the class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is invoked from the `tearDown()` method in several of the discussed test
+    case implementations in order to clean up class variables that may have been instantiated
+    as non-static inner classes so as to avoid holding references to them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is in order to prevent memory leaks for large test suites.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`IllegalAccessException` is thrown if a problem is encountered while accessing
+    these class variables.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ActivityInstrumentationTestCase2 class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The `ActivityInstrumentationTestCase2` class would probably be the one you use
+    the most to write functional Android test cases. It provides functional testing
+    of a single Activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This class has access to Instrumentation and will create the Activity under
+    test using the system infrastructure, by calling `InstrumentationTestCase.launchActivity()`.
+    The Activity can then be manipulated and monitored after creation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you need to provide a custom Intent to start your Activity, before invoking
+    `getActivity()`, you may inject an Intent with `setActivityIntent(Intent intent)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This test case would be very useful to test interactions through the user interface
+    as events can be injected to simulate user behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The constructor
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'There is only one public non-deprecated constructor for this class, which is
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: It should be invoked with an instance of the `Activity` class for the same Activity
+    used as a class template parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The setUp method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `setUp` method is the precise place to initialize the test case fields and
+    other fixture components that require initialization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is an example that shows some of the patterns that you might repeatedly
+    find in your test cases:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We perform the following actions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Invoke the super method. This is a JUnit pattern that should be followed here
+    to ensure correct operation.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Disable the touch mode. To take effect, this should be done before the Activity
+    is created, by invoking `getActivity()`. It sets the initial touch mode of the
+    Activity under test as disabled. The touch mode is a fundamental Android UI concept,
+    and is discussed in [http://developer.android.com/guide/topics/ui/ui-events.html#TouchMode](http://developer.android.com/guide/topics/ui/ui-events.html#TouchMode).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Start the Activity using `getActivity()`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Get the instrumentation. We have access to the instrumentation because `ActivityInstrumentationTestCase2`
+    extends `InstrumentationTestCase`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Find the Views and set the fields. In these operations, note that the `R` class
+    used is from the target package and not from the tests.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The tearDown method
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Usually, this method cleans up what was initialized in `setUp`. For instance,
+    if you were creating an integration test that sets up a mock web server before
+    your tests, you would want to tear it back down afterwards to free up resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this example, we ensure that the object we used is disposed of:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: The ProviderTestCase2<T> class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This is a test case designed to test the `ContentProvider` classes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ProviderTestCase2` class also extends `AndroidTestCase`. The class template
+    parameter `T` represents `ContentProvider` under test. Implementation of this
+    test uses `IsolatedContext` and `MockContentResolver`, which are mock objects
+    that we described before in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The constructor
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'There is only one public non-deprecated constructor for this class. This is
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: This should be invoked with an instance of the `ContentProvider` class for the
+    same `ContentProvider` class used as a class template parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second parameter is the authority for the provider, which is usually defined
+    as the `AUTHORITY` constant in the `ContentProvider` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An example
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This is a typical example of a `ContentProvider` test:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this test, we are expecting the query to return a Cursor that contains two
+    rows (this is just an example that uses the number of rows that applies for your
+    particular case) and asserts this condition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Usually, in the `setUp` method, we obtain a reference to the `mProvider` provider
+    in this example, using `getProvider()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'What is interesting to note is that because these tests are using `MockContentResolver`
+    and `IsolatedContext`, the content of the real database is not affected, and we
+    can also run destructive tests like this one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: This test deletes some content from the database, but the database is restored
+    to its initial content afterwards not to affect other tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The ServiceTestCase<T>
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This is a test case specially created to test services. The methods to exercise
+    the service life cycle, such as `setupService`, `startService`, `bindService`,
+    and `shutDownService`, are also included in this class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The constructor
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'There is only one public non-deprecated constructor for this class. This is
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: It should be invoked with an instance of the `Service` class for the same `Service`
+    used as a class template parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The TestSuiteBuilder.FailedToCreateTests class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The `TestSuiteBuilder.FailedToCreateTests` class is a special `TestCase` class
+    used to indicate a failure during the `build()` step. That is, during the test
+    suite creation, if an error is detected, you will receive an exception like this
+    one, which indicates the failure to construct the test suite:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using libraries in test projects
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Your Android project might require an external Java library or an Android library.
+    Now, we will explain how to incorporate these in your project that is ready to
+    be tested. Note that the following explains the usage of a local module that is
+    an Android library, but the same rules can be applied to an external JAR (Java
+    library) file or an external AAR (Android library) file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's pretend that in one Activity, we are creating objects from a class that
+    is part of a library. For the sake of our example, let's say the library is called
+    `dummyLibrary`, and the mentioned class is `Dummy`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So our Activity would look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This library is an Android AAR module, and so it should be added to your `build.gradle`
+    dependencies in the normal way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: If this was an external library, you would replace `project(':dummylibrary')`
+    with `'com.external.lib:name:version'`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s create a simple test. From our previous experience, we know that
+    if we need to test an Activity, we should use `ActivityInstrumentationTestCase2`,
+    and this is precisely what we will do. Our simple test will be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: The test in the preceding code runs and passes in the first instance! Note that
+    in the not-so-distant past (pre-Gradle), the test would not have even compiled.
+    We would have had to jump through hoops, adding the test library to our Android
+    tests project, or making the JAR/AAR file exportable from our main project. It's
+    a nice time to stop and reflect on the power of Gradle and Android Studio that
+    give us a lot of manual setup for free.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We investigated the most relevant building blocks and reusable patterns to
+    create our tests. Along this journey, we:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understood the common assertions found in JUnit tests
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Explained the specialized assertions found in the Android SDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Explored Android mock objects and their use in Android tests
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Exemplified the use of the different test cases available in the Android SDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Now that we have all the building blocks, it is time to start creating more
+    and more tests to acquire the experience needed to master the technique.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next chapter will provide you with examples of when and where to use different
+    test cases on Android. This will give us a great breadth of expertise in knowing
+    what testing methodology to apply when we have a specific scenario to test.
+  prefs: []
+  type: TYPE_NORMAL

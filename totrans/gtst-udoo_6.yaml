@@ -1,0 +1,1307 @@
+- en: Chapter 6. Building a Chronotherm for Home Automation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: For many decades now it has been possible, even easy, to control home devices
+    such as lights, thermostats, and appliances with automatic and remote controls.
+    On the one hand, these automation devices save effort and energy, but on the other
+    hand, even modest adjustments are inconvenient to final users because they need
+    a good knowledge of the system to make any changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: During the last few years, people were reluctant to adopt **home automation**
+    technologies because of a lack of a standard or an easy-to-customize solution.
+    Nowadays, things are changing and prototyping boards such as UDOO, play a great
+    role during the design and the building of **DIY** (**Do It Yourself**) automated
+    devices. Best of all, thanks to open source projects, these platforms are easy
+    to extend and can be controlled by different devices, such as personal computers
+    with web browsers, mobile phones, and tablets.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploring the advantages of home automation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building a chronotherm circuit
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sending data and receiving commands
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Writing the Chronotherm Android application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Home automation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The term *home automation* is quite generic and may have a lot of different
+    meanings: a timer controlling ambient lights, an intelligent system that takes
+    actions in response to events coming from the outside, or a programmable device
+    responsible for accomplishing repetitive tasks.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: These are all valid examples of home automation as they share the same key concept
+    making us able to manage house work and activities even when we are not at home.
+    Home-automated devices usually operate on public or private networks to communicate
+    with each other, as well as with other kinds of devices such as smartphones or
+    tablets, taking commands or exchanging information about their status. But what
+    happens when we need to automate simple appliances or electronic components such
+    as light bulbs? A common solution to address this problem is by developing a sort
+    of **Control System** device, physically connected to the appliances we want to
+    manage; being the Control System, a home-automated device, we can use it to drive
+    the behavior of every appliance it is connected to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we manage to get enough experience in the home-automation field, the chances
+    are that we will be able to develop and build a high-end system for our own house,
+    flexible enough to be easily extended without any further knowledge.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building a chronotherm circuit
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A chronotherm is mainly composed of a *Control Unit,* that has the responsibility
+    to check whether the environment temperature is below a preconfigured setpoint,
+    and in this case, turn on the boiler to warm up the room. This behavior is quite
+    simple, but without any further logic isn't so useful. Indeed, we can extend this
+    behavior adding the *time* parameter to the chronotherm logic. In this way, users
+    can define a temperature setpoint for each hour of the day, making the temperature
+    check smarter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The fact that in this prototype the Control Unit is the onboard Arduino is an
+    implementation detail to simplify the overall design.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is how a traditional chronotherm works and to realize it, we should:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Build the circuit with a temperature sensor
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implement the microcontroller logic to check the users' setpoints with the current
+    temperature
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Unfortunately, the second part is not so easy because the users'' setpoints
+    should be stored in the microcontroller, and for this reason, we can delegate
+    this task to our Android application saving settings in the microSD card. This
+    approach decouples responsibilities in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Arduino sketch:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Collects data from a temperature sensor
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sends the detected temperature to Android
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Expects an Android command to start or stop the boiler
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Android application:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manages user's interactions
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implements user's settings to store temperature setpoints for each hour of the
+    day
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Reads the temperature sent by the microcontroller
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implements the logic to choose whether the boiler should be turned on or off
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sends a command to the microcontroller to start or stop the boiler
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: With this plan, we can rely on the Android user interface components to easily
+    implement a lean and usable interface, while avoiding the complexity of the settings
+    storage layer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To start building the prototype, we need to plug into our breadboard a temperature
+    sensor, such as the *TMP36*, to obtain the following circuit:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Building a chronotherm circuit](img/1942OS_06_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following is a step-wise procedure to get the components connected, as
+    shown in the preceding schema:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Put the TMP36 sensor on the right part of the breadboard.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Connect the UDOO +3.3V pin to the positive line of the power bus. Be sure not
+    to connect the +5V power pin because it may damage the analog input pins during
+    future connections.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Connect the UDOO ground to the negative line of the power bus.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Connect the left terminal of the TMP36 sensor to the positive line of the power
+    bus.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When using packaged sensors, we can deduce the orientation looking at the flat
+    part. Use this approach to find the left and the right terminal.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Connect the right terminal of the TMP36 sensor to the negative line of the power
+    bus.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Connect the middle terminal of the TMP36 sensor to the analog input A0.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: This packaged sensor is really simple to use and it doesn't require any other
+    components or voltage dividers to provide the voltage variation to the microcontroller.
+    Now we should proceed managing the boiler ignition from our circuit. For the sake
+    of the prototype, we're going to replace the boiler actuator with a simple LED,
+    like we did in [Chapter 2](ch02.html "Chapter 2. Know Your Tools"), *Know your
+    Tools*. This will keep our circuit simpler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can add an LED to the breadboard to achieve the following schema:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Building a chronotherm circuit](img/1942OS_06_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following is the procedure of connecting the components, as shown in the
+    preceding schema:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Put the LED on the left-hand side of the breadboard.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Connect the LED longer terminal (anode) to the UDOO digital pin 12.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Connect the LED smaller terminal (cathode) to the negative line of the power
+    bus, using a 220 Ohm resistor.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'With this circuit, we have all the components required to collect data from
+    the environment and to simulate a boiler ignition. Now we need to open the Arduino
+    IDE and start a new sketch. The first goal is to retrieve and convert the detected
+    temperature into a convenient unit of measurement. To achieve this goal, we have
+    to perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Define these object-like macros and variables at the top of the sketch:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We define the `SENSOR` object to represent the analog pin A0 while the `BOILER`
+    object is related to our digital pin 12\. We also declare a `reading` variable
+    that we use later to store the current detected temperature. The `TEMPERATURE_POLL_PERIOD`
+    macro represents how many seconds the microcontroller waits between readings and
+    before it notifies the Android application with the detected temperature.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In the `setup()` function, add the pin mode declaration and open the serial
+    communication as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the bottom of the sketch, create the `convertToCelsius()`function as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this function, we expect a sensor reading and return its representation in
+    *Celsius degrees*. To achieve this, we're using a little math to figure out what
+    the real detected voltage is. Because the analog to digital converters of the
+    UDOO microcontroller provide values in the range [0-1023], but we want to calculate
+    the range from 0 to 3.3V, we should divide the value by 1024.0 and then multiply
+    the result by 3.3.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: We use the voltage in the Celsius conversion because if we read the TMP36 datasheet,
+    we find that every 10 millivolts of change from the sensor is equivalent to a
+    temperature change of 1 Celsius degree and this is why we multiply the value by
+    100\. We also need to subtract the voltage by 0.5 because this sensor handles
+    temperatures below 0 degrees, and 0.5 is the chosen offset.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This function easily converts TMP36 readings into Celsius degrees. If you want
+    to use another unit of measurement, such as Fahrenheit, or if you use a different
+    sensor or thermistor, you have to change this implementation.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In the main `loop()` function, read the analog signal from the sensor and use
+    the `loop()` function to print the converted result:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If we upload the sketch and open the serial monitor, we''ll notice the current
+    room temperature. Indeed, if we put our finger around the sensor, we will see
+    an increase in the previously detected temperature immediately. The following
+    screenshot is an example of the sketch output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Building a chronotherm circuit](img/1942OS_06_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Sending data and receiving commands
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The next step is to enable the ADK communication as usual, and we need to add
+    the *accessory descriptor* code at the top of the sketch as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we have to send the detected float temperature back to the Android application,
+    like we did in [Chapter 5](ch05.html "Chapter 5. Managing Interactions with Physical
+    Components"), *Managing Interactions with Physical Components*. To load the buffer
+    with a float number and send the value through the internal bus, we have to add
+    a `writeToAdk()` helper function with the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The preceding function expects a float temperature converted from the sensor
+    reading. We use the `sprintf()` function call to fill a temporary buffer and then
+    use the `memcpy()` function to replace the ADK buffer content with the `tempBuffer`
+    variable. When the loading is done, we send the buffer contents to the Android
+    application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'During the main `loop()` function, we also need to listen to any commands sent
+    by Android that describe the need to turn on or off the boiler. For this reason,
+    we need to create an executor function like we did in [Chapter 2](ch02.html "Chapter 2. Know
+    Your Tools"), *Know your Tools*. Then, we have to read commands from the ADK and
+    pass the result to the executor. To achieve this, we need to perform the following
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the `executor()` function that reads a command and turns the external device
+    on or off:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `executeFromAdk()` function that reads a command from the ADK and passes
+    that command to the preceding `executor()` function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If we take a look at the plan defined at the beginning of the chapter, we have
+    all the required components for the Arduino sketch, so we can put everything together
+    in the main `loop()` function using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the ADK is ready, we read the sensor value and write its Celsius degrees
+    conversion in the ADK buffer. We then expect a command from the ADK and, if it's
+    available, we execute that command turning the boiler on or off. Now that the
+    sketch is completed, we can proceed writing the Chronotherm Android application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Managing the chronotherm through Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When we're building physical applications through the UDOO platform, we have
+    to bear in mind that we can make use of Android components and services to enhance
+    the quality of our projects. Moreover, Android UI elements are more user-friendly
+    and maintainable than the hardware counterpart. For this reason, we will create
+    a software component to manage temperature setpoints instead of the use of potentiometers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To begin the application prototyping, open Android Studio and start a new application
+    named **Chronotherm** with Android API 19\. During the bootstrap process, choose
+    a **Blank Activity** called *Overview*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up the ADK Toolkit
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we proceed with the application layout, we need to configure the ADKToolkit
+    for internal communication. Remember to follow these reminders to achieve the
+    correct configuration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add the *ADKToolkit* library dependency in the `app/build.gradle` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Sync your Gradle configuration.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Create the accessory filter file `usb_accessory_filter.xml` under `res/xml/`
+    with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Add the *USB accessory support* option requirement and the *USB accessory intent
+    filter* option in the `AndroidManifest.xml` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the `Overview.java` class file, declare the `AdkManager` object at the top
+    of the class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add the `AdkManager` object initialization inside the `onCreate()` method of
+    the `Overview` activity class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Override the `onResume()` activity callback to start the ADK connection when
+    the activity is opening. In this project, we don't close the ADK connection in
+    the `onPause()` callback because we will use two different activities and the
+    connection should remain active.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: With the ADK communication up and running, we may proceed and write the Chronotherm
+    user interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Designing the Android user interface
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The next step is designing the Chronotherm application''s user interface to
+    handle the proper feedback together with setpoints management. We will achieve
+    these requirements writing two different Android activities with the following
+    responsibilities:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An *Overview* activity showing the current time, the detected temperature, and
+    the current boiler status. It should include a widget showing the user's setpoints
+    for each hour of the day. These setpoints are used to decide whether to turn the
+    boiler on or off.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A *Settings* activity used to change the current setpoints for each hour of
+    the day. This activity should use the same widget of the `Overview` activity to
+    represent the temperature setpoints.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We begin the implementation starting with the `Overview` activity and the temperature
+    setpoints widget.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing the Overview activity
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'This activity should provide all details regarding the current status of the
+    Chronotherm application. All the required components are summarized in the following
+    mock-up that defines the order in which the components will be created:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Writing the Overview activity](img/1942OS_06_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The first step is to update the activity layout, and following the suggestion
+    in the preceding mock-up, we should go through the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the top of the layout, we could include a `TextClock` view that shows the
+    current system time.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The top bar should provide a feedback for the boiler status. We can add a gray
+    `TextView` with the **Active** text that becomes green when the boiler is turned
+    on.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `Overview` body must provide the current detected temperature. Because this
+    is one of the most important details provided by the Chronotherm application,
+    we will emphasize this value making it bigger than other components.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Near the room temperature, we will create a widget for the current activated
+    schedule through a set of vertical bars that show the user's setpoints for each
+    hour of the day. In the `Overview` activity, this widget will remain in read-only
+    mode only to provide a quick overview of the active program.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the activity action bar, we should provide a menu item that opens the `Settings`
+    activity. This activity will be used to store setpoints within the Chronotherm
+    application.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We begin the `Overview` implementation starting from the top bar and the detected
+    temperature components; the following steps are required to achieve the preceding
+    layout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `res/values/dimens.xml` file, add the following highlighted resources:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `res/values/styles.xml` file, add the following resources and change
+    the `AppTheme parent` attribute as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To emphasize the current detected temperature, we can create a circle shape
+    that should surround the temperature value. To realize it, create the `circle.xml`
+    file under `res/drawable/` with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We can now proceed and replace the layout in the `activity_overview.xml` file
+    under `res/layout/`, with the following highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Place the following code in the preceding `LinearLayout` to create the activity
+    top bar, which contains the current system time and the boiler status:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The next step is to create the activity body. It should contain two different
+    items: the first is a `LinearLayout`, where we will inflate the setpoints widget
+    using the `LayoutInflater` class in the activity `onCreate()` callback, and the
+    second is the current detected temperature surrounded by the circle shape we created
+    before. In the root `LinearLayout`, nest the following elements:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'As last steps, store all the view references in the activity code. At the top
+    of the `Overview` class, add the reference for the `temperature` and `boiler_status`
+    views views with the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `Overview` `onCreate()` callback, get the references with the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: These steps provide a partial layout that we will complete adding the setpoints
+    widget and the settings menu item.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a custom UI component
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To keep the user interface lean, usable, and intuitive, we can use a set of
+    vertical bars, such as an audio equalizer, so that users can instantly know the
+    room temperature trend they want to obtain. Android ships with a built-in component
+    called `SeekBar` that we can use to choose a temperature setpoint. Unfortunately,
+    this component draws a horizontal bar and isn't provided with its vertical counterpart;
+    for this reason, we will extend its default behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Android API 11 and later adds the `rotate` attribute for each component inside
+    the XML. Even if we use a rotation of 270 degrees to obtain a vertical component,
+    we will have some issues to correctly place one bar next to another. In this case,
+    our initial efforts to customize this component will simplify our work later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android offers sophisticated and componentized models for building custom UI
+    elements and we can delve into further details at [http://developer.android.com/guide/topics/ui/custom-components.html](http://developer.android.com/guide/topics/ui/custom-components.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `SeekBar` component''s customization could be organized as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a first step, we should create a `TemperatureBar` class implementing the
+    vertical sliding behavior. Most of the changes are related to inherit the `SeekBar`
+    class while switching the component width with its height.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The widget needs an XML layout to be programmatically added from our code. For
+    this reason, we will create a layout that includes the `TemperatureBar` view,
+    the chosen degrees and the hour related to the bar.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When any changes occur to the vertical bar component, the degrees number should
+    be updated. In this step, we will create a listener that propagates bar changes
+    to the degrees component providing proper feedback to the users.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Our customized component that includes the `TemperatureBar` class, the degrees
+    and hour views, should be programmatically created for each hour of the day. We
+    will create a utility class that is responsible for inflating the component layout
+    24 times adding the proper listeners.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We begin writing the vertical `SeekBar` class that could be realized with the
+    following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a new package in your namespace called `widget`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In the newly created package, add the `TemperatureBar` class that extends the
+    `SeekBar` class implementation while defining the default class constructors as
+    follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Continue the `TemperatureBar` class implementation, adding the draw and measure
+    methods at the bottom of the class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In the first methods, we're switching the widget width with its height so that
+    we can use this parameter to provide an accurate measurement of the component
+    contents. Then we override the `onDraw()` method called by the Android system
+    during component drawing, by applying a translation to the `SeekBar` canvas and
+    placing it vertically. As the last step, we call the `onSizeChanged` callback
+    once again to resize the component after the canvas translation.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Because we have switched the bar width and height, we need to override the
+    `onTouchEvent()` method to use the component height during value calculation.
+    At the bottom of the `TemperatureBar()` class, add the following callback:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With the preceding code, we update the component progress every time an `ACTION_DOWN`,
+    `ACTION_MOVE`, or `ACTION_UP` method event occurs. We don't need any other behaviors
+    for the purpose of this project, so we leave the remaining implementation as it
+    is.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now we can proceed writing the XML layout that hosts the preceding component
+    with a degrees and hour `TextView`. Through the following steps, we can achieve
+    a layout that we will inflate from our utility class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the `bar_height` declaration to the `dimens.xml` file under `res/values/`,
+    so we can easily change it in the future if needed:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the `temperature_bar.xml` file under `res/layout/` that contains the
+    widget layout. In this file, we should add this `LinearLayout` as the root element:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To the preceding `LinearLayout`, include the following components:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Always change the `me.palazzetti` namespace occurrences with your own.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now that we have the temperature bar component and the widget layout, we need
+    to create a binding between the `degrees` and the `seekbar` views. Proceed with
+    the widget implementation through the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `DegreeListener` class in the `widget` package.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The preceding class should implement the `SeekBar` listener while storing the
+    reference for the connected `degrees` view. We use this `TextView` reference to
+    propagate the vertical bar value:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Propagate the progress value to the `mDegrees` view, overriding the following
+    methods required by the `OnSeekBarChangeListener` interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The last missing part is to provide the utility class used to inflate the widget
+    layout initializing the `TemperatureBar` class with the `DegreeListener` class.
+    The inflate process should be repeated for each hour of the day and it needs the
+    reference of the layout in which the widget will be inflated. To complete the
+    implementation, go through the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `TemperatureWidget` class in the `widget` package.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'This class should expose a static `addTo()` method that expects the activity
+    context, the parent element, and whether vertical bars should be created in read-only
+    mode. In this way, we can use this widget both for visualization and edit. We
+    can find the complete implementation in the following code snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: At the top of the class, we're defining the generated bar's number. In the `addTo()`
+    method, we inflate the `temperature_bar` layout to create an instance of the bar
+    object. Then, we get all the references of `time`, `degrees`, and `seekbar` objects
+    so that we can set initial values and create the `DegreeListener` class with the
+    `degrees TextView` binding. We proceed adding the widget to the `parent` node,
+    filling the `bars` array with the currently created bar. As the last step, we
+    return this array so that it can be used from the caller activity.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Finishing the Overview activity
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The setpoints widget is now completed and we can proceed with the last steps
+    inflating temperature bars during the activity creation. We will also add the
+    action to start the `Settings` activity in the activity menu. To complete the
+    `Overview` class, follow these steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inflate the setpoints widget in the `Overview` `onCreate()` callback by adding
+    the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Handle the action bar menu to start the `Settings` activity, changing the `onOptionsItemSelected()`
+    method as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `Settings` activity is not available at the moment and we will create it
+    in the next section.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'We''ve completed the `Overview` class layout and the following screenshot is
+    the obtained result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Finishing the Overview activity](img/1942OS_06_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Writing the Settings activity
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The next step before implementing the logic of our chronotherm, is to create
+    the `Settings` activity that can be used to change the temperature setpoints during
+    the day. To bootstrap a new activity, click on **File** from the window menu and
+    choose **New** to open the context menu. There, choose **Activity** and then **Blank
+    Activity**. This will open a new window and we can write `Settings` in the **Activity
+    Name** and then click on **Finish**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Even if we can use the built-in settings template with synchronized preferences,
+    we're using a blank activity to keep this part as easy as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We start designing the activity layout with the following mock-up, showing
+    all the required components:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Writing the Settings activity](img/1942OS_06_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The first required step is to update the activity layout and, following the
+    suggestion in the previous mock-up, we should:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add a **Save** button that will call an activity method to save the selected
+    setpoints from the temperature widgets.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Inflate the temperature widget used during the setpoints selection.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To achieve the preceding layout, update the `activity_settings.xml` file under
+    `res/layout/` with the following changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Replace the root layout element with the following `LinearLayout`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the preceding layout, add the widget placeholder and the **Save** button:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We can complete the activity adding the widget initialization in the `Settings`
+    class through the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the highlighted variable at the top of `Settings` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `onCreate()` method of the `Settings` class, add the highlighted code
+    to inflate the setpoints widget:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If we upload the Android application again, we can use the menu options to
+    open the `Settings` activity, which presents itself as shown in the following
+    screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Writing the Settings activity](img/1942OS_06_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The Chronotherm application's interface is completed and we can proceed managing
+    the storage layer for the user's settings.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Managing user's setpoints
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Chronotherm application's activities provide the required user interface
+    components to show and change the user's setpoints. To let them work, we should
+    implement the logic to save persistent application data. Based on our needs, we
+    can use the `SharedPreferences` class to store primitive data in key-value pairs
+    to provide setpoint values for the entire application. In this project, we will
+    use the setpoint hour as the key and the chosen temperature as the value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`SharedPreferences` class is a storage option provided by the Android framework.
+    If in other projects we need a different storage, we may take a look at Android''s
+    official documentation at [developer.android.com/guide/topics/data/data-storage.html](http://developer.android.com/guide/topics/data/data-storage.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reading setpoints from the Overview activity
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We begin with the `Overview` activity implementing a method that reads stored
+    setpoints and updates the temperature bar values. We can proceed with the following
+    steps reading the user''s preferences during the activity creation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For each bar, we set the progress with the stored value. We use `0` as the
+    default when no settings are found. This implementation requires the following
+    code that we should add in the `Overview` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We open the application's preferences and update each bar using the hour of
+    the day as a key. The related hour is indirectly represented by the `i` loop counter.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Call the preceding method from the `onResume()` activity callback, adding the
+    highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Through these steps, we've completed setpoints management in the `Overview`
+    activity and we will proceed working with the `Settings` activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing setpoints from the Settings activity
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'In the `Settings` activity, we should implement the logic to store the users
+    setpoints when they click on the **Save settings** button. Moreover, when the
+    activity is created, we must load the previously stored setpoints so that we can
+    present the current schedule to the users before they start changing their preferences.
+    To implement these functionalities, we may proceed with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Like we did in the `Overview` activity, we need to load setpoint values and
+    update temperature bars. Because we've already implemented this functionality,
+    we can simply copy and paste the `readPreferences()` method as is from the `Overview`
+    class to the `Settings` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add the following code at the bottom of the `Settings` class to store the selected
+    setpoints:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: After we've retrieved and stored all setpoints using a background commit, we
+    close the current activity.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In the `activity_settings.xml` layout file under `res/layout/`, update the
+    save button so that it will call the preceding method on click, as you can see
+    in the following highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This was the last step to implement the Chronotherm application interface and
+    settings management. Now we can proceed implementing the required logic to read
+    the detected temperature and to turn the boiler on or off.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Interacting with Arduino
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Our application is ready to receive temperature data checking whether the boiler
+    should be activated or not. The overall design is to use the `ExecutorService`
+    class that runs a periodical scheduled thread and it should:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Read the detected temperature from ADK.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Update the boiler status checking whether the temperature is below the current
+    selected setpoint.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Send the temperature to the main thread so that it can update the `temperature`
+    `TextView`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Send the command to Arduino to turn the boiler on or off. This task should be
+    done only if the current boiler status has changed from the previous task execution.
+    In this case, it should also send the boiler status to the main thread so that
+    it can update the related `TextView`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Before we proceed with thread implementation, we should provide a Java interface
+    that exposes the required methods to update the activity''s user interface. We
+    can fulfill this with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a new Java interface called `OnDataChangeListener` and add the following
+    code snippet:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the preceding interface to the `Overview` class using the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the interface by writing the code that updates the current temperature
+    and the boiler status TextViews:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now we can proceed implementing the scheduled thread, following the overall
+    design explained previously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a new package in your namespace called `adk`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the `adk` package, add a new class named `DataReader`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'At the top of the class, add the following declarations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We define the polling time for the scheduled thread and the message types used
+    in the main thread handler to identify a temperature or a boiler update. We store
+    the references for the `AdkManager` instance, the activity context, and the caller
+    activity that implements the previous interface. Then we define the `ExecutorService`
+    implementation that we will use to create short-lived threads for sensor readings.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Implement the `DataReader` constructor to set the message handler when the
+    main thread receives messages from the sensor thread:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We store all the required references and then we define the main thread handler.
+    Within the handler, we use the `OnDataChangeListener` callbacks to update the
+    temperature or the boiler status in the view, according to the message type.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'At the bottom of the `DataReader` constructor, add the following `Runnable`
+    method implementation that realizes the overall design previously defined:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In this implementation, we create the `isBelowSetpoint()` method that checks
+    whether the temperature is below the chosen setpoint for the current hour. We
+    retrieve this value from the application's shared preferences.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add a method to the `DataReader` class to start the scheduler that spawns short-lived
+    threads periodically as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `stop()` method at the bottom of the class to stop the scheduler from
+    spawning new threads through the `shutdown()` executor''s method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now we should go back to the `Overview` class to start and stop the scheduler
+    within the activity lifecycle. Add the `DataReader` declaration at the top of
+    the `Overview` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Initialize the `DataReader` instance in the `onCreate()` callback through the
+    following highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Start and stop the reading scheduler in the `onResume()` and `onPause()` activity''s
+    callbacks, as you can see in the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The communication between UDOO and Android is up and running and the logic
+    of our chronotherm is ready to activate and deactivate the boiler. Now, we can
+    upload the Android application again, add some temperature settings, and start
+    playing with the prototype. We''ve completed our prototype and the last missing
+    task is to update the application version in the `app/build.gradle` file with
+    a `0.1.0` version, as you can see in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: Improving the prototype
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: During this chapter we've made different design decisions making the chronotherm
+    easier to implement. While this application is good proof of concept for home
+    automation, we have to bear in mind that many things should be done to improve
+    the quality and reliability of the prototype. This application is a classical
+    scenario with a **Human-Machine Interface (HMI)** and a **Control System** implemented
+    respectively, with an Android application and an Arduino microcontroller. In such
+    scenarios, a driving principle of automation design is that the control unit should
+    be capable of making *reasonable and safe decisions* even in the absence of the
+    HMI part.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In our case, we've decoupled responsibilities delegating the decision to turn
+    the boiler on or off to the Android application. While this isn't a mission-critical
+    system, with this design, we may risk that if the Android application crashes,
+    the boiler remains turned on forever. A better decoupling would be using the HMI
+    only for showing feedback and storing the user's setpoints, while the decision
+    to change the boiler status remains in the control unit. This means that instead
+    of sending on or off commands to Arduino, we should send the current setpoint
+    that will be stored in the microcontroller's memory. In this way, the control
+    unit could make safe choices according to the last received setpoint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another improvement that we may take into account as an exercise is to implement
+    a **hysteresis logic**. Our chronotherm is designed to turn the boiler on or off,
+    respectively, when the detected temperature exceeds or is below the chosen setpoint.
+    This behavior should be improved because with such design, when the temperature
+    is stabilized around the setpoint, the chronotherm will start to turn the boiler
+    on and off very frequently. We can find useful details and suggestions about applying
+    hysteresis logic in control systems at [http://en.wikipedia.org/wiki/Hysteresis#Control_systems](http://en.wikipedia.org/wiki/Hysteresis#Control_systems).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we explored the land of home automation and how UDOO can be
+    used to work out some daily tasks. You learned about the advantages of using smart
+    objects that are capable of solving place and time problems when you aren't at
+    home. Then, we planned a chronotherm prototype to control our living room temperature
+    through a sensor. To make the device fully automated, we designed a use case where
+    users can decide temperature setpoints for each hour of the day.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the beginning, we built the application circuit using a temperature sensor
+    and an LED to simulate the boiler. We started programming the Android user interface
+    customizing a regular UI component to fit our needs better. We started writing
+    the overview activity that showed the current time, the boiler status, the current
+    room temperature, and the widget with chosen setpoints for the whole day. We continued
+    with the settings activity used to store the chronotherm temperature schedule.
+    As the last step, we wrote a scheduled thread that reads the environment temperature
+    and turns the boiler on or off, matching the detected temperature with the current
+    setpoint.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will extend this prototype with new functionalities
+    to enhance the human interaction thanks to a powerful set of Android APIs.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,761 @@
+- en: Chapter 8. Testing and Profiling Performance
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapters, we studied and developed tests for our Android application.
+    Those tests let us evaluate compliance against a specification and allowed us
+    to determine whether the software was behaving correctly or not according to these
+    rules by taking a binary verdict, whether it complied green or not. If all test
+    cases pass, it means our software is behaving as expected. If one of the test
+    cases fails, the software needs to be fixed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In many other cases, mainly after we have verified that the software conforms
+    to all these specifications, we want to move forward and know how or in what manner
+    the criteria are satisfied. At the same time, we would want to know how the system
+    performs under different situations to analyze other attributes such as usability,
+    speed, response time, and reliability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'According to the Android developer guide ([http://developer.android.com/](http://developer.android.com/)),
+    these are the best practices when it comes to designing our application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Designing for performance
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Designing for responsiveness
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Designing for seamlessness
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It's extremely important to follow these best practices and to think about performance
+    and responsiveness from the very beginning of the design. Since our application
+    will run on Android devices with limited computer power, identifying the targets
+    for optimization once our application is built, at least partially, and then applying
+    the performance testing (which we will be discussing soon) can bring us bigger
+    gains.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Donald Knuth popularized this years ago:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*"Premature optimization is the root of all evil".*'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Optimizations, which are based on guesses, intuition, and even superstition,
+    often interfere with the design over short-term periods, and with readability
+    and maintainability over long-term periods. On the contrary, *micro-optimizations*
+    are based on identifying the bottlenecks or hot spots that require optimization,
+    applying the changes, and then benchmarking again to evaluate the improvements
+    of the optimization. So, the point we are concentrating on here is measuring the
+    existing performance and the optimization alternatives.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This chapter will introduce a series of concepts related to benchmarking and
+    profiling, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Traditional logging statement methods
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating Android performance tests
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using profiling tools
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Microbenchmarks using Caliper
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Ye Olde Logge method
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sometimes, this is too simplistic for real-life scenarios but I'm not going
+    to say that it could not help in some cases, mainly because its implementation
+    takes minutes and you only need the `logcat` text output to analyze the case.
+    This comes in handy during situations where you want to automate procedures or
+    apply continuous integration, as described in previous chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This method consists of timing a method (or a part of it), surrounding it by
+    two time measures, and logging the difference at the end:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is very straightforward. We take the times and log the difference. For
+    this, we are using the `Log.v()` method, and we can see the output in the logcat
+    when we run the application. You can control the execution of this benchmark by
+    setting `true` or `false` to the `BENCHMARK_TEMPERATURE_CONVERSION` constant that
+    you defined outside the method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we launch the activity with the `BENCHMARK_TEMPERATURE_CONVERSION` constant
+    set to `true` in the logcat, we will receive messages like these every time the
+    conversion takes place:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Timing logger
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now, the one better than this is the `android.util.TimingLogger` Android class.
+    The `TimingLogger` object can help you time your method calls without having to
+    worry about maintaining those time variables yourself. It also has a higher degree
+    of accuracy than `System.currentTimeMillis()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you launch the application now, you will notice that nothing comes out in
+    your logcat. This is because `TimingLogger` needs you to explicitly turn on the
+    logging for the *Tag* you defined. Otherwise, the method calls will do nothing.
+    From a terminal, run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'You can check what level your logging tag is set to with the `getprop` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`adb shell getprop log.tag.TemperatureTag`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can list all other properties from your device using this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`adb shell getprop`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, when we launch the application, we will receive messages like these every
+    time a conversion completes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Something you should take into account is that these benchmark-enabling constants
+    should not be enabled in the production build, as other common constants, such
+    as `DEBUG` or `LOGD`, are used. To avoid mistakes, you should integrate the verification
+    of these constants' values in the build process you are using for automated builds,
+    such as Gradle. Further, personally, I would remove all benchmarking or verification
+    logging from the build before it ships to production—not comment out but delete.
+    Remember that you can always find it again in your version control system, in
+    the history or on a branch.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Logging code execution's speed like this is simple, but for more complex performance
+    issues, you might want to use more detailed—though more complex—techniques.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performance tests in Android SDK
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If the previous method of adding log statements does not suit you, there are
+    different methods of getting performance test results from our application. This
+    is known as profiling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When running instrumented code (as with our Android instrumented test cases),
+    there is no standard way of getting performance test results from an Android application,
+    as the classes used by Android tests are hidden in the Android SDK and only available
+    to system applications, that is, applications that are built as part of the main
+    build or system image. This strategy is not available for us, so we are not digging
+    deeper in that direction. Instead, we will focus on other available choices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Launching the performance test
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: These tests are based on an approach similar to what we just discussed, and
+    they are used by Android to test system applications. The idea is to extend `android.app.Instrumentation`
+    to provide performance snapshots, automatically creating a framework that we can
+    even extend to satisfy other needs. Let's understand better what this means with
+    a simple example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the LaunchPerformanceBase instrumentation
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Our first step is to extend `Instrumentation` to provide the functionality
+    we need. We are using a new package named `com.blundell.tut.launchperf` to keep
+    our tests organized:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We are extending `Instrumentation` here. The constructor initialized the two
+    fields in this class: `results` and `intent`. At the end, we invoke the `setAutomaticPerformanceSnapshots()`
+    method, which is the key here to creating this performance test.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `launchApp()` method is in charge of starting the desired Activity and waiting
+    before returning.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `finish()` method logs the results received and then invokes the Instrumentation's
+    `finish()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the TemperatureConverterActivityLaunchPerformance class
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'This class sets up the Intent to invoke `TemperatureConverterActivity` and
+    furnish the infrastructure provided by the `LaunchPerformanceBase` class to test
+    the performance of launching our Activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, `onCreate()` calls `super.onCreate()` as the Android lifecycle dictates.
+    Then the Intent is set, specifying the class name and the package. Then one of
+    the Instrumentation's methods, `start()`, is called. It creates and starts a new
+    thread in which to run instrumentation. This new thread will make a call to `onStart()`,
+    where you can implement the instrumentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then the `onStart()` implementation follows, invoking `launchApp()` and `finish()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running the tests
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once everything is in place, we are ready to start running the test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, install the APK that includes these changes. Then, we have several options
+    to run the tests, as we reviewed in previous chapters. In this case, we are using
+    the command line, as it is the easiest way of getting all the details. If you
+    only have one device connected, use this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you are ever wondering what `Instrumentation` test runners you have installed
+    on your device, you can use this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`adb shell pm list instrumentation`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We receive the set of results for this test in the standard output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have highlighted two of the values we are interested in: `execution_time`
+    and `cpu_time`. They account for the total execution time and the CPU time used
+    respectively.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running this test on an emulator increases the potential for mismeasurement,
+    because the host computer is running other processes, which also take up the CPU,
+    and the emulator does not necessarily represent the performance of a real piece
+    of hardware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Needless to say, in this and any other case where you measure something that
+    is variable over time, you should use a measurement strategy and run the test
+    several times to obtain different statistical values, such as average or standard
+    deviation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the Traceview and dmtracedump platform tools
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Android SDK includes among its various tools two that are specially intended
+    to analyze performance problems and profiles, and potentially determine the target
+    to apply optimizations. Android also offers us the **Dalvik Debug Monitor Service**
+    (**DDMS**), which collates these tools all in one place. DDMS can be opened from
+    Android Studio by navigating to **Tools** | **Android** | **Device Monitor**,
+    or from the command line with the command monitor. You can use Traceview and other
+    tools inside DDMS by using handy GUI shortcuts. Here, however, we are going to
+    use the command-line options so that you can understand the tools behind the GUI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These tools have an advantage over other alternatives: usually, no modification
+    to the source code is needed for simpler tasks. However, for more complex cases,
+    some additions are needed, but they are very simple, as we will see shortly.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you don''t need precision about starting and stopping tracing, you can drive
+    it from the command line or Android Studio. For example, to start tracing from
+    the command line, you can use the following command. Remember to add the serial
+    number with `–s` if you have multiple devices attached:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Do something such as entering a temperature value in the Celsius field to force
+    a conversion, then run this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Otherwise, if you need more precision about when profiling starts, you can
+    add the programmatic style:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will create a trace file, using the default name, `dmtrace.trace`, on the
+    SD card by invoking `Debug.startMethodTracing()`, which starts method tracing
+    with the default log name and buffer size. When we are done, we call `Debug.stopMethodTracing()`
+    to stop the profiling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Remember that enabling profiling really slows down the application execution,
+    so the results should be interpreted by their relative weight, not by their absolute
+    values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To be able to write to the SD card, the application requires an `android.permission.WRITE_EXTERNAL_STORAGE`
+    permission to be added to the manifest.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For Traceview using DDMS, the stream is sent through the JDWP connection straight
+    to your development computer, and the permission is not needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You need to exercise the application in order to obtain the trace file. This
+    file needs to be pulled to the development computer to be further analyzed using
+    `traceview`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After running this command, the traceview''s window appears, displaying all
+    the information collected, as shown in this screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Using the Traceview and dmtracedump platform tools](img/00041.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The top part of the window shows the timeline panel and a colored area for every
+    method. Time increases to the right along the scale. There are also small lines
+    under the colored row, displaying the extent of all the calls to the selected
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We profiled a small segment of our application, so only the main thread was
+    running from our process. In the cases where other threads run during the profiling,
+    this information will also be displayed. For instance, this shows that an AsyncTask
+    was executed by the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The bottom part shows the profile panel, every method executed, and its parent-child
+    relationships. We refer to calling methods as **parents** and the called methods
+    as **children**. When clicked on, a method expands to show its parents and children.
+    Parents are shown with a purple background and children with a yellow background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, the color selected for the method, done in a round-robin fashion, is displayed
+    before the method name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, at the bottom, there's a **Find:** field, where we can enter a filter
+    to reduce the amount of information displayed. For example, if we are interested
+    in displaying only the methods in the `com.blundell.tut` package, we should enter
+    `com/blundell/tut`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Clicking on a column will set the order of the list according to that column
+    in ascending or descending order.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This table shows you the available columns and their descriptions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Column | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Name | The name of the method, including its package name, in the form we
+    just described, which is by using / (slash) as the delimiter. Also, the parameters
+    and the return type are displayed. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Incl Cpu Time% | The inclusive time, as a percentage of the total time, used
+    by the method. This includes all its children. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Incl Cpu Time | The inclusive time, in milliseconds, used by the particular
+    method. This includes the method and all its children. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Excl Cpu Time% | The exclusive time, as a percentage of the total time, used
+    by the method. This excludes all its children. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Excl Cpu Time | The exclusive time, in milliseconds. This is the total time
+    spent in the particular method. It excludes all its children. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Incl Real Time% | Inclusive time plus the waiting time of the process to
+    execute as a percentage (waiting for I/O). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Incl Real Time | Inclusive time plus the waiting time of the process to execute.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Excl Real Time% | Exclusive time plus the waiting time of the process to
+    execute as a percentage (waiting for I/O). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Excl Real Time | Exclusive time plus the waiting time of the process to execute.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Calls+RecurCalls/Total | This column shows the number of calls for the particular
+    method and the number of recursive calls.The number of calls compared with the
+    total number of calls made to this method. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Cpu Time/Call | The time of every call in milliseconds. |'
+  prefs: []
+  type: TYPE_TB
+- en: 'The final word on Traceview is a word of warning: Traceview currently disables
+    the JIT compiler from running, which may cause Traceview to misattribute time
+    to code blocks, which the JIT may be able to win back. Therefore, it is imperative
+    after making changes you imply from Traceview data, that you ensure that the resulting
+    code actually runs faster when run without Traceview.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dmtracedump
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Dmtracedump is an alternative to traceview. It allows you to generate your trace
+    data in alternative formats, including HTML, and also a call-stack diagram, using
+    the trace files already gathered. The later diagram is of a tree structure, and
+    each node of the tree represents one call in the stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can use the same traceview files we have pulled from the device with the
+    new command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To view your trace data as HTML, run the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This alternative HTML view allows you to navigate around the details of your
+    trace and filter the call stacks of each call, in a way different from how the
+    original traceview GUI does:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Dmtracedump](img/00043.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This table describes the extra command-line arguments you can use with dmtracedump:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Command | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-d <trace-file-name>` | Carry out a comparison against this trace file and
+    print the difference. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-g <graph-out-file-name.png>` | Generate the graph in this file. Technically,
+    it might not generate PNG images, but if you name it `something.png`, you can
+    open the file to see the graph. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-h` | Turn on the HTML output. This will be printed on your console just
+    as HTML code, so remember to pipe this output to a file, such as `example.html`.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-o` | Dump the trace file instead of profiling. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-s <trace-file-name>` | URL base to the location of the sortable JavaScript
+    file (I''m not sure what the use of this parameter is! [https://code.google.com/p/android/issues/detail?id=53468](https://code.google.com/p/android/issues/detail?id=53468)).
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `-t <percent>` | Minimum threshold for including child nodes in the graph
+    (the child''s inclusive time as a percentage of the parent''s inclusive time).
+    If this option is not used, the default threshold is 20 percent. |'
+  prefs: []
+  type: TYPE_TB
+- en: Microbenchmarks
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Benchmarking is the act of running a computer program or operation in order
+    to compare operations in a way that produces quantitative results, normally by
+    running a set of tests and trials against them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Benchmarks can be organized in the following two big categories:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Macrobenchmarks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Microbenchmarks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Macrobenchmarks**exist as a means to compare different platforms in specific
+    areas such as processor speed, number of floating-point operations per unit of
+    time, graphics and 3D performance, and so on. They are normally used against hardware
+    components, but can also be used to test software-specific areas, such as compiler
+    optimization or algorithms.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As opposed to these traditional macrobenchmarks, a **microbenchmark** attempts
+    to measure the performance of a very small piece of code, often a single method.
+    The results obtained are used to choose between competing implementations that
+    provide the same functionality, when deciding the optimization path.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The risk here is to microbenchmark something different than what you think you
+    are measuring. This is something to take into account mainly in the case of JIT
+    compilers, as used by Android, starting with version 2.2 Froyo. The JIT compiler
+    may compile and optimize your microbenchmark differently than the same code in
+    your application. So, be cautious when taking your decision.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is different from the profiling tactic introduced in the previous section,
+    as this approach does not consider the entire application but a single method
+    or algorithm at a time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Caliper microbenchmarks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Caliper** is Google''s open source framework for writing, running, and viewing
+    results of microbenchmarks. There are many examples and tutorials on its website
+    at [http://code.google.com/p/caliper](http://code.google.com/p/caliper).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Caliper is endorsed on `developer.android.com` and is used by Google to measure
+    the performance of the Android programming language itself. We are exploring its
+    essential use here, and will introduce more Android-related usage in the next
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Its central idea is to benchmark methods, mainly to understand how efficient
+    they are. We may decide that this is the target for our optimization, perhaps
+    after analyzing the results provided by profiling the app via Traceview.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Caliper benchmarks use annotations to help you build your tests correctly. Benchmarks
+    are structured in a fashion similar to JUnit tests. Previously, Caliper mirrored
+    JUnit3 in its conventions; for instance, where tests had to start with the prefix
+    `test`, benchmarks started with the prefix `time`. With the latest version, it
+    is like JUnit4 where JUnit has `@Test`, Caliper uses `@Benchmark`. Every benchmark
+    then accepts an int parameter, usually named `reps`, indicating the number of
+    repetitions to benchmark the code that sits inside the method, which is surrounded
+    by a loop counting the repetitions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `setUp()` method or `@Before` annotation is present and is used as `@BeforeExperiment`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Benchmarking the temperature converter
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let's start by creating a new Java module inside our project. Yes, this time,
+    it is not an Android module—just Java.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For consistency, use the `com.blundell.tut` package as the main package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add a dependency to this module on your core module in the `/benchmark/build.gradle`
+    file. This allows you to access the temperature converter code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Also, add the `Caliper` library as a dependency; this is hosted on Maven central.
+    However, at the time of writing this book, the version released by Google is Caliper
+    1.0-beta-1, which does not include the annotations we have just discussed. I have
+    tried to poke them to fix this, at [https://code.google.com/p/caliper/issues/detail?id=291](https://code.google.com/p/caliper/issues/detail?id=291),
+    star that issue if you feel so inclined. Therefore, in the meantime, another developer
+    has released Caliper under his package to Maven central to allow us to use annotations.
+    This is the import you need:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Create the `TemperatureConverterBenchmark` class that will be containing our
+    benchmarks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have a `setUp()` method similar to JUnit tests that use the `@BeforeExperiment`
+    annotation. It is run before the benchmarks are run. This method initializes a
+    collection of random temperatures used in the conversion benchmark. The size of
+    this collection is a field and is annotated here with the `@Param` annotation
+    so that Caliper knows about its existence. Caliper will allow us to provide the
+    value of this parameter when we run the benchmarks. However, for this example,
+    we have given the param some default values of `"1", "10", "100"`. This means
+    we will have at least three benchmarks, with one, then 10, and then 100 values
+    of temperature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use a Gaussian distribution for the pseudo-random temperatures, as this can
+    be a good model of the reality of a user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The benchmark method itself uses the `@Benchmark` annotation so that caliper
+    can recognize and run this method, in this `timeCelsiusToFahrenheit()` instance.
+    Inside this method, we loop for the number of repetitions passed to us as a method
+    parameter, each time invoking the `TemperatureConverter.celsiusToFahrenheit()`
+    conversion, which is the method we wish to benchmark.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Running Caliper
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To run Caliper, right-click on the class and select from the menu and run `TemperatureConverterBenchmark.main()`.
+    If you want to change the total parameter from the default of `1, 10, 100`, edit
+    the run configuration, and in the Program arguments field, input `–Dtotal=5,50,500`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Either way, this will run the benchmarks, and if everything goes well, we will
+    be presented with the results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: To help visualize these results, there is a service hosted on Google AppEngine
+    ([http://microbenchmarks.appspot.com](http://microbenchmarks.appspot.com)) that
+    accepts your result data and lets you visualize it in a much better way. You can
+    see this URL in the preceding output, where the results have been published.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you wish to access a suite of benchmarks, or collate your results over time,
+    you can log in to this server and gain an API key to help congregate your results.
+    Once you have obtained this key, it should be placed in the `~/.caliper/config.properties`
+    file in your home directory, and the next time you run the benchmarks, the results
+    will be linked to your login.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `config.properties` will look like this snippet after you pasted the API
+    key obtained:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The result will be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Running Caliper](img/00044.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As well as the run speeds, the generated website shows you the configuration
+    of the JVM used to run the tests. The blue and red sections are expandable for
+    seeing more properties, helping you to detect when the environment being run on
+    is actually affecting the different results being reported.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we dissected the available alternatives for testing the performance
+    measures of our application by benchmarking and profiling our code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Some options that should be provided by the Android SDK are not available at
+    the time of writing this book, and there is no way to implement Android `PerformanceTestCases`
+    because some of the code is hidden in the SDK. We visited and analyzed some other
+    valid alternatives.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Among these alternatives, we found that we can use simple log statements or
+    more sophisticated code that extends instrumentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Subsequently, we analyzed profiling alternatives and described and exemplified
+    the use of `traceview` and `dmtracedump`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, you discovered Caliper, a microbenchmarking tool that has native support
+    for Android. However, we introduced its most basic usage, and postponed more specific
+    Android and Dalvik VM usage for the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To be able to quantify your testing efforts in the next chapter, we will be
+    executing coverage reports on our code. We will also introduce alternative testing
+    and discuss new upcoming libraries and topics in the Android testing world to
+    hopefully give you some jumping-off points to explore and continue on your own
+    testing voyage.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,1303 @@
+- en: Chapter 3. Baking with Testing Recipes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter provides practical examples of multiple common situations that
+    you will encounter, by applying the disciplines and techniques described in the
+    previous chapters. The examples are presented in an easy-to-follow manner, so
+    you can adapt and use them for your own projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following are the topics that will be covered in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android unit tests
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing activities and applications
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing databases and content providers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing local and remote services
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing user interfaces
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing exceptions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing parsers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing for memory leaks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing with Espresso
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: After this chapter, you will have a reference to apply different testing recipes
+    to your projects for different situations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android unit tests
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are some cases where you really need to test parts of the application
+    in isolation with little connection to the underlying system. In Android, the
+    system is the Activity framework. In such cases, we have to select a base class
+    that is high enough in the test hierarchy to remove some of the dependencies but
+    not high enough for us to be responsible for some of the basic infrastructure
+    of instantiating Context, for example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In such cases, the candidate base class is `AndroidTestCase` because this allows
+    the use of Context and Resources without thinking about Activities:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This example is based on the Android **Compatibility Test Suite** (**CTS**)
+    at [http://source.android.com/compatibility/cts-intro.html](http://source.android.com/compatibility/cts-intro.html).
+    The CTS is a suite of tests aimed at making the Android hardware and software
+    environment consistent for application developers, irrespective of the original
+    equipment manufacturer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `AccessPrivateDataTest` class extends `AndroidTestCase` because it's a unit
+    test that doesn't require the system infrastructure. In this particular case,
+    we could not have used `TestCase` directly because we are using `getContext()`
+    later on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This test method, `testAccessAnotherAppsPrivateDataIsNotPossible()`, tests the
+    access to another package's private data and fails if access is possible. To achieve
+    this, the expected exceptions are caught, and if this doesn't happen, `fail()`
+    is invoked with a custom message. The test seems pretty straightforward, but you
+    can see how powerful this is to stop inadvertent security mistakes from creeping
+    in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing activities and applications
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Here, we cover some common cases that you will find in your day-to-day testing,
+    including dealing with Intents, Preferences, and Context. You can adapt these
+    patterns to suit your specific needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mocking applications and preferences
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In Android parlance, an application refers to a base class used when it is needed
+    to maintain a global application state. The full package is `android.app.Application`.
+    This can be utilized when dealing with shared preferences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We expect that the tests that alter these preferences' values will not affect
+    the behavior of the real application. Without the correct testing framework, the
+    tests could delete user account information for an application that stores these
+    values as shared preferences. This doesn't sound like a good idea. So what we
+    really need is the ability to mock a Context that also mocks the access to `SharedPreferences`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our first attempt could be to use `RenamingDelegatingContext`, but unfortunately,
+    it does not mock `SharedPreferences`, although it is close because it mocks the
+    database and filesystem access. So first, we need to mock access to our shared
+    preferences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Whenever you come across a new class (like `RenamingDelegatingContext`), it's
+    a good idea to read the relevant Java doc to get an overview of how the framework
+    developers expect it to be used. For more information, refer to [http://developer.android.com/reference/android/test/RenamingDelegatingContext.html](http://developer.android.com/reference/android/test/RenamingDelegatingContext.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The RenamingMockContext class
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Let's create the specialized Context. The `RenamingDelegatingContext` class
+    is a very good point to start from because as we mentioned before, database and
+    filesystem access will be mocked. The problem is how to mock the `SharedPreferences`
+    access.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Remember that `RenamingDelegatingContext`, as its name suggests, delegates
+    everything to a Context. So the root of our problem lies in this Context. When
+    you access `SharedPreferences` from a Context, you use `getSharedPreferences(String
+    name, int mode)`. To change the way this method works, we can override it inside
+    `RenamingMockContext`. Now that we have control, we can prepend the name parameter
+    with our test prefix, which means that when our tests run, they will write to
+    a preferences file that is different than that of our main application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, we have full control over how preferences, databases, and files are stored.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mocking contexts
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We have the `RenamingMockContext` class. Now, we need a test that uses it. As
+    we will be testing an application, the base class for the test would be `ApplicationTestCase`.
+    This test case provides a framework in which you can test application classes
+    in a controlled environment. It provides basic support for the lifecycle of an
+    application, and hooks to inject various dependencies and control the environment
+    in which your application is tested. Using the `setContext()` method, we can inject
+    the `RenamingMockContext` method before the application is created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''re going to test an application called `TemperatureConverter`. This is
+    a simple application that converts Celsius to Fahrenheit and vice versa. We will
+    discuss more about the development of this app in [Chapter 6](part0061_split_000.html#page
+    "Chapter 6. Practicing Test-driven Development"), *Practicing Test-driven Development*.
+    For now, the details aren''t necessary as we are concentrating on testing scenarios.
+    The `TemperatureConverter` application will store the decimal places of any conversion
+    as a shared preference. Consequently, we will create a test to set the decimal
+    places and then retrieve it to verify its value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: We extend `ApplicationTestCase` using the `TemperatureConverterApplication`
+    template parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we use the given name constructor pattern that we discussed in [Chapter
+    2](part0020_split_000.html#page "Chapter 2. Understanding Testing with the Android
+    SDK"), *Understanding Testing with the Android SDK*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here, we have not used a `setUp()` method since there is only one test in the
+    class–*you ain''t gonna need it* as they say. One day, if you come to add another
+    test to this class, this is when you can override `setUp()` and move the behavior.
+    This follows the DRY principle, meaning Don''t Repeat Yourself, and leads to more
+    maintainable software. So at the top of the test method, we create the mock context
+    and set the context for this test using the `setContext()` method; we create the
+    application using `createApplication()`. You need to ensure you call `setContext`
+    before `createApplication` as this is how you get the correct instantiation order.
+    Now, the code that actually tests for the required behavior setting the decimal
+    places, retrieving it, and verifying its value. This is it, using `RenamingMockContext`
+    to give us control over `SharedPreferences`. Whenever the `SharedPreference` is
+    requested, the method will invoke the delegating context, adding the prefix for
+    the name. The original `SharedPreferences` class used by the application are unchanged:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can verify that our tests do not affect the application by furnishing the
+    `TemperatureConverterApplication` class with some value in the shared preferences,
+    running the application, then running the tests and eventually verifying that
+    this value was not affected by executing the tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing activities
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The next example shows how an activity can be tested in complete isolation using
+    the `ActivityUnitTestCase<Activity>` base class. A second choice would be `ActivityInstrumentationTestCase2<Activity>`.
+    However, the former allows you to create an Activity but not attach it to the
+    system, meaning you cannot launch other Activities (you are an Activity single
+    unit). This choice of the parent class not only requires more care and attention
+    in your setup but also provides a greater flexibility and control over the Activity
+    under test. This kind of test is intended to test general Activity behavior and
+    not an Activity instance's interaction with other system components or any UI-related
+    tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First things first, here is the class under test. It is a simple Activity with
+    one button. When this button is pressed, it fires an Intent to start the Dialer
+    and finishes itself:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For our test `case`, we extend `ActivityUnitTestCase<ForwardingActivity>`,
+    as we mentioned earlier, as a unit test for an `Activity` class. This activity
+    under test will be disconnected from the system, so it is only intended to test
+    internal aspects of it and not its interaction with other components. In the `setUp()`
+    method, we create the Intent that will start our Activity under test, that is,
+    `ForwardingActivity`. Note the use of `getInstrumentation()`. The `getContext`
+    class, as at this point in the `setUp()` method of the Activity Context, is still
+    null:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that the setup is done, we can move onto our tests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The first test performs a click on the **Go** button of the Forwarding Activity.
+    The `onClickListener` class of that button invokes `startActivity()` with an Intent
+    that defines a new `Activity` that will be started. After performing this action,
+    we verify that the `Intent` used to launch the new Activity is not null. The `getStartedActivityIntent()`
+    method returns the Intent that was used if the Activity under tests invoked `startActivity(Intent)`
+    or `startActivityForResult(Intent, int)`. Next, we assert that `finish()` was
+    called, and we do that by verifying the return value of `FinishCalled()`, which
+    returns `true` if one of the `finish` methods (`finish()`, `finishFromChild(Activity)`,
+    or `finishActivity(int)`) was called in the Activity under test:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The second test is perhaps the more interesting test method in this test case.
+    This test case demonstrates how to exercise the Activity life cycle. After starting
+    the Activity, `onCreate()` is called automatically, and we can then exercise other
+    life cycle methods by invoking them manually. To be able to invoke these methods,
+    we use `Intrumentation` of this test. Also, we don't manually invoke `onDestroy()`
+    as it will be invoked for us in `tearDown()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's walk through the code. This method starts the Activity in the same way
+    as the previously analyzed test. After the activity is started, its `onCreate()`
+    method is called automatically by the system. We then use `Instrumentation` to
+    invoke other life cycle methods to complete the Activity under test start up.
+    These correspond to `onStart()` and `onResume()` in the Activity life cycle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Activity is now completely started, and it's time to test for the aspects
+    we are interested in. Once this is achieved, we can follow other steps in the
+    life cycle. Note that this sample test does not assert anything here but simply
+    points out how to step through the life cycle. To finish the life cycle, we call
+    through to `onPause()` and `onStop()`. As we know, `onDestroy()` is avoided as
+    it will automatically be called by `tearDown()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This test represents a test skeleton. You can reuse it to test your Activities
+    in isolation and to test life cycle-related cases. The injection of mock objects
+    can also facilitate testing of other aspects of the Activity, such as accessing
+    system resources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing files, databases, and content providers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Some test cases have the need to exercise databases or `ContentProvider` operations,
+    and soon comes the need to mock these operations. For example, if we are testing
+    an application on a real device, we don't want to interfere with the normal operation
+    of applications on the said device, especially if we were to change values that
+    may be shared by more than one application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Such cases can take advantage of another mock class that is not a part of the
+    `android.test.mock` package but of `android.test` instead, namely `RenamingDelegatingContext`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember, this class lets us mock file and database operations. A prefix supplied
+    in the constructor is used to modify the target of these operations. All other
+    operations are delegated to the delegating Context that you specify.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Suppose our Activity under test uses some files or databases that we want to
+    control in some way, probably to introduce specialized content to drive our tests,
+    and we don't want to, or we cannot use the real files or database. In such cases,
+    we create `RenamingDelegatingContext`, which specifies a prefix. We provide mock
+    files using this prefix and introduce any content we need to drive our tests,
+    and the Activity under test could use them with no alteration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The advantage of keeping our Activity unchanged, that is, not modifying it to
+    read from a different source, is that this assures that all the tests are valid.
+    If we introduce a change only intended for our tests, we will not be able to assure
+    that, under real conditions, the Activity behaves the same.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To demonstrate this case, we will create an extremely simple Activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `MockContextExampleActivity` activity displays the content of a file inside
+    `TextView`. What we intend to demonstrate is how it displays different content
+    during a normal operation of Activity, as compared to when it is under test:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is our simple Activity. It reads the content of the `my_file.txt` file
+    and displays it on `TextView`. It also displays any error that might occur. Obviously,
+    in a real scenario, you would have better error handling than this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need some content for this file. Probably the easiest way to create the
+    files is as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: We created two different files, one named `my_file.txt` and the other `test.my_file.txt`,
+    with different content. The latter indicates that it is a mock content. If you
+    ran the preceding activity now, you would see **This is real data** as it is reading
+    from the expected file `my_file.txt`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following code demonstrates the use of this mock data in our activity tests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `MockContextExampleTest` class extends `ActivityUnitTestCase` because we
+    are looking for isolated testing of `MockContextExampleActivity` and because we
+    are going to inject a mocked context; in this case, the injected context is `RenamingDelegatingContext`
+    as a dependency.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our fixture consists of the mock context, `mockContext` and `RenamingDelegatingContext`,
+    using the target context obtained by `getInstrumentation().getTargetContext()`.
+    Note that the context where the instrumentation is run is different than the context
+    of the Activity under test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here a fundamental step follows—since we want to make the existing files and
+    databases accessible to this test, we have to invoke `makeExistingFilesAndDbsAccessible()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, our test named `testSampleTextDisplayed()` injects the mock context using
+    `setActivityContext()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You must invoke `setActivityContext()` to inject a mock context before you start
+    the Activity under test by invoking `startActivity()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, the Activity is started by `startActivity()` using a blank Intent just
+    created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We obtain the text value held by the `TextView` by using a getter that we added
+    to the Activity. I would never recommend changing production code (that is, exposing
+    getters) just for your tests in a real project, as this can lead to bugs, incorrect
+    usage patterns by other developers, and security issues. However, here, we are
+    demonstrating the use of `RenamingDelegatingContext` rather than test correctness.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, the text value obtained is checked against the `This is MOCK* data`
+    string. It is important here to notice that the value used for this test is the
+    test file content and not the real file content.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The BrowserProvider tests
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'These tests are based on the Browser module of the Android Open Source Project
+    (AOSP). The AOSP has lots of great test examples, and using them as an example
+    here stops you from writing a lot of boilerplate code to set up the scenario for
+    the test. They are intended to test some aspects of the Browser bookmarks, content
+    provider, which is part of the standard Browser included with the Android platform
+    (not the Chrome app but the default Browser app):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: The fixture created in the `setUp()` method creates a list of `Uris` that are
+    used to keep track of the inserted `Uris` to be deleted at the end of each test
+    in the `tearDown()` method. The developers could have saved this hassle using
+    a mock content provider, maintaining the isolation between our tests and the system.
+    Anyway, `tearDown()` iterates over this list and deletes the stored `Uris`. There
+    is no need to override the constructor here as `AndroidTestCase` is not a parameterized
+    class, and we don't need to do anything special in it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now comes the test:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `testHasDefaultBookmarks()` method is a test to ensure that there are a
+    number of default bookmarks always present in the database. On startup, a cursor
+    iterates over the default bookmarks obtained by invoking `getBookmarksSuggest("")`,
+    which returns an unfiltered cursor of bookmarks; this is why the content provider
+    query parameter is `""`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `testPartialFirstTitleWord()` method and three others like it not shown
+    here `testFullFirstTitleWord()`, `testFullFirstTitleWordPartialSecond()`, and
+    `testFullTitle()` test for the insertion of bookmarks. To achieve this, they invoke
+    `assertInsertQuery()` using the bookmarked URL, its title, and the query. The
+    method `assertInsertQuery()` adds the bookmarks to the bookmark provider, inserting
+    the URL issued as a parameter with the specified title. The `Uri` returned is
+    verified to be not null and not exactly the same as the default one. Finally,
+    the `Uri` is inserted in the list of `Uri` instances to be deleted in `tearDown()`.
+    The code for this can be seen in the utility methods shown as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Unicode is a computing industry standard designed to consistently and uniquely
+    encode characters used in written languages throughout the world. The Unicode
+    standard uses hexadecimals to express a character. For example, the value \u30ae
+    represents the Katakana letter GI (ギ).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have several tests that are intended to verify the utilization of this bookmark
+    provider for locales and languages other than just English. These particular cases
+    cover the Japanese language utilization in bookmark titles. The tests `testFullTitleJapanese()`,
+    and two others that are not shown here, that is, `testPartialTitleJapanese()`
+    and `testSoundmarkTitleJapanese()` are the Japanese versions of the tests introduced
+    before using Unicode characters. It is recommended to test the application's components
+    under different conditions, like in this case, where other languages with different
+    character sets are used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Several utility methods follow. These are the utilities used in the tests.
+    We briefly looked at `assertInsertQuery()` before, so now, let''s look at the
+    other methods as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The method `assertInsertQuery()` invokes `assertQueryReturns(url`, `title`,
+    and `query)`, after `addBookmark()`, to verify that the Cursor returned by `getBookmarksSuggest(query)`
+    contains the expected data. This expectation can be summarized as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The number of rows returned by the query is greater than 0
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The number of rows returned by the query is equal to 1
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The title in the returned row is not null
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The title returned by the query is exactly the same as the method parameter
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The second line for the suggestion is not null
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The URL returned by the query is not null
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This URL matches exactly the URL issued as the method parameter
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: This strategy provides an interesting pattern to follow in our tests. Some of
+    the utility methods that we need to create to complete our tests can also carry
+    their own verification of several conditions and improve our test quality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating assert methods in our classes allows us to introduce a domain-specific
+    testing language that can be reused when testing other parts of the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing exceptions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have mentioned this before in [Chapter 1](part0014_split_000.html#page "Chapter 1. Getting
+    Started with Testing"), *Getting Started with Testing*, where we stated that you
+    should test for exceptions and wrong values instead of just testing positive cases:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have also presented these tests before, but here, we are digging deeper into
+    it. The first thing to notice is that these are JUnit4 tests, meaning we can test
+    for exceptions using the `expected` annotation parameter. When you download the
+    chapter's sample project, you will be able to see that it is split into two modules,
+    one of them being core, which is a pure Java module, and so, we have the chance
+    to use JUnit4\. At the time of writing this, Android has announced JUnit4 support
+    but not yet released it, so we are still on JUnit3 for Instrumented Android tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Every time we have a method that is supposed to generate an exception, we should
+    test this exceptional condition. The best way of doing it is by using JUnit4''s
+    `expected` parameter. This declares that the test should throw the exception,
+    if it does not throw the exception or throws a different exception, the test will
+    fail. This can also be done in JUnit3 by invoking the method under test inside
+    a try-catch block, catching the expected exception, and failing otherwise:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Testing local and remote services
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'When you want to test an `android.app.Service`, the idea is to extend the `ServiceTestCase<Service>`
+    class to test in a controlled environment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: The constructor, as in other similar cases, invokes the parent constructor that
+    passes the Android service class as a parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is followed by `testBasicStartup()`. We start the service using an Intent
+    that we create here, setting its class to the class of the service under test.
+    We also use the instrumented Context for this Intent. This class allows for some
+    dependency injection, as every service depends on the Context in which it runs,
+    and the application with which it is associated. This framework allows you to
+    inject modified, mock, or isolated replacements for these dependencies, and thus
+    performs a true unit test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Dependency Injection** (**DI**) is a software design pattern that deals with
+    how components get hold of their dependencies. You can do this yourself manually
+    or use one of the many dependency injection libraries.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since we simply run our tests as is, the service will be injected with a fully
+    functional `Context` and a generic `MockApplication` object. Then, we start the
+    service using the `startService(startIntent)` method, in the same way as if it
+    were started by `Context.startService()`, providing the arguments it supplied.
+    If you use this method to start the service, it will automatically be stopped
+    by `tearDown()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another test, `testBindable()`, will test whether the service can be bound.
+    This test uses `bindService(startIntent)`, which starts the service under test
+    in the same way as if it were started by `Context.bindService()`, providing the
+    arguments it supplied. It returns the communication channel to the service. It
+    may return null if clients cannot bind to the service. Most probably, this test
+    should check for the null return value in the service with an assertion like `assertNotNull(service)`
+    to verify that the service was bound correctly, but it doesn't, so we can focus
+    on the framework classes in use. Be sure to include this test when you write code
+    for similar cases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The returned `IBinder` is usually for a complex interface that has been described
+    using AIDL. In order to test with this interface, your service must implement
+    a `getService()` method, as shown in `DummService` in the example project for
+    this chapter; which has this implementation of that method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: Extensive use of mock objects
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapters, we described and used the mock classes that are present
+    in the Android SDK. While these classes can cover a great number of cases, there
+    are other Android classes and your own domain classes to consider. You might have
+    the need for other mock objects to furnish your test cases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Several libraries provide the infrastructure to satisfy our mocking needs, but
+    we are now concentrating on Mockito, which is perhaps the most widely used library
+    in Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This is not a Mockito tutorial. We will just be analyzing its use in Android,
+    so if you are not familiar with it, I would recommend that you take a look at
+    the documentation available on its website at [https://code.google.com/p/mockito/](https://code.google.com/p/mockito/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mockito is an open source software project available under the MIT license,
+    and provides test doubles (mock objects). It is a perfect match for Test-driven
+    Development due to the way it verifies expectations and due to its dynamically
+    generated mock objects because they support refactoring, and the test code will
+    not break when renaming methods or changing its signature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Summarizing its documentation, the most relevant benefits of Mockito are as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ask questions about interactions after execution
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It is not expect-run-verify – avoids expensive setup
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: One way to mock that is a simple API
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Easy refactoring with types used
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: It mocks concrete classes as well as interfaces
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: To demonstrate its usage and to establish a style that can be later reproduced
+    for other tests, we are completing some example test cases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The latest version of Mockito supported by Android as of this writing is Dexmaker
+    Mockito 1.1\. You might want to try out a different one, but you will most probably
+    encounter problems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first thing we should do is add `Mockito` as a dependency for your Android
+    instrumentation tests. This is as simple as adding the `androidTestCompile` reference
+    to your dependencies closure. Gradle will do the rest, that is, download the JAR
+    file and add it to your classpath:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In order to use Mockito in our tests, we only need to statically import its
+    methods from `org.mockito`. Usually, your IDE will give you the option to statically
+    import these, but if it does not, you can try to add them manually (if the code
+    is red when manually added, then you have a problem with the library being available):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is preferable to use specific imports instead of using the wildcard. The
+    wildcards are here just for brevity. It is most likely that when your IDE autosaves,
+    it will expand them into the imports needed (or remove them if you aren't using
+    them!).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Importing libraries
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We have added the Mockito library to the project''s Java Build Path. Usually,
+    this is not a problem, but sometimes, rebuilding the project leads us to the following
+    error that stops the project being built: **Error: duplicate files during packaging
+    of APK**.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This depends on how many libraries are included by the project and what they
+    are.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Most of the available open source libraries have a similar content as proposed
+    by GNU and include files such as `LICENSE`, `NOTICE`, `CHANGES`, `COPYRIGHT`,
+    and `INSTALL`, among others. We will find this problem as soon as we try to include
+    more than one in the same project to ultimately build a single APK. This can be
+    resolved in your `build.gradle`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Mockito usage example
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's create `EditText`, which only accepts signed decimal numbers. We'll call
+    it `EditNumber`. `EditNumber` uses `InputFilter` to provide this feature. In the
+    following tests, we will be exercising this filter to verify that the correct
+    behavior is implemented.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create the test, we will be using a property that `EditNumber` inherits from
+    `EditText`, so it can add a listener, actually a `TextWatcher`. This will provide
+    methods that are called whenever the text of `EditNumber` changes. This `TextWatcher`
+    is a collaborator for the test, and we could have implemented it as its own separate
+    class and verified the results of calling its methods, but this is tedious, and
+    might introduce more errors, so the approach taken is to use Mockito in order
+    to avoid the need of writing an external `TextWatcher`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is precisely how we are introducing a mock `TextWatcher` to check method
+    invocations when the text changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The EditNumber filter tests
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This suite of tests will exercise `InputFilter` behavior of `EditNumber`, checking
+    the method calls on the `TextWatcher` mock and verifying the results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We are using an `AndroidTestCase` because we are interested in testing `EditNumber`
+    in isolation of other components or Activities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have several inputs that need to be tested (we allow decimal numbers, but
+    do not allow multiple decimals, letters, and so on), and so we can have one test
+    with an array of expected input and an array of expected output. However, the
+    test can get very complicated and would be awful to maintain. A better approach
+    is to have one test for each test case of `InputFilter`. This allows us to give
+    meaningful names to our tests and an explanation of what we are aiming to test.
+    We will finish up with a list like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we will run through the use of mocks for one of these tests `testTextChangedFilterWorksForCharacterInput()`,
+    and if you check the example project, you will see that all the other tests follow
+    the same pattern, and we have actually extracted out a helper method that acts
+    as a custom assertion for all tests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can see, the text case is pretty straightforward; it asserts that when
+    you enter `A1A` into the text of the **EditNumber** view, the text is actually
+    changed into `1`. This means that our EditNumber has filtered out the characters.
+    An interesting thing happens when we look at the `assertEditNumberTextChangeFilter(input,
+    output)` helper method. Within our helper method is where we verify that the `InputFilter`
+    is doing its job and it is here we use Mockito. There are four common steps to
+    take when using Mockito mock objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instantiate the intended mocks that are ready for use.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Determine what behavior is expected and stub it to return any fixture data.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Exercise the methods, usually by invoking methods of the class under test.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Verify the behavior of your mock object to pass the test.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: According to step one, we create a mock `TextWatcher` using `mock(TextWatcher.class)`
+    and set it as our `TextChangedListener` on EditNumber.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We skip step two in this instance as we have no fixture data, in that the class
+    we are mocking does not have any methods that are expected to return a value.
+    We'll come back to this in another test later on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In step three, we have our mock in place, and we can exercise the method under
+    test to perform its intended action. In our case, the method is `editNumber.setText(input)`,
+    and the intended action is to set the text and thus prompt our `InputFilter` to
+    run.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Step four is where we verify that the text was actually changed by our filter.
+    Let''s break step four down a little. Here are our verifications again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: We will be using two custom written matchers (`editableCharSequenceEq(String)`
+    and `charSequenceEq(String)`) because we are interested in comparing the string
+    content for different classes used by Android, such as `Editable` and `CharSequence`.
+    When you use a special matcher, it means all comparisons done for that verification
+    method call need a special wrapper method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The other matcher, `eq()`, expects `int` that is equal to the given value. The
+    latter is provided by Mockito for all primitive types and objects, but we need
+    to implement `editableCharSequenceEq()` and `charSequenceEq()` as it is an Android-specific
+    matcher.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Mockito has a predefined `ArgumentMatcher` that would help us create our matcher.
+    You extend the class and it gives you one method to override:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `matches` argument matcher method expects an argument that you can use to
+    compare against a predefined variable. This argument is the "actual" result of
+    your method invocation, and the predefined variable is the "expected" one. You
+    then decide to return true or false whether they are the same or not.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As you might have already realized, the custom `ArgumentMatcher` class''s frequent
+    use in a test could become really complex and might lead to errors, so to simplify
+    this process, we will be using a helper class that we call `CharSequenceMatcher`.
+    We also have `EditableCharSequenceMatcher`, which can be found in the example
+    project of this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: We implement matches by returning the result of the comparison of the object
+    passed as arguments with our predefined field after they are converted to a string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also override the `describeTo` method, and this allows us to change the
+    error message when the verification fails. This is always a good tip to remember:
+    take a look at the error messages before and after doing this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When the static instantiation method for our matcher is used and we import
+    this as a static method, in our test, we can simply write:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: Testing views in isolation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The test that we are analyzing here is based on the Focus2AndroidTest from the
+    Android SDK ApiDemos project. It demonstrates how some properties of the Views
+    that conform to a layout can be tested when the behavior itself cannot be isolated.
+    The testing focusability of a view is one of these situations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We are only testing individual views. In order to avoid creating the full Activity,
+    this test extends `AndroidTestCase`. You may have thought about using just `TestCase`,
+    but unfortunately, this is not possible as we need a Context to inflate the XML
+    layout via `LayoutInflater`, and `AndroidTestCase` will provide us with this component:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The setup prepares our test as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We request a `FocusFinder` class. This is a class that provides the algorithm
+    used to find the next focusable View. It implements the singleton pattern and
+    that's why we use `FocusFinder.getInstance()` to obtain a reference to it. This
+    class has several methods to help us find focusable and touchable items, given
+    various conditions as the nearest in a given direction or searching from a particular
+    rectangle.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Then, we get the `LayoutInflater` class and inflate the layout under test. One
+    thing we need to take into account, as our test is isolated from other parts of
+    the system, is that we have to manually measure and lay out the components.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Then, we use the find views pattern and assign the found views to the fields.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In a previous chapter, we enumerated all the available asserts in our arsenal,
+    and you may remember that to test a View''s position, we had a complete set of
+    assertions in the `ViewAsserts` class. However, this depends on how the layout
+    is defined:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: The method `testGoingRightFromLeftButtonJumpsOverCenterToRight()`, as its name
+    suggests, tests the focus gained by the right button when the focus moves from
+    the left to the right button. To achieve this search, the instance of `FocusFinder`
+    obtained during the `setUp()` method is employed. This class has a `findNextFocus()`
+    method to obtain the View that receives focus in a given direction. The value
+    obtained is checked against our expectations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a similar way, the `testGoingLeftFromRightButtonGoesToCenter()` test tests
+    the focus that goes in the other direction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing parsers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are many occasions where your Android application relies on external XML,
+    JSON messages, or documents obtained from web services. These documents are used
+    for data interchange between the local application and the server. There are many
+    use cases where XML or JSON documents are obtained from the server or generated
+    by the local application to be sent to the server. Ideally, methods invoked by
+    these activities have to be tested in isolation to have real unit tests, and to
+    achieve this, we need to include some mock files somewhere in our APK to run the
+    tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But the question is where can we include these files?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's find out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android assets
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To begin, a brief review of the assets'' definition can be found in the Android
+    SDK documentation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The difference between "resources" and "assets" isn''t much on the surface,
+    but in general, you''ll use resources to store your external content much more
+    often than you''ll use assets. The real difference is that anything placed in
+    the resources directory will be easily accessible from your application from the
+    R class, which is compiled by Android. Whereas, anything placed in the assets
+    directory will maintain its raw file format and, in order to read it, you must
+    use the AssetManager to read the file as a stream of bytes. So keeping files and
+    data in resources (res/) makes them easily accessible.*'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: Clearly, assets are what we need to store the files that will be parsed to test
+    the parser.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So our XML or JSON files should be placed in the assets folder to prevent manipulation
+    at compile time and to be able to access the raw content while the application
+    or tests are run.
+  prefs: []
+  type: TYPE_NORMAL
+- en: But be careful, we need to place them in the assets of our `androidTest` folder
+    because then, these are not part of the application, and we don't want them packed
+    with our code when we release a live application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The parser test
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'This test implements an `AndroidTestCase` as all we need is a Context to be
+    able to reference our assets folder. Also, we have written the parsing inside
+    of the test, as the point of this test is not how to parse xml but how to reference
+    mock assets from your tests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `InputStream` class is obtained by opening the `my_document.xml` file from
+    the assets by `getContext().getAssets()`. Note that the Context and thus the assets
+    obtained here are from the tests package and not from the Activity under test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, the `parseXml()` method is invoked using the recently obtained `InputStream`.
+    If there is an `IOException`, the test will fail and spit out the error from the
+    stack trace, and if everything goes well, we test that the result is not null.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We should then provide the XML we want to use for the test in an asset named
+    `my_document.xml`. You want the asset to be under the test project folder; by
+    default, this is `androidTest/assets`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The content could be:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: Testing for memory usage
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sometimes, memory consumption is an important factor to measure the good behavior
+    of the test target, be it an Activity, Service, Content Provider, or another component.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To test for this condition, we can use a utility test that you can invoke from
+    other tests mainly after having run a test loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: This assertion can be called from other tests. At the beginning, it obtains
+    `MemoryInfo` from `ActivityManager` using `getMemoryInfo()`, after getting the
+    instance using `getSystemService()`. The `lowMemory` field is set to `true` if
+    the system considers itself to currently be in a low memory situation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In some cases, we want to dive even deeper into the resource usage and can obtain
+    more detailed information from the process table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can create another helper method to obtain process information and use it
+    in our tests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: To obtain this information, a command (in this case, `ps` is used, but you can
+    adapt it to your needs) is executed using `Runtime.exec()`. The output of this
+    command is concatenated in a string that is later returned. We can use the return
+    value to print it to the logs in our test, or we can further process the content
+    to obtain summary information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is an example of logging the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When this test is run, we obtain information about the running processes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: The output was cut for brevity, but if you run it, you will get the complete
+    list of processes that run on the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A brief explanation of the information obtained is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Column | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| USER | This is the textual user ID. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| PID | This is the process ID number of the process. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| PPID | This is the parent process ID. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| VSIZE | This is the virtual memory size of the process in KB. This is the
+    virtual memory the process reserves. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| RSS | This is the resident set size, the non-swapped physical memory that
+    a task has used (in pages). This is the actual amount of real memory the process
+    takes in pages.This does not include pages that have not been demand-loaded in.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| WCHAN | This is the "channel" in which the process is waiting. It is the
+    address of a system call, and can be looked up in a name list if you need a textual
+    name. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| PC | This is the current EIP (instruction pointer). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| State (no header) | This denotes the process states, which are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: S is used to indicate sleeping in an interruptible state
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: R is used to indicate running
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: T is used to indicate a stopped process
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Z is used to indicate a zombie
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '|'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| **Column** | **Description** |'
+  prefs: []
+  type: TYPE_TB
+- en: '| NAME | This denotes the command name. The application processes in Android
+    are renamed after its package name. |'
+  prefs: []
+  type: TYPE_TB
+- en: Testing with Espresso
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Testing UI components can be difficult. Knowing when a view has been inflated
+    or ensuring you don't access views on the wrong thread can lead to strange behavior
+    and flaky tests. This is why Google has released a helper library for UI-related
+    instrumentation tests called Espresso ([https://code.google.com/p/android-test-kit/wiki/Espresso](https://code.google.com/p/android-test-kit/wiki/Espresso)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Adding the Espresso library JAR can be achieved by adding to the `/libs` folder,
+    but to make it easier for Gradle users, Google released a version to their Maven
+    repository (consider yourselves lucky users because this was not available before
+    version 2.0). When using Espresso, you need to use the bundled TestRunner as well.
+    Therefore, the setup becomes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the Espresso dependency has been added to your project, you have a fluid
+    interface to be able to assert the behavior on your UI elements. In our example,
+    we have an Activity that allows you to order Espresso coffee. When you press the
+    order button, a nice Espresso image appears. We want to verify this behavior in
+    an instrumentation test.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first thing to do is to set up our Activity to test. We use `ActivityInstrumentationTestCase2`
+    so that we can have a full lifecycle Activity running. You need to call `getActivity()`
+    at the start of your test or in the `setup()` method to allow the activity to
+    be started and for Espresso to find the Activity in a resumed state:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once the setup is done, we can write a test using Espresso to click our button
+    and check whether the image was shown (made visible) in the Activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This example shows the use of Espresso to find our order button, click on the
+    button, and check whether our ordered Espresso is shown to the user. Espresso
+    has a fluid interface, meaning it follows a builder-style pattern, and most method
+    calls can be chained. In the preceding example, I showed the fully qualified classes
+    for clarity, but these can easily be changed to static imports so that the test
+    is even more human readable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: This can now be read in a much more *sentence* style. This example shows the
+    use of Espresso to find our order button `onView(withId(R.id.espresso_button_order))`.
+    Click on `perform(click())`, then we find the cup image `onView(withId(R.id.espresso_imageview_cup))`,
+    and check whether it is visible to the user `check(matches(isDisplayed()))`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This shows that the only classes you need to think about are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Espresso**: This is the entry point. Always start with this to interact with
+    a View.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**ViewMatchers**: This is used to locate a View within the current hierarchy.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**ViewActions**: This is used to click, long click, and so on, on a located
+    View.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**ViewAssertions**: This is used to check the state of a View after an action
+    has been performed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Espresso has a really powerful API, which allows you to test the positions of
+    views next to each other, match data in a ListView, get data straight from a header
+    or footer, and check the views in your ActionBar/ToolBar and many more assertions.
+    Another feature is its capability to deal with threading; Espresso will wait for
+    asynchronous tasks to finish before it asserts whether the UI has changed. An
+    explanation of these features and much more is listed on the wiki page ([https://code.google.com/p/android-test-kit/w/list](https://code.google.com/p/android-test-kit/w/list)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, several real-world examples of tests that cover a wide range
+    of cases were presented. You can use them as a starting point while creating your
+    own tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We covered a variety of testing recipes that you can extend for your own tests.
+    We used mock contexts and showed how `RenamingDelegatingContext` can be used in
+    various situations to change the data obtained by the tests. We also analyzed
+    the injection of these mock contexts into test dependencies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we used `ActivityUnitTestCase` to test Activities in complete isolation.
+    We tested Views in isolation using `AndroidTestCase`. We demonstrated the use
+    of Mockito to mock objects combined with `ArgumentMatchers` to provide custom
+    matchers on any object. Finally, we treated the analysis of potential memory leaks
+    and took a peek into the power of testing UI with Espresso.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next chapter focuses on managing your test environment to enable you to
+    run tests in a consistent, fast, and always deterministic way, which leads to
+    automation and those mischievous monkeys!
+  prefs: []
+  type: TYPE_NORMAL

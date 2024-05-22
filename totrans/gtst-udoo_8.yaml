@@ -1,0 +1,881 @@
+- en: Chapter 8. Adding Network Capabilities
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 6](ch06.html "Chapter 6. Building a Chronotherm for Home Automation"),
+    *Building a Chronotherm for Home Automation*, we explored the definition of home
+    automation and, one step after another, we built a prototype capable of controlling
+    a boiler programmatically according to user preferences. We extended this prototype,
+    providing a preset configuration for storing different temperature schedules and
+    also improving the user interaction through voice recognition and synthesis.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This time, we're enhancing the Chronotherm application with another feature
+    that makes use of network capabilities to collect data from the Internet. The
+    goal of this chapter is to make our prototype capable of reacting to external
+    events that can't be easily caught by connected sensors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extending the Chronotherm application with network capabilities
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using web services to collect weather forecast data
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using collected data to change the Chronotherm behavior
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Extending Chronotherm with network capabilities
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Chronotherm application solves a specific problem. It turns on the boiler
+    every time the current temperature is below a configured setpoint for each hour
+    of the day. This logic is sufficient for a traditional Chronotherm but we can
+    improve this behavior so it takes into account the strict relationship between
+    the home temperature and weather conditions. For instance, the internal temperature
+    usually drops faster during cold days; if we incorporate this information in the
+    boiler logic, we can make our prototype smarter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moreover, if it's really cold, our boiler may stop working because the water
+    inside it has frozen. This issue can be solved if we implement an antifreeze feature
+    that will start the boiler when the outside temperature drops below a defined
+    value despite the user's preferences. Such features would handle unexpected situations
+    when users are away from the house or overnight.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unfortunately, it's not so easy to wire an external sensor and it may be too
+    complicated to build and use a wireless thermal sensor. However, given that the
+    external temperature is really important, we have to find a workaround to collect
+    weather condition data. Because the UDOO Chronotherm is in our home and it's likely
+    that it's connected to the Internet, we can get this information from web services
+    that provide forecast data, using this knowledge in our computation. In this way,
+    we can even add a complete overview of the weather conditions, improving the user
+    interface while providing users with useful information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'According to the needs mentioned earlier, we can organize our work in the following
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implement a module used to connect our prototype to weather REST APIs.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Collect and show weather forecast data at regular intervals.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Write the boiler antifreeze logic that will use the preceding data.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Connecting to REST APIs
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We start our work by providing an implementation to connect to a RESTful web
+    service. **REpresentational State Transfer** (**REST**) is a simple stateless
+    architecture style usually running over the HTTP protocol. The idea behind REST
+    involves exposing the state of the system as a collection of resources we can
+    manipulate, addressing them by their name or ID. The backend service is responsible
+    for persisting resource data, usually through the use of a database server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When a client asks for a resource through the HTTP protocol, the application
+    server retrieves the resource from the database server and sends it back to the
+    client using an interchange format such as XML or JSON. Exposing a REST API makes
+    it extremely easy to provide data to a mobile client, a browser extension, or
+    any piece of software that needs to access and process application data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will use a REST API only for information retrieval. If you
+    are interested in more detail about the REST architecture, follow this link [http://en.wikipedia.org/wiki/Representational_state_transfer](http://en.wikipedia.org/wiki/Representational_state_transfer).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we begin the implementation of the APIs connector, we should add the
+    following permission (in order to use the Internet in our application) to the
+    `AndroidManifest.xml` file just before the `<application>` tag,:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, to provide network capabilities to our application, we have to create
+    an abstraction to the `HttpURLConnection` class so that we can use external services
+    through a simpler API. To create a connector for our application, perform the
+    following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `UrlConnector` class in a new package named `http`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'At the top of the class, add the following declaration to store the `HttpURLConnection`
+    class instance:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following constructor that we will use to initialize the request parameters:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We expect an `encodedUrl` parameter as the argument and we use it to initialize
+    the URL object used later to open the connection. Then we set timeouts for the
+    reading and connection phases, using values that are good for our prototype.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add a generic method to set the HTTP headers of our requests:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following code snippet below the `get()` method that is used to make
+    the call:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: To the `mConnector` instance, we set the `GET` request method returning the
+    status code of the response. This status code will be used to check whether the
+    request finishes with a success or a failure.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the following `getResponse()` method to get the result from the web server
+    connection:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We create a buffered reader using the `mConnector` instance's input stream and
+    then, through the above reader, we get the content sent by the server. When we've
+    finished, we return the string without any further modifications.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Create a `disconnect()` method to close the connection with the server:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `UrlConnector` class simplifies HTTP calls and this implementation is enough
+    to connect to many web services that don''t use any authentication flows. Before
+    we can proceed, we have to choose a web service that provides weather forecast
+    data that we''re going to query. For the purpose of our prototype, we will use
+    the OpenWeatherMap service because it provides a free tier without authentication
+    flows, and it''s also available through REST APIs. You can find more information
+    at [http://openweathermap.org/](http://openweathermap.org/) or [http://openweathermap.org/current](http://openweathermap.org/current)
+    for the description of the service and to learn how their REST APIs are structured:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we make a call to the above RESTful service, we should parse the JSON
+    response, making it available within our application. This approach can be realized
+    with a Java class that knows the response structure and parses it according to
+    our needs. The implementation requires the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `Weather` class in a new package called `weather`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'At the top of the class, add the following declarations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We declare variables according to what we will use from the given response.
+    In our case, we use an `mStatus` variable to store the weather condition so users
+    will know if it's, for example, sunny or cloudy. We also use the `mTemperature`
+    variable, which is our first requirement, and the `mHumidity` attribute to provide
+    a plus to our users.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the class constructor as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We expect as argument a `JSONObject` parameter, the API result after a successful
+    call. From this object, we get the first element of the `weather` field and, within
+    the `JSONObject` object, we get the value of the `description` key. Then we get
+    the `temperature` variable value from the `main` field; this should be passed
+    to a `convertTempKtoC()` function because the returned value from the service
+    is in Kelvin. The last step is to get the `humidity` parameter from the same field.
+    This code could raise some exceptions during JSON parsing and, because of this,
+    we add these exceptions if the constructor throws a list.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the `convertTempKtoC()` member function, used in the constructor, that
+    converts Kelvin to Celsius:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This is just an example; you can use any unit of measurement that you prefer
+    for temperature.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the following getters to the Weather class, to retrieve instance data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now that we have an abstraction to make HTTP calls and a JSON results parser,
+    we need to implement the latest building block that calls the REST API and returns
+    a `Weather` instance. We can achieve this implementation through the following
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create the `WeatherApi` class within the `weather` package.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'At the top of the class, declare the following variables:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `BASE_URL` attribute defines the endpoint we should call to get weather
+    data. The `API_PARAM` attribute defines the used query string where the `q` parameter
+    is the location we want to query, while the `lang` parameter asks the server to
+    translate the result for the given locale.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Define a `static` method to generate a valid request URL:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This method expects a `location` argument used with a valid location to generate
+    the `params` string. In this way, it sets both the `q` and `lang` parameters and
+    then returns the `BASE_URL` attribute with the appropriate concatenation.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the static method to make the API call and to return an instance of the
+    `Weather` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This method expects the `location` argument, which is passed to the `getUrl()`
+    method we saw earlier to generate the endpoint that should be queried. Through
+    the `addHeader()` method, we define the request media type as an `application/json`
+    parameter, used by the server to deduce the format of our request. We make the
+    HTTP call with the `api` instance correctly configured for our endpoint, checking
+    the status code for a success. After the call, we close the connection, returning
+    the initialized `Weather` instance or the `null` reference if an exception is
+    raised.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this section, we're handling a different status code, an `IOException` exception,
+    and a `JSONException` exception that are respectively raised when the API call
+    doesn't finish with a success, when a network error occurs, or when our API call
+    results in a response parsing error. Every time you deal with exceptions in your
+    prototypes, remember that *errors should never pass silently*. We should always
+    handle such errors, notifying the problem to users with proper feedback.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Extending the Android user interface
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now that we can collect weather forecast data through the `WeatherApi` class,
+    we should start thinking about user interaction. As a first step, we should ask
+    users their home location, updating the Chronotherm user interface with the current
+    selected location and related weather conditions. Second, we should provide a
+    component to set an antifreeze setpoint that can be enabled or disabled, according
+    to the user's preferences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To achieve both interactions, we can use a clickable `TextView` object that
+    starts voice recognition based on user input, as we did in [Chapter 7](ch07.html
+    "Chapter 7. Using Android APIs for Human Interaction"), *Using Android APIs for
+    Human Interactions*. All the required components are summarized in the following
+    mock-up:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Extending the Android user interface](img/1942OS_08_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The first step is to update the `Overview` parameter layout. Following the
+    preceding suggestion, we should:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add the *Weather Forecast* `TextView`: This component changes whenever a short-lived
+    thread loads a `Weather` instance using the `WeatherApi` class. In this case,
+    it shows the current location, the weather condition, the temperature, and the
+    humidity. When users click on this component, we should launch the voice recognition
+    intent to get the user''s location.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Add the *Antifreeze* `TextView`: This component shows the current antifreeze
+    setpoint with a green color when the antifreeze feature is enabled; on the other
+    hand, it becomes gray when users disable the antifreeze check. When users click
+    on this component, we should launch the voice recognition intent to get the user''s
+    antifreeze setpoint; if antifreeze is enabled, the setpoint should be removed
+    from the user''s preferences.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We begin working with the layout that can be achieved, updating the `activity_overview.xml`
+    file under `res/layout/` and the `Overview` class, as you can see in the following
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Change the `LinearLayout` that contains the `view_container` and `temperature`
+    views, with the following highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Below the previous `LinearLayout`, add the following layout that will containing
+    both TextViews:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the previous container, add the *Antifreeze* and the *Weather Forecast*
+    TextViews with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In both components we define the `onClick` attribute that calls the `changeAntifreeze`
+    and the `changeLocation` methods. These member functions realize the interaction
+    described earlier and we will proceed with their implementation in the next section.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now we should proceed with the `Overview` activity, implementing the missing
+    code to update both TextViews. As the first step, declare their references at
+    the top of the `Overview` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `onCreate()` activity method, get both references with the highlighted
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Because a short-lived thread should update the `mWeatherStatus` `TextView`
+    parameter, we have to provide a callback in the `OnDataChangeListener` parameter
+    interface that expects a `Weather` instance. Add the highlighted method in the
+    `OnDataChangeListener` parameter interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'As the last step, add the `onWeatherChanged()` interface implementation with
+    the following code at the bottom of the `Overview` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As we discussed earlier, if we have a `weather` instance we update the `mWeatherStatus`
+    attribute with a formatted string showing the current location, the weather conditions,
+    the temperature, and the humidity.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'With the preceding changes, we can upload our Chronotherm application. It presents
+    itself as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Extending the Android user interface](img/1942OS_08_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Collecting weather forecast data
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that our application''s user interface is completed, we can proceed to
+    implement the logic to store the user''s location while fetching weather data
+    from the RESTful web service. This implementation could be organized in the following
+    steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Update the `Preset` class to store the user's location.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Handle voice recognition results when the user clicks on the `weather_status`
+    `TextView` parameter.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add a new scheduled thread that fetches weather data and updates the user interface
+    using the `onWeatherChanged()` callback.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We start updating the `Preset` class and realizing it with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add, at the top of the class, the highlighted declaration used as a key to
+    store and retrieve the location set by users:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the bottom of the class, add the following setter to store the given location:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To retrieve the stored value, add the following getter:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Through the `CURRENT_LOCATION` key, we retrieve the stored location and, if
+    it isn't set, we return a `null` value. In this way, we cover the first run when
+    no location is set, preventing any useless API call.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now we can proceed with updating the application''s interaction to change the
+    currently stored location through voice recognition. To complete this step, proceed
+    with the following changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the top of the `Overview` class, add the highlighted declaration to define
+    a request code for the new `Intent` result that will ask for the user''s location:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the `changeLocation()` method used by the `weather_status` clickable
+    view:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the member function that will set the current location using the
+    `Preset` class, while providing the appropriate feedback to users:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: After we store the current location in the application's shared preferences,
+    we update the `weather_status` view with a placeholder message until the scheduled
+    thread retrieves the weather conditions.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the highlighted code into the `onRecognitionDone()` callback, to pass the
+    `bestMatch` parameter to the previous method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The last building block we''re missing is to collect and show weather forecast
+    data at regular intervals through a new scheduled thread. This last part can be
+    realized by updating the `DataReader` class with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the top of the class, add the highlighted declarations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In the preceding snippet, we set the weather thread polling time to 5 seconds
+    but we have to bear in mind that the external temperature will never change so
+    fast, so it's useless to create too many queries to the web service. We chose
+    this value only for testing purposes; when the prototype is ready, we will need
+    to set more reasonable timings.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'At the bottom of the class, add the following `Runnable` implementation that
+    collects weather data and publishes the `Weather` instance to the main thread:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add, the new scheduler initialization that spawns short-lived threads for weather
+    data fetching to the `start()` method, as you can see in the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Stop the preceding scheduler, changing the `stop()` method with the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Update the main thread handler, passing the `Weather` instance to the appropriate
+    callback according to the message type:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now that we have a prototype capable of collecting and showing weather data
+    at regular intervals, we can upload our application into the UDOO board. After
+    we click on the weather status view and insert our location through voice recognition,
+    the application should update the `Overview` interface with the current weather
+    conditions. The next step is to improve the boiler ignition check, adding the
+    antifreeze feature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Improving the boiler with an antifreeze check
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that the forecast fetching is up and running, we can proceed with implementing
+    the antifreeze feature. To achieve the interaction and the logic previously discussed,
+    we should:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enhance the `Preset` class storing the user's antifreeze setpoint. In this class,
+    we should provide two utilities to disable the antifreeze check and to find out
+    whether the feature is enabled or not.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Handle the antifreeze feature in the `Overview` activity, updating the user
+    interface when a setpoint is selected.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Update the boiler logic in the `SensorThread` class so it takes into account
+    the antifreeze check when it's enabled.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We begin our work by changing the `Preset` class with the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the top of the class, add the highlighted declarations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We use the `ANTIFREEZE_DISABLED` attribute as a default temperature that is
+    impossible to reach. In this way, we can match this variable to know whether the
+    antifreeze is activated or not.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the following setter to store the antifreeze setpoint at the bottom of
+    the class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In line with the preceding method, add the following getter to retrieve the
+    antifreeze setpoint:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: With this approach, we return the value of the `CURRENT_ANTIFREEZE` key or the
+    `ANTIFREEZE_DISABLED` attribute, if it isn't set.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Add the following method to remove the antifreeze setpoint:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the following utility that returns values if the antifreeze feature is
+    enabled:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'For the next step, we should add the antifreeze feature in the `Overview` activity,
+    providing all methods to update the user interface while handling user input through
+    voice recognition. The implementation requires the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the top of the `Overview` class, add the `mFreeze` Boolean that points out
+    whether the antifreeze check is currently activated :'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the bottom of the class, add the following method used to update the `Overview`
+    layout:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As the first step, we retrieve the antifreeze temperature available in shared
+    preferences, setting the `mFreeze` Boolean through the `antifreezeIsEnabled()`
+    method. At this point, if the antifreeze feature is enabled, we show a green message
+    with the given setpoint; otherwise, we show a gray message stating that the feature
+    is disabled.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Call the `updateAntifreeze()` method at the bottom of the `readPreferences()`
+    member function, as we can see in the highlighted code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now that we have a layout that works with the stored antifreeze setpoint, we
+    should provide users with voice recognition and synthesis to activate or deactivate
+    the antifreeze check. To realize this implementation, the following steps are
+    required:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the top of the `Overview` class, add the highlighted `Intent` request code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the `changeAntifreeze()` method to enable or disable the feature, when
+    users click on the `weather_antifreeze` view:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement the member function to enable and store the antifreeze setpoint:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the highlighted code to the `onRecognitionDone()` callback, passing the
+    `bestMatch` attribute to the previous method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If the recognition intent is related to the `VOICE_ANTIFREEZE` request code,
+    we try to parse the `bestMatch` parameter as a float, passing the value to the
+    `enableAntifreeze()` method. If float parsing fails, we provide proper feedback
+    through voice synthesis.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'The Chronotherm prototype is almost done; the only task left is to improve
+    the boiler logic using the antifreeze feature. In the `DataReader` class, we should
+    add the following highlighted code in the `isBelowSetpoint()` method to make the
+    `SensorThread` class aware of the antifreeze setpoint, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: With this code, if the outside temperature is less than the stored antifreeze
+    setpoint, the boiler will turn on regardless of the user's preferences. If this
+    condition doesn't happen, the default behavior continues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The prototype is completed; through weather forecast data, it keeps our house
+    warm and also removes the risk of the boiler breaking down due to freezing temperatures.
+    We can upload the application and then we can set the antifreeze temperature.
+    The following screenshot shows the expected result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Improving the boiler with an antifreeze check](img/1942OS_08_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now that the prototype is completed, we can update the Chronotherm application
+    in the `app/build.gradle` file with a `0.3.0` version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we discovered how important the Internet is to our devices,
+    thanks to its huge amount of data and services. We found that our prototype could
+    be improved using the external temperature and, without any changes to the circuit,
+    we collected weather conditions through the network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the first part, we wrote a generic connector so we could make HTTP calls
+    without too much work. Then we used this component to implement a partial abstraction
+    of the RESTful web service, capable of retrieving the current weather for the
+    given location. We added new elements in the Chronotherm layout to show forecast
+    data and to handle location input with voice recognition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we decided to integrate the external temperature in our boiler logic.
+    Indeed, we implemented antifreeze capability, which turns on the boiler regardless
+    of the user's preferences when the external temperature is too low.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This prototype was this book's last foray into the many features provided by
+    the UDOO board together with the Android operating system. However, if you're
+    interested in one further improvement to the Chronotherm application, you could
+    delve into the bonus chapter, *Chapter 9*, *Monitoring your Devices with MQTT*,
+    which teaches the main concepts of the *Internet of Things* and the *MQTT protocol*,
+    used to exchange data between physical devices. Even if your next project uses
+    another prototyping board or technology, I hope that you've found useful advice
+    and that you've enjoyed the work we've done together to build simple, but interactive,
+    devices.
+  prefs: []
+  type: TYPE_NORMAL

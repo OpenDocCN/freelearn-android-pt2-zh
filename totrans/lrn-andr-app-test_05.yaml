@@ -1,0 +1,641 @@
+- en: Chapter 5. Discovering Continuous Integration
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Continuous** **integration** is one agile technique for software engineering
+    that aims to improve software quality and reduce the time taken to integrate changes
+    by continuously applying integration and testing frequently, as opposed to the
+    more traditional approach of integrating and testing at the end of the development
+    cycle.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Continuous integration has received a broad adoption, and a proliferation of
+    commercial tools and open source projects is a clear demonstration of its success.
+    That is not very difficult to understand, as anybody who during their professional
+    career has participated in a software development project using a traditional
+    approach is very likely to have experienced the so-called *integration hell*,
+    where the time it takes to integrate the changes exceeds the time it took to make
+    the changes. Does this remind you of anything?On the contrary, continuous integration
+    is the practice of integrating changes frequently and in small steps. These steps
+    are negligible and, if an error is noticed, it is so small that it can be fixed
+    immediately. The most common practice is to trigger the build process after every
+    commit to the source code repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This practice also implies other requirements, beside the source code being
+    maintained by a version control system (VCS):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Builds should be automated by running a single command. This feature has been
+    supported for a very long time by tools such as `make` and `ant`, and more recently
+    by `maven` and `gradle`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Builds should be self-testing to confirm that the newly built software meets
+    the expectations of the developers.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Build artifacts and results of the tests should be easy to find and view.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: When we write tests for our Android projects, we would like to take advantage
+    of continuous integration. To achieve this, we want to create a model that coexists
+    with the traditional IDE environment and Android build tools, so we can run and
+    install our app no matter the environment such as CI box, IDE or manually.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we are going to discuss:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Automating the build process
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introducing version control systems to the process
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Continuous integration with Jenkins
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Automating tests
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: After this chapter, you will be able to apply continuous integration to your
+    own project no matter its size, whether it is a medium or large software project
+    employing dozens of developers or it is just you programming solo.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The original article on continuous integration was written by Martin Fowler
+    back in 2000 ([http://www.martinfowler.com/articles/continuousIntegration.html](http://www.martinfowler.com/articles/continuousIntegration.html)),
+    and describes the experience of putting together continuous integration on a large
+    software project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building Android applications manually using Gradle
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If we aim to incorporate **continuous** **integration** into our development
+    process, the first step will be to build Android applications manually, as we
+    can combine an integration machine with the manual building technique to automate
+    the procedure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In doing this, we intend to keep our project compatible with the IDE and command-line
+    building process, and this is what we are going to do. Automated building is a
+    great advantage and speeds up the development process by building and eventually
+    showing the errors that may exist in your project immediately. When editing resources
+    or other files that generate intermediate classes, a CI is an invaluable tool;
+    otherwise, some simple errors would be discovered too late in the building process.
+    Following the mantra of fail often, fail fast is a recommended practice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fortunately, Android supports manual building with the existing tools and not
+    much effort is needed to merge manual IDE builds and automatic CI builds in the
+    same project. In such cases, building manually inside your IDE with Gradle is
+    supported. However, other options such as Ant exist too that are no longer supported
+    by default, and Maven or Make that are not supported out of the box.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Gradle is build automation evolved. Gradle combines the power and flexibility
+    of Ant with the dependency management and conventions of Maven into a more effective
+    way to build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: More information can be found at its home page, [http://gradle.org/](http://gradle.org/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the time of writing, projects based on Android Gradle require at least Gradle
+    2.2 or newer versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is worth noting here that the entire Android open source project is not built
+    by Gradle but built by an incredibly complex structure of make files, and this
+    method is used even to build the applications that are included by the platform
+    such as Calculator, Contacts, Settings, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When creating a new project with Android Studio, the template project will
+    already be being built with Gradle. This means you can already build the project
+    manually from the command line. Executing `./gradlew tasks` from the base of your
+    project will give you a full list of tasks that can be run. The most commonly
+    used tasks are as shown in the following table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Target | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `build` | Assembles and tests this project |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `clean` | Deletes the build directory |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `tasks` | Displays the tasks runnable from root project x (some of the displayed
+    tasks may belong to subprojects) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `installDebug` | Installs the Debug build |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `installDebugTest` | Installs the Test build for the Debug build |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `connectedAndroidTest` | Installs and runs the tests for Build debug on connected
+    devices |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `uninstallDebug` | Uninstalls the Debug build |'
+  prefs: []
+  type: TYPE_TB
+- en: The commands prefixed with `./gradlew` use an installation of Gradle that is
+    actually shipped inside your project source code. This is known as the *gradle
+    wrapper*. Therefore, you do not need Gradle installed on your local machine! However,
+    if you do have Gradle installed locally, all commands using the wrapper can be
+    replaced with `./gradle`. If there are several devices or emulators connected
+    to the build machine, these commands will run/install on them all. This is great
+    for our CI setup, meaning we can run our tests on all the provided devices so
+    that we can handle a number of configurations and Android versions. If you do
+    want to install on just one for some other reason, this is possible through the
+    Device Providers API but is out of the scope of this book. I encourage you to
+    read more at [http://tools.android.com](http://tools.android.com) and also check
+    out the wide range of Gradle plugins available to help you with this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now we can run this command to install our application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is the start and end of the output generated:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Running the preceding command mentioned, the following steps are executed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compilation of the sources, including resource, AIDL, and Java files
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Conversion of the compiled files into the native Android format
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Package creation and signing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Installation onto the given device or emulator
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Once we have the APK installed, and because we are now doing everything from
+    the command line, we can even start an Activity such as `EspressoActivity`. Using
+    the `am` `start` command and an Intent using the `MAIN` action and the Activity
+    we are interested to launch as the component, we can create a command line as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The Activity is started as you can verify in the emulator. Now the next thing
+    to do would be to install the test project for our application, and then use the
+    command line to run these tests (as discussed in previous chapters). Finally,
+    when they are completed, we should uninstall the application. If you read the
+    command list carefully, you may have noticed that luckily this has been done for
+    us with the `connectedAndroidTest` Gradle task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After running the command, we will obtain the tests results. If they pass,
+    the output is simply as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'However if they fail, the output is more detailed and a link to the file where
+    you can see the full stack trace and the reasons why each test failed is presented:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have done everything from the command line by just invoking some simple commands,
+    which is what we were looking for in order to feed this into a continuous integration
+    process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Git – the fast version control system
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Git** is a free and open source, distributed version control system designed
+    to handle everything from small to very large projects with speed and efficiency.
+    It is very simple to set up so I strongly recommend its use even for personal
+    projects. There is no project simple enough that could not benefit from the application
+    of this tool. You can find information and downloads at http://git-scm.com/.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A version control system or **VCS** (also known as source code management or
+    **SCM**) is an unavoidable element for development projects where more than one
+    developer is involved and the best practice even if coding solo. Furthermore,
+    even though it is possible to apply continuous integration with no VCS in place
+    (as a VCS is not a requisite of CI), it is not a reasonable or recommended practice
+    to avoid it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Other and probably more traditional (see legacy), options exist in the VCS arena
+    such as Subversion or CVS, which you are free to use if you feel more comfortable.
+    Otherwise, Git is used extensively by the Android project to host Google's own
+    code and examples so it is worth investing some time to at least understand the
+    basics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having said that and remembering that this is a very broad subject to justify
+    a book in itself (and certainly there are some good books about it), we are discussing
+    here the most basic topics and supplying examples to get you started if you haven't
+    embraced this practice yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a local Git repository
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'These are the simplest possible commands to create a local repository and populate
+    it with the initial source code for our projects. In this case we are again using
+    the `AndroidApplicationTestingGuide` project created and used in previous chapters.
+    We copy the code we used in the previous section, where we built manually:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: We create the new project directory, initialize the Git repository, copy the
+    initial content, clean and delete our previous autogenerated files, remove the
+    `local.properties` file, add everything to the repository, and commit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `local.properties` file must never be checked in a version control system
+    as it contains information specific to your local configuration. You might also
+    want to look at creating a `.gitignore` file. This file allows you to define what
+    files are not checked in (such as auto-generated files). An example of the `.gitignore`
+    file can be found at [https://github.com/github/gitignore](https://github.com/github/gitignore).
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, we have our project repository containing the initial source
+    code for our application and all of its tests. We haven't altered the structure
+    so the project is still compatible with our IDE and Gradle for when we continue
+    developing, locally building, and continuously integrating.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next step is to have our project built and tested automatically every time
+    we commit a change to the source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Continuous integration with Jenkins
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Jenkins** is an open source, extensible continuous integration server that
+    has the ability to build and test software projects or monitor the execution of
+    external jobs. Jenkins is easy to install and configure, and is thus widely used.
+    That makes it ideal as an example to learn continuous integration.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing and configuring Jenkins
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We mentioned easy installation as one of the advantages of Jenkins and installation
+    could not be any easier. Download the native package for the operating system
+    of your choice from [http://jenkins-ci.org/](http://jenkins-ci.org/). There are
+    native packages for all major server and desktop operating systems. In the following
+    examples, we will be using version 1.592\. We will run the `.war` file after downloading
+    it, since it does not require administrative privileges to do so.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once finished, copy the war into a selected directory, `~/jenkins`, and then
+    run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This expands and starts Jenkins.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The default configuration uses port `8080` as the HTTP listener port, so pointing
+    your browser of choice to `http://localhost:8080` should present you with the
+    Jenkins home page. You can verify and change Jenkins' operating parameter if required,
+    by accessing the **Manage** **Jenkins** screen. We should add to this configuration
+    the plugins needed for Git integration, building with Gradle, checking test results,
+    and support for Android emulator during builds. These plugins are named **Git
+    plugin**, **Gradle plugin**, **JUnit plugin**, and **Android Emulator plugin**,
+    respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This following screenshot displays the information you can obtain about the
+    plugins following the link available on the Jenkins plugin administration page:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Installing and configuring Jenkins](img/00016.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: After installing and restarting Jenkins, these plugins will be available for
+    use. Our next step is to create the jobs necessary to build the projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the jobs
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's start by creating the AndroidApplicationTestingGuide job using **New Item**
+    on the Jenkins home page. Name it after the project. Different kinds of jobs can
+    be created; in this case, we select **Freestyle project**, allowing you to connect
+    any SCM with any build system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After clicking on the **OK** button, you will be presented with the specific
+    job options, which are described in the following table. This is at the top of
+    the job properties'' page as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Creating the jobs](img/00017.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'All of the options in the **New** **Item** screen have a help text associated,
+    so here we are only explaining the ones we enter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Option | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Project name | The name given to the project. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Description | Optional description. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Discard Old Builds | This helps you save on disk consumption by managing
+    how long to keep records of the builds (such as console output, build artifacts,
+    and so on). |'
+  prefs: []
+  type: TYPE_TB
+- en: '| This build is parameterized | This allows you to configure parameters that
+    are passed to the build process to create parameterized builds, for instance,
+    using `$ANDROID_HOME` instead of hardcoding a path. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Source Code ManagementAlso known as VCS, where is the source code for the
+    project? In this case, we use Git and a repository where the URL is the absolute
+    path of the repository we created earlier. For example, `/git-repo/AndroidApplicationTestingGuide`.
+    |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Build Triggers | How this project is automatically built. In this case, we
+    want every change in the source code to trigger the automatic build, so we select
+    **Poll SCM**.The other option is to use **Build periodically**. This feature is
+    primarily to use Jenkins as a `cron` replacement, and it is not ideal to continuously
+    build software projects. When people first start continuous integration, they
+    are often so used to the idea of regularly scheduled builds such as nightly/weekly
+    that they use this feature. However, the point of continuous integration is to
+    start a build as soon as a change is made, to provide a quick feedback to the
+    change.This option can be used for longer running builds like test suites that
+    perhaps test performance when the build runs for 1 hour for example (configure
+    it to run at midnight). It also can be used to release new versions, nightly,
+    or weekly. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Schedule | This field follows the syntax of `Cron` (with minor differences).
+    Specifically, each line consists of five fields separated by TAB or whitespace:`MINUTE
+    HOUR DOM MONTH DOW`.For example, if we want to poll continuously at 30 minutes
+    past the hour, specify:`30 * * * *`Check the documentation for a complete explanation
+    of all the options. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Build environment | This option lets you specify different options for the
+    build environment and for the Android emulator that may run during the build.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Build | This option describes the build steps. We select **Invoke Gradle
+    script** as we reproduce the steps we did before to manually build and test the
+    project.We will select **Use Gradle Wrapper** so that our project doesn''t rely
+    on the CI boxes built in the Gradle version.Then, in the **Tasks** box, we want
+    to write `clean connectedAndroidTest`. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Post build actions | These are a series of actions we can do after the build
+    is done. We are interested in saving the APKs so we enable **Archive the artifacts**
+    and then define the path for them as **Files to archive**; in this precise case,
+    it is `**/*-debug.apk`. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Save | Saves the changes we just made and completes the build job creation.
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: 'Now that our CI build is set up, there are following two options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can force a build using **Build** **Now**
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Or introduce some changes to the source code, push with Git, and wait for them
+    to be detected by our polling strategy
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Either way, we will get our project built and our artifacts ready to be used
+    for other purposes, such as dependency projects or QA. Unfortunately, if you did
+    run the CI build, it would fail spectacularly as there are no devices attached.
+    Your choices are, attach a real device or use the Android Emulator plugin that
+    we just installed. Let's use the plugin. From Jenkins, go to the job we just created
+    and click on **Configure**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Option | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Build environment | Our intention is to install and run the tests on an emulator.
+    So for our build environment, we use the facilities provided by the **Android
+    Emulator Plugin**. This comes in handy if you wish to automatically start an Android
+    emulator of your choice before the build steps execute, with the emulator being
+    stopped after the building is complete.You can choose to start a predefined, existing
+    Android emulator instance (AVD).Alternatively, the plugin can automatically create
+    a new emulator on the build slave with properties you specify here.In any case,
+    the `logcat` output will automatically be captured and archived.Select **Run emulator
+    with properties**.Then, select **4.4** for the **Android OS version**, **320**
+    DPI for the **Screen density** and **WQVGA** for **Screen resolution**.Feel free
+    to experiment and select the options that better suit your needs. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Common emulator options | We would like to **Reset emulator state at start-up**
+    to wipe user data and disable **Show emulator window**, so the emulator window
+    is not displayed. |'
+  prefs: []
+  type: TYPE_TB
+- en: After configuring and building this project, we have the APK installed on the
+    target emulator and the tests are running.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Obtaining Android test results
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Once the tests are run, the results are saved as XML files inside the project's
+    build folder at `/AndroidApplicationTestingGuides/app/build/outputs/androidTest-results/connected/`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: They are no good to us there. It would be nice if we could read the results
+    of our tests in Jenkins and have them displayed in a nice HTML format; another
+    Jenkins plugin to the rescue. JUnit Plugin enables a post build action that asks
+    you where your JUnit reports are stored and will then retrieve them for easy viewing
+    in the project screen of Jenkins as test results. In this scenario, we use the
+    Post-build Actions also in the job configuration's page.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Having done all of the steps previously described, only forcing a build is
+    left to see the results. Option | Description |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Publish JUnit test result report | When this option is configured, the JUnit
+    plugin on Jenkins can provide useful information about test results, such as historical
+    test result trends, a web UI to view test reports, tracking failures, and so on.It
+    requires a regex to look up the JUnit result files. I would recommend `**/TEST*.xml`.
+    This regex should match all JUnit test results, including those of the Android
+    connected tests; praise in research here goes to Adam Brown. If you change the
+    regex, be sure not to include any non-report files into this pattern.Once a few
+    builds have run with test results, you should start seeing some trend charts displaying
+    the evolution of tests. |'
+  prefs: []
+  type: TYPE_TB
+- en: 'Click on **Build** **Now** and after a few moments, you will see your test
+    results and statistics displayed in a similar way as the following screenshot
+    depicts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Obtaining Android test results](img/00018.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: From here, we can easily understand our project status. Clicking on **Latest
+    Test Result** shows you how many tests failed and why. You can search through
+    the failed tests and can also find the extensive **Error message** and **Stack
+    trace** options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It is also really helpful to understand the evolution of a project through
+    the evaluation of different trends and Jenkins is able to provide such information.
+    Every project presents the current trends using weather-like icons from sunny,
+    when the health of the project increases by 80 percent, and to thunderstorm when
+    the health lies below 20 percent. In addition, for every project, the evolution
+    of the trend of the tests success versus failure ratio is displayed in a chart.
+    A failing test chart is reproduced here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Obtaining Android test results](img/00019.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In this case, we can see how at build 9, four tests where broken, three where
+    fixed in build 10, and the final one in build 11.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To see how a project status changes by forcing a failure, let''s add a failing
+    test such as the following. Don''t forget to push your commit to trigger the CI
+    build as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Yet another very interesting feature that is worth mentioning is the ability
+    of Jenkins to keep and display the timeline and build the time trend, as shown
+    in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Obtaining Android test results](img/00020.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This page presents the build history with links to every particular build that
+    you can follow to see the details. Now we have less to be worried about and every
+    time somebody in the development team commits changes to the repository, we know
+    that these changes will be immediately integrated and the whole project will be
+    built and tested. If we further configure Jenkins, we can even receive the status
+    by e-mail. To achieve this, enable **E-mail Notification** in the job configuration
+    page and enter the desired **Recipients**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter introduced continuous integration in practice providing valuable
+    information to start applying it soon to your projects no matter what their size,
+    whether you are developing solo or a part of a big company team.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The techniques presented focus on the particularities of Android projects maintaining
+    and supporting widely used development tools such as Android Studio and the Android
+    Gradle plugin.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We introduced real-world examples with real-world tools available from the vast
+    open source arsenal. We employed Gradle to automate the building process, Git
+    to create a simple version control system repository to store our source code
+    and manage the changes, and finally, installed and configured Jenkins as the continuous
+    integration of choice.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Within Jenkins, we detailed the creation of jobs to automate the creation of
+    our Android application and its tests, and we emphasized the relationship between
+    the continuous integration box and its devices/emulators.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we became aware of the Android-connected tests results and implemented
+    a strategy to obtain an attractive interface to monitor the running of tests,
+    their results, and the existing trends.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next chapter takes us through the road of Test-driven Development; you'll
+    finally start to understand why I keep talking about the temperature in all the
+    examples so far with a real-world project. Thus, having a continuous integration
+    setup is perfect to empower us to write great code and have faith in our CI built
+    APKs being ready to release.
+  prefs: []
+  type: TYPE_NORMAL
