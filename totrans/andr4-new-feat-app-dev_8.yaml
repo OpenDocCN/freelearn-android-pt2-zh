@@ -1,0 +1,373 @@
+- en: Chapter 8. New Connectivity APIs – Android Beam and Wi-Fi Direct
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: New connectivity APIs have been introduced with Android Ice Cream Sandwich –
+    **Android Beam** which uses the NFC hardware of the device, and **Wi-Fi Direct**
+    which allows devices to connect to each other without using a wireless access
+    point. This chapter will teach us Android Beam and Wi-Fi Direct APIs' usage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The topics covered in this chapter are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android Beam
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Beaming NdefMessages
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sharing data with Wi-Fi Direct
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android Beam
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Devices that have NFC hardware can share data by tapping them together. This
+    could be done with the help of the Android Beam feature. It is similar to Bluetooth,
+    as we get seamless discovery and pairing as in a Bluetooth connection. Devices
+    connect when they are close to each other (not more than a few centimeters). Users
+    can share pictures, videos, contacts, and so on, using the Android Beam feature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Beaming NdefMessages
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In this section, we are going to implement a simple Android Beam application.
+    This application will send an image to another device when two devices are tapped
+    together. There are three methods that are introduced with Android Ice Cream Sandwich
+    that are used in sending **NdefMessages**. These methods are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**setNdefPushMessage()**: This method takes an NdefMessage as a parameter and
+    sends it to another device automatically when devices are tapped together. This
+    is commonly used when the message is static and doesn''t change.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**setNdefPushMessageCallback()**: This method is used for creating dynamic
+    NdefMessages. When two devices are tapped together, the `createNdefMessage()`
+    method is called.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**setOnNdefPushCompleteCallback()**: This method sets a callback which is called
+    when the Android Beam is successful.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We are going to use the second method in our sample application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our sample application''s user interface will contain a `TextView` component
+    for displaying text messages and an `ImageView` component for displaying the received
+    images sent from another device. The layout XML code will be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we are going to implement, step-by-step, the `Activity` class of the sample
+    application. The code of the `Activity` class with the `onCreate()` method is
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see in this code, we can check whether the device provides an `NfcAdapter`.
+    If it does, we get an instance of `NfcAdapter`. Then, we call the `setNdefPushMessageCallback()`
+    method to set the callback using the `NfcAdapter` instance. We send the `Activity`
+    class as a callback parameter because the `Activity` class implements `CreateNdefMessageCallback`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to implement `CreateNdefMessageCallback`, we should override the `createNdefMessage()`
+    method as shown in the following code block:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see in this code, we get a drawable, convert it to bitmap, and then
+    to a byte array. Then we create an `NdefMessage` with two `NdefRecords`. The first
+    record contains the mime type and the byte array. The first record is created
+    by the `createMimeRecord()` method. The second record contains the **Android Application
+    Record** (**AAR**). The Android Application Record was introduced with Android
+    Ice Cream Sandwich. This record contains the package name of the application and
+    increases the certainty that your application will start when an **NFC Tag** is
+    scanned. That is, the system firstly tries to match the intent filter and AAR
+    together to start the activity. If they don't match, the activity that matches
+    the AAR is started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the activity is started by an Android Beam event, we need to handle the
+    message that is sent by the Android Beam. We handle this message in the `onResume()`
+    method of the `Activity` class as shown in the following code block:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see in this code, we firstly check whether the intent is `ACTION_NDEF_DISCOVERED`.
+    This means the `Activity` class is started due to an Android Beam. If it is started
+    due to an Android Beam, we process the intent with the `processIntent()` method.
+    We firstly get `NdefMessage` from the intent. Then we get the first record and
+    convert the byte array in the first record to bitmap using `BitmapFactory`. Remember
+    that the second record is AAR, we do nothing with it. Finally, we set the bitmap
+    of the `ImageView` component.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `AndroidManifest.xml` file of the application should be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see in this code, we need to set the minimum SDK to API Level 14
+    or more in the `AndroidManifest.xml` file because these APIs are available in
+    API Level 14 or more. Furthermore, we need to set the permissions to use NFC.
+    We also set the `uses` feature in `AndroidManifest.xml`. The feature is set as
+    not required. This means that our application would be available for devices that
+    don't have NFC support. Finally, we create an intent filter for `android.nfc.action.NDEF_DISCOVERED`
+    with `mimeType` of `application/com.chapter9`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When a device sends an image using our sample application, the screen will
+    be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Beaming NdefMessages](img/9526_09_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Wi-Fi Direct
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In a conventional wireless network, devices are connected to each other through
+    a wireless access point. With the help of **Wi-Fi Direct**, devices connect to
+    each other without the need of a wireless access point. It's similar to Bluetooth,
+    but it is faster and the range of Wi-Fi Direct is longer. New Wi-Fi Direct APIs
+    are introduced with Android Ice Cream Sandwich which allows us to use Wi-Fi Direct
+    properties of Android devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The main class that will help us to find and connect peers is the `WifiP2pManager`
+    class. We are going to use the following `Listener` classes during finding and
+    connecting to peers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`WifiP2pManager.ActionListener`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`WifiP2pManager.ChannelListener`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`WifiP2pManager.ConnectionInfoListener`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`WifiP2pManager.PeerListListener`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Finally, the following intents will help us in a Wi-Fi Direct connection:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`WIFI_P2P_CONNECTION_CHANGED_ACTION`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`WIFI_P2P_PEERS_CHANGED_ACTION`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`WIFI_P2P_STATE_CHANGED_ACTION`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`WIFI_P2P_THIS_DEVICE_CHANGED_ACTION`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In this section, we are going to learn how to use these new Wi-Fi Direct APIs
+    with a sample application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sample Wi-Fi Direct application
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In order to use Wi-Fi Direct APIs, we need to set the minimum SDK version to
+    API Level 14 or more in `AndroidManifest.xml`. Furthermore, we need some permission
+    to use Wi-Fi Direct APIs. The `AndroidManifest.xml` file should be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The first class that we need is a class that extends `BroadcastReceiver` and
+    handles the intents that we listed previously in the `onReceive()` method. The
+    constructor of this class should be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can see in this code, we passed the `Channel`, `WifiP2pManager`, and
+    the `Activity` classes to the constructor as parameters because we will need them
+    later in the `onReceive()` method. We need to override the `onReceive()` method
+    of `BroadcastReceiver` as shown in the following code block:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this method, we handle the received intents. Firstly, we check whether the
+    intent is `WIFI_P2P_STATE_CHANGED_ACTION`. This intent is received when Wi-Fi
+    Direct is enabled or disabled. We receive the Wi-Fi Direct status from the intent
+    and take action according to the Wi-Fi Direct status.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secondly, we check whether the intent is `WIFI_P2P_PEERS_CHANGED_ACTION`. This
+    intent is received when the `discoverPeers()` method of the `WifiP2pManager` class
+    is called. We get the list of the peers from the `requestPeers()` method of the
+    `Wifi2P2pManager` class when we receive the `WIFI_P2P_PEERS_CHANGED_ACTION` intent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we check whether the received intent is `WIFI_P2P_CONNECTION_CHANGED_ACTION`.
+    This intent is received when the Wi-Fi connection changes. We handle connections
+    or disconnections when we receive the `WIFI_P2P_CONNECTION_CHANGED_ACTION` intent.
+    We firstly get `NetworkInfo` from the intent to understand whether there is a
+    connection or disconnection. If it is a connection, we call the `requestConnectionInfo()`
+    method of `WifiP2pManager` to connect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, we check whether the intent is `WIFI_P2P_THIS_DEVICE_CHANGED_ACTION`.
+    We receive this intent when the device details have changed. We do nothing for
+    this intent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have a simple user interface for this application; a layout with two buttons.
+    The first button is to find and second button is to connect peers. The XML code
+    of the layout is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The user interface will look like the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Sample Wi-Fi Direct application](img/9526_09_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Lastly, we need to implement the `Activity` class of this application. The
+    code of the `Activity` class should be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The implementation is not complete currently. We will add the necessary methods
+    step-by-step.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see in this code, our `Activity` class implements various `Listeners`
+    to handle the Wi-Fi Direct events. `ConnectionInfoListener` is for the callback
+    when the connection info is available. `PeerListListener` is for the callback
+    when the peer list is available. `ChannelListener` is for the callback when the
+    channel is lost.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We create an intent filter and add the intents that we will check in the `onReceive()`
+    method of the class that extends `BroadcastReceiver`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We initialize the `WifiP2pManager` class by calling the `initialize()` method.
+    This will register our application with the Wi-Fi network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to override the `onChannelDisconnected()` method because we implemented
+    `ChannelListener`, as shown in the following code block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We need to implement the `onPeersAvailable()` method because we implemented
+    `PeerListListener`, as shown in the following code block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We get the available `peerList` in this method. We get the first device and
+    break the `for` loop. We need the device for connection.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'We need to implement the `onConnectionInfoAvailable()` method because we implemented
+    `ConnectionInfoListener`, as shown in the following code block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This is the place where we get the connection info and connect and send data
+    to the peer. For instance, an `AsyncTask` that transfers a file could be executed
+    here.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'We need to implement the `onClick()` method for the buttons:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `find()` and `connect()` methods are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: When the **find** button is clicked, we call the `discoverPeers()` method of
+    `WifiP2pManager` to discover the available peers. As you will remember, calling
+    the `discoverPeers()` method will cause `BroadcastReceiver` to receive the `WIFI_P2P_PEERS_CHANGED_ACTION`
+    intent. Then we will request the peer list in `BroadcastReceiver`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the **connect** button is clicked, we call the `connect()` method of the
+    `WifiP2pManager` using the device info. This starts a peer-to-peer connection
+    with the specified device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The sample application to introduce the Wi-Fi Direct APIs is complete with these
+    methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we firstly learned the Android Beam feature of Android. With
+    this feature, devices can send data using the NFC hardware. We implemented a sample
+    Android Beam application and learned how to use Android Beam APIs. Secondly, we
+    learned what Wi-Fi Direct is and how to use Wi-Fi Direct APIs.
+  prefs: []
+  type: TYPE_NORMAL
