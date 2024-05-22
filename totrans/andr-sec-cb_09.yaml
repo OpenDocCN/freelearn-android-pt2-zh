@@ -1,76 +1,108 @@
 - en: Chapter 9. Encryption and Developing Device Administration Policies
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第9章. 加密和开发设备管理策略
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Using cryptography libraries
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用加密库
 - en: Generating a symmetric encryption key
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 生成对称加密密钥
 - en: Securing SharedPreferences data
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 保护SharedPreferences数据
 - en: Password-based encryption
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 基于密码的加密
 - en: Encrypting a database with SQLCipher
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用SQLCipher加密数据库
 - en: Android KeyStore provider
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 安卓KeyStore提供者
 - en: Setting up device administration policies
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设置设备管理策略
 - en: Introduction
+  id: totrans-9
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: The primary focus of this chapter will be on how to make use of cryptography
     properly to store data securely on a device. We start with creating a consistent
     cryptography foundation by including our own encryption implementation libraries
     to give support to stronger encryption algorithms on older devices.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章节的主要焦点将是如何正确使用加密技术，以在设备上安全地存储数据。我们从创建一个一致的加密基础开始，包括我们自己的加密实现库，以在旧设备上支持更强的加密算法。
 - en: One of the straightforward items to tackle is the generation of symmetric encryption
     keys; however, the default settings are not always more secure. We look at the
     specific parameters to ensure the strongest encryption and review a common antipattern
     and OS bug that limits the security of the generated keys.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们要解决的一个直接问题就是生成对称加密密钥；然而，默认设置并不总是更安全。我们将查看具体参数以确保最强加密，并回顾一个常见的反模式和一个限制生成密钥安全的操作系统漏洞。
 - en: Then, we look at several ways in which we can securely store encryption keys
     using third-party libraries or a system service called the **Android KeyStore**
     that was introduced in Android 4.3\. Going further, we learn how to avoid storing
     the key on the device altogether using a key derivation function to generate a
     key from the user's password or pin code.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: '然后，我们探讨了多种使用第三方库或称为**Android KeyStore**的系统服务来安全存储加密密钥的方法，该服务在安卓4.3中引入。更进一步，我们学习如何完全避免在设备上存储密钥，使用密钥派生函数从用户的密码或PIN码生成密钥。  '
 - en: We'll cover how to integrate SQLCipher efficiently to ensure that your applications'
     SQLite database is encrypted to dramatically increase the security of your app
     data.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将介绍如何有效地集成SQLCipher，以确保你的应用程序的SQLite数据库得到加密，从而显著提高你的应用数据的安全性。
 - en: We will wrap up with a look at the Device Administration API that is designed
     for enterprises to enforce device policies and safeguards to further protect the
     device. We implement two factitious (yet sensible) enterprise policies to ensure
     that the device has enabled encrypted storage and meets lock screen timeout requirements.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将以设备管理API结束本章，该API旨在让企业实施设备策略和保护措施，进一步保护设备。我们实施了两项虚构（但合理）的企业政策，以确保设备启用了加密存储并满足锁屏超时要求。
 - en: Using cryptography libraries
+  id: totrans-15
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用加密库
 - en: One of the great things about Android using Java as the core programming language
     is that it includes the **Java Cryptographic Extensions** (**JCE**). JCE is a
     well-established, tested set of security APIs. Android uses Bouncy Castle as the
@@ -82,198 +114,288 @@
     you will see provider errors when running it on Android versions below 4.0\. Also,
     although Bouncy Castle supports the AES-GCM scheme (which we'll cover in the next
     recipe), you cannot use this in Android without including it separately.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓使用Java作为核心编程语言的好处之一是它包含了**Java加密扩展**（**JCE**）。JCE是一套成熟、经过测试的安全API。安卓使用Bouncy
+    Castle作为这些API的开源实现。然而，Bouncy Castle的版本在安卓版本之间有所不同；只有较新的安卓版本才能获得最新的修复。为了减少Bouncy
+    Castle的大小，安卓定制了Bouncy Castle库并移除了一些服务和API。例如，如果你打算使用**椭圆曲线密码学**（**ECC**），在低于4.0的安卓版本上运行时，你会看到提供者错误。另外，尽管Bouncy
+    Castle支持AES-GCM方案（我们将在下一个食谱中介绍），但在安卓上使用它必须单独包含。
 - en: To solve this, we can include an application-specific implementation of cryptographic
     libraries. This recipe will show you how to include the Spongy Castle library,
     which provides a higher level of security given that it is more up-to-date as
     compared to Android's Bouncy Castle implementation and supports more cryptographic
     options.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了解决这个问题，我们可以包含特定于应用程序的加密库实现。本指南将展示如何包含Spongy Castle库，它相对于Android的Bouncy Castle实现来说更加更新，提供了更高层次的安全，并支持更多的加密选项。
 - en: You may be wondering "why use Spongy Castle and not just include the Bouncy
     Castle libraries". The reason is that Android already ships with an older version
     of the Bouncy Castle libraries, and so we need to rename the package of this library
     to avoid "classloader" conflicts. So, Spongy Castle is a repackaging of Bouncy
     Castle. In fact, the package name could be whatever you wanted as long as it differs
     from `org.bouncycastle`.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能会想“为什么使用Spongy Castle而不是直接包含Bouncy Castle库”。原因是Android已经包含了一个较旧的Bouncy Castle库版本，因此我们需要重命名这个库的包以避免“类加载器”冲突。所以，Spongy
+    Castle实际上是Bouncy Castle的重新打包。实际上，只要包名与`org.bouncycastle`不同，它可以是任何你想要的名称。
 - en: How to do it...
+  id: totrans-19
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's add Spongy Castle to our Android application.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们在Android应用程序中添加Spongy Castle。
 - en: Download the latest Spongy Castle binaries from [https://github.com/rtyley/spongycastle/#downloads](https://github.com/rtyley/spongycastle/#downloads).
+  id: totrans-21
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[https://github.com/rtyley/spongycastle/#downloads](https://github.com/rtyley/spongycastle/#downloads)下载最新的Spongy
+    Castle二进制文件。
 - en: Review the MIT X11 License (same as Bouncy Castle) to ensure that this is compatible
     with how you intend to use it.
+  id: totrans-22
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 查阅MIT X11许可证（与Bouncy Castle相同），以确保这与你打算使用的方式兼容。
 - en: 'Extract and copy the Spongy Castle `.jar` files in your application''s `/libs`
     directory:'
+  id: totrans-23
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在你应用程序的`/libs`目录中提取并复制Spongy Castle的`.jar`文件：
 - en: '`sc-light-jdk15on`: Core lightweight API'
+  id: totrans-24
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`sc-light-jdk15on`：核心轻量级API'
 - en: '`scprov-jdk15on`: JCE provider (requires `sc-light-jdk15on`)'
+  id: totrans-25
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`scprov-jdk15on`：JCE提供者（需要`sc-light-jdk15on`）'
 - en: 'Include the following `static` code block in your Android Application object:'
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在你的Android应用程序对象中包含以下`static`代码块：
 - en: '[PRE0]'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: How it works...
+  id: totrans-28
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: We use the static code block to call `Security.insertProviderAt()`. It ensures
     that the Spongy Castle provider that we have bundled in our application's `/libs`
     folder is used in preference. By setting the position as `1`, we ensure that it
     gets preference over the existing security providers.
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用静态代码块来调用`Security.insertProviderAt()`。它确保我们捆绑在应用程序`/libs`文件夹中的Spongy Castle提供者优先使用。通过设置为`1`的位置，我们确保它优先于现有的安全提供者。
 - en: The beauty of using Spongy Castle with the JCE is that no modification to the
     existing encryption code is needed. Throughout this chapter, we show samples of
     an encryption code that works equally well with either Bouncy Castle or Spongy
     Castle.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用Spongy Castle与JCE的妙处在于，无需修改现有的加密代码。在本章中，我们展示了可以与Bouncy Castle或Spongy Castle同样良好工作的加密代码示例。
 - en: There's more...
+  id: totrans-31
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: As mentioned, the code is available for download from GitHub; however, it is
     possible to build your own version. *Roberto Tyley*, the owner of the Spongy Castle
     repository, has included the `become-spongy.sh` bash script that does the renaming
     of `com.bouncycastle` to `com.spongycastle`. Therefore, you can use it on your
     own freshly downloaded and up-to-date version of the Bouncy Castle library, and
     convert it to `org.spongycastle` or something equally cute and catchy.
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，代码可以从GitHub下载；但是，你也可以构建自己的版本。Spongy Castle仓库的所有者*Roberto Tyley*包含了一个`become-spongy.sh`
+    bash脚本，该脚本将`com.bouncycastle`重命名为`com.spongycastle`。因此，你可以将其用于自己刚刚下载并更新版本的Bouncy
+    Castle库，并将其转换为`org.spongycastle`或其他同样可爱且吸引人的名称。
 - en: Note
+  id: totrans-33
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The `become-spongy.sh` bash script is available at [https://gist.github.com/scottyab/8003892](https://gist.github.com/scottyab/8003892)
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: '`become-spongy.sh` bash脚本可以在[https://gist.github.com/scottyab/8003892](https://gist.github.com/scottyab/8003892)找到'
 - en: See also
+  id: totrans-35
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Generating a symmetric encryption key* and *Password-based encryption*
     recipes demonstrate using the JCE APIs
+  id: totrans-36
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 《生成对称加密密钥》和《基于密码的加密》食谱演示了使用JCE API的方法
 - en: The Spongy Castle GitHub repository at [http://rtyley.github.io/spongycastle/#downloads](http://rtyley.github.io/spongycastle/#downloads)
+  id: totrans-37
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Spongy Castle的GitHub仓库在[http://rtyley.github.io/spongycastle/#downloads](http://rtyley.github.io/spongycastle/#downloads)
 - en: The Bouncy Castle home page at [http://www.bouncycastle.org/java.html](http://www.bouncycastle.org/java.html)
+  id: totrans-38
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Bouncy Castle的主页在[http://www.bouncycastle.org/java.html](http://www.bouncycastle.org/java.html)
 - en: The *Using the Java Cryptographic Extensions* OWASP community page at [https://www.owasp.org/index.php/Using_the_Java_Cryptographic_Extensions](https://www.owasp.org/index.php/Using_the_Java_Cryptographic_Extensions)
+  id: totrans-39
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 访问[https://www.owasp.org/index.php/Using_the_Java_Cryptographic_Extensions](https://www.owasp.org/index.php/Using_the_Java_Cryptographic_Extensions)的*使用Java加密扩展*
+    OWASP社区页面
 - en: Generating a symmetric encryption key
+  id: totrans-40
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 生成对称加密密钥
 - en: A symmetric key describes a key that is used for both encryption and decryption.
     To create cryptographically secure encryption keys in general, we use securely
     generated pseudorandom numbers. This recipe demonstrates how to correctly initialize
     the `SecureRandom` class and how to use it to initialize an **Advanced Encryption
     Standard** (**AES**) encryption key. AES is the preferred encryption standard
     to DES, and typically used with key sizes 128 bit and 256 bit.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 对称密钥是指用于加密和解密的同一个密钥。为了在一般情况下创建加密安全的加密密钥，我们使用安全生成的伪随机数。这个方法演示了如何正确初始化`SecureRandom`类，以及如何用它来初始化**高级加密标准**（**AES**）的加密密钥。AES是比DES更受欢迎的加密标准，通常与128位和256位的密钥大小一起使用。
 - en: Note
+  id: totrans-42
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意事项
 - en: There are no code differences whether you are using Bouncy Castle or Spongy
     Castle, as noted in the previous recipe.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前一个菜谱所述，无论您是使用Bouncy Castle还是Spongy Castle，代码上没有差异。
 - en: How to do it...
+  id: totrans-44
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's create a secure encryption key.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们创建一个安全的加密密钥。
 - en: 'Write the following function to generate a symmetric AES encryption key:'
+  id: totrans-46
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编写以下函数以生成对称AES加密密钥：
 - en: '[PRE1]'
+  id: totrans-47
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Create a random 32-byte initialization vector (IV) that matches the AES key
     size of 256 bit:'
+  id: totrans-48
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个匹配256位AES密钥大小的32字节随机初始化向量（IV）：
 - en: '[PRE2]'
+  id: totrans-49
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Write the following function to encrypt an arbitrary string:'
+  id: totrans-50
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编写以下函数以加密任意字符串：
 - en: '[PRE3]'
+  id: totrans-51
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'For completeness, the preceding snippet shows how to decrypt. The only difference
     is that we call the `Cipher.init()` method using the `Cipher.DECRYPT_MODE` constant:'
+  id: totrans-52
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了完整性，前面的代码片段展示了如何解密。唯一的不同是，我们使用`Cipher.DECRYPT_MODE`常量调用`Cipher.init()`方法：
 - en: '[PRE4]'
+  id: totrans-53
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: For this sample, we have just stored the key and IV as a static variable; this
     isn't advisable for actual use. A simple approach would be to persist the key
     in `SharedPerferences` with the `Context.MODE_PRIVATE` flag so that a consistent
     key is available between application sessions. The next recipe develops this idea
     further to use an encrypted version of `SharedPerferences`.
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 在此示例中，我们只是将密钥和IV作为静态变量存储；在实际使用中并不建议这样做。一个简单的方法是将密钥以`SharedPerferences`方式持久化，并使用`Context.MODE_PRIVATE`标志，以便在应用程序会话之间提供一致的密钥。下一个菜谱进一步开发这个想法，使用`SharedPerferences`的加密版本。
 - en: How it works…
+  id: totrans-55
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的…
 - en: Creating a `SecureRandom` object is simply a case of instantiating the default
     constructor. There are other constructors available; however, the default constructor
     uses the strongest provider available. We pass an instance of `SecureRandom` to
     the `KeyGenerator` class with the `keysize` argument, and the `KeyGenerator` class
     handles the creation of the symmetric encryption key. 256 bit is often touted
     as "military grade", and for most systems it is considered cryptographically secure.
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建`SecureRandom`对象只需实例化默认构造函数即可。还有其他构造函数可用；然而，默认构造函数使用的是可用的最强提供者。我们将`SecureRandom`的实例传递给`KeyGenerator`类，并带上`keysize`参数，`KeyGenerator`类负责创建对称加密密钥。256位通常被认为是“军用级别”，对于大多数系统来说，它被认为是加密安全的。
 - en: Here we introduce an initialization vector which, in simple terms, increases
     the strength of the encryption, and is essential when encrypting more than one
     message/item. This is because messages encrypted with the same key can be analyzed
@@ -281,67 +403,93 @@
     Equivalent Privacy** (**WEP**) was broken. So, it is recommended to generate a
     new IV for each message, and store it along with the cipher text; for example,
     you could pre-append or concatenate the IV to the cipher text.
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们引入一个初始化向量（IV），简而言之，它增加了加密的强度，并且在加密多个消息/项目时至关重要。这是因为使用相同密钥加密的消息可以一起分析，以帮助提取消息。弱IV是**有线等效隐私**（**WEP**）被破解的部分原因。因此，建议为每条消息生成一个新的IV，并将其与密文一起存储；例如，你可以在密文前预先追加或连接IV。
 - en: For the actual encryption, we use an AES instance of the `Cipher` object that
     we initiate in `ENCRYPT_MODE` with the newly-generated `SecretKey`. We then call
     `cipher.doFinal` with the bytes of our plaintext input to return a byte array
     containing the encrypted bytes.
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: 在实际的加密过程中，我们使用`Cipher`对象的AES实例，以新生成的`SecretKey`在`ENCRYPT_MODE`模式下初始化。然后我们调用`cipher.doFinal`方法，传入明文字节，以返回包含加密字节的字节数组。
 - en: When requesting the AES encryption mode with the `Cipher` object, a common oversight
     that is also present in Android documentation is to simply use `AES`. However,
     this defaults to the simplest and less-secure ECB mode, specifically `AES/ECB/PKCS7Padding`.
     Therefore, we should explicitly request the stronger CBC mode `AES/CBC/PKCS5Padding`,
     as shown in the sample code.
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 当使用`Cipher`对象请求AES加密模式时，一个常见的疏忽（在安卓文档中也存在）是简单地使用`AES`。然而，这默认为最简单且安全性较低的ECB模式，具体为`AES/ECB/PKCS7Padding`。因此，我们应该明确请求更强大的CBC模式`AES/CBC/PKCS5Padding`，如示例代码所示。
 - en: There's more...
+  id: totrans-60
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: Here we look at how to use a strong encryption mode called **AES-GCM** **,**
     and a common antipattern that reduces the security of the generated keys.
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们探讨如何使用一种称为**AES-GCM**的强加密模式，以及一个常见的反模式，该反模式降低了生成的密钥的安全性。
 - en: Using AES-GCM for strong symmetric encryption
+  id: totrans-62
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 使用AES-GCM进行强对称加密
 - en: 'We noted that simply defining `AES` does not default to the strongest mode.
     If we include the Spongy Castle libraries, we can use the much strong AES-GCM
     that includes authentication, and can detect if the cipher text has been tampered
     with. To use AES-GCM when defining the algorithm/transformation string, use `AES/GCM/NoPadding`
     as shown in the following code:'
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们注意到，简单地定义`AES`并不会默认为最强模式。如果我们包含Spongy Castle库，我们可以使用更强大的AES-GCM，它包括验证，并且可以检测密文是否被篡改。要在定义算法/转换字符串时使用AES-GCM，请使用如下代码所示的`AES/GCM/NoPadding`：
 - en: '[PRE5]'
+  id: totrans-64
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Antipattern – setting the seed
+  id: totrans-65
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 反模式——设置种子
 - en: Since Android Version 4.2, the default **PseudoRandom Number Generator** (**PRNG**)
     provider of `SecureRandom` was changed to OpenSSL. This disables the ability,
     which existed previously, of Bouncy Castle provider to manually seed the `SecureRandom`
     object. This was a welcome change as an antipattern emerged where developers were
     setting the seed.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 自从安卓4.2版本以来，`SecureRandom`的默认**伪随机数生成器**（**PRNG**）提供者被改为OpenSSL。这使得Bouncy Castle提供者之前存在的手动设置`SecureRandom`对象种子的能力被禁用。这是一个受欢迎的变化，因为开发者设置种子的反模式已经出现。
 - en: '[PRE6]'
+  id: totrans-67
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: In this code sample, we can see the seed being manually set to `42`, the result
     being that the `notRandom` variable would always equal the same number. Although
     useful for unit tests, this defeats any enhanced security from using `SecureRandom`
     to generate a cryptographic key.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个代码示例中，我们可以看到种子被手动设置为`42`，结果是`notRandom`变量总是等于同一个数字。尽管这对于单元测试很有用，但这破坏了使用`SecureRandom`生成加密密钥的任何增强安全性。
 - en: Android's PRNG bug
+  id: totrans-69
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 安卓的伪随机数生成器（PRNG）漏洞
 - en: As mentioned previously, the default provider of PseudoRandom Number Generator
     (PRNG) is OpenSSL since Android 4.2\. However, in August 2013, a critical bug
     was discovered with the generation of random numbers. This was highlighted by
@@ -350,56 +498,81 @@
     system fingerprints, it was initialized to null. The result was similar to that
     of the antipattern secure keys that were generated earlier from a predictable
     number. The effected Android versions were Jelly Bean 4.1, 4.2, and 4.3.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，自安卓4.2以来，伪随机数生成器（PRNG）的默认提供者是OpenSSL。然而，在2013年8月，发现了一个生成随机数的严重错误。这通过几个安卓比特币钱包应用的妥协得到了突出。这个问题涉及到安全随机数生成器的种子设置；它没有使用复杂且独特的系统指纹，而是被初始化为null。其结果与之前从可预测数字生成的安全密钥的反模式类似。受影响的安卓版本包括Jelly
+    Bean 4.1、4.2和4.3。
 - en: A fix was noted in the *Some SecureRandom Thoughts* Android blog article and
     issued to Open Handset Alliance companies. However, it's recommended that you
     call this fix from your application's `onCreate()` method in case the fix has
     not been applied to the device your app is running on.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 在《*关于SecureRandom的一些思考*》的安卓博客文章中记录了一个修复方法，并提交给了Open Handset Alliance公司。然而，建议您从应用程序的`onCreate()`方法中调用此修复，以防该修复尚未应用到运行您应用程序的设备上。
 - en: Note
+  id: totrans-72
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意事项
 - en: For convenience, here's a gist provided by GitHub of the code from Google, which
     can be found at [https://gist.github.com/scottyab/6498556](https://gist.github.com/scottyab/6498556).
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了方便起见，这里提供了一个来自GitHub的gist，其中包含了谷歌的代码，可以在[https://gist.github.com/scottyab/6498556](https://gist.github.com/scottyab/6498556)找到。
 - en: See also
+  id: totrans-74
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Securing SharedPreference data* recipe, where we used a generated AES key
     to encrypt application SharedPreferences
+  id: totrans-75
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*保护SharedPreferences数据*的配方，我们使用了生成的AES密钥来加密应用程序的SharedPreferences'
 - en: The *An Empirical Study of Cryptographic Misuse in Android Applications* guide
     at [http://cs.ucsb.edu/~yanick/publications/2013_ccs_cryptolint.pdf](http://cs.ucsb.edu/~yanick/publications/2013_ccs_cryptolint.pdf)
+  id: totrans-76
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[《安卓应用中密码学误用实证研究》](http://cs.ucsb.edu/~yanick/publications/2013_ccs_cryptolint.pdf)指南'
 - en: The `SecureRandom` class in the Android Developer Reference guide at [https://developer.android.com/reference/java/security/SecureRandom.html](https://developer.android.com/reference/java/security/SecureRandom.html)
+  id: totrans-77
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Android开发者参考指南中的`SecureRandom`类](https://developer.android.com/reference/java/security/SecureRandom.html)'
 - en: The `KeyGenerator` class in the Android Developer Reference guide at [https://developer.android.com/reference/javax/crypto/KeyGenerator.html](https://developer.android.com/reference/javax/crypto/KeyGenerator.html)
+  id: totrans-78
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Android开发者参考指南中的`KeyGenerator`类](https://developer.android.com/reference/javax/crypto/KeyGenerator.html)'
 - en: The *Some SecureRandom Thoughts* Android blog article at [http://android-developers.blogspot.co.uk/2013/08/some-securerandom-thoughts.html](http://android-developers.blogspot.co.uk/2013/08/some-securerandom-thoughts.html)
+  id: totrans-79
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[《关于SecureRandom的一些思考》Android博客文章](http://android-developers.blogspot.co.uk/2013/08/some-securerandom-thoughts.html)'
 - en: The Open Handset Alliance members at [http://www.openhandsetalliance.com/oha_members.html](http://www.openhandsetalliance.com/oha_members.html)
+  id: totrans-80
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[开放手持设备联盟成员](http://www.openhandsetalliance.com/oha_members.html)'
 - en: Securing SharedPreferences data
+  id: totrans-81
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 保护SharedPreferences数据
 - en: Android provides a simple framework for app developers to persistently store
     key-value pairs of primitive datatypes. This recipe illustrates a practical use
     of a pseudorandomly generated secret key and demonstrates the use of **Secure-Preferences**
@@ -407,114 +580,166 @@
     to encrypt the key-value pairs for protecting them against attackers. Secure-Preferences
     is compatible with Android 2.1+, and is licensed with Apache 2.0; hence, it is
     suitable for commercial development.
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: Android为应用开发者提供了一个简单的框架，用于持久化存储基本数据类型的键值对。这个菜谱展示了伪随机生成的密钥的实际用途，并演示了**Secure-Preferences**的使用。它是一个开源库，包装了默认的Android
+    SharedPreferences以加密键值对，从而保护它们免受攻击者的侵害。Secure-Preferences兼容Android 2.1+，并使用Apache
+    2.0许可，因此适合商业开发。
 - en: I should add that I'm the co-creator and maintainer of the Secure-Preferences
     library. A good alternative to Secure-Preferences is a library called **Cwac-prefs**
     that is backed by SQLCipher (covered in a later recipe).
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 我应该补充一下，我是Secure-Preferences库的共同创建者和维护者。Secure-Preferences的一个很好的替代品是名为**Cwac-prefs**的库，它由SQLCipher支持（在后面的菜谱中介绍）。
 - en: Getting ready
+  id: totrans-84
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Let's add the Secure-Preferences library.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们添加Secure-Preferences库。
 - en: Download or clone Secure-Preferences from GitHub at [https://github.com/scottyab/secure-preferences](https://github.com/scottyab/secure-preferences).
+  id: totrans-86
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从GitHub下载或克隆Secure-Preferences，地址是[https://github.com/scottyab/secure-preferences](https://github.com/scottyab/secure-preferences)。
 - en: The Secure-Preferences repository contains an Android library project and a
     sample project.
+  id: totrans-87
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: Secure-Preferences仓库包含一个Android库项目和示例项目。
 - en: Link the library to your Android project as you would normally do.
+  id: totrans-88
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 就像通常那样，将库链接到你的Android项目中。
 - en: How to do it...
+  id: totrans-89
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's get started.
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧。
 - en: 'Simply initialize the `SecurePreferences` object with Android `context`:'
+  id: totrans-91
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用Android `context`简单初始化`SecurePreferences`对象：
 - en: '[PRE7]'
+  id: totrans-92
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'The following are several helper methods that you could add to your application
     to retrieve an instance of the (secure) preferences object in your application
     object:'
+  id: totrans-93
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下面是一些你可以添加到你的应用程序中的辅助方法，以便在你的应用程序对象中获取（安全的）偏好设置实例：
 - en: '[PRE8]'
+  id: totrans-94
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Here, `YourApplication.this` is a reference to your application object.
+  id: totrans-95
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在这里，`YourApplication.this`是对你的应用程序对象的引用。
 - en: 'Then ideally, in a base application component such as `BaseActivity`, `BaseFragment`,
     or `BaseService`, you can include the following to retrieve an instance of the
     (secure) preferences object:'
+  id: totrans-96
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，理想情况下，在一个基础的应用程序组件中，如`BaseActivity`、`BaseFragment`或`BaseService`，你可以包含以下内容以获取（安全的）偏好设置对象的实例：
 - en: '[PRE9]'
+  id: totrans-97
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: How it works...
+  id: totrans-98
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: The Secure-Preferences library implements the `SharedPreferences` interface;
     therefore, no code changes are needed to interact with it in comparison to the
     default SharedPreferences.
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: Secure-Preferences库实现了`SharedPreferences`接口；因此，与默认的SharedPreferences相比，与它交互不需要进行代码更改。
 - en: Standard SharedPreferences keys and values are stored in a simple XML file and
     Secure-Preferences uses the same storage mechanism; except that the keys and values
     are transparently encrypted using an AES symmetric key. The cipher text of keys
     and values are encoded with base64 encoding before writing to the file.
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 标准的SharedPreferences键和值存储在一个简单的XML文件中，Secure-Preferences使用相同的存储机制；不同之处在于，键和值会使用AES对称密钥进行透明加密。在写入文件之前，键和值的密文会使用base64编码。
 - en: If you examine the following SharedPreference XML file; it shows without and
     with the Secure-Preferences library. You'll see the file from the Secure-Preferences
     library is a collection of seemingly random entries that give no clue to their
     purpose.
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你检查以下SharedPreference XML文件，你会看到使用和不使用Secure-Preferences库的区别。你会看到来自Secure-Preferences库的文件是一系列看似随机的条目，这些条目无法揭示其用途。
 - en: 'A standard SharedPreferences XML file:'
+  id: totrans-102
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 一个标准的SharedPreferences XML文件：
 - en: '[PRE10]'
+  id: totrans-103
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'A SharedPreferences XML file using Secure-Preferences library:'
+  id: totrans-104
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用Secure-Preferences库的SharedPreferences XML文件：
 - en: '[PRE11]'
+  id: totrans-105
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: The first time `SecurePreferences` is instantiated, an AES encryption key is
     generated and stored. This key is used to encrypt/decrypt all future keys/values
     that are saved via the standard `SharedPreferences` interface.
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一次实例化`SecurePreferences`时，会生成一个AES加密密钥并存储。这个密钥用于加密/解密通过标准`SharedPreferences`接口保存的所有将来的键/值。
 - en: The shared preference file is created with `Context.MODE_PRIVATE` that enforces
     app sandbox security and ensures that only your app has access. However, in the
     case of rooted devices, sandbox security cannot be relied upon. More correctly,
@@ -522,38 +747,54 @@
     be considered as bulletproof security. Instead, view it as a quick win for incrementally
     making an Android app more secure. For instance, it will stop users on rooted
     devices easily modifying your app's SharedPreferences.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 共享首选项文件是使用`Context.MODE_PRIVATE`创建的，这强制执行应用沙箱安全，确保只有你的应用可以访问。然而，在已root的设备上，不能依赖沙箱安全。更准确地说，Secure-Preferences是在混淆首选项；因此，这不应当被视为坚不可摧的安全措施。相反，将其视为一种快速获胜的方法，逐步提高Android应用的安全性。例如，它将阻止已root设备上的用户轻松修改你应用的SharedPreferences。
 - en: Secure-Preferences could be further enhanced to generate the key based on the
     user input password using a technique called **password-based encryption** (**PBE**
     ), which is covered in the next chapter.
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: Secure-Preferences可以进一步增强，通过使用一种称为**基于密码的加密**（**PBE**）的技术，根据用户输入的密码生成密钥，这将在下一章中介绍。
 - en: See also
+  id: totrans-109
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The `SharedPreferences` interface in the Android Developers Reference guide
     at [https://developer.android.com/reference/android/content/SharedPreferences.html](https://developer.android.com/reference/android/content/SharedPreferences.html)
+  id: totrans-110
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android开发者参考指南中的`SharedPreferences`接口位于[https://developer.android.com/reference/android/content/SharedPreferences.html](https://developer.android.com/reference/android/content/SharedPreferences.html)
 - en: Article on Secure-Preferences by *Daniel Abraham* at [http://www.codeproject.com/Articles/549119/Encryption-Wrapper-for-Android-SharedPreferences](http://www.codeproject.com/Articles/549119/Encryption-Wrapper-for-Android-SharedPreferences)
+  id: totrans-111
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*丹尼尔·亚伯拉罕*关于Secure-Preferences的文章，位于[http://www.codeproject.com/Articles/549119/Encryption-Wrapper-for-Android-SharedPreferences](http://www.codeproject.com/Articles/549119/Encryption-Wrapper-for-Android-SharedPreferences)'
 - en: The Secure-Preferences library at [https://github.com/scottyab/secure-preferences](https://github.com/scottyab/secure-preferences)
+  id: totrans-112
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Secure-Preferences库位于[https://github.com/scottyab/secure-preferences](https://github.com/scottyab/secure-preferences)
 - en: The CWAC-prefs library (an alternative to Secure-Preferences) at [https://github.com/commonsguy/cwac-prefs](https://github.com/commonsguy/cwac-prefs)
+  id: totrans-113
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: CWAC-prefs库（Secure-Preferences的替代品）位于[https://github.com/commonsguy/cwac-prefs](https://github.com/commonsguy/cwac-prefs)
 - en: Password-based encryption
+  id: totrans-114
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 基于密码的加密
 - en: One of the larger issues with encryption is the management and secure storage
     of encryption keys. Until now and in the pervious recipes, we have settled for
     storing the key in SharedPreferences as recommended on the Google developer's
@@ -561,110 +802,154 @@
     rely on the Android system security sandbox as the root user has access to all
     areas. By that we mean, unlike on a unrooted device, other apps can obtain elevated
     root privileges.
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 加密面临的一个较大问题是密钥的管理和安全存储。到目前为止，在之前的食谱中，我们接受将密钥存储在SharedPreferences中，正如谷歌开发者的博客所推荐的；然而，这对于已获得root权限的设备来说并不理想。在已root的设备上，你不能依赖Android系统的安全沙箱，因为root用户可以访问所有区域。这意味着，与未root的设备不同，其他应用可以获得提升的root权限。
 - en: The potential for an insecure app sandbox is an ideal case for password-based
     encryption (PBE). It offers the ability to create (or more correctly derive) the
     encryption key at runtime using a passcode/password that is usually supplied by
     the user.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 在不安全的app沙盒环境中，基于密码的加密（PBE）是一个理想的选择。它提供了在运行时使用由用户通常提供的密码/密码来创建（或更准确地说是派生）加密密钥的能力。
 - en: Another solution for key management is to use a system keychain; Android's version
     of this is called the Android KeyStore, which we will review in a later recipe.
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个密钥管理的解决方案是使用系统密钥链；Android的版本称为Android KeyStore，我们将在后面的食谱中进行审查。
 - en: Getting ready
+  id: totrans-118
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: PBE is part of the Java Cryptography Extension, and so is already included in
     Android SDK.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: PBE是Java加密扩展的一部分，因此它已经包含在Android SDK中。
 - en: In this recipe, we'll use an initialization vector (IV) and **salt** as part
     of the key derivation. We covered the IV in the previous recipe, and it helps
     create more randomness. So, even the same messages that are encrypted with the
     same key would produce different cipher texts. Salt is similar to an IV in that
     it is usually a random data that is added as part of the encryption process to
     enhance its cryptographic strength.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个食谱中，我们将使用初始化向量（IV）和**盐值**作为密钥派生的一部分。我们在上一个食谱中介绍了IV，它有助于创建更多的随机性。因此，即使使用相同的密钥加密相同的消息，也会产生不同的密文。盐值与IV相似，它通常是一个随机数据，作为加密过程的一部分添加，以提高其加密强度。
 - en: How to do it...
+  id: totrans-121
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's get started.
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧。
 - en: 'First, we define some helper methods to retrieve or create IV and salt. We
     will use them as part of the key derivation and encryption:'
+  id: totrans-123
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，我们定义一些辅助方法来获取或创建IV和盐值。我们将它们作为密钥派生和加密的一部分来使用：
 - en: '[PRE12]'
+  id: totrans-124
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Generate the PBE key:'
+  id: totrans-125
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 生成PBE密钥：
 - en: '[PRE13]'
+  id: totrans-126
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Write a sample method showing how to encrypt using a newly derived PBE key:'
+  id: totrans-127
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编写一个示例方法，展示如何使用新派生的PBE密钥进行加密：
 - en: '[PRE14]'
+  id: totrans-128
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Write a sample method showing how to decrypt cipher text using a newly derived
     PBE key:'
+  id: totrans-129
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编写一个示例方法，展示如何使用新派生的PBE密钥解密密文：
 - en: '[PRE15]'
+  id: totrans-130
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: How it works...
+  id: totrans-131
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: In step 1, we define methods similar to the ones we have used in the previous
     recipes. Just to reiterate, it's essential for the salt and IV to be consistent
     to be able to decrypt encrypted data. For example, you could generate a salt per
     app and store it in `SharedPreferences`. Also, the size of the salt is typically
     the same as the key size, which in this example is 32 bytes / 256 bit. Typically,
     you would save the IV along with cipher text to be retrieved upon decryption.
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 在步骤1中，我们定义了类似于以前食谱中使用的方法。再次强调，为了能够解密加密数据，盐值和IV必须保持一致。例如，你可以为每个app生成一个盐值并将其存储在`SharedPreferences`中。此外，盐值的大小通常与密钥大小相同，在这个例子中是32字节/256位。通常，你会在解密时将IV和密文一起保存以便检索。
 - en: In step 2, we derive a 256 bit AES `SecretKey` using PBE with the user's password.
     `PBKDF2` is a commonly used algorithm for deriving a key from a user password;
     the Android implementation of this algorithm is noted as `PBKDF2WithHmacSHA1`.
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 在步骤2中，我们使用用户的密码通过PBE派生一个256位的AES `SecretKey`。`PBKDF2`是一种常用于从用户密码派生密钥的算法；Android对该算法的实现被记为`PBKDF2WithHmacSHA1`。
 - en: As part of the `PBEKeySpec`, we define the number iterations used internally
     within `SecretKeyFactory` to generate the secret key. The larger the number of
     iterations, the longer the key derivation takes. To defend against Brute Force
     attacks, it is recommended that the time to derive the key should be more than
     100ms; Android uses 10,000 iterations to generate the encryption key for encrypted
     backups.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为`PBEKeySpec`的一部分，我们定义了在`SecretKeyFactory`内部使用的迭代次数，以生成密钥。迭代次数越多，密钥派生所需的时间就越长。为了防御暴力破解攻击，建议派生密钥的时间应超过100毫秒；Android使用10,000次迭代来生成加密备份的加密密钥。
 - en: Steps 3 and 4 demonstrate using the secret key with the `Cipher` object to encrypt
     and decrypt; you'll notice that these are very similar to the methods noted in
     an earlier recipe. But of course, for decryption, the IV and salt are not randomly
     generated but re-used form the encryption step.
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 步骤3和4演示了如何使用`Cipher`对象和密钥进行加密和解密；你会注意到，这些方法与之前食谱中记录的方法非常相似。但当然，对于解密，IV和盐值不是随机生成的，而是从加密步骤中重新使用。
 - en: There's more…
+  id: totrans-136
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: In Android 4.4, a subtle change was made to the `SecretKeyFactory` class when
     dealing with `PBKDF2WithHmacSHA1` and Unicode passphrases. Previously, `PBKDF2WithHmacSHA1`
     only looked at the lower eight bits of Java characters in passphrases; the change
@@ -672,156 +957,224 @@
     characters. To maintain backward compatibility, you can use this new key generation
     algorithm `PBKDF2WithHmacSHA1And8bit`. If you are using ASCII, this change will
     not affect you.
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android 4.4中，处理`PBKDF2WithHmacSHA1`和Unicode密码短语时，对`SecretKeyFactory`类进行了细微的更改。以前，`PBKDF2WithHmacSHA1`只查看密码短语中Java字符的低位8位；对`SecretKeyFactory`类的更改允许使用Unicode字符的所有可用位。为了保持向后兼容性，你可以使用这个新的密钥生成算法`PBKDF2WithHmacSHA1And8bit`。如果你使用ASCII，这个更改不会影响你。
 - en: 'Here''s a code sample of how to maintain backward compatibility:'
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是一个如何保持向后兼容的代码示例：
 - en: '[PRE16]'
+  id: totrans-139
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: See also
+  id: totrans-140
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The `SecretKeyFactory` class in the Android Developers Reference guide at [https://developer.android.com/reference/javax/crypto/SecretKeyFactory.html](https://developer.android.com/reference/javax/crypto/SecretKeyFactory.html)
+  id: totrans-141
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Android开发者参考指南中的`SecretKeyFactory`类](https://developer.android.com/reference/javax/crypto/SecretKeyFactory.html)'
 - en: The `PBEKeySpec` class in the Android Developers Reference guide at [https://developer.android.com/reference/javax/crypto/spec/PBEKeySpec.html](https://developer.android.com/reference/javax/crypto/spec/PBEKeySpec.html)
+  id: totrans-142
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Android开发者参考指南中的`PBEKeySpec`类](https://developer.android.com/reference/javax/crypto/spec/PBEKeySpec.html)'
 - en: Java Cryptography Extension in the Java Cryptography Architecture (JCA) Reference
     guide at [http://docs.oracle.com/javase/6/docs/technotes/guides/security/crypto/CryptoSpec.html](http://docs.oracle.com/javase/6/docs/technotes/guides/security/crypto/CryptoSpec.html)
+  id: totrans-143
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Java加密体系结构（JCA）参考指南中的Java加密扩展](http://docs.oracle.com/javase/6/docs/technotes/guides/security/crypto/CryptoSpec.html)'
 - en: The *Using Cryptography to Store Credentials Safely* Android Developer's blog
     at [http://android-developers.blogspot.co.uk/2013/02/using-cryptography-to-store-credentials.html](http://android-developers.blogspot.co.uk/2013/02/using-cryptography-to-store-credentials.html)
+  id: totrans-144
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Android开发者博客中的*使用加密安全存储凭据*](http://android-developers.blogspot.co.uk/2013/02/using-cryptography-to-store-credentials.html)'
 - en: Sample PBE project by *Nikolay Elenkov* at [https://github.com/nelenkov/android-pbe](https://github.com/nelenkov/android-pbe)
+  id: totrans-145
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 由*Nikolay Elenkov*提供的示例PBE项目，位于[https://github.com/nelenkov/android-pbe](https://github.com/nelenkov/android-pbe)
 - en: Changes to the `SecretKeyFactory` API in Android 4.4 at [http://android-developers.blogspot.co.uk/2013/12/changes-to-secretkeyfactory-api-in.html](http://android-developers.blogspot.co.uk/2013/12/changes-to-secretkeyfactory-api-in.html)
+  id: totrans-146
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Android 4.4中对`SecretKeyFactory` API的更改](http://android-developers.blogspot.co.uk/2013/12/changes-to-secretkeyfactory-api-in.html)'
 - en: Encrypting a database with SQLCipher
+  id: totrans-147
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用SQLCipher加密数据库
 - en: SQLCipher is one of the simplest ways to enable secure storage in an Android
     app, and it's compatible for devices running Android 2.1+. SQLCipher uses 256-bit
     AES in CBC mode to encrypt each database page; in addition, each page has its
     own random initialization vector to further increase security.
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: SQLCipher是Android应用中实现安全存储的最简单方法之一，它兼容运行Android 2.1+的设备。SQLCipher使用256位AES加密每个数据库页面，采用CBC模式；此外，每个页面都有自己的随机初始化向量，以进一步提高安全性。
 - en: SQLCipher is a separate implementation of the SQLite database, and rather than
     implementing its own encryption, it uses the widely used and tested OpenSSL `libcrypto`
     library. While this ensures greater security and wider compatibility, it does
     come with a relatively high `.apk` file footprint of roughly 7 MB. This additional
     weight is probably the only disadvantage of using SQLCipher.
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: SQLCipher是SQLite数据库的一个独立实现，它没有实现自己的加密，而是使用了广泛使用和测试的OpenSSL `libcrypto`库。虽然这确保了更高的安全性和更广泛的兼容性，但它确实伴随着大约7MB的相对较大的`.apk`文件体积。这额外的重量可能是使用SQLCipher的唯一缺点。
 - en: According to the SQLCipher website, in terms of read/write performance, there
     is a ~5 percent performance hit that is negligible unless your app is performing
     complex SQL joins (but it is worth noting that these aren't great in SQLite either).
     The good news for commercial development is that not only is SQLCipher for Android
     open source, it is also released under a BSD-style license.
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据SQLCipher网站的说法，在读写性能方面，大约有5%的性能损失是微不足道的，除非你的应用正在执行复杂的SQL连接（但值得注意的是，这些在SQLite中也不太好）。对于商业开发来说，好消息是SQLCipher
+    for Android不仅是开源的，而且还是基于BSD风格的许可发布的。
 - en: Getting ready
+  id: totrans-151
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: To start with, we will download and set up your Android project with SQLCipher.
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将下载并设置你的Android项目以使用SQLCipher。
 - en: Download the latest binary packages via the link on the SQLCipher GitHub page,
     or follow this direct link [https://s3.amazonaws.com/sqlcipher/SQLCipher+for+Android+v3.0.0.zip](https://s3.amazonaws.com/sqlcipher/SQLCipher+for+Android+v3.0.0.zip).
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过SQLCipher GitHub页面上的链接下载最新的二进制包，或者直接使用这个链接[https://s3.amazonaws.com/sqlcipher/SQLCipher+for+Android+v3.0.0.zip](https://s3.amazonaws.com/sqlcipher/SQLCipher+for+Android+v3.0.0.zip)。
 - en: Unpack the ZIP file.
+  id: totrans-154
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 解压ZIP文件。
 - en: Copy the `icudt46l.zip` file from `/asset`s to `/assets` of your application.
+  id: totrans-155
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从`/asset`s目录将`icudt46l.zip`文件复制到应用程序的`/assets`目录。
 - en: The `/libs` directory contains several JARs and folders containing native libraries.
+  id: totrans-156
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`/libs`目录包含几个JAR文件和包含本地库的文件夹。'
 - en: Copy the `*.jar` files to you application's `/libs` directory. You may already
     be using Commons-codec and/or guava; if so, check if the version is compatible
     with SQLCipher.
+  id: totrans-157
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将`*.jar`文件复制到你的应用程序的`/libs`目录。你可能已经在使用Commons-codec和/或guava；如果是这样，请检查版本是否与SQLCipher兼容。
 - en: Both the ARM and x86 implementations of the native code are included; however,
     you'll probably only need the ARM-based native libraries. So, copy the `armeabi`
     folder to `/libs` of your application.
+  id: totrans-158
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 本地代码的ARM和x86实现均已包含；然而，你可能只需要基于ARM的本地库。因此，请将`armeabi`文件夹复制到你的应用程序的`/libs`目录下。
 - en: How to do it...
+  id: totrans-159
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's create an encrypted SQLite database.
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们创建一个加密的SQLite数据库。
 - en: There are several ways to handle SQLite database, either by working directly
     with the `SQLiteDatabase` object or using `SQLiteOpenHelper`. But generally, if
     you are already using an SQLite database in your app, simply replace the `import
     android.database.sqlite.*` statement with `import net.sqlcipher.database.*`.
+  id: totrans-161
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 处理SQLite数据库有几种方式，可以直接与`SQLiteDatabase`对象合作，也可以使用`SQLiteOpenHelper`。但是，通常如果你在应用中已经使用了SQLite数据库，只需将`import
+    android.database.sqlite.*`声明替换为`import net.sqlcipher.database.*`即可。
 - en: 'The simplest way to create an encrypted SQLCipher database is to call `openOrCreateDatabase(…)`
     with a password:'
+  id: totrans-162
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建加密的SQLCipher数据库最简单的方式是使用密码调用`openOrCreateDatabase(…)`：
 - en: '[PRE17]'
+  id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'If you''re using the `SQLiteOpenHelper` object, you would have extended it.
     In this example, we''ll assume that your extension is called `SQLCipherHelper`.
     When you call `getWritableDatabase`, you''ll notice that you are required to pass
     a string argument (the database passphrase) with SQLCipher''s version of `SQLiteOpenHelper`:'
+  id: totrans-164
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果你正在使用`SQLiteOpenHelper`对象，你可能已经对其进行了扩展。在这个例子中，我们将假设你的扩展名为`SQLCipherHelper`。当你调用`getWritableDatabase`时，你会注意到需要传递一个字符串参数（数据库密码短语）与SQLCipher版本的`SQLiteOpenHelper`：
 - en: '[PRE18]'
+  id: totrans-165
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Tip
+  id: totrans-166
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The SQLCipher native libraries need to be loaded before any database operation
     can be completed using the `SQLiteDatabase.loadLibs(context)` statement. Ideally
     this call should be located in the `onCreate` lifecycle method of either a content
     provider or your application's application object.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 在使用`SQLiteDatabase.loadLibs(context)`语句完成任何数据库操作之前，需要加载SQLCipher本地库。理想情况下，此调用应位于内容提供者或应用程序对象的`onCreate`生命周期方法中。
 - en: How it works…
+  id: totrans-168
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'The sample code illustrates the two most common ways of working with SQLite
     database: directly with the `SQLiteDatabase` object or using `SQLiteOpenHelper`.'
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例代码展示了与SQLite数据库合作的两种最常见方式：直接使用`SQLiteDatabase`对象或使用`SQLiteOpenHelper`。
 - en: The main point to note is the difference between using the `net.sqlcipher.database`
     API and the default SQLite API is the use of passphrase when we create or retrieve
     the SQLCipher database object. SQLCipher derives the encryption key using `PBKDF2`,
@@ -833,169 +1186,246 @@
     key. It also uses a message authentication code (MAC) to ensure both integrity
     and authenticity, ensuring that the data has not been accidently or maliciously
     tampered with.
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 需要注意的主要区别在于使用`net.sqlcipher.database` API与默认SQLite API之间的区别在于，在创建或检索SQLCipher数据库对象时使用密码短语。SQLCipher使用`PBKDF2`派生加密密钥，如前一个配方所介绍。在撰写本书时，默认配置生成了一个使用4,000次迭代的256位AES密钥。开发者需要决定如何生成密码短语。你可以基于每个应用使用PRNG生成，或者为了更大的随机性和安全性由用户输入。SQLCipher使用派生的密钥透明地加密和解密。它还使用消息验证码（MAC）来确保数据的完整性和真实性，确保数据没有被意外或恶意篡改。
 - en: There's more...
+  id: totrans-171
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多内容...
 - en: It's worth noting that because much of SQLCipher is written in native C/C++,
     it is compatible with other platforms such as Linux, Windows, iOS, and Mac OS.
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 值得注意的是，由于SQLCipher的大部分代码是用本地C/C++编写的，因此它与其他平台（如Linux、Windows、iOS和Mac OS）兼容。
 - en: IOCipher
+  id: totrans-173
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: IOCipher
 - en: Think of IOCipher as SQLCipher's long lost cousin from the good people at the
     Guardian project. It offers the ability to mount an encrypted virtual filesystem
     that allows developers to transparently encrypt all files within their app's directory.
     As with SQLCipher, IOCipher relies on the developer to manage the password and
     supports Android 2.1+.
+  id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: 将IOCipher视为来自Guardian项目的SQLCipher久未联系的表亲。它提供了挂载加密虚拟文件系统的能力，允许开发者在他们的应用目录中透明地加密所有文件。与SQLCipher一样，IOCipher依赖开发者管理密码，支持Android
+    2.1+。
 - en: One huge advantage of IOCipher is that it is a clone of the `java.io` API. This
     means that from an integration perspective, there are few code changes to the
     existing file management code. The difference is that the filesystem is first
     mounted with a password, and instead of using `java.io.File`, you use `info.guardianproject.iocipher.File`.
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: IOCipher的一个巨大优势是它是`java.io` API的一个克隆。这意味着从集成的角度来看，对现有的文件管理代码进行修改很少。不同之处在于，首先需要使用密码挂载文件系统，并且不是使用`java.io.File`，而是使用`info.guardianproject.iocipher.File`。
 - en: Even though IOCipher uses parts of SQLCipher, it is less mature but worth investigating
     if you wish to protect the files rather than data within SQLite database.
+  id: totrans-176
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管IOCipher使用了SQLCipher的部分内容，但它还不够成熟，但如果你希望保护的是文件而不是SQLite数据库中的数据，那么它值得研究。
 - en: See also
+  id: totrans-177
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The SQLCipher downloads at [http://sqlcipher.net/downloads/](http://sqlcipher.net/downloads/)
+  id: totrans-178
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: SQLCipher下载地址为[http://sqlcipher.net/downloads/](http://sqlcipher.net/downloads/)
 - en: The SQLCipher for Android source code at [https://github.com/sqlcipher/android-database-sqlcipher](https://github.com/sqlcipher/android-database-sqlcipher)
+  id: totrans-179
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: SQLCipher for Android的源代码位于[https://github.com/sqlcipher/android-database-sqlcipher](https://github.com/sqlcipher/android-database-sqlcipher)
 - en: 'The *IOCipher: Virtual Encrypted Disks* project at [https://guardianproject.info/code/iocipher/](https://guardianproject.info/code/iocipher/)'
+  id: totrans-180
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*IOCipher: Virtual Encrypted Disks*项目位于[https://guardianproject.info/code/iocipher/](https://guardianproject.info/code/iocipher/)'
 - en: Android KeyStore provider
+  id: totrans-181
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Android KeyStore提供者
 - en: In Android 4.3, a new facility was added to allow apps to save private encryption
     keys in a system **KeyStore** . Called Android KeyStore, it restricts access only
     to the app that created them, and it was secured using the device pin code.
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android 4.3中，新增了一个功能，允许应用将私有的加密密钥保存在系统**密钥库**中。这个被称为Android KeyStore的功能只允许创建它们的应用访问，并且使用设备PIN码进行保护。
 - en: Specifically, the Android KeyStore is a certificate store, and so only public/private
     keys can be stored. Currently, arbitrary symmetric keys such as an AES key cannot
     be stored. In Android 4.4, the **Elliptic Curve Digital Signature Algorithm**
     (**ECDSA**) support was added to the Android KeyStore. This recipe discusses how
     to generate a new key, and save and fetch it from the Android KeyStore.
+  id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: 特别地，Android KeyStore是一个证书存储，因此只能存储公钥/私钥。目前，无法存储诸如AES密钥之类的任意对称密钥。在Android 4.4中，**椭圆曲线数字签名算法**（**ECDSA**）支持被添加到Android
+    KeyStore中。本食谱讨论如何生成新密钥，以及如何将其保存和从Android KeyStore中获取。
 - en: Getting ready
+  id: totrans-184
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备开始
 - en: As this feature was only added in Android 4.3, ensure that the minimum SDK version
     in the Android manifest file is set to `18`.
+  id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于这个特性是在Android 4.3中添加的，请确保在Android清单文件中将最低SDK版本设置为`18`。
 - en: How to do it...
+  id: totrans-186
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's get started.
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧。
 - en: 'Create a handle on your app''s KeyStore:'
+  id: totrans-188
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个指向应用KeyStore的句柄：
 - en: '[PRE19]'
+  id: totrans-189
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Generate and save the app''s key pair:'
+  id: totrans-190
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 生成并保存应用的关键对：
 - en: '[PRE20]'
+  id: totrans-191
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'Retrieve the key with a given alias:'
+  id: totrans-192
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用给定的别名检索密钥：
 - en: '[PRE21]'
+  id: totrans-193
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: How it works...
+  id: totrans-194
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: The `KeyStore` class has been around since API level 1\. To access the new Android
     KeyStore, you use a special constant `"AndroidKeystore"`.
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: '`KeyStore`类自API级别1以来就已经存在。要访问新的Android KeyStore，你可以使用一个特殊的常量`"AndroidKeystore"`。'
 - en: According to the Google documentation, there is a strange issue with the `KeyStore`
     class that requires you to call the `load(null)` method even though you are not
     loading the `KeyStore` from an input stream; otherwise, you may experience a crash.
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据谷歌的文档，`KeyStore`类有一个奇怪的问题，即使你不是从输入流加载`KeyStore`，也需要调用`load(null)`方法；否则，你可能会遇到崩溃的情况。
 - en: When generating the key pair, we populate a `KeyPairGeneratorSpec.Builder` object
     with the required details—including the alias that we use to retrieve it later.
     In this example, we set an arbitrary validation period of `1` year from the current
     date and default the serial to `TEN`.
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 在生成密钥对时，我们使用所需的详细信息填充`KeyPairGeneratorSpec.Builder`对象，包括我们稍后用于检索它的别名。在这个例子中，我们从当前日期开始设置了一个任意的验证期限为`1`年，并将序列号默认为`TEN`。
 - en: Loading a key from the alias is as simple as loading `keyStore.getEntry("alias",
     null)`; from here, we cast to the `PrivateKey` interface so that we can use it
     in our encryption/decryption.
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: 从别名加载密钥就像加载`keyStore.getEntry("alias", null)`一样简单；从这里，我们将其转换为`PrivateKey`接口，以便我们可以在加密/解密中使用它。
 - en: There's more...
+  id: totrans-199
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: The API for the `KeyChain` class was also updated in Android 4.3 to allow developers
     to determine whether the device supports hardware-backed certificate store or
     not. This basically means that the device supports a secure element for the certificate
     store. This is an exciting enhancement as it promises to keep the certificate
     store safe even on rooted devices. However, not all devices support this hardware
     feature. The LG Nexus 4, a popular device, uses ARM's TrustZone for hardware protection.
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android 4.3中，`KeyChain`类的API也得到了更新，允许开发者确定设备是否支持硬件支持的证书存储。这基本上意味着设备支持证书存储的安全元素。这是一个令人兴奋的增强功能，因为它承诺即使在根设备上也能保持证书存储的安全。然而，并不是所有设备都支持这个硬件特性。流行的设备LG
+    Nexus 4使用ARM的TrustZone进行硬件保护。
 - en: See also
+  id: totrans-201
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The `KeyStore` class in the Android Developer reference guide at [https://developer.android.com/reference/java/security/KeyStore.html](https://developer.android.com/reference/java/security/KeyStore.html)
+  id: totrans-202
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android开发者参考指南中的`KeyStore`类，可以在[https://developer.android.com/reference/java/security/KeyStore.html](https://developer.android.com/reference/java/security/KeyStore.html)找到
 - en: The KeyStore API sample at [https://developer.android.com/samples/BasicAndroidKeyStore/index.html](https://developer.android.com/samples/BasicAndroidKeyStore/index.html)
+  id: totrans-203
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: KeyStore API示例可以在[https://developer.android.com/samples/BasicAndroidKeyStore/index.html](https://developer.android.com/samples/BasicAndroidKeyStore/index.html)找到
 - en: The *Credential storage enhancements in Android 4.3* article by *Nikolay Elenkov*
     at [http://nelenkov.blogspot.co.uk/2013/08/credential-storage-enhancements-android-43.html](http://nelenkov.blogspot.co.uk/2013/08/credential-storage-enhancements-android-43.html)
+  id: totrans-204
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*Nikolay Elenkov*撰写的《Android 4.3中的凭据存储增强》一文可以在[http://nelenkov.blogspot.co.uk/2013/08/credential-storage-enhancements-android-43.html](http://nelenkov.blogspot.co.uk/2013/08/credential-storage-enhancements-android-43.html)找到'
 - en: ARM TrustZone at [http://www.arm.com/products/processors/technologies/trustzone/index.php](http://www.arm.com/products/processors/technologies/trustzone/index.php)
+  id: totrans-205
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: ARM TrustZone可以在[http://www.arm.com/products/processors/technologies/trustzone/index.php](http://www.arm.com/products/processors/technologies/trustzone/index.php)找到
 - en: Setting up device administration policies
+  id: totrans-206
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设置设备管理策略
 - en: First introduced in Android 2.2, the Device Admin policies grant abilities to
     apps to gain a greater level of device control. These features are primarily aimed
     at enterprise app developers given their controlling, restrictive, and potentially
@@ -1003,166 +1433,235 @@
     Management** (**MDM**) solution. In general, this is not aimed at consumer apps
     unless a trust relationship already exists, for example, a bank and a banking
     app.
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: Device Admin策略最早在Android 2.2中引入，它赋予应用程序更大的设备控制能力。这些功能主要针对企业应用开发者，因为它们具有控制性、限制性，可能具有破坏性，并提供了一种替代第三方**移动设备管理**（**MDM**）解决方案的方法。通常，这不是针对消费者应用，除非已经存在信任关系，例如银行和银行应用。
 - en: 'This recipe will define two device policies designed to strengthen the device
     that could be part of an enterprise''s mobile security policy:'
+  id: totrans-208
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱将定义两个旨在加强设备的设备策略，这可能是企业移动安全政策的一部分：
 - en: Enforce device encryption (which also ensures that a device pin/password is
     set)
+  id: totrans-209
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 强制执行设备加密（这也确保设置了设备PIN码/密码）
 - en: Enforce maximum screen lock timeout
+  id: totrans-210
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 强制执行最大屏幕锁定超时
 - en: Although device encryption is no replacement for ensuring that the app data
     is encrypted properly, it does add to the overall device security. Reducing the
     maximum screen lock timeout helps protect the device if left unattended.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管设备加密不能替代确保应用程序数据正确加密，但它确实增加了整体设备安全性。减少最大屏幕锁定超时有助于在设备无人看管时保护设备。
 - en: There is no restriction on the number of apps enforcing device policies. If
     there is a conflict on policy, the system defaults to the most secure policy.
     For example, if there was a conflict on the password strength requirement's policy,
     the strongest policy would be applied to satisfy all policies.
+  id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 对执行设备策略的应用程序数量没有限制。如果策略上有冲突，系统默认采用最安全的策略。例如，如果密码强度要求策略上有冲突，将应用最严格的策略以满足所有策略。
 - en: Getting ready
+  id: totrans-213
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: The Device Admin policies were added in Version 2.2; however, this feature and
     the specific restriction for device encryption were not added until Android 3.0\.
     Therefore, for this recipe, ensure that you are building against a SDK above API
     11.
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 设备管理员策略在2.2版本中添加，但是，此功能以及对设备加密的具体限制直到Android 3.0才添加。因此，对于此食谱，请确保你针对的是高于API 11的SDK。
 - en: How to do it...
+  id: totrans-215
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's get started.
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧。
 - en: 'Define a device administration policy by creating a new `.xml` file called
     `admin_policy_encryption_and_lock_timeout.xml` in the `res/xml` folder with the
     following content:'
+  id: totrans-217
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过在`res/xml`文件夹中创建名为`admin_policy_encryption_and_lock_timeout.xml`的新`.xml`文件来定义设备管理策略，内容如下：
 - en: '[PRE22]'
+  id: totrans-218
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'Create a class that extends the `DeviceAdminReceiver` class. This is the app
     entry point for system broadcasts relating to device administration:'
+  id: totrans-219
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个扩展了`DeviceAdminReceiver`类的类。这是与设备管理相关的系统广播的应用程序入口点：
 - en: '[PRE23]'
+  id: totrans-220
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Add receiver definition to your Android manifest file:'
+  id: totrans-221
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在你的Android清单文件中添加接收者定义：
 - en: '[PRE24]'
+  id: totrans-222
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Defining the receiver allows `AppPolicyReceiver` to receive system broadcast
     intents to disable/request disabling of the admin settings. You should also notice
     that this is where we reference the policy XML file in the metadata via the filename
     `admin_policy_encryption_and_lock_timeout`.
+  id: totrans-223
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 定义接收者使得`AppPolicyReceiver`能够接收系统广播意图，以禁用/请求禁用管理员设置。你应该注意到，这是我们通过文件名`admin_policy_encryption_and_lock_timeout`在元数据中引用策略XML文件的地方。
 - en: 'A device policy controller handles communication with `DevicePolicyManager`
     with any additional application-specific logic. The first method that we defined
     is for other application components (such as an activity) to validate device admin
     status and to get intents that are specific to device admin:'
+  id: totrans-224
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 设备策略控制器处理与`DevicePolicyManager`的通信以及任何特定于应用程序的逻辑。我们定义的第一个方法是供其他应用程序组件（如活动）验证设备管理员状态，并获得特定于设备管理员的意图：
 - en: '[PRE25]'
+  id: totrans-225
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'In `AppPolicyController`, we now define the method that actually enforces the
     lock screen timeout. We''ve arbitrarily chosen a maximum lock time of `3` minutes,
     but this should align with an enterprise''s security policy:'
+  id: totrans-226
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`AppPolicyController`中，我们现在定义了实际执行锁定屏幕超时的方法。我们随意选择了`3`分钟的最大锁定时间，但这应该与企业安全政策保持一致：
 - en: '[PRE26]'
+  id: totrans-227
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Encrypting the device may take some time depending on the device''s hardware
     and external storage size. As part of enforcing the device encryption policy,
     we need a way to check whether the device is encrypted or encryption is in progress:'
+  id: totrans-228
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 根据设备的硬件和外部存储大小，加密设备可能需要一些时间。作为执行设备加密政策的一部分，我们需要一种方法来检查设备是否已加密或加密是否正在进行中：
 - en: '[PRE27]'
+  id: totrans-229
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'We define an example activity to show how it''s possible to integrate `AppPolicyController`
     to help direct the user to enable system settings and handle the responses:'
+  id: totrans-230
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们定义了一个示例活动，以展示如何集成 `AppPolicyController` 以帮助指导用户启用系统设置并处理响应：
 - en: '[PRE28]'
+  id: totrans-231
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'Here, we implement the `onActivityResult(…)` activity lifecycle method to handle
     the results from the system activities when enabling device administration and
     encryption:'
+  id: totrans-232
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在这里，我们实现了 `onActivityResult(…)` 活动生命周期方法，以处理在启用设备管理和加密时，来自系统活动的结果：
 - en: '[PRE29]'
+  id: totrans-233
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'Finally, we add a method to handle the process if users choose not to activate
     this app as a device administrator. In this sample, we simply post a message;
     however, it is likely that you would prevent the app from running as the device
     wouldn''t compliment the enterprise security policy:'
+  id: totrans-234
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，我们添加了一个方法来处理如果用户选择不将此应用作为设备管理员激活的情况。在这个示例中，我们只是简单地发布了一条消息；然而，你可能会阻止应用运行，因为设备不符合企业安全策略：
 - en: '[PRE30]'
+  id: totrans-235
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: How it works...
+  id: totrans-236
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它的工作原理...
 - en: '`AppPolicyDemoActivity` shows an example of handling user interactions and
     callbacks in `onActivityResult(…)` from the system activities for enabling the
     device administration and device encryption.'
+  id: totrans-237
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AppPolicyDemoActivity` 展示了一个处理用户交互和回调的例子，这些回调来自系统活动，用于启用设备管理和设备加密的 `onActivityResult(…)`。'
 - en: '`AppPolicyController` encapsulates interactions with `DevicePolicyManager`
     and contains the logic to apply the policies. You could locate this code in your
     activity or fragment, but it''s a better practice to keep it separate.'
+  id: totrans-238
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AppPolicyController` 封装了与 `DevicePolicyManager` 的交互，并包含了应用策略的逻辑。你可以在你的活动或片段中找到这段代码，但更好的做法是将它独立出来。'
 - en: 'Defining the policies is as simple as defining them in the `<uses-policies>`
     element of the device admin file. This is referenced in the metadata element of
     the `AppPolicyReceiver` XML declaration in the Android manifest:'
+  id: totrans-239
   prefs: []
   type: TYPE_NORMAL
+  zh: 定义策略就像在设备管理员文件中的 `<uses-policies>` 元素中定义它们一样简单。这是在 Android 清单文件中 `AppPolicyReceiver`
+    XML 声明的元数据元素中引用的：
 - en: '[PRE31]'
+  id: totrans-240
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: Given the elevated privileges of being a device administrator, apps are not
     enabled as device administrators on installation as a security precaution. This
     is achieved post install by using a build-in system activity that is requested
@@ -1172,21 +1671,29 @@
     Nonactivation of the device administration could count as being in breach of the
     enterprise security policy. Therefore, if the user doesn't activate it, it might
     be enough to simply prevent the user from using the app until it is activated.
+  id: totrans-241
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于设备管理员具有提升的权限，出于安全考虑，应用在安装时不会作为设备管理员启用。这是通过使用内置系统活动实现的，该活动通过使用具有特殊动作 `AppPolicyController.getEnableDeviceAdminIntent()`
+    的意图请求，如所示。这个活动通过 `startActivityForResult()` 启动，它将回调返回到 `onActivityResult(…)`，用户可以选择激活或取消。设备管理员的非激活可能被视为违反企业安全策略。因此，如果用户没有激活它，可能足以简单地阻止用户使用应用，直到它被激活。
 - en: We use the `DevicePolicyManager.isActive(…)` method to check if the app is active
     as a device administrator. Typically, this check should be performed on the entry
     points to the application, such as the first activity.
+  id: totrans-242
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用 `DevicePolicyManager.isActive(…)` 方法来检查应用是否作为设备管理员激活。通常，这个检查应该在应用程序的入口点执行，比如第一个活动。
 - en: The job of `AppPolicyReceiver` is to listen for device administration system
     events. To receive these events, firstly you have to extend `DeviceAdminReceiver`
     and define `Receiver` in the Android manifest file. The `OnEnabled()` callback
     is where we enforce the lock screen timeout as it requires no additional user
     input. Enabling device encryption requires user confirmation; therefore, we initiate
     this from the activity.
+  id: totrans-243
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AppPolicyReceiver` 的工作是监听设备管理系统的活动。为了接收这些事件，首先你必须扩展 `DeviceAdminReceiver`
+    并在 Android 清单文件中定义 `Receiver`。在 `OnEnabled()` 回调中，我们强制执行锁屏超时，因为它不需要额外的用户输入。启用设备加密需要用户确认；因此，我们从活动中启动这个过程。'
 - en: '`AppPolicyReceiver` will also receive an `onDisabled` event if the user disables
     this application as a device administrator. What to do when a user disables your
     app as device administrator will vary between apps, as mentioned earlier it depends
@@ -1194,90 +1701,133 @@
     method that allows us to display a specific message to the user, detailing the
     consequences of disabling the application. In this example, we wipe the SharedPreferences
     to ensure that data is not at risk while the device is noncompliant.'
+  id: totrans-244
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果用户将此应用程序作为设备管理员禁用，`AppPolicyReceiver`也将收到`onDisabled`事件。如前所述，当用户将应用作为设备管理员禁用时，不同应用的处理方式会有所不同，这取决于企业安全政策。还有一个`onDisableRequested`回调方法，允许我们向用户显示特定信息，详细说明禁用应用程序的后果。在这个例子中，我们会清除SharedPreferences，以确保在设备不符合要求时数据不会处于风险之中。
 - en: There's more...
+  id: totrans-245
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'In addition to the policies used in this recipe, the device admin can enforce
     the following:'
+  id: totrans-246
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了此食谱中使用的策略外，设备管理员还可以强制执行以下操作：
 - en: Password enabled
+  id: totrans-247
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 启用密码
 - en: Password complexity (more control over this was added in 3.0)
+  id: totrans-248
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 密码复杂性（从3.0版本开始增加了更多控制）
 - en: Password history since 3.0
+  id: totrans-249
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 自3.0版本以来的密码历史
 - en: Maximum failed password attempts before factory reset
+  id: totrans-250
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在恢复出厂设置之前允许的最大密码失败尝试次数
 - en: Wipe device (factory reset)
+  id: totrans-251
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 擦除设备（恢复出厂设置）
 - en: Lock device
+  id: totrans-252
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 锁定设备
 - en: Disable lock screen widgets (since 4.2)
+  id: totrans-253
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 禁用锁屏小部件（自4.2版本起）
 - en: Disable camera (since 4.0)
+  id: totrans-254
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 禁用摄像头（自4.0版本起）
 - en: Users cannot uninstall apps that are active device administrators. To uninstall,
     they must first deactivate the app as a device administrator, and then uninstall
     it. This allows you to perform any necessary functions in `DeviceAdminReceiver.onDisabled()`,
     for example, reporting an incident to a remote server.
+  id: totrans-255
   prefs: []
   type: TYPE_NORMAL
+  zh: 用户无法卸载处于活动状态的设备管理员应用。要卸载，他们必须首先将应用作为设备管理员停用，然后再卸载。这允许你在`DeviceAdminReceiver.onDisabled()`中执行任何必要的功能，例如，向远程服务器报告事件。
 - en: Android 4.4 saw the introduction of an optional device admin feature constant
     to be used in the `<uses-feature>` tag in the app's `manifest.xml` file. This
     declares that the app requires device admin feature and ensures correct filtering
     on the Google Play store.
+  id: totrans-256
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 4.4引入了一个可选的设备管理功能常量，可以在app的`manifest.xml`文件中的`<uses-feature>`标签中使用，这表明应用需要设备管理功能，并确保在Google
+    Play商店正确筛选。
 - en: Disabling device camera
+  id: totrans-257
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 禁用设备摄像头
 - en: 'An interesting feature added in Android 4.0 was the ability to disable camera
     use. This can be useful for organizations looking to limit data leakage. The following
     code snippet shows the policy to enable an app to disable camera use:'
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 4.0增加的一个有趣功能是能够禁用摄像头使用。这对于希望限制数据泄露的组织可能很有用。以下代码段展示了启用应用禁用摄像头使用的策略：
 - en: '[PRE32]'
+  id: totrans-259
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: See also
+  id: totrans-260
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The Device Administration API in the Android Developers Reference guide at [https://developer.android.com/guide/topics/admin/device-admin.html](https://developer.android.com/guide/topics/admin/device-admin.html)
+  id: totrans-261
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android开发者参考资料中的设备管理API，参考链接：[https://developer.android.com/guide/topics/admin/device-admin.html](https://developer.android.com/guide/topics/admin/device-admin.html)
 - en: The Device Admin sample application at [https://developer.android.com/guide/topics/admin/device-admin.html#sample](https://developer.android.com/guide/topics/admin/device-admin.html#sample)
+  id: totrans-262
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设备管理员示例应用程序，参考链接：[https://developer.android.com/guide/topics/admin/device-admin.html#sample](https://developer.android.com/guide/topics/admin/device-admin.html#sample)
 - en: The *Enhancing Security with Device Management Policies* web page in the Android
     Developers training guide at [https://developer.android.com/training/enterprise/device-management-policy.html](https://developer.android.com/training/enterprise/device-management-policy.html)
+  id: totrans-263
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android开发者培训指南中的*通过设备管理策略增强安全性*网页，参考链接：[https://developer.android.com/training/enterprise/device-management-policy.html](https://developer.android.com/training/enterprise/device-management-policy.html)
 - en: '`FEATURE_DEVICE_ADMIN` in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/PackageManager.html#FEATURE_DEVICE_ADMIN](https://developer.android.com/reference/android/content/pm/PackageManager.html#FEATURE_DEVICE_ADMIN)'
+  id: totrans-264
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android开发者参考资料中的`FEATURE_DEVICE_ADMIN`，参考链接：[https://developer.android.com/reference/android/content/pm/PackageManager.html#FEATURE_DEVICE_ADMIN](https://developer.android.com/reference/android/content/pm/PackageManager.html#FEATURE_DEVICE_ADMIN)
