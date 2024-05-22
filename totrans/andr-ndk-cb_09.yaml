@@ -1,41 +1,60 @@
 - en: Chapter 9. Porting an Existing Application to Android with NDK
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第9章. 使用NDK将现有应用程序移植到Android
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Porting a command-line executable to Android with an NDK build system
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用NDK构建系统将命令行可执行文件移植到Android
 - en: Porting a command-line executable to Android with an NDK standalone compiler
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用NDK独立编译器将命令行可执行文件移植到Android
 - en: Adding GUI to a ported Android app
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 为移植的Android应用程序添加GUI
 - en: Using background threads at porting
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在移植时使用后台线程
 - en: Introduction
+  id: totrans-6
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 简介
 - en: The previous chaptercovered various techniques of porting a native library to
     Android with NDK. This chapter discusses the porting of native applications.
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 上一章涵盖了使用NDK将本地库移植到Android的各种技术。本章讨论了本地应用程序的移植。
 - en: We will first introduce how to build a native command-line application for Android
     with an Android NDK build system and the standalone compiler provided by NDK.
     We will then add a GUI for the ported application. Finally, we illustrate using
     a background thread to do the heavy processing and sending the progress update
     message from the native code to the Java UI thread for GUI updates.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将首先介绍如何使用Android NDK构建系统和NDK提供的独立编译器为Android构建本地命令行应用程序。然后，我们为移植的应用程序添加一个图形用户界面（GUI）。最后，我们说明如何使用后台线程进行繁重处理，并将进度更新消息从本地代码发送到Java
+    UI线程以进行GUI更新。
 - en: We will use the open source Fugenschnitzer program throughout this chapter.
     It is a content-aware image resizing program based on the **Seam Carving** algorithm.
     The basic idea of this algorithm is to change the size of an image by searching
@@ -46,198 +65,282 @@
     page at [http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html)
     for more details. Otherwise, we can ignore the algorithm and focus on how the
     porting is done.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将在本章中使用开源的Fugenschnitzer程序。它是一个基于**Seam Carving**算法的内容感知图像调整大小程序。该算法的基本思想是通过搜索并操作原始图像中的接缝（一个**接缝**是从上到下或从左到右连接像素的路径）来改变图像的大小。该算法能够在尝试保留重要信息的同时调整图像大小。对于对程序和算法感兴趣的读者，可以访问[http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html)了解更多详情。否则，我们可以忽略算法，专注于移植过程。
 - en: Porting a command-line executable to Android with an NDK build system
+  id: totrans-10
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用NDK构建系统将命令行可执行文件移植到Android
 - en: This recipe discusses how to port a command-line executable to Android with
     an NDK build system. We will use the open source Fugenschnitzer program (`fusch`)
     as an example.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱讨论了如何使用NDK构建系统将命令行可执行文件移植到Android。我们将以开源的Fugenschnitzer程序（`fusch`）为例。
 - en: Getting ready
+  id: totrans-12
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: You should read the *Porting a library as a static library with an Android NDK
     build system* recipe in [Chapter 8](ch08.html "Chapter 8. Porting and Using the
     Existing Libraries with Android NDK"), *Porting and Using Existing Libraries with
     Android NDK*, before going through this one.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 在阅读本章之前，你应该先阅读[第8章](ch08.html "第8章. 使用Android NDK移植和使用现有库")中的*使用Android NDK构建系统将库作为静态库移植*的食谱，*使用Android
+    NDK移植和使用现有库*。
 - en: How to do it...
+  id: totrans-14
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps describe how to port the `fusch` program to Android with
     an NDK build system:'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤描述了如何使用NDK构建系统将`fusch`程序移植到Android：
 - en: Create an Android application named **PortingExecutable** with native support.
     Set the package name as `cookbook.chapter9.portingexecutable`. Refer to the *Loading
     native libraries and registering native methods* recipe in [Chapter 2](ch02.html
     "Chapter 2. Java Native Interface"), *Java Native Interface*, if you want more
     detailed instructions.
+  id: totrans-16
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为**PortingExecutable**的具有本地支持的Android应用程序。将包名设置为`cookbook.chapter9.portingexecutable`。如果你需要更详细的说明，请参考[第2章](ch02.html
+    "第2章. Java本地接口")中的*加载本地库和注册本地方法*的食谱，*Java本地接口*。
 - en: Remove the existing content under the `jni` folder of the project.
+  id: totrans-17
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 删除项目`jni`文件夹下的现有内容。
 - en: Download the source code of the `fusch` library and command-line application
     from [http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html).
     Extract the archive files and put them into the `jni/fusch` and `jni/fusch_lib`
     folders respectively.
+  id: totrans-18
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html)下载`fusch`库和命令行应用程序的源代码。解压归档文件，并将它们分别放入`jni/fusch`和`jni/fusch_lib`文件夹中。
 - en: Download `libpng 1.2.50` from [http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/](http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/)
     and extract the files to the `jni/libpng-1.2.50` folder. The latest version of
     `libpng` won't work because the interface is different.
+  id: totrans-19
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/](http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/)下载`libpng
+    1.2.50`，并将文件解压到`jni/libpng-1.2.50`文件夹中。最新版本的`libpng`无法工作，因为接口不同。
 - en: 'Add an `Android.mk` file under the `jni/libpng-1.2.50` folder to build `libpng`
     as a static library module. The file has the following content:'
+  id: totrans-20
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni/libpng-1.2.50`文件夹下添加一个`Android.mk`文件，以将`libpng`构建为一个静态库模块。该文件具有以下内容：
 - en: '[PRE0]'
+  id: totrans-21
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Add an `Android.mk` file under the `jni/fusch_lib` folder to build `libseamcarv`
     as a static library module. The file content is as follows:'
+  id: totrans-22
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni/fusch_lib`文件夹下添加一个`Android.mk`文件，以将`libseamcarv`构建为一个静态库模块。文件内容如下：
 - en: '[PRE1]'
+  id: totrans-23
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: Add the third `Android.mk` file under the `jni/fusch` folder to build the `fusch`
     executable, which uses the two static libraries built in the two folders `libpng-1.2.50`
     and `fusch_lib`.
+  id: totrans-24
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni/fusch`文件夹下添加第三个`Android.mk`文件，以构建使用`libpng-1.2.50`和`fusch_lib`两个文件夹中构建的两个静态库的`fusch`可执行文件。
 - en: '[PRE2]'
+  id: totrans-25
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Add the fourth `Android.mk` file under the `jni` folder to include the `Android.mk`
     files under its subfolders.
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加第四个`Android.mk`文件，以包含其子文件夹下的`Android.mk`文件。
 - en: '[PRE3]'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Build the application and you will see a binary file, `fusch`, under the `libs/armeabi`
     folder. We can put this binary into a rooted Android device or an emulator with
     the following command:'
+  id: totrans-28
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建应用程序，你会在`libs/armeabi`文件夹下看到一个名为`fusch`的二进制文件。我们可以使用以下命令将此二进制文件放入已越狱的Android设备或模拟器中：
 - en: '[PRE4]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: Note that we will not be able to copy and execute the binary on a non-rooted
     Android device because we cannot get the permission to execute.
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 请注意，我们无法在未越狱的Android设备上复制并执行二进制文件，因为我们无法获得执行权限。
 - en: 'Start the first command line on the console. We can grant the execution permission
     to the binary and execute it with the following command:'
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在控制台上启动第一个命令行。我们可以使用以下命令授予二进制文件执行权限并执行它：
 - en: '[PRE5]'
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: This will print out the help message of the program.
+  id: totrans-33
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这将输出程序的帮助信息。
 - en: 'Start the second command-line shell. Push the test PNG file `cookbook_ch9_test.png`
     (available under the `assets` folder of the sample project''s source code) to
     the testing device or emulator with the following command:'
+  id: totrans-34
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动第二个命令行终端。使用以下命令将测试PNG文件`cookbook_ch9_test.png`（位于示例项目源代码的`assets`文件夹中）推送到测试设备或模拟器中：
 - en: '[PRE6]'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Get back to the first command-line shell and execute the `fusch` program again
     with the following command:'
+  id: totrans-36
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 回到第一个命令行终端，使用以下命令再次执行`fusch`程序：
 - en: '[PRE7]'
+  id: totrans-37
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'The program will take a while to resize the input image from 800 x 600 to 600
     x 600\. Once it is finished, we can get the processed image with the following
     command at the second command-line shell:'
+  id: totrans-38
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 程序将花费一些时间将输入图像从800 x 600调整到600 x 600。一旦完成，我们可以在第二个命令行终端使用以下命令获取处理后的图像：
 - en: '[PRE8]'
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: The following screenshot shows the original image on the left and the processed
     image on the right:![How to do it...](img/1505_09_12.jpg)
+  id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以下屏幕截图显示了左侧的原始图像和右侧的处理后图像：![如何操作...](img/1505_09_12.jpg)
 - en: How it works...
+  id: totrans-41
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The sample project demonstrates how to port the `fusch` program as a command-line
     executable to Android. We describe the sources to the Android NDK build system
     in the `Android.mk` file and the NDK build system handles the rest.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例项目演示了如何将`fusch`程序作为命令行可执行文件移植到Android。我们在`Android.mk`文件中向Android NDK构建系统描述了源代码，NDK构建系统处理其余部分。
 - en: 'The steps to port a command-line executable are as follows:'
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 移植命令行可执行文件的操作步骤如下：
 - en: Figure out the library dependencies. In our sample program, `fusch` depends
     on `libseamcarv` (in the `fusch_lib` folder) and `libpng`, and `libpng` subsequently
     depends on `zlib`.
+  id: totrans-44
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 确定库依赖关系。在我们的示例程序中，`fusch`依赖于`libseamcarv`（位于`fusch_lib`文件夹中）和`libpng`，而`libpng`随后又依赖于`zlib`。
 - en: If a library is not available on the Android system, port it as a static library
     module. This is the case for `libseamcarv` and `libpng` in our sample application.
     But as `zlib` is available on Android, we simply need to link to it.
+  id: totrans-45
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果Android系统上没有可用的库，将其作为静态库模块移植。这是我们示例应用程序中的`libseamcarv`和`libpng`的情况。但是因为Android上有`zlib`，所以我们只需链接到它即可。
 - en: Port the executable as a separate module and link it to the library modules.
+  id: totrans-46
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将可执行文件作为单独的模块移植，并将其链接到库模块。
 - en: Understanding the Android.mk files
+  id: totrans-47
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 理解Android.mk文件
 - en: We have covered most of the `Android.mk` variables and macros in [Chapter 8](ch08.html
     "Chapter 8. Porting and Using the Existing Libraries with Android NDK"), *Porting
     and Using Existing Libraries with Android NDK*. We will introduce two more predefined
     variables here. You can also refer to the Android NDK file `docs/ANDROID-MK.html`
     for information on more macros and variables.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在第8章《使用Android NDK移植和使用现有库》中已经介绍了大部分`Android.mk`变量和宏。这里我们将介绍另外两个预定义变量。你也可以查阅Android
+    NDK文件`docs/ANDROID-MK.html`获取更多关于宏和变量的信息。
 - en: '`LOCAL_CFLAGS`: A module description variable. This allows us to specify additional
     compiler options or macro definitions for building C and C++ source files. Another
     variable that serves a similar purpose is `LOCAL_CPPFLAGS`, but for C++ source
@@ -245,32 +348,43 @@
     `libseamcarv` and `fusch`. This asks the compiler to accept ISO C99 C language
     standard syntax. Failing to specify the flag will result in compilation errors
     at the time of building.'
+  id: totrans-49
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`LOCAL_CFLAGS`：一个模块描述变量。它允许我们为构建C和C++源文件指定额外的编译器选项或宏定义。另一个具有类似功能的变量是`LOCAL_CPPFLAGS`，但它仅用于C++源文件。在我们示例项目中，在构建`libseamcarv`和`fusch`时，我们向编译器传递了`-std=c99`。这要求编译器接受ISO
+    C99 C语言标准的语法。如果在构建时未指定该标志，将导致编译错误。'
 - en: Note
+  id: totrans-50
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: It is also possible to specify the include paths with `LOCAL_CFLAGS += I<include
     path>`. However, it is recommended that we use `LOCAL_C_INCLUDES` because the
     `LOCAL_C_INCLUDES` path will also be used for `ndk-gdb` native debugging.
+  id: totrans-51
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 也可以使用`LOCAL_CFLAGS += I<包含路径>`来指定包含路径。但是，建议我们使用`LOCAL_C_INCLUDES`，因为`LOCAL_C_INCLUDES`路径也将用于`ndk-gdb`本地调试。
 - en: '`BUILD_EXECUTABLE`: A GNU make variable. It points to a build script that collects
     all information about the executable that we want to build and determines how
     to build it. It is similar to `BUILD_SHARED_LIBRARY` and `BUILD_STATIC_LIBRARY`
     except that it is for executables. It is used when building `fusch` in our sample
     project.'
+  id: totrans-52
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`BUILD_EXECUTABLE`：一个GNU make变量。它指向一个构建脚本，该脚本收集了我们想要构建的可执行文件的所有信息，并确定如何构建它。它与`BUILD_SHARED_LIBRARY`和`BUILD_STATIC_LIBRARY`类似，不同之处在于它用于构建可执行文件。在我们示例项目中构建`fusch`时使用了它。'
 - en: '[PRE9]'
+  id: totrans-53
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: With this explanation and the knowledge we acquired in [Chapter 8](ch08.html
     "Chapter 8. Porting and Using the Existing Libraries with Android NDK"), *Porting
     and Using Existing Libraries with Android NDK*, it is now fairly easy to understand
@@ -281,183 +395,260 @@
     we also link to the `zlib` library (with `LOCAL_LDLIBS`) available on the Android
     system. Finally, we port the `fusch` program by referring to the two library modules
     (with `LOCAL_STATIC_LIBRARIES`).
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过本章的解释以及第8章《使用Android NDK移植和使用现有库》的知识，现在理解我们示例应用程序中使用的四个`Android.mk`文件已经相当容易了。我们将`libpng`和`libseamcarv`作为两个静态库模块进行移植。我们导出依赖的库（通过`LOCAL_EXPORT_LDLIBS`）和头文件（通过`LOCAL_EXPORT_C_INCLUDES`），这样在使用模块时它们会被自动包含。在移植`libpng`时，我们还链接了Android系统上可用的`zlib`库（通过`LOCAL_LDLIBS`）。最后，我们通过引用这两个库模块（通过`LOCAL_STATIC_LIBRARIES`）来移植`fusch`程序。
 - en: Porting a command-line executable to Android with an NDK standalone compiler
+  id: totrans-55
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用NDK独立编译器将命令行可执行文件移植到Android。
 - en: The previous recipe covered how to port a command-line executable to Android
     with an NDK build system. This recipe describes how to do it by using the Android
     NDK toolchain as a standalone compiler.
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 上一个食谱介绍了如何使用NDK构建系统将命令行可执行文件移植到Android。这个食谱描述了如何使用Android NDK工具链作为独立编译器来实现这一点。
 - en: Getting ready
+  id: totrans-57
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: It is recommended that you read the *Porting a library with its existing build
     system* recipe in [Chapter 8](ch08.html "Chapter 8. Porting and Using the Existing
     Libraries with Android NDK"), *Porting and Using Existing Libraries with Android
     NDK*, before continuing.
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: 在继续之前，建议您阅读[第8章](ch08.html "第8章。使用Android NDK移植和利用现有库")中的*使用现有构建系统移植库*一节，*使用Android
+    NDK移植和利用现有库*。
 - en: How to do it...
+  id: totrans-59
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps describe how to port the `fusch` program to Android by
     using the NDK toolchain directly:'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤描述了如何使用NDK工具链直接将`fusch`程序移植到Android：
 - en: Create an Android application named **PortingExecutableBuildSystem** with native
     support. Set the package name as `cookbook.chapter9.portingexecutablebuildsystem`.
     Refer to the *Loading native libraries and registering native methods* recipe
     of [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native Interface*,
     if you want more detailed instructions.
+  id: totrans-61
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为**PortingExecutableBuildSystem**的具有本地支持的Android应用。设置包名为`cookbook.chapter9.portingexecutablebuildsystem`。如果您需要更详细的说明，请参考[第2章](ch02.html
+    "第2章。Java本地接口")中的*加载本地库和注册本地方法*一节，*Java本地接口*。
 - en: Remove the existing content under the `jni` folder of the project.
+  id: totrans-62
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 删除项目`jni`文件夹下的现有内容。
 - en: Download the source code of the `fusch` library and the command-line application
     from [http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html).
     Extract the archive files and put them into the `jni/fusch` and `jni/fusch_lib`
     folders respectively.
+  id: totrans-63
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://fugenschnitzer.sourceforge.net/main_en.html](http://fugenschnitzer.sourceforge.net/main_en.html)下载`fusch`库和命令行应用的源代码。解压归档文件，并将它们分别放入`jni/fusch`和`jni/fusch_lib`文件夹。
 - en: Download `libpng 1.2.50` from [http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/](http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/)
     and extract the files to the `jni/libpng-1.2.50` folder. The latest version of
     `libpng` won't work because the interface has changed. Replace the `config.guess`
     script under `libpng-1.2.50` with the one at [http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.guess](http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.guess)
     and `config.sub` with the script at [http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.sub](http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.sub).
+  id: totrans-64
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/](http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/)下载`libpng
+    1.2.50`，并将文件解压到`jni/libpng-1.2.50`文件夹。最新版本的`libpng`不能工作，因为接口已经改变。将`libpng-1.2.50`下的`config.guess`脚本替换为[http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.guess](http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.guess)的内容，`config.sub`替换为[http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.sub](http://gcc.gnu.org/svn/gcc/branches/cilkplus/config.sub)的脚本。
 - en: 'Add a `build_android.sh` file under the `jni/libpng-1.2.50` folder to build
     `libpng`. The file has the following content:'
+  id: totrans-65
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni/libpng-1.2.50`文件夹下添加一个`build_android.sh`文件来构建`libpng`。文件内容如下：
 - en: '[PRE10]'
+  id: totrans-66
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Add a `build_android.sh` file under the `jni/fusch_lib` folder to build the
     library `libseamcarv`. The file content is as follows:'
+  id: totrans-67
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni/fusch_lib`文件夹下添加一个`build_android.sh`文件来构建`libseamcarv`库。文件内容如下：
 - en: '[PRE11]'
+  id: totrans-68
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: Add the third `build_android.sh` file under the `jni/fusch` folder to build
     the `fusch` executable, which uses the two static libraries built at the two folders
     `libpng-1.2.50` and `fusch_lib`.
+  id: totrans-69
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni/fusch`文件夹下添加第三个`build_android.sh`文件，以构建使用在`libpng-1.2.50`和`fusch_lib`两个文件夹下构建的两个静态库的`fusch`可执行文件。
 - en: '[PRE12]'
+  id: totrans-70
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: Build the two libraries `libpng` and `libseamcarv` and the `fusch` executable
     by executing the `build_android.sh` script in the three subfolders `libpng-1.2.50`,
     `fusch_lib`, and `fusch`. We shall find `libpng.a` under the `libpng-1.2.50/lib`
     folder, `libseamcarv.a` under the `fusch_lib` folder, and the `fusch` executable
     under the `fusch` folder.
+  id: totrans-71
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过在`libpng-1.2.50`、`fusch_lib`和`fusch`三个子文件夹中执行`build_android.sh`脚本来构建`libpng`和`libseamcarv`两个库以及`fusch`可执行文件。我们可以在`libpng-1.2.50/lib`文件夹下找到`libpng.a`，在`fusch_lib`文件夹下找到`libseamcarv.a`，在`fusch`文件夹下找到`fusch`可执行文件。
 - en: 'We can put the binary file `fusch` to a rooted Android device or an emulator
     with the following command:'
+  id: totrans-72
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们可以使用以下命令将二进制文件`fusch`放到已越狱的Android设备或模拟器上：
 - en: '[PRE13]'
+  id: totrans-73
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: Note that we will not be able to copy and execute the binary on a non-rooted
     Android device because we cannot get the permission.
+  id: totrans-74
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 请注意，由于我们无法获得权限，因此不能在未越狱的Android设备上复制和执行二进制文件。
 - en: 'Start the first command-line shell. We can grant the execution permission to
     the binary and execute it with the following command:'
+  id: totrans-75
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动第一个命令行终端。我们可以给二进制文件执行权限，然后使用以下命令执行它：
 - en: '[PRE14]'
+  id: totrans-76
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: This will print out the help message of the program.
+  id: totrans-77
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这将打印出程序的帮助信息。
 - en: 'Start the second command-line shell. Push the test PNG file `cookbook_ch9_test.png`
     (available under the `assets` folder of the sample project''s source code) to
     the testing device or emulator with the following command:'
+  id: totrans-78
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动第二个命令行终端。使用以下命令将测试PNG文件`cookbook_ch9_test.png`（位于示例项目源代码的`assets`文件夹下）推送到测试设备或模拟器上：
 - en: '[PRE15]'
+  id: totrans-79
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'Get back to the first command-line shell and execute the `fusch` program again
     with the following command:'
+  id: totrans-80
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 回到第一个命令行终端，使用以下命令再次执行`fusch`程序：
 - en: '[PRE16]'
+  id: totrans-81
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'The program will take a while to resize the input image from 800 x 600 to 800
     x 400\. Once it is finished, we can get the processed image with the following
     command at the second command-line shell:'
+  id: totrans-82
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 程序将花费一些时间将输入图像从800 x 600调整到800 x 400。一旦完成，我们可以在第二个命令行终端使用以下命令获取处理后的图像：
 - en: '[PRE17]'
+  id: totrans-83
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: The following figure shows the original image on the left and the processed
     image on the right:![How to do it...](img/1505_09_13.jpg)
+  id: totrans-84
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下图显示了左侧的原始图像和右侧的处理后图像：![如何操作...](img/1505_09_13.jpg)
 - en: How it works...
+  id: totrans-85
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The sample project shows how to port a command-line executable to Android by
     using the NDK toolchain as a standalone compiler.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例项目展示了如何使用NDK工具链作为独立编译器将命令行可执行文件移植到Android。
 - en: The steps to port the executable are similar to those in the previous recipe
     where we used the Android NDK build system. The key here is to pass proper options
     to the standalone compiler.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 移植可执行文件的过程与之前使用Android NDK构建系统的食谱类似。关键在于向独立编译器传递适当的选项。
 - en: Porting libpng
+  id: totrans-88
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 移植libpng
 - en: '`libpng` comes with its own build scripts. We can get a list of options to
     configure the building process with the following command:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: '`libpng`附带了它自己的构建脚本。我们可以使用以下命令获取配置构建过程的选项列表：'
 - en: '[PRE18]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: The compiler command, compiler flags, and linker flags can be configured with
     the environment variables `CC`, `CFLAGS`, and `LDFLAGS` respectively. In the `build_android.sh`
     script under the `libpng-1.2.50` folder, we set these variables to use the NDK
@@ -466,485 +657,698 @@
     system using Android NDK toolchain* recipe in [Chapter 8](ch08.html "Chapter 8. Porting
     and Using the Existing Libraries with Android NDK"), *Porting a Library with its
     Existing Build System*.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 编译器命令、编译器标志和链接器标志可以通过环境变量`CC`、`CFLAGS`和`LDFLAGS`分别配置。在`libpng-1.2.50`文件夹下的`build_android.sh`脚本中，我们设置这些变量以使用NDK编译器为ARM架构构建。关于如何移植库的详细说明，我们可以参考*使用Android
+    NDK工具链的现有构建系统移植库*的食谱，在[第8章](ch08.html "第8章. 使用Android NDK移植和使用现有库")，*移植带有其现有构建系统的库*。
 - en: We will now cover a few compilation options. Since the Android NDK toolchain
     is based on GCC, we can refer to [http://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html](http://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html)
     for a detailed explanation of each option.
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们现在将介绍一些编译选项。由于Android NDK工具链基于GCC，我们可以参考}[http://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html](http://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html)详细了解每个选项。
 - en: '`-fpic`: It generates position-independent code suitable for building a shared
     library.'
+  id: totrans-93
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-fpic`：它生成适用于构建共享库的位置无关代码。'
 - en: '`-ffunction-sections`: This option asks the linker to perform optimizations
     to improve the locality of reference in the code.'
+  id: totrans-94
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-ffunction-sections`：此选项要求链接器执行优化，以提高代码中的引用局部性。'
 - en: '`-funwind-tables`: It generates static data for unwinding the call stack.'
+  id: totrans-95
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-funwind-tables`：它生成用于展开调用栈的静态数据。'
 - en: '`-D__ARM_ARCH_5__``, -D__ARM_ARCH_5T``, -D__ARM_ARCH_5E__``, -D__ARM_ARCH_5TE`,`-DANDROID`
     defines `__ARM_ARCH_5__`, `__ARM_ARCH_5T`, `__ARM_ARCH_5E__`, `__ARM_ARCH_5TE`,
     and `ANDROID` as macro, with definition equal to `1`. For example, `-DANDROID`
     is equivalent to `-D ANDROID=1`.'
+  id: totrans-96
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-D__ARM_ARCH_5__`, `-D__ARM_ARCH_5T`, `-D__ARM_ARCH_5E__`, `-D__ARM_ARCH_5TE`,
+    `-DANDROID`定义了`__ARM_ARCH_5__`, `__ARM_ARCH_5T`, `__ARM_ARCH_5E__`, `__ARM_ARCH_5TE`,
+    和`ANDROID`作为宏，定义等于`1`。例如，`-DANDROID`等同于`-D ANDROID=1`。'
 - en: '`-Wno-psabi`: It suppresses the warning message about `va_list` and so on.'
+  id: totrans-97
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-Wno-psabi`：它抑制了关于`va_list`等的警告信息。'
 - en: '`-march=armv5te`: It specifies the target ARM architecture as `ARMv5te`.'
+  id: totrans-98
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-march=armv5te`：它指定目标ARM架构为`ARMv5te`。'
 - en: '`-mtune=xscale`: It tunes the performance of the code as it will be running
     on the xscale processor. Note that xscale is a processor name.'
+  id: totrans-99
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-mtune=xscale`：它调整代码的性能，因为代码将在xscale处理器上运行。请注意，xscale是一个处理器名称。'
 - en: '`-msoft-float`: It uses software floating point functions.'
+  id: totrans-100
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-msoft-float`：它使用软件浮点函数。'
 - en: '`-mthumb`: It generates code using the Thumb instruction set.'
+  id: totrans-101
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-mthumb`：它使用Thumb指令集生成代码。'
 - en: '`-Os`: It provides optimization for size.'
+  id: totrans-102
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-Os`：提供针对大小的优化。'
 - en: '`-fomit-frame-pointer`: It helps avoid saving frame pointers in registers if
     possible.'
+  id: totrans-103
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-fomit-frame-pointer`：如果可能，帮助避免在寄存器中保存帧指针。'
 - en: '`-fno-strict-aliasing`: No strict aliasing rules can be applied. This prevents
     the compiler from unwanted optimizations.'
+  id: totrans-104
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-fno-strict-aliasing`：不应用严格的别名规则。这防止编译器进行不想要的优化。'
 - en: '`-finline-limit=64`: It sets the limit size of functions that can be inlined
     as `64` pseudo instructions.'
+  id: totrans-105
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-finline-limit=64`：设置可以作为`64`伪指令内联的函数的大小限制。'
 - en: '`-std=c99`: It accepts `c99` standard syntax.'
+  id: totrans-106
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-std=c99`：接受`c99`标准语法。'
 - en: When the build executes successfully, we can find the `libpng.a` static library
     under the `libpng-1.2.50/lib` folder and the header files under the `libpng-1.2.50/include`
     folder.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 当构建成功执行后，我们可以在`libpng-1.2.50/lib`文件夹下找到`libpng.a`静态库，以及在`libpng-1.2.50/include`文件夹下的头文件。
 - en: Note
+  id: totrans-108
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The Android NDK build system essentially figures out the proper compilation
     options for us and invokes the cross compiler for us. Therefore, we can learn
     the options to pass to the compiler from the NDK build system output. For example,
     we can invoke the command `ndk-build -B V=1` or `ndk-build -B -n` in the previous
     recipe to see how the NDK build system handles the building of `libpng`, `libseamcarv`,
     and `fusch`, and apply similar options in this recipe.
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: Android NDK构建系统本质上是为我们确定合适的编译选项并为我们调用交叉编译器。因此，我们可以从NDK构建系统的输出中学习传递给编译器的选项。例如，我们可以在前一个食谱中调用命令`ndk-build
+    -B V=1`或`ndk-build -B -n`，以了解NDK构建系统如何处理`libpng`、`libseamcarv`和`fusch`的构建，并在本食谱中应用类似的选项。
 - en: Porting libseamcarv
+  id: totrans-110
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 移植libseamcarv
 - en: '`libseamcarv` comes with a Makefile but no configure file. We can either modify
     the Makefile or write a build script from scratch. Since the library only contains
     a few files, we will write the build script directly. There are two steps to be
     followed:'
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: '`libseamcarv`附带一个Makefile但没有配置文件。我们可以修改Makefile或者从头开始编写构建脚本。由于库只包含几个文件，我们将直接编写构建脚本。需要遵循两个步骤：'
 - en: Compile all source files to object files. This is done by passing the `"-c`"
     option at compilation.
+  id: totrans-112
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将所有源文件编译成对象文件。这是通过在编译时传递`"-c"`选项完成的。
 - en: Archive the object files into a static library. This step is done with the archiver
     `arm-linux-androideabi-ar` from the NDK toolchain.
+  id: totrans-113
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将对象文件归档成静态库。这一步是通过NDK工具链中的归档器`arm-linux-androideabi-ar`完成的。
 - en: Tip
+  id: totrans-114
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: As we have explained in [Chapter 8](ch08.html "Chapter 8. Porting and Using
     the Existing Libraries with Android NDK"), *Porting and Using Existing Libraries
     with Android NDK*, a static library is simply an archive of object files, which
     can be created by the `archiver` program.
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 正如我们在[第8章](ch08.html "第8章。使用Android NDK移植和使用现有库")，*使用Android NDK移植和现有库*中所解释的，静态库不过是对象文件的归档，可以通过`archiver`程序创建。
 - en: Porting fusch
+  id: totrans-116
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 移植fusch
 - en: 'We need to link to the two libraries we built, namely `libpng` and `libseamcarv`.
     This is done by passing the following options to the linker:'
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要链接到我们构建的两个库，即`libpng`和`libseamcarv`。这是通过向链接器传递以下选项完成的：
 - en: '[PRE19]'
+  id: totrans-118
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: This "`-L`" option adds `fusch_lib` and `libpng-1.2.50/lib` to the library's
     search path and "`-l`" tells the linker to link to the `libpng` and `libseamcarv`
     libraries. The build script will output a binary file named `fusch` under the
     `fusch` folder.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个"`-L`"选项将`fusch_lib`和`libpng-1.2.50/lib`添加到库的搜索路径中，而"`-l`"告诉链接器链接到`libpng`和`libseamcarv`库。构建脚本将在`fusch`文件夹下输出名为`fusch`的二进制文件。
 - en: The `fusch` program is fairly simple. Therefore, we can use either the Android
     NDK build system or a standalone compiler to port it. If an application has more
     dependencies, it can be difficult to describe everything in `Android.mk` files.
     Therefore, it is helpful that we can use the NDK toolchain as a standalone compiler
     and make use of a library's existing build scripts.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: '`fusch`程序相当简单。因此，我们可以使用Android NDK构建系统或独立的编译器来移植它。如果一个应用程序有更多的依赖，用`Android.mk`文件描述所有内容可能会很困难。因此，能够使用NDK工具链作为独立的编译器并利用库的现有构建脚本是非常有帮助的。'
 - en: Adding GUI to a ported Android app
+  id: totrans-121
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 为移植的Android应用添加GUI
 - en: The previous two recipes demonstrate how to port a command-line executable to
     Android. Needless to say, the biggest disadvantage of such a method is that it
     cannot be executed on a non-rooted Android device. This recipe discusses how to
     address the issue by adding a GUI when porting an application to Android.
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 前两个食谱展示了如何将命令行可执行文件移植到Android。不用说，这种方法最大的缺点是它不能在未越狱的Android设备上执行。本食谱讨论了在将应用程序移植到Android时，如何通过添加GUI来解决这一问题。
 - en: How to do it...
+  id: totrans-123
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps describe how to add a simple UI to the ported app:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤描述了如何向移植的应用添加一个简单的用户界面：
 - en: Create an Android application named `PortingExecutableAUI` with native support.
     Set the package name as `cookbook.chapter9.portingexecutableaui`. Refer to the
     *Loading native libraries and registering native methods* recipe of [Chapter 2](ch02.html
     "Chapter 2. Java Native Interface"), *Java Native Interface*, if you want more
     detailed instructions.
+  id: totrans-125
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`PortingExecutableAUI`的具有本地支持的Android应用。将包名设置为`cookbook.chapter9.portingexecutableaui`。如果你需要更详细的说明，请参考[第2章](ch02.html
+    "第2章。Java本地接口")的*加载本地库和注册本地方法*部分，*Java Native Interface*。
 - en: Follow steps 2 to 8 of the *Porting a command line executable to Android with
     NDK build system* recipe of this chapter.
+  id: totrans-126
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照本章中*使用NDK构建系统将命令行可执行文件移植到Android*的步骤2至8进行操作。
 - en: 'Add a `mylog.h` file under the `jni/fusch` folder. Add the following lines
     to the `jni/fusch/fusch.c` file at the beginning of the main method, then remove
     the original main method signature line. The `naMain` method accepts a command
     from the Java code instead of the command-line shell. The arguments should be
     separated by a space:'
+  id: totrans-127
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni/fusch`文件夹下添加一个`mylog.h`文件。在`jni/fusch/fusch.c`文件的开头部分添加以下几行，然后移除原始的主方法签名行。`naMain`方法接受来自Java代码的命令，而不是命令行shell。参数应以空格分隔：
 - en: '[PRE20]'
+  id: totrans-128
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'Add the following lines before the `return` statement of the main method to
     release the native string:'
+  id: totrans-129
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在主方法的`return`语句之前添加以下几行以释放本地字符串：
 - en: '[PRE21]'
+  id: totrans-130
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'Update the `Android.mk` file under `jni/fusch` as follows. The updated part
     is highlighted:'
+  id: totrans-131
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新`jni/fusch`下的`Android.mk`文件，如下所示。更新的部分已被高亮显示：
 - en: '[PRE22]'
+  id: totrans-132
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: Add the `MainActivity.java` file under the `cookbook.chapter9.portingexecutableaui`
     package. The Java code sets up the GUI, loads the shared library `libfusch.so`,
     and calls the native method `naMain`.
+  id: totrans-133
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cookbook.chapter9.portingexecutableaui`包下添加`MainActivity.java`文件。Java代码设置图形用户界面，加载共享库`libfusch.so`，并调用本地方法`naMain`。
 - en: Add an `activity_main.xml` file under the `res/layout` folder to describe the
     GUI.
+  id: totrans-134
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`res/layout`文件夹下添加一个`activity_main.xml`文件以描述图形用户界面。
 - en: 'In the `AndroidManifest.xml` file, add the following line before `<application>...</application>`:'
+  id: totrans-135
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`AndroidManifest.xml`文件中，在`<application>...</application>`之前添加以下行：
 - en: '[PRE23]'
+  id: totrans-136
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: Build and run the Android app. You should be able to see a GUI similar to the
     following screenshot:![How to do it...](img/1505_09_04.jpg)
+  id: totrans-137
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建并运行Android应用。你应该能看到一个与以下截图类似的图形用户界面：![如何操作...](img/1505_09_04.jpg)
 - en: We can press either the **Width** or **Height** button to process the default
     image. Alternatively, we can load another `.png` image and process it. Once we
     click on either **Width** or **Height**, the GUI will become unresponsive and
     we will have to wait for the processing to finish. If the famous **Application
     Not Responding** (**ANR**) dialog box pops out, simply click on **Wait**.
+  id: totrans-138
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们可以点击**宽度**或**高度**按钮来处理默认图像。或者，我们可以加载另一个`.png`图像并处理它。一旦我们点击**宽度**或**高度**，图形用户界面将不再响应，我们必须等待处理完成。如果出现著名的**应用无响应**（**ANR**）对话框，只需点击**等待**。
 - en: When the processing finishes, the processed image will load and its dimensions
     will be displayed. The screenshot on the left shows the result for hitting the
     **Width** button, while the right one indicates the result for **Height** processing.
     Note that the images are scaled to fit into the display:![How to do it...](img/1505_09_14.jpg)
+  id: totrans-139
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 处理完成后，将加载处理过的图像并显示其尺寸。左侧的截图显示了点击**宽度**按钮的结果，而右侧的截图则表示**高度**处理的结果。请注意，图像被缩放以适应显示区域：![如何操作...](img/1505_09_14.jpg)
 - en: How it works...
+  id: totrans-140
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The example demonstrates how to add a GUI for the `fusch` program that we ported
     to Android. The `fusch` source code is modified for the native code to interface
     with the GUI.
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 该示例展示了如何为移植到Android的`fusch`程序添加图形用户界面。`fusch`源代码被修改，以便本地代码与图形用户界面接口。
 - en: In general, the steps can be followed to add a GUI to a command-line executable
     ported to Android.
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常，可以按照以下步骤向已移植到Android的命令行可执行文件添加图形用户界面。
 - en: Replace the main method with a native method. In our sample application, we
     replaced main with `naMain`.
+  id: totrans-143
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 用本地方法替换主方法。在我们的示例应用中，我们用`naMain`替换了main。
 - en: Parse the input argument of the native method for command options instead of
     reading them from the command line. In our sample application, we parsed the third
     input argument `pCmdStr` for `fusch` command options. This allows the command
     to be constructed at the Java code and pass it easily to the native code .
+  id: totrans-144
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 解析本地方法的输入参数以获取命令选项，而不是从命令行读取。在我们的示例应用程序中，我们解析了第三个输入参数 `pCmdStr` 以获取 `fusch`
+    命令选项。这使得命令可以在 Java 代码中构建，并轻松地传递给本地代码。
 - en: Register the native method with the Java class.
+  id: totrans-145
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将本地方法注册到 Java 类。
 - en: In the Java code, the GUI can take various argument values specified by user,
     construct the command, and pass it to the native method for processing.
+  id: totrans-146
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 Java 代码中，图形用户界面（GUI）可以接收用户指定的各种参数值，构建命令，并将其传递给本地方法进行处理。
 - en: Note that in our modified native code, we didn't remove the original code. We
     used the C preprocessor macro `ANDROID_BUILD` to control which part of the source
     code should be included for building Android shared libraries. We pass `-DANDROID_BUILD`
     to the compiler in the `Android.mk` file (under the `fusch` folder), in order
     to enable the code specific for Android. This approach allows us to easily add
     support for Android, without breaking the code for other platforms.
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，在我们的修改后的本地代码中，我们并没有移除原始代码。我们使用了 C 预处理器宏 `ANDROID_BUILD` 来控制哪些源代码部分应该被包含以构建
+    Android 共享库。我们在 `Android.mk` 文件（位于 `fusch` 文件夹下）中向编译器传递 `-DANDROID_BUILD`，以启用特定的
+    Android 代码。这种方法使得我们能够轻松添加对 Android 的支持，而不会破坏其他平台的代码。
 - en: There are two serious limitations for the sample application in this recipe.
     Firstly, the main UI thread handles the heavy image processing, which causes the
     application to become unresponsive. Secondly, there is no progress update when
     the image processing is going on. The GUI is updated only when the image processing
     is done. We will address these issues in the next recipe.
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱中的示例应用程序有两个严重的限制。首先，主 UI 线程处理繁重的图像处理，这导致应用程序变得无响应。其次，在图像处理过程中没有进度更新。只有在图像处理完成后
+    GUI 才会更新。我们将在下一个食谱中解决这些问题。
 - en: Using background threads at porting
+  id: totrans-149
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在移植中使用后台线程
 - en: The previous recipe adds a GUI to the ported `fusch` program with two issues
     left behind—unresponsiveness of the GUI and no progress update when processing
     is going on. This recipe discusses how to use a background thread to handle the
     processing and report the progress to the main UI thread.
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: 前一个食谱为移植的 `fusch` 程序添加了 GUI，但留下了两个问题——GUI 的无响应性和处理过程中没有进度更新。这个食谱讨论了如何使用后台线程来处理进程，并将进度报告给主
+    UI 线程。
 - en: Getting ready
+  id: totrans-151
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪。
 - en: 'The sample program in this recipe is based on the program we developed in previous
     recipes of this chapter. You should go through them first. In addition, readers
     are recommended to reading the following recipes in [Chapter 2](ch02.html "Chapter 2. Java
     Native Interface"), *Java Native Interface*:'
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱中的示例程序基于我们本章前一个食谱中开发的程序。您应该首先阅读它们。此外，建议读者阅读以下 [第2章](ch02.html "第 2 章. Java
+    本地接口")，*Java Native Interface* 的食谱：
 - en: '*Calling static and instance methods from the native code*'
+  id: totrans-153
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*从本地代码调用静态和实例方法*'
 - en: '*Caching jfieldID, jmethodID, and reference data to improve performance*'
+  id: totrans-154
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*缓存 `jfieldID`、`jmethodID` 和引用数据以提高性能*'
 - en: How to do it...
+  id: totrans-155
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'The following steps describe how to use a background thread for heavy processing
     and report progress update to the Java UI thread:'
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤描述了如何使用后台线程进行繁重的处理，并将进度更新报告给 Java UI 线程：
 - en: Copy the `PortingExecutableAUI` project that we developed in the previous recipe
     to a folder named `PortingExecutableAUIAsync`. Open the project in the folder
     at the Eclipse IDE.
+  id: totrans-157
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将我们在前一个食谱中开发的 `PortingExecutableAUI` 项目复制到一个名为 `PortingExecutableAUIAsync` 的文件夹中。在
+    Eclipse IDE 中打开文件夹中的项目。
 - en: 'Add the following code to `MainActivity.java`:'
+  id: totrans-158
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 向 `MainActivity.java` 添加以下代码：
 - en: '`handler`: An instance of the `handler` class handles the messages sent from
     background threads. It will update the GUI with the content of the message.'
+  id: totrans-159
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`handler`：`handler` 类的实例处理从后台线程发送的消息。它将使用消息内容更新 GUI。'
 - en: '[PRE24]'
+  id: totrans-160
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: '`ImageProcRunnable`: A private class of `MainActivity` implements the `Runnable`
     interface, which accepts the command string, calls the native method `naMain,`
     and sends the result message to the handler at the Java UI thread. An instance
     of this class will be invoked from a background thread:'
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`ImageProcRunnable`：`MainActivity` 的一个私有类实现了 `Runnable` 接口，它接受命令字符串，调用本地方法
+    `naMain`，并将结果消息发送给 Java UI 线程的处理器。这个类的实例将从后台线程中调用：'
 - en: '[PRE25]'
+  id: totrans-162
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: '`updateProgress`: This is a method to be called from native code through JNI.
     It sends a message to the handler at the Java UI thread:'
+  id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`updateProgress`：这是一个从本地代码通过JNI调用的方法。它向Java UI线程的处理程序发送一条消息：'
 - en: '[PRE26]'
+  id: totrans-164
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: Update the `fusch.c` source code.
+  id: totrans-165
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新 `fusch.c` 源代码。
 - en: 'We cache the `JavaVM` reference in the `naMain` method, and get a global reference
     for the `MainAcitvity` object reference `pMainActObj`. The `fusch` program uses
     more than one background thread. We will need these references to call Java methods
     from those background threads:'
+  id: totrans-166
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `naMain` 方法中我们缓存了 `JavaVM` 引用，并为 `MainAcitvity` 对象引用 `pMainActObj` 获取了一个全局引用。`fusch`
+    程序使用了不止一个后台线程。我们将需要这些引用从那些后台线程调用Java方法：
 - en: '[PRE27]'
+  id: totrans-167
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Add the following lines before the `return` statement of the `main` method
     to release the native string and the cached JavaVM reference to avoid memory leaks:'
+  id: totrans-168
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `main` 方法的 `return` 语句之前添加以下行，以释放本地字符串和缓存的JavaVM引用，避免内存泄漏：
 - en: '[PRE28]'
+  id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'To update the GUI, we send out a message to the Java code. We need to update
     the code used to produce output messages at various parts of the source file.
     The following is an example of this:'
+  id: totrans-170
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了更新GUI，我们向Java代码发送一条消息。我们需要更新源文件不同部分用于生成输出消息的代码。以下是这方面的一个示例：
 - en: '[PRE29]'
+  id: totrans-171
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'The `seam_progress` and `carve_progress` functions are executed by native threads
     started at `naMain`. We used the cached `JavaVM` reference `cachedJvm` and `MainActivity`
     object reference `cachedMainActObj` to get `jmethodID` of the `updateProgress`
     method defined at `MainActivity.java`:'
+  id: totrans-172
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`seam_progress` 和 `carve_progress` 函数是由在 `naMain` 启动的本地线程执行的。我们使用了缓存的 `JavaVM`
+    引用 `cachedJvm` 和 `MainActivity` 对象引用 `cachedMainActObj` 来获取在 `MainActivity.java`
+    中定义的 `updateProgress` 方法的 `jmethodID`。'
 - en: '[PRE30]'
+  id: totrans-173
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'We can then call the `updateProgress` method from `seam_progress` and `carve_progress`.
     This is shown in the code section extracted from the `carve_progress` function,
     as follows:'
+  id: totrans-174
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，我们可以从 `seam_progress` 和 `carve_progress` 调用 `updateProgress` 方法。以下是来自 `carve_progress`
+    函数的代码段，显示了这一点：
 - en: '[PRE31]'
+  id: totrans-175
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: Build and run the Android app. You should be able to see a GUI similar to the
     following screenshot:![How to do it...](img/1505_09_07.jpg)
+  id: totrans-176
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 构建并运行Android应用。你应该能看到一个与以下截图相似的图形用户界面：![如何操作...](img/1505_09_07.jpg)
 - en: We can hit the **Width** or **Height** button to start the processing. The left
     and middle screenshots show the processing in progress, while the right screenshot
     shows the results:![How to do it...](img/1505_09_15.jpg)
+  id: totrans-177
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们可以点击**宽度**或**高度**按钮开始处理。左中和右截图分别显示了处理过程和结果：![如何操作...](img/1505_09_15.jpg)
 - en: How it works...
+  id: totrans-178
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The preceding example shows how to use a background thread to handle heavy processing,
     so that the GUI can remain responsive to user inputs. While the background thread
     is processing the images, it also sends progress updates to the UI thread.
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 前面的示例显示了如何使用后台线程处理繁重的处理工作，以便GUI能够响应用户输入。当后台线程处理图像时，它还会向UI线程发送进度更新。
 - en: 'The details of the `fusch` program are actually a bit more complicated than
     the core idea described, because it uses heavy concurrent processing. This is
     illustrated in the following diagram:'
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: '`fusch` 程序的细节实际上比所描述的核心思想要复杂一些，因为它使用了大量的并发处理。以下图表对此进行了说明：'
 - en: '![How it works...](img/1505OT_09_11.jpg)'
+  id: totrans-181
   prefs: []
   type: TYPE_IMG
+  zh: '![工作原理...](img/1505OT_09_11.jpg)'
 - en: Once we click on either the **Width** or **Height** button in `MainActivity.java`,
     a new Java thread (**Background Thread 1**) will be created with an instance of
     the `ImageProcRunnable`. This thread will invoke the `naMain` native method.
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们在 `MainActivity.java` 中点击了**宽度**或**高度**按钮，将创建一个新的Java线程（**后台线程1**），其实例为
+    `ImageProcRunnable`。此线程将调用 `naMain` 本地方法。
 - en: Multiple native threads are created with the `pthread_create` function in the
     `naMain` method. Two of them, indicated as **Background Thread 2** and **Background
     Thread 3**, will be running `seam_progress` and `carve_progress` respectively.
+  id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 `naMain` 方法中使用 `pthread_create` 函数创建了多个本地线程。其中两个，分别标记为**后台线程2**和**后台线程3**，将分别运行
+    `seam_progress` 和 `carve_progress`。
 - en: We send messages of the `MSG_TYPE_PROG` type to the handler bound to the UI
     thread in all the three background threads. The handler will process the messages
     and update the GUI.
+  id: totrans-184
   prefs: []
   type: TYPE_NORMAL
+  zh: 在所有三个后台线程中，我们向绑定到UI线程的处理程序发送 `MSG_TYPE_PROG` 类型的消息。处理程序将处理这些消息并更新图形用户界面。
 - en: Sending messages from the native code
+  id: totrans-185
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 从本地代码发送消息
 - en: Sending messages to a handler in Java is straightforward; we simply call the
     `handler.sendMessage()` method. But things can be a bit troublesome in the native
     code.
+  id: totrans-186
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Java中向处理程序发送消息很简单；我们只需调用 `handler.sendMessage()` 方法。但在本地代码中可能会有些麻烦。
 - en: 'We defined an `updateProgress` method in `MainActivity.java`, which accepts
     a string and an integer, constructs a message, and sends it to the handler. The
     native code invokes this Java method through JNI in order to send messages. There
     are two situations:'
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`MainActivity.java`中，我们定义了一个`updateProgress`方法，该方法接收一个字符串和一个整数，构建一条消息，并将其发送给处理器。本地代码通过JNI调用这个Java方法以便发送消息。有两种情况：
 - en: '**Native code at Java thread**: This is the case for **Background Thread 1**
     in the previous diagram. The thread is created at Java code, and it calls the
     `naMain` native method. At `naMain`, we retrieve `jmethodID` for `updateProgress`,
@@ -952,9 +1356,13 @@
     You can refer back to the *Calling static and instance methods from native code*
     recipe in [Chapter 2](ch02.html "Chapter 2. Java Native Interface"), *Java Native
     Interface* for more information.'
+  id: totrans-188
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**本地代码在Java线程中**：这是前一个图中**后台线程1**的情况。该线程是在Java代码中创建的，并调用了`naMain`本地方法。在`naMain`中，我们获取`updateProgress`的`jmethodID`，并通过JNI函数`CallVoidMethod`调用`updateProgress`方法。更多详情，您可以参考[第2章](ch02.html
+    "第2章. Java Native Interface")，*Java Native Interface*中的*Calling static and instance
+    methods from native code*一节。'
 - en: '**Native code at native thread**: This is what happens at **Background Thread
     2** and **Background Thread 3**. These threads are created at `naMain` by the
     `pthread_create` function. We must call `AttachCurrentThread` to attach the native
@@ -963,11 +1371,17 @@
     method. For more details about caching at JNI, we can refer to the *Caching jfieldID,
     jmethodID, and reference data to improve performance* recipe in [Chapter 2](ch02.html
     "Chapter 2. Java Native Interface"), *Java Native Interface*.'
+  id: totrans-189
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**本地代码在本地线程中**：这就是**后台线程2**和**后台线程3**发生的情况。这些线程是通过`naMain`中的`pthread_create`函数创建的。在进行任何JNI调用之前，我们必须调用`AttachCurrentThread`将本地线程附加到Java虚拟机。注意，我们使用了缓存的`MainActivity`对象引用`cachedMainActObj`来调用`updateProgress`方法。关于在JNI中缓存更多详情，我们可以参考[第2章](ch02.html
+    "第2章. Java Native Interface")，*Java Native Interface*中的*Caching jfieldID, jmethodID,
+    and reference data to improve performance*一节。'
 - en: The GUI we have created doesn't look all that good, but it is simple and enough
     to illustrate how to use a background thread for heavy processing and to send
     out GUI update messages from the native code.
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们创建的GUI看起来并不完美，但它足够简单，足以说明如何使用后台线程进行繁重处理以及从本地代码发送GUI更新消息。
