@@ -1,57 +1,82 @@
 - en: Chapter 2. Engaging with Application Security
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第二章. 与应用程序安全互动
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Inspecting application certificates and signatures
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 检查应用程序证书和签名
 - en: Signing Android applications
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 签名Android应用程序
 - en: Verifying application signatures
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 验证应用程序签名
 - en: Inspecting the AndroidManifest.xml file
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 检查AndroidManifest.xml文件
 - en: Interacting with the activity manager via ADB
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 通过ADB与活动管理器交互
 - en: Extracting application resources via ADB
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 通过ADB提取应用程序资源
 - en: Introduction
+  id: totrans-8
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: In this chapter, we are going to see some components of the Android security
     architecture in action by directly engaging with them, specifically those focused
     on protecting applications. "You never really understand anything until you get
     your hands dirty." This is what this chapter tries to inspire; actually getting
     down and dirty with some of the security mechanisms, dissecting them, and really
     getting to know what they are all about.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将通过直接与它们互动，了解一些Android安全架构组件的实际应用，特别是那些专注于保护应用程序的部分。"在你亲自动手之前，你永远不会真正理解任何事。"
+    这正是本章试图激发的理念；实际动手拆卸一些安全机制，剖析它们，真正了解它们的作用。
 - en: We're going to cover just the bare minimum here, the tips and tricks that'll
     get you the information you need from an application, should you ever want to
     reverse engineer it or perform a pervasive hands-on security assessment for Android
     applications, or if you're just purely interested in finding out more about application
     security.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在这里只介绍最基本的内容，这些技巧和窍门能让你在需要逆向工程应用程序或对Android应用程序进行彻底的手动安全评估时，或者你只是纯粹对应用程序安全感兴趣并想了解更多时，获取所需的信息。
 - en: Inspecting application certificates and signatures
+  id: totrans-11
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 检查应用程序证书和签名
 - en: Application certificates are what developers use to declare their trust in the
     applications they publish to the application market. This is done by declaring
     their identities and associating them to their application(s) cryptographically.
@@ -59,8 +84,10 @@
     providing a simple and effective mechanism to determine and enforce the integrity
     of Android applications. It is a requirement that all applications be signed with
     certificates before they are installed.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 应用证书是开发者用来声明他们对发布到应用市场的应用程序的信任。这是通过声明他们的身份并将其与他们的应用程序以加密方式相关联来完成的。应用签名确保没有应用程序可以通过提供一种简单有效的机制来冒充另一个应用程序，从而确定并强制执行Android应用程序的完整性。所有应用程序在安装前必须使用证书进行签名，这是一个要求。
 - en: Android application signing is a repurposing of JAR signing. It works by applying
     a cryptographic hash function to an application's contents. We will soon see exactly
     which of the contents in the APK files are hashed. The hashes are then distributed
@@ -71,51 +98,72 @@
     to vouch for the fact that the developer actually owns the given public key. This
     process yields a signature and is to be distributed or published with this public
     key.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: Android应用程序签名是对JAR签名的重新利用。它通过对应用程序内容应用加密哈希函数来工作。我们很快将看到APK文件中确切哪些内容被哈希。然后，这些哈希值与声明开发者身份的证书一起分发，将其与开发者的公钥以及实际上他的私钥相关联，因为它们在语义上是相关的。证书通常使用开发者的私钥进行加密，这意味着它是一个自签名证书。没有可信赖的第三方来证明开发者实际上拥有给定的公钥。这个过程产生了一个签名，并且应该与这个公钥一起分发或发布。
 - en: An application's signature is unique and finding an application's certificate
     and signature is a crucial skill. You may be looking for malware signatures on
     a device, or you may want to list all of the applications that share a given public
     key.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 一个应用程序的签名是唯一的，找到应用程序的证书和签名是一项关键技能。你可能在设备上寻找恶意软件签名，或者你可能想要列出共享给定公钥的所有应用程序。
 - en: Getting ready
+  id: totrans-15
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Before we begin, you will need the following software installed on your machine:'
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始之前，你需要在你的机器上安装以下软件：
 - en: '**Java JDK**: This can be installed on either Unix/Linux distribution or Microsoft
     Windows system, as shown in the previous chapter'
+  id: totrans-17
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Java JDK**：这可以在Unix/Linux发行版或Microsoft Windows系统上安装，如前一章所示'
 - en: '**Android SDK**: This can be installed on your Linux Debian or Microsoft Windows
     system, as shown in the previous chapter'
+  id: totrans-18
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Android SDK**：如前一章所示，可以在你的Linux Debian或Microsoft Windows系统上安装。'
 - en: '**WinZip** (for Windows): This is available for download at [http://www.winzip.com](http://www.winzip.com);
     if you are running Windows 7, WinZip is not explicitly required'
+  id: totrans-19
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**WinZip**（针对Windows）：可以在[http://www.winzip.com](http://www.winzip.com)下载；如果你运行的是Windows
+    7，则不需要显式安装WinZip'
 - en: '**Unzip** (for Debian/Ubuntu Linux systems): This can be installed by typing
     the following command into your terminal:'
+  id: totrans-20
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**解压**（针对Debian/Ubuntu Linux系统）：可以通过在终端输入以下命令进行安装：'
 - en: '[PRE0]'
+  id: totrans-21
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: Assuming that we don't already have an application in mind—whose certificate
     you would like to view—and given that you'd like to be able to completely replicate
     what is demonstrated here, it'd be convenient to pull an app of an emulator. This
     recipe also details setting up the emulator to do so.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 假设我们还没有一个明确想要查看证书的应用程序，并且你想要完全复制这里所展示的内容，从模拟器中提取一个应用会方便得多。此食谱还详细介绍了如何设置模拟器以执行此操作。
 - en: Setting up an emulator, in the way it is done here, ensures that you will be
     able to get access to exactly the same applications and emulated system, and ultimately,
     the same certificates, making it easy to check that you're on the right track.
@@ -123,241 +171,339 @@
     SDK tools are updated to include the latest API levels and emulator images. If
     you're not sure how to upgrade your Android SDK, please refer to the previous
     chapter.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 按照这里的方式进行模拟器设置，确保你可以访问完全相同的程序和模拟系统，最终，拥有相同的证书，这样容易检查你是否走在正确的轨道上。在模拟Android设备之前，需要确保Android
+    SDK工具已更新，包括最新的API级别和模拟器镜像。如果你不确定如何升级你的Android SDK，请参考上一章。
 - en: 'So, to start off, lets fire up an **Android Virtual Device** (**AVD**) by performing
     the following steps:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，首先让我们通过执行以下步骤来启动一个**Android Virtual Device**（**AVD**）：
 - en: 'Open a command-line interface and execute the following command:'
+  id: totrans-25
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开命令行界面并执行以下命令：
 - en: '[PRE1]'
+  id: totrans-26
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: '![Getting ready](img/00029.jpeg)'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![准备就绪](img/00029.jpeg)'
 - en: 'Or if you''re using a Windows machine, type:'
+  id: totrans-28
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你使用的是Windows机器，请输入：
 - en: '[PRE2]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'If all goes well, you should have just created an AVD. You can now go ahead
     and launch it by executing the following command:'
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果一切顺利，你应该刚刚创建了一个AVD。现在可以执行以下命令来启动它：
 - en: '[PRE3]'
+  id: totrans-31
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: '![Getting ready](img/00030.jpeg)'
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![准备就绪](img/00030.jpeg)'
 - en: 'You should see an emulator pop up almost immediately. You will need to give
     it a second to boot up. Once it''s all booted and you can see the lock screen,
     it means you can fire up ADB and pull some APK files off for us to dissect. You
     can pull an APK file off by typing the following command:'
+  id: totrans-33
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你应该会立即看到一个模拟器弹出。给它一点时间启动。一旦完全启动，你可以看到锁屏，这意味着你可以启动ADB，为我们提取一些APK文件。你可以通过输入以下命令来提取APK文件：
 - en: '[PRE4]'
+  id: totrans-34
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'See the following screenshot for a practical example:'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 以下截图为实际操作示例：
 - en: '![Getting ready](img/00031.jpeg)'
+  id: totrans-36
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![准备就绪](img/00031.jpeg)'
 - en: 'You can find the Contacts app or others, should you need another example to
     work with, by checking out the contents of the `system/app/` directory, as shown
     in the following screenshot:'
+  id: totrans-37
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你需要其他示例，可以查看`system/app/`目录的内容，找到联系人应用或其他应用，如下面的截图所示：
 - en: '![Getting ready](img/00032.jpeg)'
+  id: totrans-38
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![准备就绪](img/00032.jpeg)'
 - en: You should have just copied over the Contacts app onto your local device. If
     any of this is confusing, please refer to the previous chapter; it covers how
     to create an emulator and copy devices from it.
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你应该刚刚将联系人应用复制到你的本地设备上。如果这部分内容让你感到困惑，请参考上一章；它涵盖了如何创建模拟器以及如何从模拟器复制设备。
 - en: How to do it…
+  id: totrans-40
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'You should have a local copy of the APK files that you wish to inspect on your
     hard drive. We can now begin inspecting the application''s certificate. To view
     an application''s public key certificate and signature, you will first need to
     unpack the APK file. This is pretty easy if you know how to unzip an archive because
     APK files are in fact ZIP archives that have been renamed. You can unzip the archive
     by performing the following steps:'
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 你应该在硬盘上有一个你想要检查的APK文件的本地副本。我们现在可以开始检查应用程序的证书。要查看应用程序的公钥证书和签名，首先需要解压APK文件。如果你知道如何解压归档文件，这非常简单，因为APK文件实际上是被重命名的ZIP归档文件。你可以通过执行以下步骤来解压归档文件：
 - en: 'If you''re on a Windows machine, you may need to make sure that you have WinZip
     installed. All you need to do is open the APK file using WinZip, and it should
     open like any other ZIP archive. On Linux Debian machines, you will need to copy
     this file to a file with a ZIP extension so that WinZip will happily unzip it
     for us:'
+  id: totrans-42
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果你使用的是Windows机器，你可能需要确保已安装WinZip。你需要做的就是使用WinZip打开APK文件，它应该像其他任何ZIP存档一样打开。在Linux
+    Debian机器上，你需要将此文件复制到一个带有ZIP扩展名的文件中，以便WinZip可以为我们愉快地解压：
 - en: '[PRE5]'
+  id: totrans-43
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Unzip the archive to some memorable place; you can do that by firing off the
     following command:'
+  id: totrans-44
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将存档解压到容易记住的地方；你可以通过执行以下命令来完成：
 - en: '[PRE6]'
+  id: totrans-45
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: '![How to do it…](img/00033.jpeg)'
+  id: totrans-46
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00033.jpeg)'
 - en: 'After unzipping the archive, your directory should look like the following
     screenshot:'
+  id: totrans-47
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 解压存档后，你的目录应该如下截图所示：
 - en: '![How to do it…](img/00034.jpeg)'
+  id: totrans-48
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00034.jpeg)'
 - en: 'Locate the folder called `META-INF`. This folder contains the signature file
     and the actual `CERT.RSA` file which is the self-signed public key certificate;
     you can view it using the keytool that comes bundled with the Java JDK that you
     should have installed prior to attempting this recipe. Use the following command
     to print the certificate:'
+  id: totrans-49
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 定位名为`META-INF`的文件夹。这个文件夹包含签名文件和实际的`CERT.RSA`文件，这是自签名的公钥证书；你可以使用随Java JDK捆绑的keytool来查看它，你应该在尝试此配方之前安装Java
+    JDK。使用以下命令打印证书：
 - en: '[PRE7]'
+  id: totrans-50
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: '![How to do it…](img/00035.jpeg)'
+  id: totrans-51
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00035.jpeg)'
 - en: What you have in front of you now is the certificate that declares the holder
     of the public key.
+  id: totrans-52
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 现在你面前的是声明公钥持有者的证书。
 - en: 'To view the actual signatures related to the application content, locate a
     file called `CERT.SF` under the `META-INF` folder. You can view this on Windows
     by opening it in notepad or any other text editor that is available to you, or
     on Unix/Linux machines by executing the following command:'
+  id: totrans-53
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 要查看与应用程序内容相关的实际签名，请定位到`META-INF`文件夹下的名为`CERT.SF`的文件。你可以在Windows上通过记事本或其他可用的文本编辑器打开它来查看，或者在Unix/Linux机器上执行以下命令：
 - en: '[PRE8]'
+  id: totrans-54
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'You should have the signature file in front of you now. It includes the cryptographic
     hashes of the resource files included in the application; see the following screenshot
     for an example:'
+  id: totrans-55
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 现在你面前应该有签名文件。它包含了应用程序中包含的资源文件的加密哈希；以下截图为例：
 - en: '![How to do it…](img/00036.jpeg)'
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00036.jpeg)'
 - en: This file is used when the `jarsigner` tool tries to verify the content of the
     application; it computes the cryptographic hash of the resources listed in the
     `CERT.SF` file and compares it to the digests listed for each resource. In the
     previous screenshot, the hash—`SHA-1 Digests`—have been base64 encoded.
+  id: totrans-57
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 当`jarsigner`工具尝试验证应用程序内容时，会使用此文件；它会计算`CERT.SF`文件中列出的资源的加密哈希，并将其与每个资源的摘要进行比较。在之前的截图中，哈希—`SHA-1
+    Digests`—已经进行了base64编码。
 - en: How it works…
+  id: totrans-58
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: The `META-INF` folder is a very important resource because it helps to establish
     the integrity of the application. Because of the important role the contents of
     this folder plays in the cryptographic security of an application's content, it
     is necessary to discuss the structure of the folder and what should appear inside
     it and why.
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: '`META-INF`文件夹是一个非常重要的资源，因为它有助于建立应用程序的完整性。由于该文件夹中的内容在应用程序内容的加密安全中扮演着重要角色，因此有必要讨论该文件夹的结构以及其中应该包含什么内容以及原因。'
 - en: 'Inside the `META-INF` folder, you should find at least the following things:'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`META-INF`文件夹内，你应该至少能找到以下内容：
 - en: '`MANIFEST.MF`: This file declares the resources very similar to the `CERT.SF`
     file.'
+  id: totrans-61
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`MANIFEST.MF`：此文件声明资源，与`CERT.SF`文件非常相似。'
 - en: '`CERT.RSA`: This is the public key certificate, as discussed previously.'
+  id: totrans-62
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`CERT.RSA`：这是前面讨论过的公钥证书。'
 - en: '`CERT.SF`: This file contains all of the resources in the application that
     have been accounted for in the application signature. It is added to accommodate
     JAR-specific cryptographic signing.'
+  id: totrans-63
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`CERT.SF`：此文件包含了应用程序中所有在应用程序签名中已计算的资源。它被添加以适应JAR特定的加密签名。'
 - en: '`CERT.RSA`: This is a X.509 v3 certificate; the information in it is structured
     by keytool in the following way:'
+  id: totrans-64
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`CERT.RSA`：这是一个X.509 v3证书；其中的信息由keytool以下列方式结构化：'
 - en: '**Owner**: This field is used to declare the holder of the public key, and
     it contains some basic information about the country and organization associated
     to this individual.'
+  id: totrans-65
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**所有者**：此字段用于声明公钥持有者，其中包含有关与此个人相关的国家和组织的一些基本信息。'
 - en: '**Issuer**: This field is used to declare the issuer of the X.509 certificate
     that associates the public key to the declared holder. The people or organizations
     mentioned here are the ones that effectively vouch for the key holder. They are
     the ones that establish the authenticity of the public key listed in the certificate.'
+  id: totrans-66
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**颁发者**：此字段用于声明将公钥与声明持有者关联的X.509证书的颁发者。这里提到的人或组织是有效为密钥持有者担保的人。他们是确立证书中列出的公钥真实性的人。'
 - en: '**Serial number**: This is used as an identifier for the issued certificate.'
+  id: totrans-67
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**序列号**：这是用于标识已颁发证书的识别码。'
 - en: '**Valid from ... until**: This field specifies the period for which this certificate
     and its associated attributes can be verified by the issuer.'
+  id: totrans-68
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**有效期限**：此字段指定了证书及其相关属性可以被颁发者验证的期限。'
 - en: '**Certificate fingerprints**: This field holds the digest sums of the certificate.
     It is used to verify that the certificate has not been tampered with.'
+  id: totrans-69
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**证书指纹**：此字段保存了证书的摘要和。它用于验证证书是否被篡改。'
 - en: The digital signature is computed by encrypting the certificate with the trusted
     third parties' private key. In most Android applications, the "trusted third party"
     is the developer. This means that this signature is generated by encrypting the
@@ -367,8 +513,10 @@
     on a trusted third party like a **Certificate Authority** (**CA**). After all,
     anyone can say that they developed the Twitter app by signing it with their own
     key, but no one can say that they own VeriSign or Symantec's private key!
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 数字签名是通过使用受信任第三方的私钥加密证书来计算的。在大多数Android应用程序中，“受信任的第三方”是开发者。这意味着此签名是通过使用他/她自己的私钥（通常与公钥关联的私钥）加密证书生成的。这种数字签名用法在功能上可能是正确的——它利用了数字签名机制的功能——但它不如依赖像证书颁发机构（**CA**）这样的受信任第三方那样健壮。毕竟，任何人都可以通过用自己的密钥签署来说他们开发了Twitter应用，但没有人可以说他们拥有VeriSign或赛门铁克的私钥！
 - en: If the certificate is self-signed, the developer can exercise his/her creativity
     while filling out the information associated to the certificate. The Android package
     manager makes no effort to verify that the issuer, owner, or any other details
@@ -380,8 +528,10 @@
     is often stored and used on a very personal device, and people who become privy
     to the fabricated details of a public key certificate may no longer trust such
     an application.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果证书是自签名的，开发者在填写与证书相关的信息时可以发挥其创造性。Android包管理器并不努力验证证书的颁发者、所有者或任何其他证书详细信息的有效性或是否是实际存在的实体。例如，“所有者”无需明确提及关于开发者的任何有效个人信息，或者“颁发者”可以是完全虚构的组织或个人。尽管这样做是可能的，但强烈建议不要这样做，因为它使得应用程序非常难以被信任；毕竟，移动应用程序经常被存储和使用在非常私人的设备上，而那些得知公钥证书虚构细节的人可能不再信任这样的应用程序。
 - en: The best way to go about generating a trustworthy application certificate is
     through a qualified CA by either requesting a signed public key certificate—after
     generating your own public and private key pair—or requesting a CA to generate
@@ -390,85 +540,122 @@
     CAs and security vendors often offer a range of services to facilitate the generation
     of trustworthy public key certificates, some of which are catered to supporting
     Android application development.
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 生成可信任应用程序证书的最佳方式是通过合格证书颁发机构（CA），你可以生成自己的公钥和私钥对之后，请求签署公钥证书，或者请求CA生成带有公钥证书的公私钥对，因为他们通常会验证证书中发布的信息。像赛门铁克等CA和安全供应商经常提供一系列服务以方便生成可信任的公钥证书，其中一些服务专门用于支持Android应用程序开发。
 - en: The next recipe of this walkthrough contains some useful links on public key
     certificates for you to check out.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程的下一部分包含了一些关于公钥证书的有用链接，供您查看。
 - en: There's more...
+  id: totrans-74
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多内容...
 - en: 'You can also view the full public key certificate using the OpenSSL library
     via the command-line tool on Linux by performing the following steps:'
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 你也可以在Linux的命令行工具中使用OpenSSL库执行以下步骤来查看完整的公钥证书：
 - en: 'Make sure you have OpenSSL installed; if not, you can install OpenSSL with
     the following command:'
+  id: totrans-76
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 确保你已经安装了OpenSSL；如果没有，你可以使用以下命令安装OpenSSL：
 - en: '[PRE9]'
+  id: totrans-77
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'Once installed, you can view the certificate using the following command, provided
     you are in the root of the unzipped `APK` directory:'
+  id: totrans-78
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装完成后，如果你处于解压后的`APK`目录的根目录下，可以使用以下命令查看证书：
 - en: '[PRE10]'
+  id: totrans-79
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'You should see something like the following screenshot appear on your terminal
     screen:'
+  id: totrans-80
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你应该在终端屏幕上看到类似以下截图的内容：
 - en: '![There''s more...](img/00037.jpeg)'
+  id: totrans-81
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![还有更多...](img/00037.jpeg)'
 - en: 'The second half of the previous screenshot is as follows:'
+  id: totrans-82
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 上一个截图的后半部分如下：
 - en: '![There''s more...](img/00038.jpeg)'
+  id: totrans-83
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![还有更多...](img/00038.jpeg)'
 - en: The last section of the certificate in the previous screenshot is the actual
     digital signature of the CA that issued the certificate.
+  id: totrans-84
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 前一个截图的证书最后一部分是颁发证书的CA的实际数字签名。
 - en: See also
+  id: totrans-85
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *RFC2459 – Internet X.509 Public Key Infrastructure Certificate and CRL
     Profile* document at [http://datatracker.ietf.org/doc/rfc2459/?include_text=1](http://datatracker.ietf.org/doc/rfc2459/?include_text=1)
+  id: totrans-86
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*RFC2459 – Internet X.509公钥基础设施证书和CRL概要*文档在[http://datatracker.ietf.org/doc/rfc2459/?include_text=1](http://datatracker.ietf.org/doc/rfc2459/?include_text=1)'
 - en: The *X.509 Certificates and Certificate Revocation Lists (CRLs)* Oracle documentation
     at [http://docs.oracle.com/javase/6/docs/technotes/guides/security/cert3.html](http://docs.oracle.com/javase/6/docs/technotes/guides/security/cert3.html)
+  id: totrans-87
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Oracle的*X.509证书和证书撤销列表（CRLs）*文档在[http://docs.oracle.com/javase/6/docs/technotes/guides/security/cert3.html](http://docs.oracle.com/javase/6/docs/technotes/guides/security/cert3.html)
 - en: Signing Android applications
+  id: totrans-88
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 签名Android应用
 - en: All Android applications are required to be signed before they are installed
     on an Android device. Eclipse and other IDEs pretty much handle application signing
     for you; but for you to truly understand how application signing works, you should
     try your hand at signing an application yourself using the tools in the Java JDK
     and Android SDK.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有Android应用在安装到Android设备之前都必须进行签名。Eclipse和其他IDE几乎可以为你处理应用签名的所有工作；但为了让你真正理解应用签名是如何工作的，你应该尝试使用Java
+    JDK和Android SDK中的工具亲自签一个应用。
 - en: First, a little background on application signing. Android application signing
     is simply a repurposing of the JAR signing. It has been used for years to verify
     the authenticity of Java class file archives. Android's APK files aren't exactly
@@ -476,162 +663,228 @@
     so, the Android team needed to gear the JAR signing to suit the APK file's structure.
     They did this by making sure that the extra content included in an Android application
     forms part of the signing and verification process.
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，关于应用签名的一些背景知识。Android应用签名只是JAR签名的重新利用。多年来，它一直被用来验证Java类文件存档的真实性。Android的APK文件与JAR文件并不完全相同，并且比JAR文件包含更多的元数据和资源；因此，Android团队需要对JAR签名进行调整以适应APK文件的结构。他们通过确保Android应用中包含的额外内容成为签名和验证过程的一部分来实现这一点。
 - en: So, without giving away too much about application signing, let's grab an APK
     file and get it signed. Later in the walkthrough, we're going to try installing
     our "hand-signed" application on an Android device as an easy way to verify that
     we have in fact signed it properly.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以，在不过多透露关于应用签名的情况下，让我们获取一个APK文件并进行签名。在后续的演练中，我们将尝试在我们签署后的应用安装在Android设备上，作为一个简单的方式来验证我们确实正确地签了名。
 - en: Getting ready
+  id: totrans-92
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Before we can begin, you will need to install the following things:'
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始之前，你需要安装以下内容：
 - en: '**Java JDK**: This contains all of the necessary signing and verification tools'
+  id: totrans-94
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Java JDK**：这包含了所有必要的签名和验证工具'
 - en: '**APK file**: This is a sample APK to sign'
+  id: totrans-95
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**APK文件**：这是一个待签名的APK示例'
 - en: '**WinZip**: This is required for Windows machines'
+  id: totrans-96
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**WinZip**：这是Windows机器上必需的操作'
 - en: '**Unzip**: This is required for Ubuntu machines'
+  id: totrans-97
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**解压**：这是Ubuntu机器上必需的操作'
 - en: 'Given that you may be using an APK file that''s already signed, you will need
     to first remove the certificate and signature file from the APK file. To do this,
     you will need to perform the following steps:'
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 考虑到你可能使用的是一个已经签名的APK文件，你首先需要从APK文件中删除证书和签名文件。为此，你需要执行以下步骤：
 - en: Unzip the APK file. It'd be waste to reiterate unpacking an APK file; so, if
     you need help with this step, refer to the *Inspecting application certificates
     and signatures* recipe.
+  id: totrans-99
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 解压APK文件。重新解包APK文件是浪费时间的；所以，如果你在这一步需要帮助，请参考*检查应用程序证书和签名*的菜谱。
 - en: 'Once the APK file has been unzipped, you''ll need to remove the `META-INF`
     folder. The Windows folks can simply open the unzipped `APK` folder and delete
     the `META-INF` folder using the graphical user interface. This can be done from
     the command-line interface by executing the following command on Unix/Linux systems:'
+  id: totrans-100
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 解压APK文件后，你需要删除`META-INF`文件夹。Windows用户可以直接打开解压后的`APK`文件夹，使用图形用户界面删除`META-INF`文件夹。在Unix/Linux系统上，可以通过执行以下命令从命令行界面完成：
 - en: '[PRE11]'
+  id: totrans-101
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: You should be ready to sign the application now.
+  id: totrans-102
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 现在你应该准备好签署应用程序了。
 - en: How to do it...
+  id: totrans-103
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Signing your Android application can be done by performing the following steps:'
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过执行以下步骤可以为你的Android应用程序签名：
 - en: 'You''ll first need to set up a keystore for yourself because it will hold the
     private key that you will need to sign your applications with. If you already
     have a keystore set up, you can skip this step. To generate a brand new keystore
     on Windows and Unix/Linux distributions, you will need to execute the following
     command:'
+  id: totrans-105
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你首先需要为自己设置一个密钥库，因为它将保存你用来签署应用程序的私钥。如果你已经有了一个密钥库，可以跳过这一步。在Windows和Unix/Linux发行版上生成全新的密钥库，你需要执行以下命令：
 - en: '[PRE12]'
+  id: totrans-106
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: After entering this command, keytool will help you set up a password for your
     keystore; you should make sure to enter something that you will actually remember!
     Also, if you at all intend to use this keystore for practical purposes, make sure
     to keep it in a very safe place!
+  id: totrans-107
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 输入这个命令后，keytool将帮助你为你的密钥库设置密码；你应该确保输入一些你真正能记住的东西！另外，如果你打算将这个密钥库用于实际用途，请确保将其保存在一个非常安全的地方！
 - en: After you've set up the password for your keystore, keytool will begin prompting
     you for information that will be used to build your certificate; pay close attention
     to the information being requested and please answer as honestly as possible—even
     though this is not demonstrated in the following screenshot:![How to do it...](img/00039.jpeg)
+  id: totrans-108
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在为你的密钥库设置好密码后，keytool 将开始提示你输入用于构建证书的信息；请密切关注所请求的信息，并尽可能诚实回答——尽管以下截图并未展示这一点：![如何操作...](img/00039.jpeg)
 - en: You should now have a brand new keystore set up with your new private key, public
     key, and self-signed certificate stored safely inside and encrypted for your protection.
+  id: totrans-109
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 现在你应该已经设置了一个全新的密钥库，其中安全地保存了你的新私钥、公钥和自签名证书，并为你提供加密保护。
 - en: 'You can now use this brand new keystore to sign an application, and you can
     do that by executing the following command:'
+  id: totrans-110
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你现在可以使用这个全新的密钥库来签署应用程序，通过执行以下命令即可完成：
 - en: '[PRE13]'
+  id: totrans-111
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: You'll be prompted for the password to the keystore. Once you enter it correctly,
     `jarsigner` will start signing the application in place. This means that it will
     modify the APK file that you gave it by adding the `META-INF` folder with all
     of the certificate and signature-related details.![How to do it...](img/00040.jpeg)
+  id: totrans-112
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 系统将提示你输入密钥库的密码。一旦你正确输入，`jarsigner`将开始原地签署应用程序。这意味着它将修改你提供的APK文件，通过添加带有所有证书和签名相关细节的`META-INF`文件夹。![如何操作...](img/00040.jpeg)
 - en: And that's it. Signing an application is that easy. I've also inadvertently
     illustrated how to re-sign an application, namely, replace the signatures that
     were distributed with the application originally.
+  id: totrans-113
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 就是这样。签署应用程序就是如此简单。我也无意中展示了如何重新签署应用程序，即替换原本与应用程序一起分发的签名。
 - en: How it works...
+  id: totrans-114
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'To start off, let''s have a look at the options supplied to keytool:'
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，让我们看看提供给keytool的选项：
 - en: '`-genkey`: This option tells keytool that you''d like to generate some keys'
+  id: totrans-116
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-genkey`：这个选项告诉keytool你想要生成一些密钥。'
 - en: '`-v`: This option enables verbose output; however, this command is optional'
+  id: totrans-117
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-v`：这个选项启用详细输出；然而，这个命令是可选的。'
 - en: '`-keystore`: This option is used to locate the keystore you''d like to use
     to store your generated keys'
+  id: totrans-118
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-keystore`：这个选项用于定位你希望用来存储生成的密钥的密钥库。'
 - en: '`-alias`: This option is an alias for the key pair being generated'
+  id: totrans-119
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-alias`：这个选项是为你生成的密钥对的别名。'
 - en: '`-keyalg`: This option tells about the encryption algorithm used to generate
     the key; you can make use of either RSA or DSA'
+  id: totrans-120
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-keyalg`：这个选项说明了用于生成密钥的加密算法；你可以选择使用RSA或DSA。'
 - en: '`-keysize`: This option specifies the actual bit length of the key you''re
     going to generate'
+  id: totrans-121
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-keysize`：此选项指定你将要生成的密钥的实际位数。'
 - en: '`-validity`: This option mentions the number of days for which the generated
     key will be valid; Android officially recommends using a value above 10,000 days'
+  id: totrans-122
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-validity`：此选项提到生成的密钥将有效的天数；Android 官方推荐使用超过 10,000 天的值。'
 - en: What keytool actually does with the public and private keys is store the public
     key wrapped inside an X.509 v3 certificate with it. This certificate is used to
     declare the identity of the public key holder and can be used to affirm that the
@@ -639,114 +892,169 @@
     from a trusted third party like a CA, but Android does not require public keys
     to be affirmed in this way. For more on how these certificates are used and structured,
     refer to the *Inspecting application certificates and signatures* recipe.
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: Keytool 实际上对公钥和私钥的操作是将公钥包装在一个 X.509 v3 证书内进行存储。此证书用于声明公钥持有者的身份，并且可以用来确认提到的公钥属于声明的持有者。这需要像
+    CA 这样的可信第三方的参与，但 Android 并不要求以这种方式确认公钥。关于这些证书如何被使用和构建的更多信息，请参考 *检查应用程序证书和签名* 的食谱。
 - en: 'The options of `jarsigner` are described in detail after the following command:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: '`jarsigner` 的选项将在以下命令后详细描述：'
 - en: '[PRE14]'
+  id: totrans-125
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'The following section explains the attributes of the preceding command:'
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下部分解释了前述命令的属性：
 - en: '`-verbose`: This is used to enable verbose output'
+  id: totrans-127
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-verbose`：用于启用详细输出。'
 - en: '`-sigalg`: This is used to supply the algorithm to be used in the signing process'
+  id: totrans-128
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-sigalg`：用于提供签名过程中将要使用的算法。'
 - en: '`-digestalg`: This is used to supply the algorithm that will compute the signatures
     for each of the resources in the `.apk` file'
+  id: totrans-129
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-digestalg`：用于提供将计算 `.apk` 文件中每个资源的签名的算法。'
 - en: '`-keystore`: This is used to specify the keystore that you want to use'
+  id: totrans-130
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-keystore`：用于指定你想要使用的密钥库。'
 - en: '`[your .apk file]`: This is the `.apk` file that you intend to sign'
+  id: totrans-131
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`[你的 .apk 文件]`：这是你打算签名的 `.apk` 文件。'
 - en: '`[your key alias]`: This is the alias that you associated to the key/certificate
     pair'
+  id: totrans-132
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`[你的密钥别名]`：这是你与密钥/证书对关联的别名。'
 - en: See also
+  id: totrans-133
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参见
 - en: The *Jarsigner* documentation at [http://docs.oracle.com/javase/6/docs/technotes/tools/windows/jarsigner.html](http://docs.oracle.com/javase/6/docs/technotes/tools/windows/jarsigner.html)
+  id: totrans-134
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*Jarsigner* 的文档在 [http://docs.oracle.com/javase/6/docs/technotes/tools/windows/jarsigner.html](http://docs.oracle.com/javase/6/docs/technotes/tools/windows/jarsigner.html)'
 - en: The *Signing your applications – Android Developer* page at [http://developer.android.com/tools/publishing/app-signing.html](http://developer.android.com/tools/publishing/app-signing.html)
+  id: totrans-135
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*签名你的应用程序 - Android 开发者* 页面在 [http://developer.android.com/tools/publishing/app-signing.html](http://developer.android.com/tools/publishing/app-signing.html)'
 - en: The *Keytool* documentation at [http://docs.oracle.com/javase/6/docs/technotes/tools/solaris/keytool.html](http://docs.oracle.com/javase/6/docs/technotes/tools/solaris/keytool.html)
+  id: totrans-136
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*Keytool* 的文档在 [http://docs.oracle.com/javase/6/docs/technotes/tools/solaris/keytool.html](http://docs.oracle.com/javase/6/docs/technotes/tools/solaris/keytool.html)'
 - en: Verifying application signatures
+  id: totrans-137
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 验证应用程序签名
 - en: In the previous recipes, we walked through how applications are signed and how
     to generate keys securely to sign them. This recipe will provide details on how
     application signatures are verified. Being able to do this "by hand" is pretty
     important because it not only gives you insight into how verification actually
     works, but also serves as a gateway to deeper introspection of cryptographic application
     security.
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的食谱中，我们讲解了应用程序是如何签名的以及如何生成密钥以安全地签名它们。这个食谱将详细说明如何验证应用程序签名。能够手动完成这一操作非常重要，因为它不仅让你了解验证实际是如何工作的，而且也是深入了解加密应用程序安全性的门户。
 - en: Getting ready
+  id: totrans-139
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备开始
 - en: 'To be able to perform this recipe, you will need the following:'
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 要执行此食谱，你需要以下内容：
 - en: The JDK
+  id: totrans-141
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: JDK
 - en: A sample signed application to verify
+  id: totrans-142
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 一个待验证的已签名应用程序样本
 - en: That's about all that you need for this one. Let's get going!
+  id: totrans-143
   prefs: []
   type: TYPE_NORMAL
+  zh: 这就是你需要的一切。让我们开始吧！
 - en: How to do it...
+  id: totrans-144
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To verify application signatures, you will need to perform the following steps:'
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
+  zh: 要验证应用程序签名，你需要执行以下步骤：
 - en: 'The Java JDK has a tool called `jarsigner` that will be able to handle all
     of the hard labor; all you need to do is execute the following command:'
+  id: totrans-146
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: Java JDK 有一个名为 `jarsigner` 的工具，它能够处理所有繁重的工作；你需要做的就是执行以下命令：
 - en: '[PRE15]'
+  id: totrans-147
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: All you need to do now is look for the **jar verified** string on your screen;
     this indicates that the application signatures have been verified.
+  id: totrans-148
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在你需要做的是在屏幕上寻找**jar已验证**的字样；这表示应用程序签名已经经过验证。
 - en: Inspecting the AndroidManifest.xml file
+  id: totrans-149
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 检查AndroidManifest.xml文件
 - en: The application manifest is probably the most important source of information
     for Android application security specialists. It contains all of the information
     regarding an application's permissions and which components form part of an application,
@@ -754,232 +1062,333 @@
     to interact with the rest of the applications on your platform. I'm going to use
     this recipe as a good excuse to talk about the application manifest, how it's
     structured, and what each component in the sample manifest means.
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: 应用程序清单可能是对Android应用程序安全专家来说最重要的信息来源。它包含了有关应用程序权限以及构成应用程序的各个组件的所有信息，并且向我们详细介绍了这些组件将如何被允许与平台上的其他应用程序交互。我将使用这个食谱作为讨论应用程序清单、其结构以及示例清单中每个组件含义的好借口。
 - en: Getting ready
+  id: totrans-151
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Before you can get going, you will need to have the following software:'
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始之前，你需要安装以下软件：
 - en: WinZip for Windows
+  id: totrans-153
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Windows上的WinZip
 - en: The Java JDK
+  id: totrans-154
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Java JDK
 - en: A handy text editor; usually Vi/Vim does the trick, but Emacs, Notepad++, and
     Notepad are all cool; we don't need anything fancy here
+  id: totrans-155
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 一个便捷的文本编辑器；通常Vi/Vim可以胜任，但Emacs、Notepad++和Notepad也都很好用；在这里我们不需要花哨的东西。
 - en: The Android SDK (no surprise here!)
+  id: totrans-156
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android SDK（这里并不意外！）
 - en: 'You may also need to go get something called **apktool**; it makes decoding
     the `AndroidManifest.xml` file really easy. Well, actually, all that it really
     does is reformat the output of another Android SDK tool. It''s pretty easy to
     set it up; all that you need to do is perform the following steps:'
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能还需要获取一个名为**apktool**的工具；它使得解码`AndroidManifest.xml`文件变得非常简单。实际上，它所做的只是重新格式化另一个Android
+    SDK工具的输出。设置它非常简单，你只需要执行以下步骤：
 - en: Download the tool; you can it find at [http://android-apktool.googlecode.com/files/apktool1.5.2.tar.bz2](http://android-apktool.googlecode.com/files/apktool1.5.2.tar.bz2).
+  id: totrans-158
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下载工具；你可以在[http://android-apktool.googlecode.com/files/apktool1.5.2.tar.bz2](http://android-apktool.googlecode.com/files/apktool1.5.2.tar.bz2)找到它。
 - en: 'If you have the Android SDK installed, you can simply extract the apktool that
     you just downloaded to the `platforms-tools` folder in your SDK folder, more specifically:'
+  id: totrans-159
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你已经安装了Android SDK，你可以将刚刚下载的apktool解压到SDK文件夹中的`platforms-tools`目录下，具体来说：
 - en: '[PRE16]'
+  id: totrans-160
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Or for Linux machines:'
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者对于Linux机器：
 - en: '[PRE17]'
+  id: totrans-162
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: Please make sure that you get the `apktool.jar` file and the apktool script
     in there with everything else; don't put it in its own subfolder!
+  id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 请确保你获取了`apktool.jar`文件和apktool脚本，与其他文件放在同一目录下；不要将其放在自己的子文件夹中！
 - en: If you don't want to download the Android SDK, there are some dependencies that
     you will need to download. They can be downloaded at [http://code.google.com/p/android-apktool/downloads/list](http://code.google.com/p/android-apktool/downloads/list).
+  id: totrans-164
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果你不想下载Android SDK，还有一些依赖项需要你下载。它们可以在[http://code.google.com/p/android-apktool/downloads/list](http://code.google.com/p/android-apktool/downloads/list)下载。
 - en: Namely, if you're using a Windows machine, you should get the apktool at [http://android-apktool.googlecode.com/files/apktool-install-windows-r05-ibot.tar.bz2](http://android-apktool.googlecode.com/files/apktool-install-windows-r05-ibot.tar.bz2).
+  id: totrans-165
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 特别是，如果你使用的是Windows电脑，你应该在[http://android-apktool.googlecode.com/files/apktool-install-windows-r05-ibot.tar.bz2](http://android-apktool.googlecode.com/files/apktool-install-windows-r05-ibot.tar.bz2)获取apktool。
 - en: And, if you're using a Linux Debian machine, you should get this one at [http://android-apktool.googlecode.com/files/apktool-install-linux-r05-ibot.tar.bz2](http://android-apktool.googlecode.com/files/apktool-install-linux-r05-ibot.tar.bz2).
+  id: totrans-166
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你在使用Linux Debian系统，你应该在这个地址获取相应的工具[http://android-apktool.googlecode.com/files/apktool-install-linux-r05-ibot.tar.bz2](http://android-apktool.googlecode.com/files/apktool-install-linux-r05-ibot.tar.bz2)。
 - en: You will also need to make sure that all of the downloaded files are in the
     same directory.
+  id: totrans-167
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你还需要确保所有下载的文件都在同一个目录下。
 - en: 'You should be able to fire it up, and you can test it out by trying to run
     it with the following:'
+  id: totrans-168
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你应该能够启动它，并且可以通过以下方式测试它：
 - en: 'On Windows:'
+  id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在Windows上：
 - en: '[PRE18]'
+  id: totrans-170
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'And on Debian Linux:'
+  id: totrans-171
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在Debian Linux上：
 - en: '[PRE19]'
+  id: totrans-172
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: If you've got all of that done, you'll be able to move on to the next step,
     that is, actually dissecting an `AndroidManifest.xml` file.
+  id: totrans-173
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你完成了所有这些步骤，你就可以进入下一步，也就是实际剖析一个`AndroidManifest.xml`文件。
 - en: How to do it...
+  id: totrans-174
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To grab a copy of the `AndroidManifest.xml` file for a given application package,
     you need to perform the following steps:'
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 要获取给定应用程序包的`AndroidManifest.xml`文件副本，你需要执行以下步骤：
 - en: All that you'll need to do is point apktool at your APK file. We're going to
     be using the `Contacts.apk` application that we pulled off of an emulator in one
     of the previous recipes. Type the following into your command prompt and make
     sure your working directory—the directory you are currently in with your terminal/command
     prompt—is the one you extracted apktool into.
+  id: totrans-176
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你需要做的就是将apktool指向你的APK文件。我们将使用之前食谱中从模拟器中提取的`Contacts.apk`应用程序。在命令提示符中输入以下内容，并确保你的工作目录——你当前所在的终端/命令提示符目录——是提取apktool的目录。
 - en: 'On Debian Linux:'
+  id: totrans-177
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在Debian Linux上：
 - en: '[PRE20]'
+  id: totrans-178
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'On Windows:'
+  id: totrans-179
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在Windows上：
 - en: '[PRE21]'
+  id: totrans-180
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'As an example, if you''re using the `Contacts.apk` application and you want
     all of the decoded files to be saved to a folder called `decoded`, you would type
     the following command on a Linux machine:'
+  id: totrans-181
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 例如，如果你使用的是`Contacts.apk`应用程序，并且你想将所有解码的文件保存到一个名为`decoded`的文件夹中，你可以在Linux机器上输入以下命令：
 - en: '[PRE22]'
+  id: totrans-182
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: '![How to do it...](img/00041.jpeg)'
+  id: totrans-183
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00041.jpeg)'
 - en: You can now view the application manifest. It should be under the folder you
     chose to extract it to in the previous step, inside a file aptly named `AndroidManifest.xml`.
     To view it, simply whip out your favorite text editor—Linux folks, you have almost
     a million text-editing tools bundled into your operating system—and point it at
     the `AndroidManifest.xml` file.
+  id: totrans-184
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在你可以查看应用程序清单了。它应该在你上一步选择提取的文件夹中，在一个名为`AndroidManifest.xml`的文件里。要查看它，只需拿出你最喜欢的文本编辑器——Linux用户，你的操作系统几乎捆绑了一百万个文本编辑工具——并将其指向`AndroidManifest.xml`文件。
 - en: 'On Linux:'
+  id: totrans-185
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在Linux上：
 - en: '[PRE23]'
+  id: totrans-186
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Alternatively, you could just display it on your terminal screen by executing
     the following command:'
+  id: totrans-187
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者，你也可以通过执行以下命令在终端屏幕上显示清单：
 - en: '[PRE24]'
+  id: totrans-188
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'On Windows:'
+  id: totrans-189
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在Windows上：
 - en: '[PRE25]'
+  id: totrans-190
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: You should see the manifest either on your terminal screen—if you're on a Linux
     machine—or notepad should pop up with the manifest open. Some of you may not understand
     what all of the garble on your screen is or how valuable this information is,
     which is why the next recipe includes an explanation of all the important parts
     of the application manifest structure:![How to do it...](img/00042.jpeg)
+  id: totrans-191
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你可以在终端屏幕上看到清单——如果你使用的是Linux机器——或者记事本会自动弹出并打开清单。你们中的一些人可能不理解屏幕上的这些乱码是什么，或者这些信息有多宝贵，因此下一个食谱将包含对应用程序清单结构所有重要部分的解释：![如何操作...](img/00042.jpeg)
 - en: So, you're probably staring at the garbled information listed in the `AndroidManifest.xml`
     file. What it means and why all of this is important is stated in the next recipe
     of the walkthrough. It provides a good background on how some of the elements
     and their attributes work. I've only covered the background on the most important
     elements with regard to security and application security assessment.
+  id: totrans-192
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 所以，你可能正盯着`AndroidManifest.xml`文件中的乱码信息。它的意义以及为什么这一切都很重要，在接下来的演练食谱中会有说明。它提供了关于某些元素及其属性如何工作的良好背景。我只涵盖了与安全和应用程序安全评估最相关的元素背景。
 - en: How it works...
+  id: totrans-193
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: To help you understand the application manifest, I'm going to show you the structure
     of a manifest here and explain what the most important sections mean. If you want
     more details on the Android manifest language, you should check out the *See also*
     section of this recipe.
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了帮助你理解应用程序清单，我将在这里向你展示清单的结构，并解释最重要部分的意义。如果你想了解更多关于Android清单语言的信息，你应该查看本食谱的*另请参阅*部分。
 - en: 'The structure of the manifest is as follows:'
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 清单的结构如下：
 - en: '[PRE26]'
+  id: totrans-196
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: Tip
+  id: totrans-197
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Downloading the example code**'
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: '**下载示例代码**'
 - en: You can download the example code files for all Packt books you have purchased
     from your account at [http://www.packtpub.com](http://www.packtpub.com). If you
     purchased this book elsewhere, you can visit [http://www.packtpub.com/support](http://www.packtpub.com/support)
     and register to have the files e-mailed directly to you.
+  id: totrans-199
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以从你在[http://www.packtpub.com](http://www.packtpub.com)的账户下载你购买的所有Packt图书的示例代码文件。如果你在其他地方购买了这本书，可以访问[http://www.packtpub.com/support](http://www.packtpub.com/support)注册，我们会直接将文件通过电子邮件发送给你。
 - en: So, what on earth does this mean? Well, to start off, the first line has more
     to do with the kind of file and Android manifest, and has almost nothing to do
     with what it does and is intended for. If you couldn't tell from the `.xml` extension,
@@ -987,114 +1396,158 @@
     manifest is an XML language. XML is a format for basically making up any language
     you wish; some sources frankly describe it as a language for defining markup languages.
     XML is designed to be a set of rules for describing just about anything!
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 这究竟意味着什么呢？首先，第一行更多是关于文件类型和Android清单，几乎与它的作用和目的无关。从`.xml`扩展名你可能已经看出，它是一个**可扩展标记语言**（**XML**）文件。这意味着Android清单是用XML语言编写的。XML基本上是用于创建任何你希望的语言的格式；一些资料坦率地将其描述为定义标记语言的的语言。XML旨在成为一组描述几乎所有事情的规则！
 - en: 'So, when you see the following code, you know that whatever follows that line
     is an XML file in XML Version 1 and it''s encoded using UTF-8:'
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以，当你看到以下代码时，你就知道紧随其后的行是一个使用UTF-8编码的XML版本1的XML文件：
 - en: '[PRE27]'
+  id: totrans-202
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Moving on to the Android-specific part:'
+  id: totrans-203
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来谈谈Android特有的部分：
 - en: '[PRE28]'
+  id: totrans-204
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'This element is the opening tag for the entries in the application manifest;
     it marks the beginning and is called the root element of an XML document. The
     next tag declares that the application requires a given permission:'
+  id: totrans-205
   prefs: []
   type: TYPE_NORMAL
+  zh: 此元素是应用程序清单中条目的开始标签；它标志着开始，被称为XML文档的根元素。下一个标签声明应用程序需要给定权限：
 - en: '[PRE29]'
+  id: totrans-206
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'This is the string that usually shows up when you install the application,
     depending on what kind of permission it is. The `android:name` attribute specifies
     the name of the permission; so, for instance, if your application needs to use
     a device''s camera service, it should have the following code in its manifest:'
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 这通常是在你安装应用程序时根据权限类型显示的字符串。`android:name`属性指定了权限的名称；例如，如果你的应用程序需要使用设备的摄像头服务，它的清单中应该有以下代码：
 - en: '[PRE30]'
+  id: totrans-208
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'The next element type is as follows:'
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个元素类型如下：
 - en: '[PRE31]'
+  id: totrans-210
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'This element is used to define permission; for instance, when a developer feels
     that for other applications to interact with a particular application component,
     a special unique permission is required. This element is quite interesting; let''s
     look at its attributes:'
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 此元素用于定义权限；例如，当开发者认为其他应用程序要与特定应用程序组件交互时，需要特殊的唯一权限。这个元素相当有趣；让我们看看它的属性：
 - en: '`android:description`: This attribute is used to define the string that will
     be displayed as the description of the permission when the user is prompted to
     grant the permission.'
+  id: totrans-212
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android:description`：此属性用于定义当用户被提示授予权限时作为权限描述显示的字符串。'
 - en: '`android:icon`: This attribute is used to define a descriptive icon to display
     when the user is prompted to grant the permission.'
+  id: totrans-213
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android:icon`：此属性用于定义当用户被提示授予权限时显示的描述性图标。'
 - en: '`android:label`: This attribute is used as the name of the permission when
     the user is prompted to grant the permission, for example, network access and
     read SMSs.'
+  id: totrans-214
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android:label`：此属性用作当用户被提示授予权限时权限的名称，例如，网络访问和读取短信。'
 - en: '`android:name`: This attribute is the actual name of the permission. This is
     the literal string that will be looked for in an application''s manifest to determine
     whether it has this permission, for example, `android.permission.Camera`.'
+  id: totrans-215
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android:name`：此属性是权限的实际名称。这是在应用程序的清单中查找的字符串，以确定它是否具有此权限，例如`android.permission.Camera`。'
 - en: '`android:protectionLevel`: This attribute is the value used to indicate the
     level of risk associated to this permission. The levels are classified as follows:'
+  id: totrans-216
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android:protectionLevel`：此属性用于指示与此权限相关的风险级别。这些级别被分类如下：'
 - en: '`"dangerous"`: This level is usually assigned to any permission that allows
     apps to access sensitive user data or operate system configuration data. This
     is used to protect access to any function or data that can be used to harm the
     user.'
+  id: totrans-217
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`"dangerous"`：此级别通常分配给任何允许应用访问敏感用户数据或操作系统配置数据的权限。这用于保护任何可能被用于危害用户的函数或数据的访问。'
 - en: '`"normal"`: This level is used to indicate any permission that grants access
     to data or services that incur no inherent risk.'
+  id: totrans-218
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`"normal"`：此级别用于指示任何授予访问不带来固有风险的数据或服务的权限。'
 - en: '`"signature"`: This level is set when the permission is to be autonomously
     granted to any application signed with the same certificate as the application
     that defined the permission, namely, the application with the associated `<permission>`
     tag in `AndroidManifest.xml`.'
+  id: totrans-219
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`"signature"`：当权限需要自主授予与定义该权限的应用具有相同证书的任何应用时，会设置此级别，即`AndroidManifest.xml`中带有相关`<permission>`标签的应用。'
 - en: '`"signatureOrSystem"`: This level is set when the permission is to be autonomously
     granted to any application signed with the same certificate as the application
     that defined the permission.'
+  id: totrans-220
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`"signatureOrSystem"`：当权限需要自主授予与定义该权限的应用具有相同证书的任何应用时，会设置此级别。'
 - en: You should pay close attention to the value used in the `protectionLevel` attribute,
     especially those of you who need to perform application assessments professionally.
     Try to think about whether the protection level that the developer decided on
     is appropriate. You need to be able to make sure that the risk involved with this
     permission is clearly indicated to the user.
+  id: totrans-221
   prefs: []
   type: TYPE_NORMAL
+  zh: 你应该密切关注`protectionLevel`属性中使用的值，尤其是那些需要专业进行应用评估的人。尝试思考开发者决定的保护级别是否恰当。你需要能够确保与此权限相关的风险能够明确地指示给用户。
 - en: Another crucial attribute of `protectionLevel` is that it determines which permissions
     are displayed to the user before the application is installed. Users are always
     prompted to grant permissions in dangerous protection levels, though normal permissions
@@ -1105,19 +1558,25 @@
     unaware of it. Please take this into consideration when you are inspecting an
     application's manifest because it will help determine how the application communicates
     risks to the user. On to the next element type!
+  id: totrans-222
   prefs: []
   type: TYPE_NORMAL
+  zh: '`protectionLevel`的另一个关键属性在于它决定了在应用安装前向用户显示哪些权限。用户总是会被提示授予危险保护级别的权限，而普通权限只有在用户明确请求时才会显示。另一方面，`signature`和`signatureOrSystem`权限在应用安装前不会显示给用户。这意味着如果应用在`signature`或`signatureOrSystem`保护级别下被授予了风险权限，用户将对此一无所知。在检查应用清单时请考虑这一点，因为它将帮助确定应用如何向用户传达风险。接下来是下一个元素类型！'
 - en: '[PRE32]'
+  id: totrans-223
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: This element is used to define the beginning of an application. What's important
     about this element with regards to security is its attributes and how they can
     affect the components defined inside this element. The attribute definitions have
     been omitted here for the sake of brevity; you will need to refer to the official
     documentation available at [http://developer.android.com/guide/topics/manifest/application-element.html](http://developer.android.com/guide/topics/manifest/application-element.html)
     for more details.
+  id: totrans-224
   prefs: []
   type: TYPE_NORMAL
+  zh: 此元素用于定义一个应用的开始。关于安全，此元素的重要之处在于其属性以及它们如何影响在此元素内定义的组件。为了简洁起见，这里省略了属性定义；你需要参考在[http://developer.android.com/guide/topics/manifest/application-element.html](http://developer.android.com/guide/topics/manifest/application-element.html)可获取的官方文档以获取更多详细信息。
 - en: An important property of this element is that some attributes simply define
     default values for the corresponding attributes of the components defined inside
     the element; this means that its components will be able to override them. A notable
@@ -1127,336 +1586,492 @@
     its components sets a different permission as its attribute, the component's permission
     will take precedence. This could introduce considerable risk if the component
     overrides a dangerous permission with a normal one.
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 此元素的一个重要属性是，某些属性仅为元素内部定义的组件的相应属性设置默认值；这意味着其组件将能够覆盖它们。这些可覆盖属性中的一个显著元素是称为`permission`的属性，它声明了其他应用与之交互所需的权限。这意味着如果一个应用设置了一个给定的权限，而它的一个组件设置了不同的权限作为其属性，那么组件的权限将优先考虑。如果组件用普通权限覆盖了危险权限，这可能会带来相当大的风险。
 - en: 'Other attributes cannot be overridden by their components. This depends on
     the value that is set in the attribute and applied to every single component.
     The components include the following attributes:'
+  id: totrans-226
   prefs: []
   type: TYPE_NORMAL
+  zh: 其他属性不能被它们的组件覆盖。这取决于属性中设定的值，并应用于每一个单独的组件。组件包括以下属性：
 - en: '`debuggable`: This attribute specifies if a given component or group of components
     are debuggable.'
+  id: totrans-227
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`debuggable`：此属性指定给定的组件或组件组是否可调试。'
 - en: '`enabled`: This attribute specifies if the android application framework will
     be able to start up or run the components defined with this element; the default
     for this is `true`. Only when this is set to `false` does it override the value
     for all components.'
+  id: totrans-228
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`enabled`：此属性指定安卓应用框架是否能够启动或运行此元素定义的组件；默认为`true`。只有当设置为`false`时，它才会覆盖所有组件的值。'
 - en: '`description`: This attribute is simply a string used to describe the application.'
+  id: totrans-229
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`description`：这个属性仅是一个用于描述应用的字符串。'
 - en: '`allowClearUserData`: This attribute is a flag that determines whether the
     users will be able to clear data associated to the app; by default, it is set
     to `true` and cannot be set as anything else by non-system apps on some platforms.'
+  id: totrans-230
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`allowClearUserData`：此属性是一个标志，用于确定用户是否可以清除与app关联的数据；默认情况下，它被设置为`true`，在一些平台上非系统应用不能将其设置为其他值。'
 - en: 'The following elements are definitions for application components and allow
     developers to decide certain attributes for them:'
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下元素是应用程序组件的定义，允许开发者为它们决定某些属性：
 - en: '[PRE33]'
+  id: totrans-232
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: '[PRE34]'
+  id: totrans-233
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: <service android:enabled=["true" | "false"]android:exported=["true" | "false"]android:icon="drawable
     resource"android:isolatedProcess=["true" | "false"]android:label="string resource"android:name="string"android:permission="string">
+  id: totrans-234
   prefs: []
   type: TYPE_NORMAL
+  zh: <service android:enabled=["true" | "false"] android:exported=["true" | "false"]
+    android:icon="drawable resource" android:isolatedProcess=["true" | "false"] android:label="string
+    resource" android:name="string" android:permission="string">
 - en: </service>
+  id: totrans-235
   prefs: []
   type: TYPE_NORMAL
+  zh: </service>
 - en: '[PRE35]'
+  id: totrans-236
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: <receiver android:enabled=["true" | "false"]android:exported=["true" | "false"]android:icon="drawable
     resource"android:label="string resource"android:name="string"android:permission="string"android:process="string"
     ></receiver>
+  id: totrans-237
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: <receiver android:enabled=["true" | "false"] android:exported=["true" | "false"]
+    android:icon="drawable resource" android:label="string resource" android:name="string"
+    android:permission="string" android:process="string" ></receiver>
 - en: '[PRE36]'
+  id: totrans-238
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: <provider android:authorities="list"android:enabled=["true" | "false"]android:exported=["true"
     | "false"]android:grantUriPermissions=["true" | "false"]android:icon="drawable
     resource"android:initOrder="integer"  android:label="string resource"android:multiprocess=["true"
     | "false"]android:name="string"android:permission="string"android:process="string"android:readPermission="string"android:syncable=["true"
     | "false"]android:writePermission="string" ></provider>
+  id: totrans-239
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: <provider android:authorities="list" android:enabled=["true" | "false"] android:exported=["true"
+    | "false"] android:grantUriPermissions=["true" | "false"] android:icon="drawable
+    resource" android:initOrder="integer" android:label="string resource" android:multiprocess=["true"
+    | "false"] android:name="string" android:permission="string" android:process="string"
+    android:readPermission="string" android:syncable=["true" | "false"] android:writePermission="string"
+    ></provider>
 - en: '[PRE37]'
+  id: totrans-240
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: <intent-filter android:icon="drawable resource"android:label="string resource"android:priority="integer"
     ></intent-filter>
+  id: totrans-241
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: <intent-filter android:icon="drawable resource" android:label="string resource"
+    android:priority="integer" ></intent-filter>
 - en: '[PRE38]'
+  id: totrans-242
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: See also
+  id: totrans-243
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *AndoirdManifest.xml file* page at [http://developer.android.com/guide/topics/manifest/manifest-intro.html](http://developer.android.com/guide/topics/manifest/manifest-intro.html)
+  id: totrans-244
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 有关[*AndroidManifest.xml文件*](http://developer.android.com/guide/topics/manifest/manifest-intro.html)的页面
 - en: Interacting with the activity manager via ADB
+  id: totrans-245
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 通过ADB与活动管理器交互
 - en: Getting to know the **Android Debug Bridge** (**ADB**) is quite crucial to any
     budding Android security specialist. The ADB allows you to interact directly with
     the native services and resources, such as the package manager, activity manager,
     and other various daemons that are crucial to an Android system's operation used
     by the Android system. This recipe will provide details on how to interact with
     the activity manager by demonstrating a few commands that you can fire off.
+  id: totrans-246
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于任何初露头角的安卓安全专家来说，了解**安卓调试桥**（**ADB**）是非常重要的。ADB允许你直接与本地服务和资源进行交互，例如包管理器、活动管理器以及其他各种对安卓系统操作至关重要的守护进程，这些都被安卓系统所使用。本指南将提供如何通过演示一些你可以执行的命令与活动管理器交互的详细信息。
 - en: Getting ready
+  id: totrans-247
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Before we start, you will need the following things:'
+  id: totrans-248
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始之前，你需要准备以下物品：
 - en: The Android SDK tools
+  id: totrans-249
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 安卓SDK工具
 - en: Either a virtual device, see the *Inspecting the AndroidManifest.xml file* recipe
     to find out how to create and launch one, or a physical Android device
+  id: totrans-250
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 可以是虚拟设备，查看*检查 AndroidManifest.xml 文件*的菜谱以了解如何创建和启动一个，或者是物理的安卓设备
 - en: How to do it…
+  id: totrans-251
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'To launch activities using the application manager, you need to perform the
     following steps:'
+  id: totrans-252
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使用应用程序管理器启动活动，你需要执行以下步骤：
 - en: 'Drop a shell on your Android device with the help of the following command:'
+  id: totrans-253
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下命令在你的安卓设备上打开一个 shell：
 - en: '[PRE39]'
+  id: totrans-254
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: Find yourself an activity to launch; you can do this by searching through the
     list of activities that are installed on the device. This can be done by using
     the package manager.
+  id: totrans-255
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 找到一个要启动的活动；你可以通过使用包管理器搜索设备上已安装的活动列表来实现这一点。
 - en: '[PRE40]'
+  id: totrans-256
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'A huge list of packages should start pouring down your screen; any one of them
     should do just fine as an example:'
+  id: totrans-257
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 大量的包列表应该开始从你的屏幕上倾泻而下；其中任何一个都可以作为一个很好的示例：
 - en: '![How to do it…](img/00043.jpeg)'
+  id: totrans-258
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00043.jpeg)'
 - en: 'Once you''ve selected the activity that you want to launch, execute the following
     command:'
+  id: totrans-259
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 选择你想要启动的活动后，执行以下命令：
 - en: '[PRE41]'
+  id: totrans-260
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: There's more...
+  id: totrans-261
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'Besides just launching activities, you can also specify intents to send over
     to an activity by making use of the intent argument accepted by the start command,
     as follows:'
+  id: totrans-262
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了启动活动之外，你还可以通过使用 start 命令接受的意图参数，指定要发送到活动的意图，如下所示：
 - en: '[PRE42]'
+  id: totrans-263
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: The `<INTENT>` argument can be made up of a couple of arguments that allow you
     to describe an intent in full detail.
+  id: totrans-264
   prefs: []
   type: TYPE_NORMAL
+  zh: '`<INTENT>` 参数可以由允许你详细描述一个意图的几个参数组成。'
 - en: '`-a [action]`: This argument specifies the string label of the action to be
     specified. It helps detail the intended purpose or "action" of the intent that
     is being sent.'
+  id: totrans-265
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-a [动作]`：此参数指定要指定的动作的字符串标签。它有助于详细说明被发送意图的预期目的或“动作”。'
 - en: '`-d [data uri]`: This argument specifies the data URI to be attached to the
     intent. It points to the data to be used by the application handling the intent.'
+  id: totrans-266
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-d [数据 URI]`：此参数指定要附加到意图的数据 URI。它指向处理意图的应用程序要使用的数据。'
 - en: '`-t [mime type]`: This argument specifies the mime type of the data included
     with the intent.'
+  id: totrans-267
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-t [MIME 类型]`：此参数指定意图中包含的数据的 MIME 类型。'
 - en: '`-c [category]`: This argument specifies the category of the intent.'
+  id: totrans-268
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-c [类别]`：此参数指定意图的类别。'
 - en: '`-n [component]`: This argument specifies the component of the specified package
     targeted with the intent. It is used to fine tune the targeting of the intent.'
+  id: totrans-269
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-n [组件]`：此参数指定了意图指定的包的目标组件。它用于精确调整意图的目标。'
 - en: '`-f [flags]`: This argument specifies the intent flags. It is used to describe
     how the intent should be honored and allows you to control a given number of behaviors
     of the application that is honoring the intent.'
+  id: totrans-270
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-f [标志]`：此参数指定意图标志。它用于描述应如何尊重意图，并允许你控制尊重意图的应用程序的一定数量的行为。'
 - en: '`-e [extra key] [string value]`: This argument adds a string value associated
     to a given key. Certain intent definitions allow you to pass a dictionary of string
     values to an application. These string values will be accessed when the intent
     is being honored.'
+  id: totrans-271
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-e [额外键] [字符串值]`：此参数添加与给定键关联的字符串值。某些意图定义允许你向应用程序传递字符串值的字典。当意图被尊重时，将访问这些字符串值。'
 - en: '`-e [extra key] [string value]`: This argument has the same function as `-e`.'
+  id: totrans-272
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-e [额外键] [字符串值]`：此参数的功能与 `-e` 相同。'
 - en: '`-ez [extra key] [boolean value]`: This argument associates Boolean values
     to a name.'
+  id: totrans-273
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-ez [额外键] [布尔值]`：此参数将布尔值与名称关联。'
 - en: '`-ei [extra key] [integer value]`: This argument associates an integer value
     to a name.'
+  id: totrans-274
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-ei [额外键] [整数值]`：此参数将整数值与名称关联。'
 - en: '`-el [extra key] [long value]`: This argument associates a long number value
     to a name.'
+  id: totrans-275
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-el [额外键] [长整数值]`：此参数将长数字值与名称关联。'
 - en: '`-ef [extra key] [float value]`: This argument associates a float number value
     to a name.'
+  id: totrans-276
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-ef [额外键] [浮点数值]`：此参数将浮点数值与名称关联。'
 - en: '`-eu [extra key] [uri value]`: This argument associates a URI to a name.'
+  id: totrans-277
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-eu [额外键] [URI 值]`：此参数将 URI 与名称关联。'
 - en: '`-ecn [extra key] [component name]`: This argument associates a component name—that
     will be converted into a `ComponentName` object—to a name.'
+  id: totrans-278
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-ecn [额外键] [组件名称]`：此参数将组件名称（将被转换为 `ComponentName` 对象）与名称关联。'
 - en: '`-eia [extra key] [integer value, integer value,...]`: This argument allows
     you to associate an integer array to a name.'
+  id: totrans-279
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-eia [额外键] [整数值, 整数值,...]`：此参数允许你将整数数组与名称关联。'
 - en: '`-efa [extra key] [float value, float value,...]`: This argument is the same
     as `-eia`, except that in this case, you would associate an array of float number
     values to a name.'
+  id: totrans-280
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-efa [额外键] [浮点值, 浮点值,...]`：此参数与`-eia`相同，不同之处在于在这种情况下，您可以将一系列浮点数值与一个名称关联。'
 - en: Not all of the intent arguments are compulsory. All that's needed for this command
     to be logically sound is a component to target with the intent or an action value;
     these rules apply to all intents targeted at applications.
+  id: totrans-281
   prefs: []
   type: TYPE_NORMAL
+  zh: 并非所有意图参数都是必须的。要让此命令逻辑上合理，只需要意图目标组件或动作值；这些规则适用于所有针对应用程序的意图。
 - en: The optional `--user` argument allows you to specify which user this application
     should run as. If this argument is not supplied with the activity, it will run
     as the ADB user.
+  id: totrans-282
   prefs: []
   type: TYPE_NORMAL
+  zh: 可选的`--user`参数允许您指定应用程序应以哪个用户身份运行。如果没有为活动提供此参数，它将以ADB用户的身份运行。
 - en: There are also flags that you can associate to the intent. For a full list of
     options, refer to the *Intent Specification – Android Developer* labeled link
     in the *See also* section.
+  id: totrans-283
   prefs: []
   type: TYPE_NORMAL
+  zh: 您还可以将标志与意图关联。要获取完整选项列表，请参考*意图规范 - Android 开发者*部分中的标记链接。
 - en: 'Using this would work something similar to the following command:'
+  id: totrans-284
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用此命令的工作方式类似于以下命令：
 - en: '[PRE43]'
+  id: totrans-285
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'You can also start services using the activity manager; you can do this using
     the `startservice` command:'
+  id: totrans-286
   prefs: []
   type: TYPE_NORMAL
+  zh: 您也可以使用活动管理器启动服务；您可以通过使用`startservice`命令来完成此操作：
 - en: '[PRE44]'
+  id: totrans-287
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'Using this would work as follows:'
+  id: totrans-288
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用此命令的工作方式如下：
 - en: '[PRE45]'
+  id: totrans-289
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'Another function that the activity manager supports is stopping services and
     processes. This comes in very handy when an app is hogging all of the system resources
     and slowing the system down. Here''s how you kill a process using the activity
     manager:'
+  id: totrans-290
   prefs: []
   type: TYPE_NORMAL
+  zh: 活动管理器支持的另一个功能是停止服务和进程。当应用程序占用所有系统资源并减慢系统速度时，这非常有用。以下是使用活动管理器杀死进程的方法：
 - en: '[PRE46]'
+  id: totrans-291
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: As with the previous commands, the `UID` argument is optional. Here, this argument
     allows you to limit the `kill` command to packages running as a given user. If
     left unspecified, ADB will try to kill the running processes of all users that
     are associated to the given package.
+  id: totrans-292
   prefs: []
   type: TYPE_NORMAL
+  zh: 与之前的命令一样，`UID`参数是可选的。在这里，此参数允许您将`kill`命令限制为以给定用户身份运行的包。如果未指定，ADB将尝试杀死与给定包关联的所有用户的运行进程。
 - en: For more commands supported by the Android activity manager, see the *Android
     Debug Bridge – Android developer* labeled link in the *See also* section.
+  id: totrans-293
   prefs: []
   type: TYPE_NORMAL
+  zh: 有关Android活动管理器支持的其他命令，请参见*Android调试桥 - Android开发者*部分中的标记链接。
 - en: See also
+  id: totrans-294
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Android Debug Bridge – Android developer* page available at [http://developer.android.com/tools/help/adb.html](http://developer.android.com/tools/help/adb.html)
+  id: totrans-295
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 有关*Android调试桥 - Android开发者*的页面，请访问[http://developer.android.com/tools/help/adb.html](http://developer.android.com/tools/help/adb.html)
 - en: The *Intent Specification – Android Developer* specifications available at [http://developer.android.com/tools/help/adb.html#IntentSpec](http://developer.android.com/tools/help/adb.html#IntentSpec)
+  id: totrans-296
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 有关*意图规范 - Android 开发者*的详细信息，请访问[http://developer.android.com/tools/help/adb.html#IntentSpec](http://developer.android.com/tools/help/adb.html#IntentSpec)
 - en: Extracting application resources via ADB
+  id: totrans-297
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 通过ADB提取应用程序资源
 - en: The following recipe shows you how to do some snooping on your Android applications.
     Namely, find out what kind of data structures they are using to store important
     information and what kind of information they are storing, for example, high scores,
@@ -1466,180 +2081,260 @@
     protect their users' data, for example, is the data encrypted? How is it encrypted?
     Does the application protect the integrity of the user data? It also makes for
     a very useful skill when reverse engineering and assessing application security.
+  id: totrans-298
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下指南将展示如何对您的Android应用程序进行一些侦查。具体来说，找出它们用来存储重要信息的数据结构类型以及它们存储的信息类型，例如，高分、密码、联系人和电子邮件。除了允许您将高分设置为负数，这还是一种有效的方法，可以允许您从后端影响应用程序行为。它还让您了解应用程序如何保护用户数据，例如，数据是否加密？如何加密？应用程序是否保护用户数据的完整性？在进行逆向工程和评估应用程序安全性时，这也是一项非常有用的技能。
 - en: Getting ready
+  id: totrans-299
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Unfortunately for this one, you will need either a "rooted" phone or an emulator,
     because you already have root access on emulated devices.
+  id: totrans-300
   prefs: []
   type: TYPE_NORMAL
+  zh: 不幸的是，对于这一点，您需要一个“已root”的手机或模拟器，因为您已经拥有模拟设备上的root权限。
 - en: If you want to get access to the resources of other apps, you will need root
     permissions. If you want to study the behavior of applications from the market,
     nothing prevents you from pulling them off of your device using ADB and installing
     them on a virtual device.
+  id: totrans-301
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想要访问其他应用程序的资源，你需要获得root权限。如果你想研究市场上应用程序的行为，使用ADB将它们从你的设备上拉下来并在虚拟设备上安装没有任何阻碍。
 - en: You will also need to install the Android SDK.
+  id: totrans-302
   prefs: []
   type: TYPE_NORMAL
+  zh: 你还需要安装Android SDK。
 - en: How to do it…
+  id: totrans-303
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'Listing files on an Android device can be done in the following ways:'
+  id: totrans-304
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android设备上列出文件可以通过以下方式完成：
 - en: 'Drop a shell on your Android device with the help of the following command:'
+  id: totrans-305
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下命令在你的Android设备上启动shell：
 - en: '[PRE47]'
+  id: totrans-306
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'Navigate to the `/data/data/` directory:'
+  id: totrans-307
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 导航到`/data/data/`目录：
 - en: '[PRE48]'
+  id: totrans-308
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: 'The directory should look similar to the following screenshot:'
+  id: totrans-309
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 该目录应类似于以下截图：
 - en: '![How to do it…](img/00044.jpeg)'
+  id: totrans-310
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00044.jpeg)'
 - en: 'If you list the file permissions, creation, modification, and other metadata,
     it should look like the following screenshot:'
+  id: totrans-311
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你列出文件权限、创建、修改和其他元数据，它应该看起来像以下截图：
 - en: '![How to do it…](img/00045.jpeg)'
+  id: totrans-312
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00045.jpeg)'
 - en: Notice the owners and groups of the data directories, the first and second columns
     from the left in the listing. The owners here are actual applications. Linux,
     by default, runs each application as its own Linux user, which is essentially
     how the application sandbox operates. When an app is given permission to a resource
     that it inherently doesn't have access to, Linux puts it in the relevant user
     group.
+  id: totrans-313
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 注意数据目录的所有者和组，这是列表从左数第一和第二个列。这里所有者是实际的应用程序。默认情况下，Linux将每个应用程序作为其自己的Linux用户运行，这本质上是应用程序沙箱操作的方式。当一个应用程序被赋予对它本质上无法访问的资源的权限时，Linux会将它放入相关的用户组。
 - en: 'Execute the following command if you wish to see all of the application resources
     and metadata in one go:'
+  id: totrans-314
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果你希望一次性查看所有应用程序资源和元数据，请执行以下命令：
 - en: '[PRE49]'
+  id: totrans-315
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: '![How to do it…](img/00046.jpeg)'
+  id: totrans-316
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00046.jpeg)'
 - en: 'But, typically, you wouldn''t want your screen to be flooded with a massive
     directory listing unless you''re redirecting it to a file. You may want to display
     only the databases:'
+  id: totrans-317
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 但是，通常情况下，除非你将输出重定向到文件，否则你不会希望屏幕被大量的目录列表淹没。你可能只想显示数据库：
 - en: '[PRE50]'
+  id: totrans-318
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: '![How to do it…](img/00047.jpeg)'
+  id: totrans-319
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00047.jpeg)'
 - en: 'Or, maybe display just the files or whatever that is saved in the `/files/`
     directory for each application:'
+  id: totrans-320
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者，也许只显示每个应用程序在`/files/`目录中保存的文件或其他内容：
 - en: '[PRE51]'
+  id: totrans-321
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: '![How to do it…](img/00048.jpeg)'
+  id: totrans-322
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作…](img/00048.jpeg)'
 - en: 'Or, you could even search for a given type of file, by specifying an extension;
     here are a few examples:'
+  id: totrans-323
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者，你可以通过指定扩展名来搜索特定类型的文件，以下是一些例子：
 - en: '[PRE52]'
+  id: totrans-324
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'Once you''ve found the files you''re looking for, all that you need to do is
     copy them onto your machine using a good old `adb pull`:'
+  id: totrans-325
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 找到你要找的文件后，你需要使用古老的`adb pull`命令将它们复制到你的机器上：
 - en: '[PRE53]'
+  id: totrans-326
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: There's more...
+  id: totrans-327
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: All we're really doing here is listing different file types. One of those types
     is sqlite3 databases, the DB files that you would have seen in some of the directories.
     I'm sure you're dying to know how to crack them open and have a look at what's
     inside. This is how it's done.
+  id: totrans-328
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在这里真正做的只是列出不同的文件类型。其中一种是sqlite3数据库，你可能在一些目录中看到的DB文件。我敢肯定你很想知道如何打开它们并看看里面有什么。以下是操作方法。
 - en: Before we get going, you will need to make sure that sqlite3 is installed; it
     comes shipped with the Android SDK.
+  id: totrans-329
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始之前，你需要确保已安装sqlite3，它随Android SDK一起提供。
 - en: 'Extract the DB file to a location on your machine using the following command:'
+  id: totrans-330
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下命令将DB文件提取到你的机器上的位置：
 - en: '[PRE54]'
+  id: totrans-331
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'Load up the `.db` file using sqlite3:'
+  id: totrans-332
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用sqlite3加载`.db`文件：
 - en: '[PRE55]'
+  id: totrans-333
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'Check out the following screenshot if you''re looking for an example:'
+  id: totrans-334
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你需要一个示例，请查看以下截图：
 - en: '![There''s more...](img/00049.jpeg)'
+  id: totrans-335
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![还有更多…](img/00049.jpeg)'
 - en: In this chapter, we covered some of the mechanisms that protect applications,
     some basic protections that involve inter-application communication, application
     permissions, as well as the cryptographic signatures, and filesystem-related access
     protections.
+  id: totrans-336
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们介绍了一些保护应用程序的机制，一些涉及应用程序间通信、应用程序权限以及加密签名和文件系统相关保护的基本保护措施。
 - en: What you should take away from here are the tips and tricks needed to perform
     the security mechanisms by hand. This allows you to assess the effectiveness of
     these mechanisms independent of the Android devices enforcing them, and also allows
     you to interact directly with them, hopefully allowing you to understand them
     better.
+  id: totrans-337
   prefs: []
   type: TYPE_NORMAL
+  zh: 你应该从这儿带走的是执行安全机制所需的一些技巧和窍门。这使你能够独立于执行这些机制的Android设备来评估这些机制的有效性，并且还能让你直接与它们交互，希望这能帮助你更好地理解它们。
