@@ -1,227 +1,307 @@
 - en: Chapter 8. Databases and Loaders
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第八章. 数据库和加载器
 - en: In this chapter, we will create a SQLite database following a database contract
     and perform read/write operations using a database called **DAO** (**Data Access
     Object**). We will also explain the difference between a query and a raw query.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将按照数据库契约创建一个SQLite数据库，并使用名为**DAO**（**数据访问对象**）的数据库执行读写操作。我们还将解释查询与原始查询之间的区别。
 - en: You will learn what a content provider is and how to create it, which will allow
     us to make this database accessible from `CursorLoader`. We will access the content
     provider through a content resolver and query different tables of the database
     at the same time, and you will learn how to use a join query in a content provider.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 你将学习什么是内容提供者以及如何创建它，这将允许我们从`CursorLoader`访问这个数据库。我们将通过内容解析器访问内容提供者，同时查询数据库的不同表格，你将学会如何在内容提供者中使用联接查询。
 - en: With `CursorLoader` **,** we'll be able to synchronize a list view with a database
     by creating a mechanism, where if we store or modify any data in the database,
     the changes will automatically be reflected in our view.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用`CursorLoader` **，**我们可以通过创建一个机制来将列表视图与数据库同步，如果我们存储或修改数据库中的任何数据，这些更改将自动反映在我们的视图中。
 - en: 'To finish, we will add the popular feature pull to refresh in order to update
     the content on demand. So, in this chapter, the following topics will be covered:'
+  id: totrans-4
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们将添加流行的下拉刷新功能，以便按需更新内容。因此，在本章中，将涵盖以下主题：
 - en: Creating the database
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建数据库
 - en: Database Contract
+  id: totrans-6
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 数据库契约
 - en: Database Open Helper
+  id: totrans-7
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 数据库开放助手
 - en: Database Access Object
+  id: totrans-8
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 数据库访问对象
 - en: Creating and accessing content providers
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建和访问内容提供者
 - en: Content Provider
+  id: totrans-10
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 内容提供者
 - en: Content Resolver
+  id: totrans-11
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 内容解析器
 - en: Syncing the database with UI
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 同步数据库与UI
 - en: CursorLoader
+  id: totrans-13
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: CursorLoader
 - en: RecyclerView and CursorAdapter
+  id: totrans-14
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: RecyclerView和CursorAdapter
 - en: Pull to refresh
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 下拉刷新
 - en: Creating the database
+  id: totrans-16
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 创建数据库
 - en: To understand how databases work in Android, we will continue working on our
     example app, `MasteringAndroidApp`, creating a database to store the job offers
     that will be used to see the content in offline mode. This means that if we open
     the app once, the job offers will be kept in the device allowing us to see the
     information if opened without an Internet connection.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了理解Android中的数据库是如何工作的，我们将继续在我们的示例应用`MasteringAndroidApp`上工作，创建一个数据库来存储工作机会，这些工作机会将用于在离线模式下查看内容。这意味着如果我们打开应用一次，工作机会将被保存在设备上，即使在没有互联网连接的情况下打开，我们也能看到信息。
 - en: 'There are four mechanisms to persist data in Android:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android中有四种机制来持久化数据：
 - en: '**Shared preferences**: These preferences are used to store basic information
     in a key-value structure'
+  id: totrans-19
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**共享偏好设置**：这些偏好设置用于以键值结构存储基本信息'
 - en: '**The internal storage**: This storage saves files that are private to your
     app'
+  id: totrans-20
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**内部存储**：这种存储保存的是你应用私有的文件'
 - en: '**The external storage**: This storage saves files which can be shared with
     other apps'
+  id: totrans-21
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**外部存储**：这种存储保存可以与其他应用共享的文件'
 - en: '**The SQLite database**: This database, based on the popular SQL, allows us
     to write and read information in a structured way'
+  id: totrans-22
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**SQLite数据库**：这个基于流行的SQL的数据库允许我们以结构化的方式编写和读取信息'
 - en: We can create simple structures, such as one-table databases, as well as complex
     structures with more than one table. We can combine the output of different tables
     to create complex queries.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以创建简单的结构，比如单表数据库，也可以创建包含多个表格的复杂结构。我们可以合并不同表格的输出以创建复杂的查询。
 - en: We will create two tables so as to show how to create a join query using the
     content provider.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将创建两个表格，以展示如何使用内容提供者创建联接查询。
 - en: There will be a table for the companies, with the company ID, some information
     about them, name, website, extra information, and so on. A second table will include
     the job offers; this will also need to contain a column with the companies' IDs.
     If we want to have a tidy structure rather than having a big table with numerous
     fields, it's preferable to have the company information in the company table and
     the job offer in the job table, with just a reference to the company.
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 将有一个公司表格，包含公司ID，一些关于它们的信息，如名称、网站、额外信息等。第二个表格将包含工作机会；这也需要包含一个带有公司ID的列。如果我们想要一个整洁的结构，而不是一个包含众多字段的大型表格，最好是将公司信息放在公司表格中，将工作机会放在工作表格中，只需引用公司即可。
 - en: We won't alter the data structure in Parse for the sake of clarity and in order
     to focus on SQLite. Therefore, we will download the content and manually split
     the company and the job offer data, inserting them into separate tables.
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
 - en: 'Our company table will have the following structure:'
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
 - en: '| RowId | Name | Image_link |'
+  id: totrans-28
   prefs: []
   type: TYPE_TB
 - en: '| --- | --- | --- |'
+  id: totrans-29
   prefs: []
   type: TYPE_TB
 - en: '| 0 | Yahoo | …. |'
+  id: totrans-30
   prefs: []
   type: TYPE_TB
 - en: '| 1 | Google | … |'
+  id: totrans-31
   prefs: []
   type: TYPE_TB
 - en: The `rowId` column is automatically added by Android, so we don't need to specify
     this column during the creation of the table.
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
 - en: 'The following table is the table of job offers:'
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
 - en: '| RowId | Title | Description | Salary | Location | Type | Company_id |'
+  id: totrans-34
   prefs: []
   type: TYPE_TB
 - en: '| --- | --- | --- | --- | --- | --- | --- |'
+  id: totrans-35
   prefs: []
   type: TYPE_TB
 - en: '| 24 | Senior Android.. | 2x developers | 55.000 | London,UK | permanent |
     1 |'
+  id: totrans-36
   prefs: []
   type: TYPE_TB
 - en: '| 25 | Junior Android.. | Dev with experience on.. | 20.000 | London,UK | permanent
     | 0 |'
+  id: totrans-37
   prefs: []
   type: TYPE_TB
 - en: 'We will create a view as a result of joining these two tables; here, the join
     will be based on the `company_id`:'
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
 - en: '| Title | Description | Salary | Location | Type | Company ID | Name | Image_link
     |'
+  id: totrans-39
   prefs: []
   type: TYPE_TB
 - en: '| --- | --- | --- | --- | --- | --- | --- | --- |'
+  id: totrans-40
   prefs: []
   type: TYPE_TB
 - en: '| Senior Android | 2x developers.. | 55.000 | London,UK | permanent | 1 | Google
     | … |'
+  id: totrans-41
   prefs: []
   type: TYPE_TB
 - en: '| Junior Android | Dev with experience on.. | 20.000 | London,UK | permanent
     | 0 | Yahoo | … |'
+  id: totrans-42
   prefs: []
   type: TYPE_TB
 - en: This view will allow us to obtain all the data that we need in a single row.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
 - en: The database contract
+  id: totrans-44
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: The database contract is a class where we define the name of our database and
     the name for all the tables and columns as constants.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
 - en: 'It serves two purposes: firstly, it is a good way to have an idea of the structure
     of the database at first sight.'
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
 - en: 'To create a database package and the `DatabaseContract.java` class, use the
     following code:'
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE0]'
+  id: totrans-48
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: Secondly, using a reference to the constant avoids mistakes and allows us to
     make only one change in the value of a constant and propagate this over our entire
     app.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
 - en: For instance, while creating this table in the database, we need to use the
     SQL sentence, `CREATE TABLE "name"…`; what we will do is use the name of the table
     from the contract with `CREATE TABLE DatabaseContract.CompanyTable.TABLE_NAME…`.
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
 - en: The database contract is just the first step. It doesn't create a database;
     it's just a file that we use as a schema. To create the database, we need the
     help of `SQLiteOpenHelper`.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
 - en: The database open helper
+  id: totrans-52
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -232,87 +312,130 @@
     the data that the users of previous versions have stored in the old schema. Uploading
     a new version to Play Store, which deletes the previous information when the user
     updates our app, is not good for user experience at all.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
 - en: 'To know when a database needs to be updated, we have a static integer with
     the database version that we have to manually increase if we alter the database,
     as follows:'
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了知道何时需要更新数据库，我们有一个静态整数，其中包含数据库版本，如果我们更改数据库，需要手动增加这个版本，如下所示：
 - en: '[PRE1]'
+  id: totrans-55
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'We need to create a `DatabaseOpenHelper` class that extends `SQLiteOpenHelper`.
     While extending this class, we are asked to implement two methods:'
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要创建一个扩展 `SQLiteOpenHelper` 的 `DatabaseOpenHelper` 类。在扩展这个类时，要求我们实现两个方法：
 - en: '[PRE2]'
+  id: totrans-57
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: '`SQLiteOpenHelper` will automatically call `onCreate` when we create an object
     of this class. However, it will only call this if the database is not created
     before and only once. In the same way, it will call `onUpgrade` when we increase
     the database version. That''s why we need to send the params with the database
     name and the current version when we create an object of this class:'
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SQLiteOpenHelper` 类在我们创建此类对象时会自动调用 `onCreate` 方法。但是，它仅在数据库尚未创建过且仅调用一次时这样做。同样，当我们将数据库版本升级时，它会调用
+    `onUpgrade` 方法。这就是为什么在我们创建此类对象时，需要传递带有数据库名和当前版本的参数：'
 - en: '[PRE3]'
+  id: totrans-59
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Let''s start with the creation of the database; the `onCreate` method needs
     to execute a SQL sentence on the database to create the table:'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们从创建数据库开始；`onCreate` 方法需要在数据库上执行一条 SQL 语句来创建表：
 - en: '[PRE4]'
+  id: totrans-61
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'We will define these sentences in static variables, as follows:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将把这些语句定义在静态变量中，如下所示：
 - en: '[PRE5]'
+  id: totrans-63
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: By default, Android creates a `column_id` column, which is unique and autoincremental
     in every row; therefore, we don't need to create a column ID in the companies
     table.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 默认情况下，Android 在每一行中创建一个 `column_id` 列，该列是唯一的且自动递增的；因此，在 companies 表中我们不需要创建列
+    ID。
 - en: 'As you can see, we also have the commas and types in the variable to avoid
     mistakes. It''s very common to miss a comma or make a mistake when writing the
     sentence directly, and it''s very time consuming to find the error:'
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 如您所见，我们在变量中也有逗号和类型，以避免错误。直接编写语句时遗漏逗号或出错是很常见的，而且找出错误非常耗时：
 - en: '[PRE6]'
+  id: totrans-66
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'We''ve seen how to create our tables, now we have to manage the update. In
     this case, we will simply drop the previous information and create the database
     again because there is no important information in the table. Once the app is
     opened after the update, it will download the job offers again and populate the
     new database:'
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经看到了如何创建我们的表，现在我们必须管理更新。在这种情况下，我们将简单地删除以前的信息并重新创建数据库，因为表中没有重要的信息。更新后打开应用时，它将再次下载职位信息并填充新数据库：
 - en: '[PRE7]'
+  id: totrans-68
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'Our complete version of the class will appear as the following:'
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们类的完整版本将如下所示：
 - en: '[PRE8]'
+  id: totrans-70
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Database Access Object
+  id: totrans-71
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 数据库访问对象
 - en: '**Database Access** **Object**, commonly known as **DAO**, is an object that
     manages all access to the database from the app. Conceptually, it''s a class in
     the middle of the database and our app:'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: '**数据库访问对象**，通常称为 **DAO**，是一个管理应用中所有数据库访问的对象。从概念上讲，它是介于数据库和我们的应用之间的一个类：'
 - en: '![Database Access Object](img/4887_08_01.jpg)'
+  id: totrans-73
   prefs: []
   type: TYPE_IMG
+  zh: '![数据库访问对象](img/4887_08_01.jpg)'
 - en: It's a pattern usually used in **J2EE** (**Java 2 Enterprise Edition**) on the
     server side. In this, the implementation of the database can be changed and added
     an extra layer of independency to, thus allowing the change in database implementation
@@ -324,51 +447,71 @@
     as trying to open the database from two different places at the same time, which
     can be locked if we are writing. Of course, the possibility to retrieve this singleton
     from anywhere in the app makes access to the database really easy as well.
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是在 **J2EE** （**Java 2 Enterprise Edition**）服务器端通常使用的模式。在这种模式中，数据库实现可以被更改，并增加一层独立性，从而允许在不更改应用中的任何数据的情况下更改数据库实现。即使我们在
+    Android 中不更改数据库的实现（它始终是通过 `SQLiteOpenHelper` 获取的 SQLite 数据库），使用这种模式仍然是有意义的。从结构的角度来看，我们将在同一个地方拥有所有数据库访问操作。同时，将
+    DAO 作为单例对象，并使用同步方法，可以防止诸如同时从两个不同的地方尝试打开数据库的问题，如果我们正在写入，可能会被锁定。当然，从应用中的任何地方获取此单例的可能性也使得访问数据库变得非常容易。
 - en: In the next section, we'll take a look at how to create a content provider,
     which is an element that can replace our DAO object; however, content providers
     are tedious to implement if what we want is to just store and read data from the
     database. Let's continue with `MasteringAndroidApp`, creating a class called `MasteringAndroidDAO`,
     which will store the job offers and companies and show the information from the
     database in order to have an offline-working app.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一节中，我们将了解如何创建一个内容提供者，它可以替换我们的DAO对象；然而，如果我们只是想从数据库中存储和读取数据，实现内容提供者是非常繁琐的。让我们继续使用`MasteringAndroidApp`，创建一个名为`MasteringAndroidDAO`的类，它将存储工作机会和公司信息，并从数据库中显示信息，以便拥有一个离线工作的应用。
 - en: 'This class will be a singleton with two public synchronized methods: one to
     store job offers (in the job offer table and the company table) and another to
     read them. Even if we split the information into two tables, while reading we
     will merge it again so that we can keep displaying the job offers with our current
     adapter without making major changes. Through this, you will learn how to join
     two tables in a query.'
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个类将是单例模式，有两个公共的同步方法：一个用于存储工作机会（在工作机会表和公司表中），另一个用于读取。即使我们将信息分成两个表，读取时我们还会将其合并，以便我们可以继续使用当前适配器显示工作机会，而无需进行重大更改。通过这种方式，你将学会如何在查询中连接两个表。
 - en: 'If a method is synchronized, we guarantee that it can''t be executed from two
     places at the same time. Therefore, use the following code:'
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果一个方法是同步的，我们保证它不能同时从两个地方执行。因此，请使用以下代码：
 - en: '[PRE9]'
+  id: totrans-78
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'We will start with the `storeOffers()` method. The first thing that we need
     to do is open the database with `DatabaseOpenHelper`, and after this we need to
     start a transaction in the database. We will store a list of items, so it doesn''t
     make sense to perform a transaction for each item. It''s much more efficient if
     we open a transaction, perform all the insert operations that we need, and end
     the transaction after this, committing all the changes in a batch:'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从`storeOffers()`方法开始。首先需要使用`DatabaseOpenHelper`打开数据库，然后我们需要在数据库中开始一个事务。我们将存储一个项目列表，因此为每个项目执行事务是没有意义的。如果我们打开一个事务，执行所有需要的插入操作，然后结束事务，批量提交所有更改，这样效率会更高：
 - en: '[PRE10]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: Tip
+  id: totrans-81
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Don't forget to close the database at the end with `db.close()`. Otherwise,
     it will remain open and consume resources, and we will get an exception if we
     try to open it again.
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后不要忘记使用`db.close()`关闭数据库。否则，它将保持打开状态并消耗资源，如果我们尝试再次打开它，将会得到一个异常。
 - en: If we only had to insert data in a single table, we would only need to create
     a `ContentValue` object—a key-value object built based on the columns that we
     want to store—and call `db.insert(contentValue)`. However, our example is a little
@@ -376,152 +519,222 @@
     to obtain this ID, we need to ask our database if the company is already stored
     on it. If it's not, we need to store it and know which ID was assigned to it because,
     as we mentioned before, the ID is automatically generated and increased.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们只需要在单个表中插入数据，我们只需要创建一个`ContentValue`对象——一个基于我们想要存储的列构建的键值对象，并调用`db.insert(contentValue)`。然而，我们的例子稍微复杂一些。为了存储一个工作机会，我们需要知道公司ID，而要获得这个ID，我们需要询问数据库是否已经存储了该公司。如果没有，我们需要存储它并知道分配给它的ID，因为如我们之前提到的，ID是自动生成并增加的。
 - en: 'To find out if the company is already on the table, we need to perform a query
     searching all the rows to see if any row matches the name of the company that
     we are searching. There are two ways of performing a query: `query()` and `rawQuery()`.'
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 要找出公司是否已经在表中，我们需要执行一个查询，搜索所有行，看是否有任何行与我们要查找的公司名称相匹配。有两种执行查询的方法：`query()`和`rawQuery()`。
 - en: Performing a query
+  id: totrans-85
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 执行查询
 - en: 'A query needs the following parameters:'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 查询需要以下参数：
 - en: '`tableColumns`: This is the projection. We might want to return the columns
     that we want to return in the cursor in the whole table. In this case, it will
     be null, equivalent to `SELECT * FROM`. Alternatively, we might want to return
     just one column, `new String[]{"column_name"}`, or even a raw query. (here, `new
     String[]{SELECT ….}`).'
+  id: totrans-87
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`tableColumns`：这是投影。我们可能想要返回整个表中我们希望在游标中返回的列。在这种情况下，它将是null，等同于`SELECT * FROM`。或者，我们可能只想返回一列，`new
+    String[]{"column_name"}`，甚至是一个原始查询。（这里，`new String[]{SELECT ….}`）。'
 - en: '`whereClause`: Usually, the `"column_name > 5"` condition is used; however,
     in case the parameters are dynamic, we use `"column_name > ?"`. The question mark
     is used to specify the position of the parameters, which will come under the following
     `whereArgs` parameters.'
+  id: totrans-88
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`whereClause`：通常使用`"column_name > 5"`条件；然而，如果参数是动态的，我们使用`"column_name > ?"`。问号用于指定参数的位置，这些参数将在下面的`whereArgs`参数中给出。'
 - en: '`whereArgs`: These are the parameters inside the `where` clause that will replace
     the question marks.'
+  id: totrans-89
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`whereArgs`：这是`where`子句中的参数，将替换问号。'
 - en: '`groupBy` (`having`, `orderby`, and `limit`): These are the rest of the params,
     which can be null if not used.'
+  id: totrans-90
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`groupBy`（`having`，`orderby`和`limit`）：这些是其余的参数，如果不用可以设置为null。'
 - en: 'In our case, this is how we will ask if a company exists on the database. It
     will return a cursor with just one column, which is all we need to obtain the
     ID:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的案例中，这就是我们询问数据库中是否存在某公司的操作方式。它将返回一个只包含一列游标，这正是我们获取ID所需：
 - en: '[PRE11]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: The benefit of using `QueryBuilder` instead of `rawQuery` is the protection
     against SQL injections. At the same time, it's less prone to error. Performance-wise,
     it does not have any advantage as it creates `rawQuery` internally.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用`QueryBuilder`而不是`rawQuery`的好处是能够防止SQL注入。同时，它不容易出错。在性能方面，它并没有任何优势，因为它内部创建了`rawQuery`。
 - en: Using a raw query
+  id: totrans-94
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 使用原始查询
 - en: 'A raw query is just a string with the SQL query. In our example, it would be
     as follows:'
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 原始查询只是一个带有SQL查询的字符串。在我们的示例中，它将是如下形式：
 - en: '[PRE12]'
+  id: totrans-96
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: In most cases, a raw query is more readable and needs less code to be implemented.
     In this case, a user with bad intentions could add more SQL code in the `whereArgs`
     variable to obtain more information, produce an error, or delete any data. It
     doesn't prevent SQL injection.
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 在大多数情况下，原始查询的可读性更强，实现所需的代码也较少。在这种情况下，有不良意图的用户可能会在`whereArgs`变量中添加更多的SQL代码以获取更多信息，产生错误或删除任何数据。它并不能防止SQL注入。
 - en: Introducing cursors
+  id: totrans-98
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 介绍游标
 - en: When we call `query()` or `rawQuery()`, the result is returned in a cursor.
     A cursor is a collection of rows with many methods to access and iterate it. It
     should be closed when no longer used.
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们调用`query()`或`rawQuery()`时，结果会以游标的形式返回。游标是包含许多用于访问和遍历它的方法的行集合。当不再使用时，它应该被关闭。
 - en: 'The shortest way to iterate a cursor is to call `moveToNext()` in a loop, which
     is a method that returns false if there is no next:'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 遍历游标最简短的方式是在循环中调用`moveToNext()`方法，该方法在没有下一个元素时会返回false：
 - en: '[PRE13]'
+  id: totrans-101
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: To read this information, we have different methods, such as `getString()`,
     which receives the index of the column of the value needed.
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 要读取这些信息，我们有不同的方法，如`getString()`，它接收所需值列的索引。
 - en: 'To know if a company is already on the table, we can execute a query, which
     will return a collection of rows with just one column of integers with the ID.
     If there is a result, the ID will be in the column with the `0` index:'
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 要知道公司是否已经在表中，我们可以执行一个查询，这将返回一个只包含一列整数的ID的行集合。如果有结果，ID将在索引为`0`的列中：
 - en: '[PRE14]'
+  id: totrans-104
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Another option is to define the column with the name of the company as unique
     and to specify to ignore the conflicts using `insertWithOnConflict`. This way,
     if the company is already on the database or just inserted, it will return the
     ID:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个选项是将公司名称的列定义为唯一，并使用`insertWithOnConflict`指定忽略冲突。这样，如果公司已经存在于数据库中或刚刚被插入，它将返回ID：
 - en: '[PRE15]'
+  id: totrans-106
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'We can create a method for the query and get the ID from the cursor if there
     is a result. If not, the result will be `-1`. Before storing the job offer, we
     will check if the company exists. If not, we will store the company, and the ID
     will be returned during the insert:'
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以为查询创建一个方法，如果查询结果存在，则从游标中获取ID。如果没有结果，则结果为`-1`。在存储工作机会之前，我们将检查公司是否存在。如果不存在，我们将存储公司，并在插入时返回ID：
 - en: '[PRE16]'
+  id: totrans-108
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: Before testing this, it would be ideal to have the method to read from the database
     ready so that we can check that everything is stored correctly. The idea is to
     query both tables at the same time with a join query so as to get back a cursor
     with all the fields that we need.
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 在测试这个之前，理想的情况是准备好从数据库读取的方法，这样我们就可以检查是否所有内容都正确存储。我们的想法是同时查询这两个表，通过连接查询以获取包含我们所需所有字段的一个游标。
 - en: In SQL, this would be a `SELECT * FROM job_offer_table JOIN company_table ON
     job_offer_table.company_id = company_table.rowid …` query.
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 在SQL中，这将是一个如下的查询语句：`SELECT * FROM job_offer_table JOIN company_table ON job_offer_table.company_id
+    = company_table.rowid ...`
 - en: 'We need to do this in a query using the name of the tables from the database
     contract. This is how it will look:'
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要使用数据库合约中表的名字来执行查询。以下是它将呈现的样子：
 - en: '[PRE17]'
+  id: totrans-112
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'The next step is to create a job offer object from a cursor row and add it
     to the job offer list:'
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一步是从游标行创建一个工作机会对象，并将其添加到工作机会列表中：
 - en: '[PRE18]'
+  id: totrans-114
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'For this example, we will clear the database when we add new data. For this,
     we will create a method in `MasteringAndroidDAO`:'
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个例子中，当我们添加新数据时，我们将清除数据库。为此，我们将在`MasteringAndroidDAO`中创建一个方法：
 - en: '[PRE19]'
+  id: totrans-116
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Once the database access object has all the methods that we will need, we have
     to move to `ListFragment` and implement the logic. The ideal flow would be to
     first show the data from the database and fire the download to get the new job
@@ -531,56 +744,76 @@
     to test the DAO, we will simply show the data from the database if there is no
     internet connection or get a new list of job offers. When the new list is downloaded,
     we will clear the database and store the new offers.
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦数据库访问对象拥有了我们将需要所有方法，我们必须转向`ListFragment`并实现逻辑。理想的流程是首先显示数据库中的数据，并启动下载以获取新的工作机会。在后台，当更新完成时，将更新工作机会并刷新列表。我们将通过内容提供者和自动将数据库与列表视图连接的游标加载器来实现这一点。在这个例子中，为了测试DAO，如果网络连接不可用，我们将简单地从数据库中显示数据，或者获取新的工作机会列表。当新列表下载完成后，我们将清除数据库并存储新的工作机会。
 - en: If we wanted to build a system that keeps a history of the job offers instead
     of clearing the database, what we would have to do is check if there are any new
     offers coming from the server that are not stored already in the database and
     save only the new offers. This can be easily done by creating a new column with
     the ID from Parse so that we can compare job offers with a unique identifier.
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们想要构建一个系统，该系统保存工作机会的历史记录，而不是清除数据库，我们需要做的是检查是否有来自服务器的新工作机会尚未存储在数据库中，并只保存新的工作机会。通过创建一个新的列，带有来自Parse的ID，我们可以轻松地做到这一点，这样我们就可以使用唯一标识符比较工作机会。
 - en: 'To check if there is an Internet connection, we will ask the connectivity manager
     using the following code:'
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了检查是否有网络连接，我们将使用以下代码向连接管理器查询：
 - en: '[PRE20]'
+  id: totrans-120
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'In the `onCreateView` method, we need to ask whether or not there is a connection.
     If there is a connection, we can download a new list of offers, which will be
     shown and stored in the database, thus clearing the previous offers:'
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`onCreateView`方法中，我们需要询问是否有连接。如果有连接，我们可以下载新的工作机会列表，该列表将显示并存储在数据库中，从而清除之前的工作机会：
 - en: '[PRE21]'
+  id: totrans-122
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: At the moment, we will create the adapter with a new list of elements. If we
     want to update the list view on the screen with new job offers and we use this
     method, it will restart the adapter, which will make the list empty for a second
     and move the scrolling position to the top. We shouldn't create an adapter to
     refresh the list; the existing adapter should update the list of elements.
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 目前，我们将创建一个带有新元素列表的适配器。如果我们想要在屏幕上的列表视图中更新新的工作机会，并且我们使用这个方法，它将重新启动适配器，这将使列表在瞬间为空，并将滚动位置移到顶部。我们不应该创建一个适配器来刷新列表；现有的适配器应该更新元素列表。
 - en: To do this, we would have to create an `updateElements()` method in the adapter
     that replaces the current list of offers and calls `notifiyDataSetChanged()`,
     causing the adapter to refresh all the elements. If we know exactly how many elements
     we have updated, we can use `notifyItemInserted()` or `notifyRangeItemInserted()`
     to update and animate only the new elements added, which works more efficiently
     than `notifyDataSetChanged()`.
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 要实现这一点，我们不得不在适配器中创建一个`updateElements()`方法，该方法将替换当前的工作机会列表，并调用`notifiyDataSetChanged()`，导致适配器刷新所有元素。如果我们确切知道更新了多少元素，我们可以使用`notifyItemInserted()`或`notifyRangeItemInserted()`来仅更新和动画新增的元素，这比`notifyDataSetChanged()`更有效。
 - en: There is no need to do this synchronization of the view with the data manually.
     Android provides us with `CursorLoader`, a mechanism that connects the list view
     with the database directly. So, all we need to do is store the new offers in the
     database, and the list view will automatically reflect our changes. However, all
     of this automation comes at a cost; it needs a content provider to work.
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 没有必要手动将视图与数据同步。Android为我们提供了`CursorLoader`，这是一种直接将列表视图与数据库连接的机制。因此，我们需要做的就是将新的工作机会存储在数据库中，列表视图将自动反映我们的更改。然而，所有这些自动化都有代价；它需要一个内容提供者才能工作。
 - en: Content providers
+  id: totrans-126
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 内容提供者
 - en: 'A content provider is very similar to the concept of a DAO; it is an interface
     between the data and the app that allows different apps to exchange information.
     We can decide whether we want it to be public or not, whether we want other apps
@@ -589,195 +822,285 @@
     create. It can be stored in files; for instance, if we want access to videos or
     pictures from the gallery, we''ll use an Android built-in media content provider.
     Alternatively, it can be obtained from the network:'
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 内容提供者与DAO的概念非常相似；它是数据与应用程序之间的接口，允许不同的应用程序交换信息。我们可以决定它是公开的还是私有的，是否允许其他应用程序从中获取数据，以及它是否只在我们自己的应用程序内部使用。数据可以存储在数据库中，例如我们即将创建的数据库。它可以存储在文件中；例如，如果我们想要访问图库中的视频或图片，我们将使用Android内置的媒体内容提供者。或者，它也可以从网络获取：
 - en: '![Content providers](img/4887_08_02.jpg)'
+  id: totrans-128
   prefs: []
   type: TYPE_IMG
+  zh: '![内容提供者](img/4887_08_02.jpg)'
 - en: A content provider must be declared in the manifest as it is a component of
     our app and also specify whether or not it will be accessible to other apps, which
     is controlled by the attribute exported. Let's start by creating our own content
     provider.
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 内容提供者必须在清单文件中声明，因为它是我们应用程序的一个组件，并且要指定它是否可以被其他应用程序访问，这是由exported属性控制的。让我们从创建我们自己的内容提供者开始。
 - en: 'To create a content provider, create a `MAAProvider` class and extend `ContentProvider`.
     We will be asked to implement the following methods:'
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 要创建一个内容提供者，请创建一个`MAAProvider`类并继承`ContentProvider`。系统将要求我们实现以下方法：
 - en: '[PRE22]'
+  id: totrans-131
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: The `OnCreate` method will be called when the provider is started; it will initialize
     all the elements required for the provider to work. The provider will start at
     the same time as the application. The system knows which provider to start because
     it's defined in the manifest. The next four methods are the methods to access
     and manage the data. The final method returns the MIME type of the object.
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: '`OnCreate`方法将在提供者启动时被调用；它将初始化提供者工作所需的所有元素。提供者将在应用程序启动时同时启动。系统知道要启动哪个提供者，因为这在清单文件中定义了。接下来的四个方法是访问和管理数据的方法。最后一个方法返回对象的MIME类型。'
 - en: As we mentioned before, there are different content providers in the phone that
     we can use; for example, we can access the SMS, contacts, or media items from
     the gallery using a content provider. So, there must be a way to identify and
     access each one of them. This is done with a **URI** (**Uniform Resource Identifier**),
     which is a string similar to a URL that we use to go to a website in the browser.
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 如我们之前提到的，手机中有不同的内容提供者可供使用；例如，我们可以通过内容提供者访问短信、联系人或媒体库中的项目。因此，必须有方法来识别和访问它们每一个。这是通过**URI**（**统一资源标识符**）实现的，它类似于我们在浏览器中访问网站时使用的URL。
 - en: A URI is composed of a prefix, `"content://"`, followed by a string identifier,
     called authority. It is usually the name of the class plus the package `"com.packtpub.masteringandoridapp.MAAProvider"`
     followed by a slash and the name of the table, for instance `"/company_table"`.
     It is also followed optionally by a slash and the number of the row inside the
     table `"/2"`.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: URI由前缀`"content://"`、一个称为权限的字符串标识组成。它通常是类名加上包名`"com.packtpub.masteringandoridapp.MAAProvider"`，然后是一个斜杠和表名，例如`"/company_table"`。还可以选择性地在表内行的编号后面加上斜杠`"/2"`。
 - en: Therefore, the complete URI for the company table will be `"content://com.packtub.masteringandroidapp.MAAProvider/company_table`.
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，公司表的完整URI将是`"content://com.packtub.masteringandroidapp.MAAProvider/company_table"`。
 - en: The complete URI for the company with ID number 2 will be `"content://com.packtub.masteringandroidapp.MAAProvider/company_table/2"`.
     This URI would be represented as `company_table/#` in a general way, where `#`
     will be replaced by an integer.
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 带有ID编号2的公司的完整URI将是`"content://com.packtub.masteringandroidapp.MAAProvider/company_table/2"`。这个URI在一般情况下可以表示为`company_table/#`，其中`#`将被一个整数替换。
 - en: 'Given that we have two different tables and a third one, which is the result
     of the join (which can be accessed to get all the elements on the table or to
     get a single row), we have six possible URIs:'
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 鉴于我们有两个不同的表和一个通过连接得到的第三个表（可以访问以获取表中的所有元素或获取单行数据），我们有六个可能的URI：
 - en: '`content://com.packtub.masteringandroidapp.MAAProvider/company_table`'
+  id: totrans-138
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.packtub.masteringandroidapp.MAAProvider/company_table`'
 - en: '`content://com.packtub.masteringandroidapp.MAAProvider/company_job_offer`'
+  id: totrans-139
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.packtub.masteringandroidapp.MAAProvider/company_job_offer`'
 - en: '`content://com.packtub.masteringandroidapp.MAAProvider/offer_join_company`'
+  id: totrans-140
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.packtub.masteringandroidapp.MAAProvider/offer_join_company`'
 - en: '`content://com.packtub.masteringandroidapp.MAAProvider/company_table/#`'
+  id: totrans-141
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.packtub.masteringandroidapp.MAAProvider/company_table/#`'
 - en: '`content://com.packtub.masteringandroidapp.MAAProvider/company_job_offer/#`'
+  id: totrans-142
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.packtub.masteringandroidapp.MAAProvider/company_job_offer/#`'
 - en: '`content://com.packtub.masteringandroidapp.MAAProvider/offer_join_company/#`'
+  id: totrans-143
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.packtub.masteringandroidapp.MAAProvider/offer_join_company/#`'
 - en: 'We have only one content provider; in theory, this provider can implement the
     `query`, `insert`, `update`, `delete`, and `getType` methods for all six URIs,
     each with six different implementations. Therefore, when we perform `myMAAProvider.insert(URI
     …)`, we will need to have an `if` statement to see which of the tables needs an
     insert and choose the right implementations. It would be something similar to
     this:'
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们只有一个内容提供者；理论上，这个提供者可以为所有六个URI实现`query`、`insert`、`update`、`delete`和`getType`方法，每个方法都有六种不同的实现。因此，当执行`myMAAProvider.insert(URI
+    …)`时，我们需要有一个`if`语句来查看哪个表需要插入，并选择正确的实现。这会是类似这样的：
 - en: '[PRE23]'
+  id: totrans-145
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: As you can see by comparing the strings, this doesn't seem right, and if we
     add a URI with an integer at the end, we would need some mechanism to verify that
     `"company_table/2"` corresponds to the general URI, `"company_table/#"`. This
     is why we have `UriMatcher`. `UriMatcher`, which will contain a list of the possible
     URL's associated with an integer. So, when it receives a URI, it will tell us
     which integer to use while using string patterns.
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过比较字符串，您可以看出这看起来不太对，如果我们添加一个带有整数结尾的URI，我们需要有一种机制来验证`"company_table/2"`是否与通用URI`"company_table/#"`相对应。这就是我们有`UriMatcher`的原因。`UriMatcher`将包含与整数相关联的可能URL列表。因此，当它接收到一个URI时，它会告诉我们使用哪个整数以及使用字符串模式。
 - en: 'After creating `UriMatcher` and defining all the possible cases, we can just
     add the possible cases to `UriMatcher` and call `UriMatcher.match(Uri uri)`, which
     will return an integer with the case. All we need to do is a switch to check which
     case we are in:'
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建`UriMatcher`并定义所有可能的情况后，我们只需将可能的情况添加到`UriMatcher`中，并调用`UriMatcher.match(Uri
+    uri)`，这将返回带有情况的整数。我们需要做的就是切换以检查我们处于哪种情况：
 - en: '[PRE24]'
+  id: totrans-148
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'We can start implementing the query method to get a list of offers merged with
     companies and set it to the adapter to check that everything is working well so
     far. We need to have the following variable with the database:'
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以开始实现查询方法，以获取与公司合并的优惠列表，并将其设置到适配器中，以检查到目前为止一切是否运行良好。我们需要有以下几个与数据库有关的变量：
 - en: '[PRE25]'
+  id: totrans-150
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'This will be assigned in `onCreate` as follows:'
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将在`onCreate`中如下分配：
 - en: '[PRE26]'
+  id: totrans-152
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Also, in the query method, we need to create a query for the six possibilities,
     as follows:'
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，在查询方法中，我们需要为六种可能性创建一个查询，如下所示：
 - en: '[PRE27]'
+  id: totrans-154
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'We need to do this with the `DBOpenHelper.OFFER_JOIN_COMPANY` variable defined
     as follows:'
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要用以下定义的`DBOpenHelper.OFFER_JOIN_COMPANY`变量这样做：
 - en: '[PRE28]'
+  id: totrans-156
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'To access a content provider, we will use `ContentResolver`. It is a general
     instance that provides access to all the content providers available as well as
     to CRUD operations (create, read, update, and delete):'
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 要访问内容提供者，我们将使用`ContentResolver`。这是一个通用实例，它提供了对所有可用的内容提供者的访问权限以及CRUD操作（创建、读取、更新和删除）：
 - en: '[PRE29]'
+  id: totrans-158
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'To use the content resolver, we need a URI for the content provider. We can
     create it from a string variable right before making the call:'
+  id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使用内容解析器，我们需要一个指向内容提供者的URI。我们可以在调用之前从字符串变量中创建它：
 - en: '[PRE30]'
+  id: totrans-160
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: Alternatively, we can define a list of URI in the provider as a static variable
     access to them.
+  id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: 另外，我们可以在提供者中将URI列表定义为静态变量，以便访问它们。
 - en: If we try to run this code now, we would get the error, '*failed to find provider
     info for com.packtub.masteringandroidapp.MAAProvider*'. This means that the system
     can't find the provider because we haven't added it to the manifest yet.
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们现在尝试运行这段代码，我们会得到错误，'*failed to find provider info for com.packtub.masteringandroidapp.MAAProvider*'。这意味着系统找不到提供者，因为我们还没有将其添加到清单中。
 - en: 'To add a provider, we need to add the `<provider>` element within the `<application>`
     tag; it needs the path and name of our provider and the authority. In our case,
     both are the same:'
+  id: totrans-163
   prefs: []
   type: TYPE_NORMAL
+  zh: 要添加提供者，我们需要在`<application>`标签内添加`<provider>`元素；它需要我们提供者的路径和名称以及权限。在我们的情况下，这两者是相同的：
 - en: '[PRE31]'
+  id: totrans-164
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Even if we display the data with `CursorLoader` and do not use the list of
     offers content, it wouldn''t be a bad idea to create a temporary method that displays
     the list of offers from the content provider. It helps ensure that the content
     provider is accessible and returns the expected data before going further down
     in the `CursorLoader` road:'
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 即使我们使用`CursorLoader`显示数据，并且没有使用工作机会的内容列表，创建一个临时方法来显示内容提供者中的工作机会列表也不是一个坏主意。这有助于确保在深入`CursorLoader`的道路之前，内容提供者是可访问的并返回预期数据：
 - en: '[PRE32]'
+  id: totrans-166
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'By replacing the call to `showOffersFromDB()` with `showOffersFromContentProvider()`,
     we should see exactly the same information in the same order:'
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过将`showOffersFromDB()`的调用替换为`showOffersFromContentProvider()`，我们应当能够以相同的顺序看到完全相同的信息：
 - en: '[PRE33]'
+  id: totrans-168
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: The `CursorLoader` object can be easily implemented once the provider is created.
     At this stage, we can say that most of the job is done.
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦创建了提供者，`CursorLoader`对象就可以很容易地实现。在这个阶段，我们可以认为大部分工作已经完成。
 - en: Sync database with UI
+  id: totrans-170
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 将数据库与用户界面同步
 - en: When we use `CursorLoader` with a content provider, the data returned in the
     cursor is directly connected with the data in the database in such a way that
     one change in the database is reflected instantly in the UI. When we have this
@@ -787,53 +1110,76 @@
     the user wants. The goal is to add a new job offer in Parse, pull the list to
     refresh, and see the new element come instantly, all handled in the background
     through the content provider.
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们使用`CursorLoader`与内容提供者配合时，游标返回的数据与数据库中的数据直接关联，这样数据库中的任何更改都会立即反映在用户界面上。当我们拥有这套系统运行时，我们只需要关心将数据存储在数据库中以及更新数据。当我们准备好这套系统后，我们将讨论如何实现流行的下拉刷新系统，以在用户需要时更新工作机会。目标是在
+    Parse 中添加新的工作机会，下拉列表刷新，并立即看到新元素的到来，所有这些都在后台通过内容提供者处理。
 - en: Implementing CursorLoader
+  id: totrans-172
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 实现`CursorLoader`
 - en: To complete this goal, the next step is to create `CursorLoader`. We talked
     about loaders previously in the book; as we mentioned, they are a mechanism to
     load data in the background. This one specifically will return the data in a cursor
     and load it from a content provider. It will also refresh the data when any change
     in the source is detected.
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了完成这个目标，下一步是创建`CursorLoader`。我们之前在书中讨论过加载器；正如我们提到的，它们是在后台加载数据的机制。这个特定的加载器将返回游标中的数据，并从内容提供者中加载。它还在检测到源中的任何更改时刷新数据。
 - en: 'To start using `CursorLoader`, our Activity or Fragment—`FragmentList` in our
     case—needs to implement `LoaderManager.LoaderCallback<Callback>`. This interface
     will ask us to implement the following methods:'
+  id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: 要开始使用`CursorLoader`，我们的活动或片段—在我们的案例中是`FragmentList`—需要实现`LoaderManager.LoaderCallback<Callback>`。这个接口将要求我们实现以下方法：
 - en: '[PRE34]'
+  id: totrans-175
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'Let''s start with the first method—`onCreateLoader`. This method receives an
     integer ID as a parameter, which will be the ID of our loader. We can have more
     than one loader working in the same activity, so we will assign an ID to them
     in order to be able to identify them. Our loader will be defined as:'
+  id: totrans-176
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们从第一个方法开始—`onCreateLoader`。这个方法接收一个整数ID作为参数，这将是我们的加载器的ID。我们可以在同一个活动中拥有多个加载器，因此我们将为它们分配ID以便能够识别它们。我们的加载器将定义为：
 - en: '[PRE35]'
+  id: totrans-177
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'The `OnCreateLoader` method will be executed when we tell `LoaderManager` to
     initialize our loader. This can be done in `onCreateView()`:'
+  id: totrans-178
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们告诉`LoaderManager`初始化我们的加载器时，将执行`OnCreateLoader`方法。这可以在`onCreateView()`中完成：
 - en: '[PRE36]'
+  id: totrans-179
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'This method has to create all the different loaders that can be initialized
     (they can be different types of loaders); in our case, we will only have one,
     which will be `CursorLoader`. It will query the table and join the offers'' table
     with the companies'' table as a result. The string with the content URI has been
     defined previously in `MAAProvider`:'
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个方法必须创建所有可以初始化的不同加载器（它们可以是不同类型的加载器）；在我们的案例中，我们只有一个，那就是`CursorLoader`。它将查询表并将工作机会的表与公司的表连接起来作为结果。带有内容URI的字符串之前已在`MAAProvider`中定义：
 - en: '[PRE37]'
+  id: totrans-181
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'When we tell the loader manager to initialize our loader, it automatically
     creates it and starts running the query to the database; asynchronously, it will
     call the second method implemented, which is `onLoadFinished`. In this method,
@@ -841,11 +1187,15 @@
     before while getting the cursor from the content resolver. By moving the code
     that we use to create the job offer from the course to a static method in the
     `JobOffer` class, our `onLoadFinished` method will look similar to the following:'
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们告诉加载器管理器初始化我们的加载器时，它会自动创建并开始运行到数据库的查询；异步地，它会调用我们实现的第二个方法，即`onLoadFinished`。在这个方法中，例如，我们可以检索游标并显示数据，就像我们之前从内容解析器获取游标时所做的那样。通过将我们从课程中创建职位信息的代码移动到`JobOffer`类的静态方法中，我们的`onLoadFinished`方法将类似于以下内容：
 - en: '[PRE38]'
+  id: totrans-183
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: This solution queries the database in the background and asynchronously displays
     the result, but it is still far from perfect. We will iterate through the cursor
     to create a list of objects, and after this, we will send the list to the adapter,
@@ -853,8 +1203,10 @@
     an adapter that could build the list directly from the cursor? The solution to
     our problem exists, and it's called CursorAdapter. However, before moving to this,
     we need to implement the third method, which is still pending.
+  id: totrans-184
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个解决方案在后台查询数据库，并异步显示结果，但它还远非完美。我们将遍历游标来创建一个对象列表，在这之后，我们会将这个列表发送给适配器，适配器会再次遍历这个列表来创建元素。如果我们有一个能直接从游标构建列表的适配器会怎样呢？我们问题的解决方案已经存在，它就是`CursorAdapter`。但在转向使用这个之前，我们需要实现第三个方法，这个方法目前还未完成。
 - en: 'The third method, `onLoaderReset`, is called when the data is not valid. This
     could happen, for instance, if the source has changed. It removes the reference
     to the cursor, preventing memory leaks and is commonly used along with `CursorAdapter`.
@@ -862,46 +1214,68 @@
     it empty; we won''t have any memory leak because we will not use our cursor outside
     the method. If we were using `CursorAdapter`, there would be a reference to it
     outside our `onLoadFinished` method and we would need to set the adapter to `null`:'
+  id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: 第三个方法，`onLoaderReset`，在数据无效时被调用。例如，如果数据源改变了，这种情况就可能发生。它移除了对游标的引用，防止内存泄漏，并且通常与`CursorAdapter`一起使用。这是三个方法中最容易实现的。在我们的示例中，我们可以让它为空；因为我们不会在方法外部使用游标，所以不会有内存泄漏。如果我们使用`CursorAdapter`，那么在`onLoadFinished`方法外部会有一个对它的引用，我们需要将适配器设置为`null`：
 - en: '[PRE39]'
+  id: totrans-186
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: RecyclerView and CursorAdapter
+  id: totrans-187
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`RecyclerView`和`CursorAdapter`'
 - en: The `CursorAdapter` class creates an adapter based on a cursor and is intended
     to be used with `ListsView`. It extends from `BaseAdapter`.
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: '`CursorAdapter`类基于游标创建适配器，用于与`ListsView`配合使用。它继承自`BaseAdapter`。'
 - en: The cursor passed to the adapter must have a column named `_id`. To do this,
     we don't need to change our database; we can simply rename the field from `rowid`
     to `_id` in the `CursorLoader` creation.
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: 传递给适配器的游标必须有一个名为`_id`的列。为此，我们不需要更改我们的数据库；我们可以在创建`CursorLoader`时，简单地将`rowid`字段重命名为`_id`。
 - en: 'This is an example of a basic `CursorAdapter`:'
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个基本的`CursorAdapter`的示例：
 - en: '[PRE40]'
+  id: totrans-191
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'Once it is created, we can pass it the new cursor in `onLoadFinished`:'
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建后，我们可以在`onLoadFinished`中传递给它新的游标：
 - en: '[PRE41]'
+  id: totrans-193
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: This solution is perfect if you are working with `ListView`; unfortunately,
     `RecyclerView` works with `RecyclerView.Adapter` and is not compatible with `BaseAdapter`.
     Therefore, the `CursorLoader` class can't be used with `RecyclerViews`.
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你正在使用`ListView`，这个解决方案是完美的；不幸的是，`RecyclerView`使用`RecyclerView.Adapter`，并且与`BaseAdapter`不兼容。因此，`CursorLoader`类不能与`RecyclerViews`一起使用。
 - en: 'At this point, we have two alternatives: one is to find an open source solution,
     such as `CursorRecyclerAdapter` ([https://gist.github.com/quanturium/46541c81aae2a916e31d#file-cursorrecycleradapter-java](https://gist.github.com/quanturium/46541c81aae2a916e31d#file-cursorrecycleradapter-java))
     and include this class in our app.'
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，我们有两个选择：一个是寻找开源解决方案，例如`CursorRecyclerAdapter`（[https://gist.github.com/quanturium/46541c81aae2a916e31d#file-cursorrecycleradapter-java](https://gist.github.com/quanturium/46541c81aae2a916e31d#file-cursorrecycleradapter-java)）并将这个类包含在我们的应用程序中。
 - en: 'The second option is to create our own. To do this, we will create a `JobOfferCursorAdapter`
     class which extends from `RecyclerView.Adapter<JobOffersAdapter.MyViewHolder>`.
     This class, as with `JobOfferAdapter`, will have the `onCreateView` and `onBindView`
@@ -911,163 +1285,240 @@
     we need the `getCount` method, which will return the cursor size, and a `changeCursor`
     method, which will allow us to change the cursor in the adapter. Take a look at
     the following code:'
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 第二个选项是创建我们自己的适配器。为此，我们将创建一个名为`JobOfferCursorAdapter`的类，它继承自`RecyclerView.Adapter<JobOffersAdapter.MyViewHolder>`。这个类与`JobOfferAdapter`一样，将具有`onCreateView`和`onBindView`方法。它们的实现方式相同，除了职位信息在光标中而不是列表中。为了从光标行获取`JobOffer`，我们将创建一个名为`getItem(int
+    position)`的额外方法。除此之外，我们还需要`getCount`方法，它将返回光标的大小，以及一个`changeCursor`方法，它将允许我们在适配器中更改光标。请看以下代码：
 - en: '[PRE42]'
+  id: totrans-197
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'The `getItem` method needs to get `Joboffer` from a row in the cursor. To do
     this, we first need to move the cursor to this position with the `moveToPosition(int
     position)` method, and after this, we can extract the values for this row:'
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: '`getItem`方法需要从光标中的一行获取`Joboffer`。为此，我们首先需要使用`moveToPosition(int position)`方法将光标移动到这个位置，之后，我们可以提取这一行的值：'
 - en: '[PRE43]'
+  id: totrans-199
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'With this method ready, we can implement the rest of the functionality on the
     adapter based on the previous `JobOffersAdapter`:'
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 准备好这个方法后，我们可以根据之前的`JobOffersAdapter`在适配器上实现其他功能：
 - en: '[PRE44]'
+  id: totrans-201
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'With our own `CursorAdapter` adapted to `RecyclerView` completed, we are ready
     to create the cursor and set the appropriate cursor when our loader manager has
     finished. In `OncreateView`, we will retrieve new data from the server and upload
     the view with the current data at the same time:'
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们自己的适配`RecyclerView`的`CursorAdapter`完成后，我们就可以创建光标并在加载器管理器完成时设置适当的光标了。在`OncreateView`中，我们将从服务器检索新数据，同时用当前数据更新视图：
 - en: '[PRE45]'
+  id: totrans-203
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'To display the data, we will change the cursor after the loader manager has
     finished:'
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了显示数据，我们将在加载器管理器完成后更改光标：
 - en: '[PRE46]'
+  id: totrans-205
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'This works perfectly fine when there is previous data in the database. However,
     if we try to uninstall the app and run this the first time, we will see that the
     list is empty. Also, looking at the logs, we can see that we are storing the new
     job offers in the background correctly:'
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
+  zh: 当数据库中已有先前数据时，这个方法工作得很好。但是，如果我们尝试卸载应用然后第一次运行它，我们会发现列表是空的。同时，查看日志，我们可以看到我们在后台正确地存储了新的职位信息：
 - en: '[PRE47]'
+  id: totrans-207
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'What is happening here is that the changes in our database are not currently
     being detected, but this is very easy to fix when we use `CursorLoaders`. There
     is no need to manually register a content observer or restart the loader; we can
     set a listener in the cursor that `CursorLoader` uses and simply notify it when
     we make any change in the database. In our provider, we can set the notification
     URI to the cursor:'
+  id: totrans-208
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里发生的情况是，我们数据库中的变化目前没有被检测到，但当我们使用`CursorLoaders`时，这个问题很容易解决。无需手动注册内容观察者或重新启动加载器；我们可以在光标中设置一个`CursorLoader`使用的监听器，并在数据库中进行任何更改时通知它。在我们的提供者中，我们可以将通知URI设置为光标：
 - en: '[PRE48]'
+  id: totrans-209
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: 'Whenever the database changes, we can call:'
+  id: totrans-210
   prefs: []
   type: TYPE_NORMAL
+  zh: 每当数据库发生变化时，我们可以调用：
 - en: '[PRE49]'
+  id: totrans-211
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'As a result, `CursorLoader` will automatically refresh the list. If we were
     doing the insert, update, or delete operations from the content provider, we could
     have had this line just before these operations to notify of any content change.
     In our example, we will simply add it manually after we have stored the new data
     in the database coming from Parse. You can use the following code for this:'
+  id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，`CursorLoader`将自动刷新列表。如果我们是从内容提供者中进行插入、更新或删除操作，我们可以在这些操作之前加上这一行来通知任何内容变化。在我们的示例中，我们只需在从Parse接收到的新数据存储到数据库后手动添加即可。你可以使用以下代码实现这个功能：
 - en: '[PRE50]'
+  id: totrans-213
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: We can now uninstall the App and install it again, and we will see that the
     list is empty for a few seconds while the offers are downloaded in the background.
     As soon as the download finishes, the cursor loader will refresh the list, and
     all the offers will appear. To put the icing on the cake, we will implement the
     *pull-to-refresh* feature.
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们可以卸载应用然后重新安装，我们会发现当职位信息在后台下载时列表会空几秒钟。下载一完成，光标加载器就会刷新列表，所有职位信息都会出现。为了锦上添花，我们将实现*下拉刷新*功能。
 - en: Introducing pull to refresh with SwipeRefreshLayout
+  id: totrans-215
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 引入通过SwipeRefreshLayout下拉刷新功能
 - en: With this feature, the user can refresh the list at any time, by scrolling up
     when the list view is at the top. This is a popular feature seen in apps, such
     as Gmail and Facebook.
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过这个功能，用户可以在列表视图处于顶部时向上滚动，随时刷新列表。这是在如Gmail和Facebook等应用中常见的流行功能。
 - en: '![Introducing pull to refresh with SwipeRefreshLayout](img/4887_08_03.jpg)'
+  id: totrans-217
   prefs: []
   type: TYPE_IMG
+  zh: '![介绍使用SwipeRefreshLayout的下拉刷新](img/4887_08_03.jpg)'
 - en: To achieve this functionality, Google released a component called `SwipeRefreshLayout`,
     which is included in the v4 support library. Prior to *revision 21* of this library,
     this was displayed as a horizontal line at the top of the screen that changed
     colors. Later, it was changed to a circle with a semicircle that rotates with
     the swipe movement.
+  id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了实现这个功能，Google发布了一个名为`SwipeRefreshLayout`的组件，它包含在v4支持库中。在此库的*修订版21*之前，这显示为屏幕顶部的水平线，颜色会变化。后来，它被改为一个随着下拉动作旋转的半圆形的圆形。
 - en: 'To use this, we need to wrap our list with this element in the view:'
+  id: totrans-219
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使用这个功能，我们需要在视图中用这个元素包裹我们的列表：
 - en: '[PRE51]'
+  id: totrans-220
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'We can create a class variable called `mSwipeRefreshLayout` and set an `onRefresh`
     listener that will be called when the user wants to refresh:'
+  id: totrans-221
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以创建一个名为`mSwipeRefreshLayout`的类变量，并设置一个`onRefresh`监听器，当用户想要刷新时会被调用：
 - en: '[PRE52]'
+  id: totrans-222
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'When the data is downloaded, we need to call `setRefresh` with the `false`
     value to stop the circle spinning forever:'
+  id: totrans-223
   prefs: []
   type: TYPE_NORMAL
+  zh: 当数据下载完成后，我们需要调用`setRefresh`，并传递`false`值以停止圆圈无限旋转：
 - en: '[PRE53]'
+  id: totrans-224
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'While refreshing, it should look similar to the following screenshot:'
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 在刷新时，它应该类似于以下截图：
 - en: '![Introducing pull to refresh with SwipeRefreshLayout](img/4887_08_04.jpg)'
+  id: totrans-226
   prefs: []
   type: TYPE_IMG
+  zh: '![介绍使用SwipeRefreshLayout的下拉刷新](img/4887_08_04.jpg)'
 - en: 'We can also change the colors of the arrow while rotating with the `SwipeRfreshLayout`
     and `setColorScheme()` methods. Just define three colors in the XML and set the
     three IDs of the different colors:'
+  id: totrans-227
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还可以在使用`SwipeRfreshLayout`和`setColorScheme()`方法旋转时改变箭头的颜色。只需在XML中定义三种颜色，并设置三种不同颜色的ID：
 - en: '[PRE54]'
+  id: totrans-228
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: We have achieved our goal. There is an easy way to test if the whole system
     works, from `SwipeToRefreshLayout` to the background Parse request, content provider,
     database, and cursor loader. We can open the app, and while we are on the list
     screen, we will go to Parse and create a new job offer, return to the app, and
     swipe to refresh. We should see the new job offer appearing after the refresh.
+  id: totrans-229
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经实现了我们的目标。有一个简单的方法可以测试整个系统是否工作正常，从`SwipeToRefreshLayout`到后台的Parse请求，内容提供者，数据库以及游标加载器。我们可以打开应用，在列表界面时，去Parse创建一个新的工作机会，然后返回应用，并下拉刷新。在刷新后，我们应该能看到新的工作机会出现。
 - en: Summary
+  id: totrans-230
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: In this chapter, you learned how to create a database, use a database contract,
     and a database open helper. We saw the pattern of the DAO and made basic operations
     with it. Additionally, we replaced the DAO with a content provider, explaining
     how the URI matcher works and accessing it through a content resolver.
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，你学习了如何创建数据库，使用数据库契约和数据库打开助手。我们了解了DAO的模式，并使用它进行了基本操作。此外，我们还用内容提供者替换了DAO，解释了URI匹配器是如何工作的，并通过内容解析器访问它。
 - en: This allowed us to use `CursorLoader` with our own implementation of `CursorAdapter`,
     which is compatible with `RecyclerView`, to have a system where the UI is synchronized
     with the database. To finish the chapter, we saw how to use the popular feature,
     pull to refresh, to update the content on demand.
+  id: totrans-232
   prefs: []
   type: TYPE_NORMAL
+  zh: 这使得我们可以使用`CursorLoader`与我们自己实现的兼容`RecyclerView`的`CursorAdapter`，以实现与数据库同步的UI系统。为了完成本章，我们学习了如何使用流行的下拉刷新功能按需更新内容。
 - en: In the next chapter, we will take a look at how to add push notifications to
     our application as well as analytics services with an overview of the differences
     between the current analytics and push notification options available in the market.
+  id: totrans-233
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将了解如何向我们的应用程序添加推送通知以及分析服务，并概述当前市场上可用的分析服务和推送通知选项之间的差异。
