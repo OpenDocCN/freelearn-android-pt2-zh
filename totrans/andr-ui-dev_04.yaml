@@ -1,35 +1,45 @@
 - en: Chapter 4. Leveraging Activities and Intents
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第四章：利用活动和意图
 - en: '*In many ways Android application management appears to be inspired by JavaScript
     and the web browser and rightly so! The web browser model has proved itself as
     a mechanism that users find easy to work with. Android as a system, Android has
     many things in common with a web browser, some of which are obvious, and others
     that you will need to look a little deeper for.*'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在许多方面，Android应用程序管理似乎受到JavaScript和网页浏览器的启发，这是有道理的！网页浏览器模型已经证明它是一个用户容易操作的机制。作为一个系统，Android与网页浏览器有许多共同之处，其中一些是显而易见的，其他的则需要你更深入地了解。
 - en: '*The Activity Stack is much like a single-directional web browser history.
     When you launch an `Activity` using the `startActivity` method, you effectively
     hand control back to the Android system. When the user pushes the hardware "Back"
     button on their phone, the default action is to pop the top `Activity` off the
     stack, and display the one underneath (not always the one that started it).*'
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: '`活动`堆栈与单向的网页浏览器历史类似。当你使用`startActivity`方法启动一个`Activity`时，实际上是将控制权交还给了Android系统。当用户在手机上按下硬件“返回”按钮时，默认操作是从堆栈中弹出顶部`Activity`，并显示下面的一个（不总是启动它的那个）。'
 - en: In this chapter we'll explore a little of how Android runs an application and
     manages `Activity` instances. While not strictly necessary for user interface
     design, it's important to know how this works. Properly leveraging these concepts
     will help you ensure a consistent user interface experience. As you will also
     see, it will help you improve the performance of your application, and allow you
     to reuse more of your application components.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将探讨Android如何运行应用程序以及如何管理`Activity`实例。虽然这对于用户界面设计并非绝对必要，但了解其工作原理很重要。正确利用这些概念将帮助你确保用户界面体验的一致性。正如你将看到的，它还有助于提高应用程序的性能，并允许你重用更多的应用程序组件。
 - en: It's also important to understand how an `Activity` is created (and when it
     is created), as well as how Android decides what `Activity` to create. We'll also
     look at some good practices to follow when building an `Activity` class, and how
     to behave nicely within the confines of an Android application.
+  id: totrans-4
   prefs: []
   type: TYPE_NORMAL
+  zh: 理解`Activity`是如何创建的（以及它何时被创建），以及Android如何决定创建哪个`Activity`也同样重要。我们还将讨论在构建`Activity`类时应遵循的一些良好实践，以及如何在Android应用程序的范围内良好地表现。
 - en: 'We''ve already encountered the "Activity Stack" in [Chapter 1](ch01.html "Chapter 1. Developing
     a Simple Activity"), *Developing a Simple Activity* and [Chapter 2](ch02.html
     "Chapter 2. Presenting Data for Views"), *Presenting Data for Views* where we
@@ -37,28 +47,40 @@
     the hardware "Back" button, you were automatically taken to the previous `Activity`
     instance, no code needed (much like a web-browser). For this chapter we''ll be
     looking at:'
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经在[第一章](ch01.html "第一章：开发一个简单的活动")和[第二章](ch02.html "第二章：为视图展示数据")中遇到了“活动堆栈”，在那里我们构建了`Intent`对象来启动特定的`Activity`类。当你使用硬件“返回”按钮时，你会自动被带到上一个`Activity`实例，无需编写任何代码（就像网页浏览器一样）。在本章中，我们将要了解：
 - en: The life cycle of an `Activity` object
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Activity`对象的生命周期'
 - en: Using the `Bundle` class to maintain application state
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用`Bundle`类维护应用程序状态
 - en: Exploring the relationship between an `Intent` and an `Activity`
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 探索`Intent`与`Activity`之间的关系
 - en: Passing data into an `Activity` through an `Intent`
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 通过`Intent`向`Activity`传递数据
 - en: Exploring the Activity class
+  id: totrans-10
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 探索活动类
 - en: The life cycle of an `Activity` object is much more like a Java `Applet` than
     a normal application. It may be started, paused, resumed, paused again, killed,
     and then brought back to life in a seemingly random order. Most Android devices
@@ -67,8 +89,10 @@
     good specifications, users tend to demand a lot more from them than the cheaper
     devices. On a phone, you're never going to get away from the fact that you have
     many applications and services sharing a very limited device.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Activity`对象的生命周期更像Java `Applet`而不是普通应用程序。它可能会被启动、暂停、恢复、再次暂停、被杀死，然后以看似随机的顺序重新激活。大多数Android设备的性能规格非常好。然而，与顶级设备相比，它们中的大多数似乎性能不足。对于那些规格好的设备，用户往往比便宜设备要求更多。在手机上，你永远无法摆脱这样一个事实：许多应用程序和服务正在共享非常有限的设备资源。'
 - en: An `Activity` may be garbage-collected any time it is not visible to the user.
     This means it may be your application that is running, but because the user is
     looking at a different `Activity`, any non-visible or background `Activity` objects
@@ -80,24 +104,35 @@
     eligible for garbage-collection by the system. If this happens, it will first
     store its state in a temporary location, restoring the state when it is brought
     back to the foreground.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果`Activity`对用户不可见，它可能会随时被垃圾回收。这意味着虽然你的应用程序可能在运行，但由于用户正在查看另一个`Activity`，任何不可见或后台的`Activity`对象可能会被关闭或垃圾回收以节省内存。默认情况下，Android
+    API会通过在关闭前存储它们的状态并在重新创建时恢复状态，优雅地处理这些关闭/启动周期。下面是一个包含两个`Activity`实例的应用程序生命周期的非常简单的图示。当"主Activity"暂停时，它就有可能被系统垃圾回收。如果发生这种情况，它首先会在一个临时位置存储其状态，当它被带回前台时会恢复状态。
 - en: '![Exploring the Activity class](img/4484OS_04_01.jpg)'
+  id: totrans-13
   prefs: []
   type: TYPE_IMG
+  zh: '![探索Activity类](img/4484OS_04_01.jpg)'
 - en: Tip
+  id: totrans-14
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Storage of user interface state**'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: '**用户界面状态的存储**'
 - en: If an `Activity` is stopped, all `View` objects that have an ID assigned will
     attempt to store their state before they are made available for garbage-collection.
     However, this state is only stored for the lifetime of the application. When the
     application is shut-down, this state is lost.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果一个`Activity`被停止，所有分配了ID的`View`对象在可供垃圾回收之前都会尝试存储它们的状态。然而，这种状态只会在应用程序的生命周期内存储。当应用程序关闭时，这个状态就会丢失。
 - en: While it's possible to use the `setContentView` method over and over again to
     change the content on the screen (much the way you might build a wizard interface
     with an AWT `CardLayout` object), it's considered a very bad idea. You are effectively
@@ -111,12 +146,16 @@
     "Forward" button on a web-browser). The Android system would be patched to handle
     this change to the device, but your application would not be. As a result, your
     users get frustrated with your application because "it doesn't work properly".
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管可以一次又一次地使用`setContentView`方法来改变屏幕上的内容（就像你可能使用AWT的`CardLayout`对象构建向导界面一样），但这被认为是一个非常糟糕的做法。你实际上是在试图从Android手中夺走控制权，这总会给你带来问题。例如，如果你开发了一个只有一个`Activity`类的应用程序，并使用多个布局资源或自己的自定义`ViewGroup`对象来表示不同的屏幕，你还必须控制设备上的硬件"返回"按钮，以允许用户后退。你的应用程序在Android市场上发布，几个月后，一个手机制造商决定在其新手机上添加一个"前进"按钮（类似于网页浏览器中的"前进"按钮）。Android系统会被打补丁以处理这个设备变化，但你的应用程序不会。因此，你的用户会对你的应用程序感到沮丧，因为"它不能正常工作"。
 - en: Using Bundle objects
+  id: totrans-18
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 使用Bundle对象
 - en: In the `onCreate` method of the `Activity` class, we've been accepting a `Bundle`
     parameter named `saveInstanceState`, as you may have guessed. It's where state
     information is stored between stops and starts of an `Activity`. Despite what
@@ -127,54 +166,72 @@
     in a `Bundle` object. It then shuts down and destroys the existing instance, and
     then creates a new instance of the `Activity` (with the new configuration parameters)
     with the `Bundle` that the state information was saved in.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`Activity`类的`onCreate`方法中，我们一直在接收一个名为`saveInstanceState`的`Bundle`参数，如您所猜测的那样。它是在`Activity`的停止和启动之间存储状态信息的地方。尽管看起来是这样，但`Bundle`对象并不是一种持久化存储形式。当设备上下文的配置发生变化（例如，当用户选择了一种新语言，或从“纵向”改为“横向”模式）时，当前的`Activity`会被“重新启动”。为此，Android请求`Activity`将其状态保存在一个`Bundle`对象中。然后它会关闭并销毁现有实例，并使用保存状态信息的`Bundle`创建`Activity`的新实例（带有新的配置参数）。
 - en: 'The `Bundle` class is effectively a `Map<String, ?>` containing any number
     of values. Since `Bundle` objects are used to store short term state (that is,
     the blog post a user was busy typing), they are mostly used to store the state
     of `View` objects. They have two major advantages over standard Java serialization
     in this regard:'
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Bundle`类实际上是一个`Map<String, ?>`，包含任意数量的值。由于`Bundle`对象用于存储短期状态（即用户正在输入的博客文章），它们主要用于存储`View`对象的状态。在这方面，它们相对于标准的Java序列化有两个主要优点：'
 - en: You are forced to implement the storage of the object manually. This requires
     some thought as to how the object will be stored, and what parts of it need to
     be stored. For example, most of the time in a user interface, you don't need to
     store the layout information, since that can be recreated from the layout file.
+  id: totrans-21
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 您必须手动实现对象存储。这需要考虑如何存储对象以及需要存储它的哪些部分。例如，在用户界面中，大多数时候您不需要存储布局信息，因为可以从布局文件重新创建它。
 - en: Being a key-value structure, a `Bundle` is more future-proof and flexible than
     a serialized object. You can leave out values that are set to their defaults,
     reducing the size of the `Bundle`.
+  id: totrans-22
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 由于`Bundle`是一个键值结构，它比序列化对象更面向未来且灵活。您可以省略设置为默认值的值，从而减少`Bundle`的大小。
 - en: A `Bundle` object is also a type-safe structure. If you use the `putString`
     method, only then `getString` or `getCharSequence` will work to retrieve the object.
     I strongly advise that when using the `get` methods of `Bundle`, you should always
     provide a default value.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Bundle`对象也是一个类型安全的结构。如果您使用`putString`方法，那么只有`getString`或`getCharSequence`可以用来检索对象。我强烈建议在使用`Bundle`的`get`方法时，您应该总是提供一个默认值。'
 - en: Before an `Activity` is paused by the Android system, the system requests that
     it save any state information in a `Bundle` object. To do this, the `onSaveInstanceState`
     method will be invoked on the `Activity`. This happens before the `onPause` method.
     In order to restore the state of the `Activity`, the system will invoke the `onCreate`
     method with the saved state `Bundle`.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android系统暂停`Activity`之前，系统会请求它将任何状态信息保存在一个`Bundle`对象中。为此，系统会在`Activity`上调用`onSaveInstanceState`方法。这发生在`onPause`方法之前。为了恢复`Activity`的状态，系统会使用保存的状态`Bundle`调用`onCreate`方法。
 - en: Tip
+  id: totrans-25
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Handling Activity crashes**'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: '**处理Activity崩溃**'
 - en: If an `Activity` class throws an uncaught exception, the user will get the dreaded
     **Force Close** dialog box. Android will attempt to recover from these errors
     by terminating the Virtual Machine, and re-opening the root activity, providing
     a `Bundle` object with the last known state from `onSaveInstanceState`.
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果`Activity`类抛出一个未捕获的异常，用户将看到可怕的**强制关闭**对话框。Android将尝试通过终止虚拟机并重新打开根活动来从这些错误中恢复，并提供一个带有从`onSaveInstanceState`获取的最后已知状态的`Bundle`对象。
 - en: The `View` class also has an `onSaveInstanceState` method, as well as a corresponding
     `onRestoreInstanceState` method. As mentioned earlier, the `Activity` class' default
     functionality will attempt to save each `View` object with an ID within a `Bundle`.
@@ -182,254 +239,370 @@
     Having a reference to a `View` object is not enough for it to be saved and restored,
     and while you can assign IDs in Java code, it clutters your user interface code
     even more.
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: '`View`类也有一个`onSaveInstanceState`方法，以及相应的`onRestoreInstanceState`方法。如前所述，`Activity`类的默认功能将尝试在`Bundle`中保存每个带有ID的`View`对象。这是坚持使用XML布局而不是自己构建布局的另一个好理由。拥有对`View`对象的引用还不足以保存和恢复它，虽然你可以在Java代码中分配ID，但这会使你的用户界面代码更加混乱。'
 - en: 'Time for action – building an example game: "guess my number"'
+  id: totrans-29
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 行动时间 - 构建一个示例游戏：“猜数字”
 - en: We want to build a simple example that will save and restore its state from
     a `Bundle` object. For this example, we have a very simple "guess my number" game.
     The `Activity` object picks a number between one and ten and challenges the user
     to guess it.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们想要构建一个简单的示例，它将从一个`Bundle`对象保存和恢复其状态。在这个示例中，我们有一个非常简单的“猜数字”游戏。`Activity`对象在1到10之间选择一个数字，并挑战用户猜测它。
 - en: 'The basic user interface layout for this example will need a label telling
     the user what to do, an input area for them to input their guess, and a button
     to tell the application they wish to input a guess. The following diagram is a
     basic idea of how the user interface should be structured:'
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个示例的基本用户界面布局需要有一个标签告诉用户要做什么，一个输入区域供他们输入猜测，以及一个按钮告诉应用他们想要输入猜测。以下图表是用户界面应该如何构建的基本思路：
 - en: '![Time for action – building an example game: "guess my number"](img/4484OS_04_02.jpg)'
+  id: totrans-32
   prefs: []
   type: TYPE_IMG
+  zh: '![行动时间 - 构建一个示例游戏：“猜数字”](img/4484OS_04_02.jpg)'
 - en: If the user were to get an SMS while playing this game, there's a strong chance
     that we will lose the number he is trying to guess. For this reason we will store
     the number that he is trying to guess in a `Bundle` object when the system asks
     us to save our state. We'll also need to look for the stored number when starting
     up.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果用户在玩这个游戏时收到短信，我们很可能会丢失他试图猜测的数字。因此，当系统要求我们保存状态时，我们将尝试猜测的数字存储在`Bundle`对象中。启动时我们还需要查找存储的数字。
 - en: 'From a command-prompt, create a new project named `GuessMyNumber`:'
+  id: totrans-34
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从命令提示符中，创建一个名为`GuessMyNumber`的新项目：
 - en: '[PRE0]'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: Open the default `res/layout/main.xml` file in an editor or IDE.
+  id: totrans-36
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在编辑器或IDE中打开默认的`res/layout/main.xml`文件。
 - en: Remove the default content within the `LinearLayout` element.
+  id: totrans-37
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 移除`LinearLayout`元素中的默认内容。
 - en: 'Add a new `TextView` to serve as a label, to tell the user what to do:'
+  id: totrans-38
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加一个新的`TextView`作为标签，告诉用户要做什么：
 - en: '[PRE1]'
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Create a new `EditText` where the users will enter their guess. Use the `android:numeric`
     attribute of `TextView` to enforce only `integer` input:'
+  id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个新的`EditText`，用户将在其中输入他们的猜测。使用`TextView`的`android:numeric`属性来强制只输入`integer`（整数）：
 - en: '[PRE2]'
+  id: totrans-41
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Add a `Button` that the users can click on to submit their guess:'
+  id: totrans-42
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加一个用户可以点击提交猜测的`Button`：
 - en: '[PRE3]'
+  id: totrans-43
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Now open the `GuessActivity.java` file in your editor or IDE.
+  id: totrans-44
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在在编辑器或IDE中打开`GuessActivity.java`文件。
 - en: 'Make the `GuessActivity` class implement `OnClickListener`:'
+  id: totrans-45
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让`GuessActivity`类实现`OnClickListener`：
 - en: '[PRE4]'
+  id: totrans-46
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Create a field variable to store the number the user is supposed to guess:'
+  id: totrans-47
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个字段变量以存储用户应该猜测的数字：
 - en: '[PRE5]'
+  id: totrans-48
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Create a utility method to generate a random number between one and ten:'
+  id: totrans-49
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个实用方法以生成1到10之间的随机数：
 - en: '[PRE6]'
+  id: totrans-50
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'In the `onCreate` method, directly after the call to `super.onCreate`, check
     to make sure the `Bundle` passed in is not `null`:'
+  id: totrans-51
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`onCreate`方法中，在调用`super.onCreate`之后，检查以确保传递进来的`Bundle`不为`null`：
 - en: '[PRE7]'
+  id: totrans-52
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'If the `Bundle` isn''t `null`, then attempt to fetch the stored `Number` from
     it:'
+  id: totrans-53
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果`Bundle`不为`null`，尝试从其中获取存储的`Number`：
 - en: '[PRE8]'
+  id: totrans-54
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'If the `Bundle` is `null`, the Activity is running as a new instance—generate
     a random number:'
+  id: totrans-55
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果`Bundle`为`null`，则`Activity`作为新实例运行 - 生成一个随机数：
 - en: '[PRE9]'
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'Then `setContentView` to the `main.xml` layout resource:'
+  id: totrans-57
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后将`setContentView`设置为`main.xml`布局资源：
 - en: '[PRE10]'
+  id: totrans-58
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Find the `Button` object you declared in the `main.xml` layout resource:'
+  id: totrans-59
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`main.xml`布局资源中找到你声明的`Button`对象：
 - en: '[PRE11]'
+  id: totrans-60
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Set the `Button` object''s `OnClickListener` to the `GuessActivity` object:'
+  id: totrans-61
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将`Button`对象的`OnClickListener`设置为`GuessActivity`对象：
 - en: '[PRE12]'
+  id: totrans-62
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Now override the `onSaveInstanceState` method:'
+  id: totrans-63
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在重写`onSaveInstanceState`方法：
 - en: '[PRE13]'
+  id: totrans-64
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Be sure to first allow the default `Activity` behavior:'
+  id: totrans-65
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先确保允许默认的`Activity`行为：
 - en: '[PRE14]'
+  id: totrans-66
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Then store the `number` variable in the `Bundle`:'
+  id: totrans-67
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后将`number`变量存储在`Bundle`中：
 - en: '[PRE15]'
+  id: totrans-68
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'We need to override the `onClick` method to handle the user''s guess:'
+  id: totrans-69
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们需要重写`onClick`方法来处理用户的猜测：
 - en: '[PRE16]'
+  id: totrans-70
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Find the `EditText` where the user enters the guessed number:'
+  id: totrans-71
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 找到用户输入猜测数字的`EditText`：
 - en: '[PRE17]'
+  id: totrans-72
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'Parse the current value of the `EditText` as an integer:'
+  id: totrans-73
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将`EditText`的当前值解析为整数：
 - en: '[PRE18]'
+  id: totrans-74
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'If the number they guessed is too low, use a `Toast` to tell them:'
+  id: totrans-75
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果他们猜的数字太低，使用`Toast`告诉他们：
 - en: '[PRE19]'
+  id: totrans-76
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'If the number they guessed is too high, again use a `Toast` to tell them:'
+  id: totrans-77
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果他们猜的数字太高，再次使用`Toast`告诉他们：
 - en: '[PRE20]'
+  id: totrans-78
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'If they successfully guessed the correct number, then congratulate them:'
+  id: totrans-79
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果他们成功猜对了数字，那么祝贺他们：
 - en: '[PRE21]'
+  id: totrans-80
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'Then generate a new number for the user to guess:'
+  id: totrans-81
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后为用户生成一个新的猜测数字：
 - en: '[PRE22]'
+  id: totrans-82
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: The `Toast` class is used in the previous code to display the output messages
     for **Too high**, **Too low**, and **You got it!** The `Toast` class is the perfect
     mechanism for displaying short output messages, and they automatically disappear
     after a few seconds. However they're not suitable for long messages as the user
     has no control over them, and cannot leave the message open or close it on command
     as they are entirely non-interactive.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 在之前的代码中使用了`Toast`类来显示**太高**、**太低**和**猜对了！**的输出信息。`Toast`类是显示简短输出信息的完美机制，几秒钟后它们会自动消失。然而，它们不适合长消息，因为用户无法控制它们，也不能按命令打开或关闭消息，因为它们完全是非交互式的。
 - en: '*What just happened*'
+  id: totrans-84
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '*刚才发生了什么*'
 - en: In the previous example, we listened for a call to `onSaveInstanceState` in
     order to record the number that the user is supposed to guess. We also have the
     current guess which the user most recently made, in the form of an `EditText`.
     Since we assigned an ID value to `EditText` in the `main.xml` file, the call to
     `super.onSaveInstanceState` will handle the storage of the `EditText` widget's
     exact state (potentially including "selection" and "focus" state).
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一个示例中，我们监听`onSaveInstanceState`的调用，以记录用户应该猜测的数字。我们还有用户最近一次做出的猜测，以`EditText`的形式。由于我们在`main.xml`文件中为`EditText`分配了一个ID值，调用`super.onSaveInstanceState`将处理`EditText`小部件的确切状态存储（可能包括“选择”和“焦点”状态）。
 - en: In the `onCreate` method, the example first checks to make sure that the `Bundle`
     is not `null`. If Android is attempting to create a new instance of the `GuessActivity`
     object, it won't pass in any saved state. If however, we have a `Bundle` object,
@@ -437,22 +610,31 @@
     `number` value. We also pass in a `r` `andom()` number as a second parameter.
     If the `Bundle` object (for whatever reason) doesn't have a stored `Number`, it
     will return this random number, eliminating the need for us to check such a condition.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`onCreate`方法中，示例首先检查以确保`Bundle`不为`null`。如果Android试图创建`GuessActivity`对象的新实例，它不会传递任何保存的状态。然而，如果我们有一个`Bundle`对象，我们会调用`Bundle.getInt`方法尝试获取我们之前存储的`number`值。我们还传递一个`r`
+    `andom()`数作为第二个参数。如果`Bundle`对象（无论什么原因）没有存储`Number`，它将返回这个随机数，这样就无需我们检查这种情况。
 - en: As a quick side-note, the example made use of the `android:numeric` attribute
     of the `TextView` class to enforce `integer` input on the `EditText` object. Switching
     to a numeric view stops the user from entering anything except "valid" characters.
     It also affects the soft-keyboard. Instead of displaying the full keyboard, it
     will only display the numbers and symbols.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 顺便一提，示例使用了`TextView`类的`android:numeric`属性，以强制`EditText`对象接受整数输入。切换到数字视图可以阻止用户输入除了“有效”字符以外的任何内容。它还会影响软键盘。它不会显示全键盘，只会显示数字和符号。
 - en: '![What just happened](img/4484_04_03.jpg)'
+  id: totrans-88
   prefs: []
   type: TYPE_IMG
+  zh: '![刚才发生了什么](img/4484_04_03.jpg)'
 - en: Creating and consuming intents
+  id: totrans-89
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 创建和使用意图：
 - en: 'The `Intent` class is Android''s primary method of "late binding". It''s a
     form of very loose coupling which allows you to specify an action (along with
     some parameter data), while not specifying how the action should be carried out.
@@ -462,16 +644,22 @@
     the user has installed, or it may even ask the user how exactly they want to get
     to [http://www.packtpub.com/](http://www.packtpub.com/). There are two primary
     types of `Intent`:'
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Intent`类是Android主要的“晚期绑定”方式。这是一种非常松散的耦合形式，允许你指定一个动作（以及一些参数数据），但不需要指定如何执行该动作。例如，你可以使用`Intent`指定浏览到[http://www.packtpub.com/](http://www.packtpub.com/)，但不需要指定Android如何执行此操作。它可能使用默认的“浏览器”应用，或者用户安装的其他网页浏览器，甚至可能询问用户他们确切想要如何访问[http://www.packtpub.com/](http://www.packtpub.com/)。有两种主要的`Intent`类型：'
 - en: Explicit Intents
+  id: totrans-91
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 显式Intents
 - en: Implicit Intents
+  id: totrans-92
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 隐式Intents
 - en: 'So far we''ve only made use of explicit `Intent` objects, where we specify
     the exact class we want to run. These are very important when switching from one
     `Activity` to another, as your application may depend on the exact implementation
@@ -479,147 +667,202 @@
     exact class which we want to work with, we include an abstract name for the action
     we want carried out. Generally, an implicit `Intent` will have much more information
     content, due to the following reasons:'
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们只使用了显式`Intent`对象，我们指定了想要运行的的确切类。当从一个`Activity`切换到另一个时，这些非常重要，因为应用程序可能依赖于`Activity`的确切实现。隐式`Intent`是当我们不指定想要操作的确切类时，而是包含我们希望执行操作的抽象名称。通常，隐式`Intent`会包含更多信息，由于以下原因：
 - en: To allow the system to make a good selection of which component to interact
     with
+  id: totrans-94
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 为了让系统在选择与哪个组件交互时做出最佳选择。
 - en: '`Intent` may point to a more generic structure than we would have built ourselves
     and a more generic structure often requires more information about how it is expected
     to behave'
+  id: totrans-95
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Intent`可能指向一个比我们自行构建的更通用的结构，而一个更通用的结构通常需要更多信息来明确其预期行为。'
 - en: '`Intent` objects are what really make Android different from other (more traditional)
     operating systems. They level the playing field between applications, and allow
     the user much more choice in how they want to run their phones. It''s perfectly
     plausible for the user to not just install a new web browser, but also a new menu,
     desktop, or even dialler application.'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Intent`对象是真正让Android与其他（更传统的）操作系统不同的地方。它们平衡了应用程序之间的竞争环境，并让用户在使用手机时有更多的选择。用户不仅可以安装一个新的网页浏览器，还可以安装新的菜单、桌面甚至拨号应用。'
 - en: Each `Activity` instance holds onto the `Intent` object that started it. In
     [Chapter 1](ch01.html "Chapter 1. Developing a Simple Activity"), *Developing
     a Simple Activity,* we made use of the `Ac` `tivity.getIntent()` method to fetch
     some parameters from the `Intent` object, which in turn told us which question
     to ask the user.
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个`Activity`实例都保存着启动它的`Intent`对象。[第一章](ch01.html "第一章. 开发一个简单的活动")中，我们通过*开发一个简单的活动*用到了`Activity.getIntent()`方法，从`Intent`对象中获取一些参数，这些参数告诉我们应该向用户提出哪个问题。
 - en: Defining Intent actions
+  id: totrans-98
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 定义Intent动作
 - en: The first thing looked at in an implicit `Intent` is its action. The action
     defines what the `Intent` "does", but not how it does it, or what it does it to.
     The `Intent` class defines a long series of constants which represent common actions.
     These common actions always have some form of backing logic, which is generally
     defined by the phone system. Thus they are always available to be used by an application.
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 在隐式`Intent`中首先要看的是它的动作。动作定义了`Intent`“做什么”，但不是“怎么做”或“对什么做”。`Intent`类定义了一系列常量，代表常见动作。这些常见动作总是有某种形式的支撑逻辑，通常由电话系统定义。因此，它们总是可供应用程序使用。
 - en: 'For example, you wanted to present the users with the dialler application,
     so they could dial a phone number and make a call, you would use an `Intent` with
     `ACTION_DIAL`:'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，如果你想向用户展示拨号应用，使他们可以拨打电话号码并进行通话，你会使用带有`ACTION_DIAL`的`Intent`：
 - en: '[PRE23]'
+  id: totrans-101
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'The action value of an `Intent` is matched against one of the actions defined
     for an `Activity`. An `Activity` may have any number of actions that it may perform,
     and they''re all specified as part of an application''s `AndroidManifest.xml`
     file. For example, you wanted to define an `askQuestion` action and bind it to
     an `Activity`, your `AndroidManifest.xml` file would contain an `Activity` entry
     which would look something like this:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Intent`的动作值与`Activity`定义的一个动作匹配。一个`Activity`可能有多个它可以执行的动作，它们都作为应用程序`AndroidManifest.xml`文件的一部分被指定。例如，如果你想定义一个`askQuestion`动作并将其绑定到一个`Activity`，你的`AndroidManifest.xml`文件将包含一个`Activity`条目，看起来像这样：'
 - en: '[PRE24]'
+  id: totrans-103
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: An `Activity` may have any number of `<intent-filter>` elements, each defining
     a different type of match to perform on an `Intent`. The `Activity` with the closest
     match to any given `Intent` is chosen to perform the action requested by the `Intent`
     object.
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 一个`Activity`可以有多个`<intent-filter>`元素，每个元素定义了一种不同类型的匹配要在`Intent`上执行。与任何给定的`Intent`最接近匹配的`Activity`被选中来执行`Intent`对象请求的动作。
 - en: Passing data in an Intent
+  id: totrans-105
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 在Intent中传递数据。
 - en: Presenting the user with the dialler application in order to let them dial a
     phone number is very nice, but what if we actually need them to dial a phone number?
     The `Intent` class doesn't just work by using the action, it also provides a default
     space for us to tell it what we want the action to be performed on. It's not brilliantly
     useful being able to open a web browser without being able to tell the browser
     what URL to go to, is it?
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 向用户展示拨号器应用程序，让他们拨打一个电话号码非常好，但如果实际上我们需要他们拨打一个电话号码呢？`Intent`类不仅仅通过使用动作来工作，它还为我们提供了一个默认的空间，告诉我们想要动作执行的对象。如果我们不能告诉浏览器要访问哪个URL，那么打开网页浏览器不是非常有用，对吧？
 - en: 'The default data provided by an `Intent` is provided as a `Uri` object. The
     `Uri` can be made to technically point to absolutely anything. For our earlier
     code snippet, we started the dialler to let the user dial a phone number. How
     would we then tell the dialler: "Dial 555-1234"? Simple, just take a look at the
     following code:'
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Intent`提供的默认数据作为一个`Uri`对象。`Uri`在技术上可以指向任何东西。对于我们之前的代码片段，我们启动了拨号器，让用户拨打一个电话号码。那么我们如何告诉拨号器：“拨打555-1234”呢？很简单，看看以下代码：'
 - en: '[PRE25]'
+  id: totrans-108
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: Adding extra data to an Intent
+  id: totrans-109
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 向Intent添加额外数据
 - en: Sometimes a `Uri` doesn't allow enough data to be specified. For these cases,
     the `Intent` class provides you with a `Map` space of key-value pairs, called
     "extra" data. The methods for accessing the extra data correspond to the methods
     in the `Bundle` class. Back in [Chapter 1](ch01.html "Chapter 1. Developing a
     Simple Activity"), *Developing a Simple Activity*, we used the extra data to keep
     track of which question we were asking the user.
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 有时`Uri`不允许指定足够的数据。对于这些情况，`Intent`类为你提供了一个键值对的`Map`空间，称为"额外"数据。"额外"数据的访问方法与`Bundle`类中的方法相对应。在[第1章](ch01.html
+    "第1章. 开发简单活动")《*开发简单活动*》中，我们使用了额外数据来跟踪我们向用户提出的问题。
 - en: 'When defining generic `Activity` classes (such as file viewers), it''s a good
     idea to work on a three phase fall-back system when looking for operational data:'
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 在定义通用的`Activity`类（如文件查看器）时，查找操作数据时建立一个三阶段回退系统是一个好主意：
 - en: Any custom (non-standard) parameters can be passed in extra fields (and none
     of them should be mandatory)
+  id: totrans-112
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 任何自定义（非标准）参数都可以在额外字段中传递（而且它们都不应该是强制性的）。
 - en: Inspect the data `Uri` to see what information you should be working with
+  id: totrans-113
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 检查数据`Uri`以了解你应该处理哪些信息。
 - en: If no data `Uri` is specified, fall-back gracefully to a logical default, and
     provide some functionality to the user
+  id: totrans-114
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果没有指定数据`Uri`，优雅地回退到逻辑默认值，并为用户提供一些功能。
 - en: Have a go hero – generic questions and answers
+  id: totrans-115
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 动手实践英雄——通用问题与答案
 - en: Go back to the example question and answer application from [Chapter 1](ch01.html
     "Chapter 1. Developing a Simple Activity"), *Developing a Simple Activity*. Rework
     the `QuestionActivity` class to use the data `Uri` to specify the question ID
     (by name) instead of the extra parameters.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 回顾一下[第1章](ch01.html "第1章. 开发简单活动")《*开发简单活动*》中的示例问题与答案应用程序。重写`QuestionActivity`类，使用数据`Uri`来指定问题ID（通过名称），而不是额外的参数。
 - en: Also, allow for the full question to be passed in using "extra" parameters—a
     parameter `Question` for the question text to ask the user, and a parameter `Answers`,
     specifying a string array of possible answers to the given question.
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，允许使用"额外"参数传递完整问题——一个参数`Question`用于要问用户的问题文本，以及一个参数`Answers`，指定给定问题的可能答案的字符串数组。
 - en: Using advanced Intent features
+  id: totrans-118
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用高级Intent功能
 - en: An `Intent` object is designed to indicate a single action as requested by the
     user. It's a self-contained request, and in some ways it is quite similar to an
     HTTP request, containing both, the action to carry out, and the resource upon
     which the action should be carried out, and any additional information that may
     be required.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Intent`对象旨在指示用户请求的单个动作。它是一个自包含的请求，在某些方面与HTTP请求非常相似，既包含要执行的动作，也包含要执行动作的资源，以及可能需要的相关信息。'
 - en: In order to find the `Activity` (service or broadcast receiver) that will handle
     an `Intent`, the system makes use of intent-filters (as we discussed briefly earlier).
     Each intent-filter indicates a single type of action that could be carried out
@@ -628,365 +871,528 @@
     automated system) to select which of the `Activity` implementations should be
     used to handle the `Intent`. The default behavior is to ask the users which of
     the `Activity` implementations they wish to use.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了找到将处理`Intent`的`Activity`（服务或广播接收器），系统使用了意图过滤器（我们之前简要讨论过）。每个意图过滤器指示了一个`Activity`可能执行的单个动作类型。当两个或更多的`Activity`实现匹配一个`Intent`时，系统会发送一个`ACTION_PICK_ACTIVITY
+    Intent`，以允许用户（或某些自动化系统）选择哪个`Activity`实现应该用来处理`Intent`。默认行为是询问用户他们希望使用哪个`Activity`实现。
 - en: Getting data back from an Intent
+  id: totrans-121
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 从Intent获取数据
 - en: An `Intent` is not always a one-way structure, some `Intent` actions will provide
     feedback. A great example of this is `Intent.ACTION_PICK`. The `Intent.ACTION_PICK`
     action is a way to ask the user to "pick" or select some form of data (a common
     use would be to ask the user to select a person or phone number from their contacts
     list).
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Intent`并不总是单向的结构，某些`Intent`动作会提供反馈。一个很好的例子就是`Intent.ACTION_PICK`。`Intent.ACTION_PICK`动作是请求用户“挑选”或选择某种数据形式的方式（一个常见的用法是请求用户从他们的联系人列表中选择一个人或电话号码）。'
 - en: When you need information back from an `Intent`, you use the `startActivityForResult`
     method instead of the normal `startActivity` method. The `startActivityForResult`
     method accepts two parameters, the `Intent` object to execute, and a useful `int`
     value which will be passed back to you.
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你需要从`Intent`获取信息时，应使用`startActivityForResult`方法，而不是普通的`startActivity`方法。`startActivityForResult`方法接受两个参数：要执行的`Intent`对象和一个有用的`int`值，该值将被传回给你。
 - en: As mentioned earlier, when another `Activity` is visible instead of yours, your
     `Activity` is paused, and may even be stopped and garbage-collected. For this
     reason, the `startActivityForResult` method returns immediately and you can generally
     assume your `Activity` will be paused directly after you return from your current
     event (passing control back to the system).
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，当另一个`Activity`可见而不是你的时，你的`Activity`会被暂停，甚至可能被停止并垃圾回收。因此，`startActivityForResult`方法会立即返回，并且通常可以假设在你从当前事件返回后（将控制权交还给系统），你的`Activity`将直接被暂停。
 - en: In order to get information back out of the `Intent` you triggered, you will
     need to override the `onActivityResult` method. The `onActivityResult` method
     is invoked every time an `Intent` started with `startActivityForResult` returns
     some data to you. The first parameter passed back into the `onActivityResult`
     method is the same integer value that you passed into the `startActivityForResult`
     method (allowing you to pass simple parameters back).
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了获取你触发的`Intent`中的信息，你需要重写`onActivityResult`方法。每次使用`startActivityForResult`启动的`Intent`返回数据时，都会调用`onActivityResult`方法。传回`onActivityResult`方法的第一参数是你传给`startActivityForResult`方法的相同整数值（允许你传回简单的参数）。
 - en: Tip
+  id: totrans-126
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Passing information to another Activity**'
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: '**向另一个Activity传递信息**'
 - en: If you intend for an `Activity` implementation to pass information back to its
     caller, you can make use of the `Activity.setResult` method to pass both, a result-code
     and an `Intent` object with your response data.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你打算让一个`Activity`实现将信息传回给调用者，你可以使用`Activity.setResult`方法来传递一个结果码和带有你响应数据的`Intent`对象。
 - en: Pop quiz
+  id: totrans-129
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 快速测验
 - en: When does `onCreate` get passed a valid `Bundle` object?
+  id: totrans-130
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`onCreate`何时会接收到一个有效的`Bundle`对象？'
 - en: Every time the `Activity` is created
+  id: totrans-131
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 每次创建`Activity`时
 - en: When the application stored information in the `Bundle` in a previous execution
+  id: totrans-132
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当应用程序在之前的执行中在`Bundle`中存储了信息时
 - en: When the Activity is being restarted due to configuration changes, or a crash
+  id: totrans-133
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当由于配置更改或崩溃而重新启动Activity时
 - en: When is the `onSaveInstanceState` method invoked?
+  id: totrans-134
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`onSaveInstanceState` 方法何时被调用？'
 - en: After the `onStop` method
+  id: totrans-135
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `onStop` 方法之后
 - en: Before the `onPause` method
+  id: totrans-136
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `onPause` 方法之前
 - en: When the `Activity` is being restarted
+  id: totrans-137
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当 `Activity` 正在被重新启动时
 - en: Before the `onDestroy` method
+  id: totrans-138
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `onDestroy` 方法之前
 - en: 'A `Bundle` object will be stored until:'
+  id: totrans-139
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Bundle` 对象将被存储直到：'
 - en: The application is closed
+  id: totrans-140
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 应用程序已关闭
 - en: The `Activity` is no longer visible
+  id: totrans-141
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Activity` 不再可见'
 - en: The application is uninstalled
+  id: totrans-142
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 应用已被卸载
 - en: Time for action – viewing phone book contacts
+  id: totrans-143
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 动手时间——查看电话簿联系人
 - en: In this example we will delve a little deeper into the workings of the Android
     system. We're going to override the default "view contact" option, providing our
     own `Activity` to view contacts from the phonebook on the device. When the user
     tries to open a contact to e-mail or call them, they will be presented with an
     option to view the contact using our `Activity` instead of the default one.
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个例子中，我们将更深入地探讨Android系统的运作方式。我们将覆盖默认的“查看联系人”选项，提供我们自己的 `Activity` 来查看设备上电话簿中的联系人。当用户尝试打开一个联系人以发送电子邮件或拨打电话时，他们将有机会使用我们的
+    `Activity` 而不是默认的来查看联系人。
 - en: 'Start by creating a new project from the command line:'
+  id: totrans-145
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从命令行开始创建一个新项目：
 - en: '[PRE26]'
+  id: totrans-146
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: Open the `res/layout/main.xml` layout resource in an editor or IDE.
+  id: totrans-147
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在编辑器或IDE中打开 `res/layout/main.xml` 布局资源。
 - en: Remove the default content within the `LinearLayout` element.
+  id: totrans-148
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 移除 `LinearLayout` 元素中的默认内容。
 - en: 'Add a new `TextView` object to contain the contact''s display name:'
+  id: totrans-149
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加一个新的 `TextView` 对象以包含联系人的显示名称：
 - en: '[PRE27]'
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Then add a `Button` which will be used to "dial" the default phone number of
     the displayed contact:'
+  id: totrans-151
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后添加一个 `Button`，该按钮将用于“拨打”显示联系人的默认电话号码：
 - en: '[PRE28]'
+  id: totrans-152
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: Open the `ViewContactActivity.java` source file in your editor or IDE.
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在编辑器或IDE中打开 `ViewContactActivity.java` 源文件。
 - en: 'Make `ViewContactActivity` implement `OnClickListener`:'
+  id: totrans-154
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让 `ViewContactActivity` 实现 `OnClickListener`：
 - en: '[PRE29]'
+  id: totrans-155
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'After the `setContentView(R.layout.main)` in the `onCreate` method, find the
     `TextView` object you have created, to show the contact''s name in:'
+  id: totrans-156
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `onCreate` 方法中的 `setContentView(R.layout.main)` 之后，找到你创建的 `TextView` 对象，以显示联系人的名称：
 - en: '[PRE30]'
+  id: totrans-157
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Then find the `Button` widget to display the phone number in:'
+  id: totrans-158
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后找到用于显示电话号码的 `Button` 控件：
 - en: '[PRE31]'
+  id: totrans-159
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Now use the `Activity.managedQuery` method to query the contact''s database
     for the `data Uri` specified in our `Intent`:'
+  id: totrans-160
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，使用 `Activity.managedQuery` 方法查询联系人数据库，获取我们的 `Intent` 中指定的 `data Uri`：
 - en: '[PRE32]'
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'In a `try {} finally{}` block, tell the `Cursor` to `moveToNext()` and make
     sure it does so (this works in exactly the same way as `ResultSet.next()`):'
+  id: totrans-162
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `try {} finally{}` 代码块中，告诉 `Cursor` 执行 `moveToNext()` 并确保其这样做（这与 `ResultSet.next()`
+    的作用完全相同）：
 - en: '[PRE33]'
+  id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'Fetch and display the contact display name from the `Cursor`:'
+  id: totrans-164
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从 `Cursor` 中获取并显示联系人显示名称：
 - en: '[PRE34]'
+  id: totrans-165
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'Fetch and display the contact default phone number from the `Cursor`:'
+  id: totrans-166
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从 `Cursor` 中获取并显示联系人的默认电话号码：
 - en: '[PRE35]'
+  id: totrans-167
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'In the `finally{}` block, close the `Cursor`:'
+  id: totrans-168
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `finally{}` 代码块中，关闭 `Cursor`：
 - en: '[PRE36]'
+  id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'Now set the `OnClickListener` of the `number Button` to `this`:'
+  id: totrans-170
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，将 `number Button` 的 `OnClickListener` 设置为 `this`：
 - en: '[PRE37]'
+  id: totrans-171
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'Override the `onClick` method:'
+  id: totrans-172
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 重写 `onClick` 方法：
 - en: '[PRE38]'
+  id: totrans-173
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'We know that the `number Button` is what was clicked (it''s the only `View`
     with an event-listener at this point). Cast the `View` parameter to a `Button`
     so that we can use it:'
+  id: totrans-174
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们知道点击的是 `number Button`（此时唯一带有事件监听器的 `View`）。将 `View` 参数转换为 `Button`，这样我们就可以使用它了：
 - en: '[PRE39]'
+  id: totrans-175
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: 'Create an `Intent` object to dial the selected phone number:'
+  id: totrans-176
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个 `Intent` 对象以拨打选定的电话号码：
 - en: '[PRE40]'
+  id: totrans-177
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'Use `startActivity` to open the dialler application:'
+  id: totrans-178
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用 `startActivity` 打开拨号器应用：
 - en: '[PRE41]'
+  id: totrans-179
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: Now open the `AndroidManifest.xml` file in your editor or IDE.
+  id: totrans-180
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，在编辑器或IDE中打开 `AndroidManifest.xml` 文件。
 - en: 'Before the declaration of the `<application>` element, we need permission to
     read the contacts list:'
+  id: totrans-181
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `<application>` 元素声明之前，我们需要读取联系人列表的权限：
 - en: '[PRE42]'
+  id: totrans-182
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'Change the label of the `ViewContactActivity` to **View Contact**:'
+  id: totrans-183
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将 `ViewContactActivity` 的标签更改为 **查看联系人**：
 - en: '[PRE43]'
+  id: totrans-184
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: Remove all of the default content inside the `<intent-filter>` element.
+  id: totrans-185
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 移除 `<intent-filter>` 元素内的所有默认内容。
 - en: 'Declare an `<action>` type of `ACTION_VIEW` for this `<intent-filter>`:'
+  id: totrans-186
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为此 `<intent-filter>` 声明一个类型为 `ACTION_VIEW` 的 `<action>`：
 - en: '[PRE44]'
+  id: totrans-187
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'Set the `<catagory>` of this `<intent-filter>` to `CATAGORY_DEFAULT`:'
+  id: totrans-188
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将此 `<intent-filter>` 的 `<catagory>` 设置为 `CATAGORY_DEFAULT`：
 - en: '[PRE45]'
+  id: totrans-189
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'Add a `<data>` element to filter `person` entries (this is a MIME type):'
+  id: totrans-190
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加一个 `<data>` 元素以筛选 `person` 条目（这是一个MIME类型）：
 - en: '[PRE46]'
+  id: totrans-191
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'Add another `<data>` element to filter `contact` entries:'
+  id: totrans-192
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加另一个 `<data>` 元素以筛选 `contact` 条目：
 - en: '[PRE47]'
+  id: totrans-193
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: When installed on a device, the preceding code will become an option for opening
     "Contacts" in the user's address book. As you can see, replacing part of the standard
     Android framework is very simple, and allows more seamless integration of applications
     with the base system than is possible with a more conventional application architecture.
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 当在设备上安装时，前面的代码将成为用户打开通讯录中“联系人”的一个选项。正如你所见，替换Android标准框架的一部分非常简单，它允许应用程序与基础系统进行更加无缝的集成，这是更传统的应用程序架构所无法实现的。
 - en: '*What just happened*'
+  id: totrans-195
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '*刚刚发生了什么*'
 - en: 'If you install this application on the emulator, you''ll notice that in the
     launcher, there''s no icon to start it up. That''s because this application doesn''t
     have a main entry point like all of the others we''ve written thus far. Instead,
     if you open the "Contacts" application, and then click on one of the contacts
     in the address book, you''ll be greeted by the following screen:'
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你在这个模拟器上安装这个应用程序，你会注意到在启动器中没有图标来启动它。这是因为这个应用程序不像我们迄今为止编写的所有其他应用程序那样有一个主要的入口点。相反，如果你打开“联系人”应用程序，然后点击通讯录中的一个联系人，你会看到以下屏幕：
 - en: '![What just happened](img/4484_04_04.jpg)'
+  id: totrans-197
   prefs: []
   type: TYPE_IMG
+  zh: '![刚刚发生了什么](img/4484_04_04.jpg)'
 - en: If you select the second icon, your new `ViewContactActivity` will be started
     in order to view the selected contact. The user (as you can see) also has the
     ability to use your application in preference to the default (for as long as your
     application remains available on the device).
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你选择第二个图标，你新的`ViewContactActivity`将被启动以查看选定的联系人。正如你所见，用户也有能力在默认情况下使用你的应用程序（只要你的应用程序在设备上可用）。
 - en: Overriding a default behavior is a very important decision when developing a
     new application. Android makes it very easy to do, and as you can see, a third-party
     application can slot in almost seamlessly between two of the default applications.
     In a normal operating system environment, you would need to write an entire "contacts
     manager", while in Android you need only write the bits that interest you.
+  id: totrans-199
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开发新应用程序时，覆盖默认行为是一个非常重要的决定。Android使得这变得非常简单，正如你所见，第三方应用程序可以几乎无缝地插入两个默认应用程序之间。在正常的操作系统环境中，你需要编写一个完整的“联系人管理器”，而在Android中，你只需要编写你感兴趣的部分。
 - en: This is a part of your user interface design since you can use it to extend
     the functionality of various default parts of the system. For example, if you
     wrote a chat application, such as a "Jabber" client, you could embed the client
@@ -995,18 +1401,25 @@
     contacts directly from their address book, instead of having to go to your application.
     You application becomes a way for them to check a contact's status, and possibly
     avoid a phone call entirely.
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是你用户界面设计的一部分，因为它可以用来扩展系统的各种默认部分的 功能。例如，如果你编写了一个聊天应用程序，比如一个“Jabber”客户端，你可以将客户端嵌入到用户通讯录中每个与Jabber
+    ID关联的联系人**查看联系人**`Activity`中。这将使用户可以直接从他们的通讯录与可用的联系人聊天，而无需打开你的应用程序。你的应用程序成为他们检查联系人状态的方式，甚至可能完全避免打电话。
 - en: Summary
+  id: totrans-201
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: Implementing an `Activity` at the correct granularity is an important part of
     your user interface design process. Although it's not a graphical part directly,
     it defines how the system will interact with your application, and thus how the
     user will interact with it.
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
+  zh: 在正确的粒度上实现`Activity`是你用户界面设计过程的一个重要部分。尽管它不是直接与图形相关的一部分，但它定义了系统如何与你的应用程序交互，从而也定义了用户如何与它交互。
 - en: It's a good idea to keep implicit intents in mind when structuring how your
     `Activity` will be started. Creating a generic `Activity` allows for other applications
     to integrate seamlessly with your own, effectively turning your new application
@@ -1014,26 +1427,34 @@
     can be replaced or extended by another application, or it can be re-used in other
     application. In both cases, the user becomes free to customize your application
     in much the same way that they can customize the wallpaper image or theme.
+  id: totrans-203
   prefs: []
   type: TYPE_NORMAL
+  zh: 在构建`Activity`启动方式时，考虑到隐式意图是一个好主意。创建一个通用的`Activity`可以让其他应用程序与你自己的程序无缝集成，从而有效地将你的新应用程序转变为其他开发人员工作的平台。通过隐式方式启动的`Activity`可以被另一个应用程序替换或扩展，也可以在其他应用程序中被复用。在这两种情况下，用户可以像定制壁纸图像或主题一样自由地定制你的应用程序。
 - en: Always try and provide a single `Activity` implementation for each action the
     user might want to take, don't make an `Activity` do too many things in the same
     screen. A very good example of granularity is the "Contacts" application—there's
     a contact list, contact viewer, contact editor, and the dialler application.
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 一定要尝试为用户可能要采取的每个动作提供一个单独的`Activity`实现，不要让一个`Activity`在同一个屏幕上做太多事情。一个很好的粒度例子就是“联系人”应用——它包含了联系人列表、联系人查看器、联系人编辑器和拨号应用。
 - en: When working with tabbed interfaces (as we did in the previous chapter), it's
     possible to specify the tab content as an `Intent`, effectively embedding the
     `Activity` in your application. I would strongly urge you to consider doing exactly
     this when building a tabbed user interface, since it allows each tab to be re-used
     by your application far more easily, while also allowing third-party developers
     to create extensions to your interface, one tab at a time.
+  id: totrans-205
   prefs: []
   type: TYPE_NORMAL
+  zh: 当处理标签界面（正如我们在上一章所做的）时，可以将标签内容指定为`Intent`，实际上是将`Activity`嵌入到你的应用中。我强烈建议你在构建标签用户界面时考虑这样做，因为它可以让每个标签更容易地被你的应用重复使用，同时也允许第三方开发者一次创建一个标签来扩展你的界面。
 - en: So far we've only really worked with the `LinearLayout` class, and while it's
     a great base for simple user interfaces, it's almost never enough. In the next
     chapter, we'll be looking at the many other types of layouts that Android provides
     by default, exploring the way in which each layout works, and how they can be
     used.
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
+  zh: 迄今为止，我们主要使用了`LinearLayout`类，虽然这对于简单的用户界面来说是一个很好的基础，但几乎永远不够用。在下一章中，我们将探讨Android默认提供的许多其他类型的布局，研究每种布局的工作方式以及如何使用它们。
