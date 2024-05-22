@@ -1,61 +1,83 @@
 - en: Chapter 3. SQLite Queries
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第三章. SQLite查询
 - en: In the last chapter, we kicked our database building up a notch – transforming
     a simple schema involving just one, lone table, into a complex schema involving
     three interdependent tables. And now that we have a solid foundation in developing
     custom SQLite databases for Android, it's time to put the icing on the cake.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一章中，我们将数据库构建提升了一个层次——将仅涉及一个孤表的简单模式转变为涉及三个相互依赖的复杂模式。现在我们已经为在Android上开发自定义SQLite数据库打下了坚实的基础，是时候锦上添花了。
 - en: Though in theory, we could have one universal `get()` query which returns to
     us all columns of every row in our database as a `Cursor` object, and then filter
     and manipulate each row for our desired data – we can do better. Don't get me
     wrong – Java is fast – but when it comes to dealing with potentially thousands
     of rows of data on relatively limited memory, why not optimize things and let
     SQL do what it does best – that is, query for things!
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 理论上，我们可以有一个通用的`get()`查询，它将数据库中的所有列的每一行作为`Cursor`对象返回给我们，然后过滤和处理每一行以获取我们想要的数据——我们可以做得更好。不要误会我的意思——Java很快——但是当涉及到在相对有限的内存中处理可能成千上万行数据时，为什么不优化事物并让SQL发挥其最大的作用——那就是查询事物！
 - en: In this next chapter, we will focus on striking the right balance between parsing
     and filtering your data on the Android client side (that is, with the Java interface),
     and building a more advanced SQL query and parsing/filtering your data in the
     SQLite database itself.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将重点介绍在Android客户端端（即使用Java接口）解析和过滤数据与在SQLite数据库本身构建更高级的SQL查询和解析/过滤数据之间找到正确的平衡。
 - en: Methods for building SQLite queries
+  id: totrans-4
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 构建SQLite查询的方法
 - en: 'First, let''s establish the different ways in which we can build a query. Just
     like we saw earlier, the most low-level method for querying the SQLite database
     is through the `SQLiteDatabase` class''s `rawQuery()` method, defined as follows:'
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，让我们确定构建查询的不同方式。正如我们之前看到的，查询SQLite数据库最低级的方法是通过`SQLiteDatabase`类的`rawQuery()`方法，定义如下：
 - en: '[PRE0]'
+  id: totrans-6
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: This method is primarily for those with a strong background in SQL, as you pass
     SQL queries directly into the method as the first parameter. If your SQL query
     involves any sort of `WHERE` filter, then the second parameter allows you to pass
     in these filter values (we'll see several examples of this in use soon).
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个方法主要是为那些在SQL方面有扎实背景的人准备的，因为您可以直接将SQL查询作为第一个参数传递给方法。如果您的SQL查询涉及到任何`WHERE`过滤，那么第二个参数允许您传入这些过滤值（我们很快将看到几个使用这个的例子）。
 - en: 'The second query method the `SQLiteDatabase` class provides you with is a convenience
     wrapper for submitting queries – with the `query()` method (something we also
     saw earlier) any actual SQL programming is hidden and, instead, all parts of the
     query are passed in as parameters:'
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SQLiteDatabase`类提供的第二种查询方法是提交查询的便捷包装——使用`query()`方法（我们之前也见过），任何实际的SQL编程都被隐藏起来，取而代之的是将查询的所有部分作为参数传递：'
 - en: '[PRE1]'
+  id: totrans-9
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: With alternative `query()` methods containing parameters for `distinct` and
     `limit` constraints. Again, the previous parameters should be relatively self-explanatory,
     but all these methods will make the most sense when seen together for one given
     query. However, before moving on to those examples, let's take a look at the third
     method for building SQL queries.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用包含`distinct`和`limit`约束参数的替代`query()`方法。同样，前面的参数应该相对容易理解，但所有这些方法在看到一个给定查询时一起看会更有意义。但是，在继续这些示例之前，让我们先看看构建SQL查询的第三种方法。
 - en: 'This third method is one we haven''t seen yet and comes from the `SQLiteQueryBuilder`
     class. Instead of having to submit raw SQL queries, or having to deal with convenience
     methods, which still may seem intimidating to those completely new to SQL, the
@@ -64,105 +86,139 @@
     has many methods associated with it (and I invite you to browse the developer
     docs online for more details), the following are some of the more important methods
     that we''ll be highlighting later in this chapter:'
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 这第三种方法是我们尚未见过，它来自`SQLiteQueryBuilder`类。由于不需要提交原始SQL查询，或者处理便捷方法，这对于那些完全不了解SQL的新手来说可能仍然显得有些吓人，因此Android平台决定提供一个完整的便捷类，以帮助开发者尽可能无缝地与SQLite数据库交互。尽管这个类有许多与之相关的方法（我邀请您在线浏览开发者文档以获取更多详细信息），以下是我们将在本章中重点介绍的一些更重要方法：
 - en: '[PRE2]'
+  id: totrans-12
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'The previous method is a convenience method for constructing a `SELECT` statement,
     which can be used then for a group of `SELECT` statements that will be joined
     through a `UNION` operator in the `buildUnionQuery()` method as follows:'
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE3]'
+  id: totrans-14
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'A method which allows you to pass in a set of `SELECT` statements (potentially
     constructed using the `buildQuery()` convenience method) and constructs a query
     that will return the `UNION` of those subqueries is as follows:'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE4]'
+  id: totrans-16
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Builds a SQL query with the given parameters, similar to the `SQLiteDatabase`
     class''s `query()` method but simply returns the query as a String:'
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE5]'
+  id: totrans-18
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: The above allows you to set your current query as `DISTINCT` rows only.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE6]'
+  id: totrans-20
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: Allows you to set the list of tables to query and if multiple tables are passed,
     in then it allows you to perform a `JOIN` on those tables.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
 - en: So now that we have a list of all the different methods available to us, let's
     explore some basic SQLite queries and look at how we would perform relatively
     simple queries using each of the methods described previously!
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
 - en: SELECT statements
+  id: totrans-23
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: 'Using our `Students` schema from [Chapter 2](ch02.html "Chapter 2. Using a
     SQLite Database"), *Using a SQLite Database*, let''s begin with a glimpse at what
     our `Students` table looks like at this point:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
 - en: '| Id | Name | State | Grade |'
+  id: totrans-25
   prefs: []
   type: TYPE_TB
 - en: '| --- | --- | --- | --- |'
+  id: totrans-26
   prefs: []
   type: TYPE_TB
 - en: '| 1 | Jason Wei | IL | 12 |'
+  id: totrans-27
   prefs: []
   type: TYPE_TB
 - en: '| 2 | Du Chung | AR | 12 |'
+  id: totrans-28
   prefs: []
   type: TYPE_TB
 - en: '| 3 | George Tang | CA | 11 |'
+  id: totrans-29
   prefs: []
   type: TYPE_TB
 - en: '| 4 | Mark Bocanegra | CA | 11 |'
+  id: totrans-30
   prefs: []
   type: TYPE_TB
 - en: '| 5 | Bobby Wei | IL | 12 |'
+  id: totrans-31
   prefs: []
   type: TYPE_TB
 - en: 'In this way, for each query that we do, we''ll know exactly what results we
     should expect and, thus, we can validate our queries. Before we dive right, in
     here''s a list of what we''ll cover in this section:'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
 - en: '`SELECT` statements'
+  id: totrans-33
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`SELECT` statements with column specifications'
+  id: totrans-34
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`WHERE` filters'
+  id: totrans-35
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`AND/OR` operators'
+  id: totrans-36
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`DISTINCT` clause'
+  id: totrans-37
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`LIMIT` clause'
+  id: totrans-38
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
@@ -170,11 +226,14 @@
     experience, but once you learn these basic building blocks, you''ll be well on
     your way to building longer, more complex queries. And so, let''s begin with the
     most basic `SELECT` query:'
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE7]'
+  id: totrans-40
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Here, we see that in the first method, we're simply passing in the standard
     SQL query, while in the second method we are breaking down the query into its
     different parameters (that is, its table name, its selection filters, and so on).
@@ -185,73 +244,98 @@
     of SQLiteQueryBuilder's strengths is that you can specify multiple queries and
     submit them all at the same time and effectively perform a `UNION` SQL query -
     but again we will play with this functionality later.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
 - en: 'Now, let''s take a look at the results from those queries and see if we can
     validate the results:'
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
 - en: '![SELECT statements](img/8123OS_03_01.jpg)'
+  id: totrans-43
   prefs: []
   type: TYPE_IMG
 - en: Looks pretty good to me! We see that each method was able to return all rows
     of our table as expected. Under the third method, we can also see the query that
     was constructed using our `SQLiteQueryBuilder` class and indeed verify that the
     SQL query we submitted in the first method matches that built-in the third method.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我看来效果很不错！我们可以看到，每种方法都能如预期那样返回我们表格的所有行。在第三种方法下，我们还可以看到使用我们的`SQLiteQueryBuilder`类构建的查询，并且可以确认，在第一种方法中提交的SQL查询与第三种方法中构建的查询完全匹配。
 - en: 'Now, say you have a large table with thousands of rows of data and with tens
     of columns - for the sake of both efficiency and memory, it''s often suggested
     in practice that you don''t return the entire table with your queries but, instead,
     refine your queries to only return those columns of data of interest! And so,
     let''s take a look at how we can specify which columns to return in our `SELECT`
     queries:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，假设你有一个包含成千上万行数据、几十列的大型表格——为了效率和内存考虑，实践中通常建议不要用查询返回整个表格，而是应该细化查询，只返回那些感兴趣的数据列！那么，让我们看看如何在`SELECT`查询中指定要返回哪些列：
 - en: '[PRE8]'
+  id: totrans-46
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'And so, we see that the overall structure of the query is the same for all
     three methods, but in methods two and three, we pass in a `String[]` containing
     the columns of data that we want. Again, just to verify that our queries are behaving
     the way we want them to, here''s the output of those queries:'
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以看到，所有三种方法的查询整体结构是相同的，但在第二种和第三种方法中，我们传递一个包含我们想要的数据列的`String[]`。再次，为了验证我们的查询是否按预期工作，以下是这些查询的输出：
 - en: '![SELECT statements](img/8123OS_03_02.jpg)'
+  id: totrans-48
   prefs: []
   type: TYPE_IMG
+  zh: '![`SELECT`语句](img/8123OS_03_02.jpg)'
 - en: And so we see that indeed we are able to return each student, along with their
     respective states. Finally again, notice the query that is constructed in the
     third method and compare it to the raw SQL query that was passed to the first
     method – they should match exactly and they do.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以看到，确实能够返回每个学生及其各自的状态。最后再次注意，第三种方法中构建的查询与传递给第一种方法的原始SQL查询是相同的——它们应该完全匹配，实际上也确实如此。
 - en: WHERE filters and SQL operators
+  id: totrans-50
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: '`WHERE`筛选器和SQL运算符'
 - en: 'Now, oftentimes it''s important to be able to filter your data not just by
     columns but also by column values! This is where the `WHERE` filter comes in handy
     and these `WHERE` filters will definitely be the most-used clause you will run
     into as a database developer. On that note, let''s take a look at how these `WHERE`
     filters (also known as selection parameters in Android) are implemented with our
     three query-building methods:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常，能够根据列的值来过滤数据是非常重要的！这正是`WHERE`筛选器派上用场的地方，作为数据库开发者，你将经常使用这些`WHERE`筛选器。就此而言，让我们看看这些`WHERE`筛选器（在Android中也被称为选择参数）是如何通过我们的三种查询构建方法实现的：
 - en: '[PRE9]'
+  id: totrans-52
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'With the first method, we can see how a standard SQL `WHERE` clause is formatted.
     Knowing this, with our second and third methods we see that, we can just pass
     into the selection parameter a string formatted like the `WHERE` clause but omitting
     the `WHERE` itself (this is automatically appended to your query for you). This
     can explicitly be seen with the constructed query returned by our `SQLiteQueryBuilder`
     class in the third method:'
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 在第一种方法中，我们可以看到一个标准的SQL `WHERE`子句是如何格式化的。知道了这一点，通过我们的第二和第三种方法，我们可以看到，只需将一个类似于`WHERE`子句格式的字符串传递给选择参数（`WHERE`本身省略，因为这会自动附加到你的查询中）。这可以在第三种方法中由我们的`SQLiteQueryBuilder`类返回的构建查询中明确看到：
 - en: '![WHERE filters and SQL operators](img/8123OS_03_03.jpg)'
+  id: totrans-54
   prefs: []
   type: TYPE_IMG
+  zh: '![`WHERE`筛选器和SQL运算符](img/8123OS_03_03.jpg)'
 - en: 'Just like with any programming language, you can filter logic through the use
     of `AND/OR` operators; the same applies to SQL and, specifically, with SQL `WHERE`
     filters. Instead of asking for all rows which satisfy one set of conditions, you
@@ -259,11 +343,16 @@
     more loosely, just one of several given conditions. An example of this is as follows,
     where instead of only returning students from Illinois, we utilize the SQL `OR`
     operator and also ask for students from Arkansas:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 与任何编程语言一样，你可以通过使用`AND/OR`运算符来实现过滤逻辑；这对SQL同样适用，特别是对于SQL `WHERE`筛选器。你可以编写不仅满足一组条件的所有行的查询，也可以编写满足所有给定条件或宽松地说，仅满足多个给定条件之一的行的查询。以下是一个例子，我们不仅返回伊利诺伊州的学生，还利用SQL
+    `OR`运算符，也查询阿肯色州的学生：
 - en: '[PRE10]'
+  id: totrans-56
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Here you''ll notice that the syntax is, again, very similar to the earlier
     example, but this time we''ve injected an `OR` operator into the `WHERE` filter
     (selection parameter) and have placed two selection arguments (that is, the ''?'')
@@ -272,31 +361,45 @@
     array will correspond to the first ''?'' place card, and so on. And of course,
     if you want to use the `AND` operator, then just apply the previous syntax but
     replacing `OR` with `AND`. Taking a quick peak at the output, we see as follows:'
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 启动电源，让我们来看看SQL中的`DISTINCT`子句：
 - en: '![WHERE filters and SQL operators](img/8123OS_03_04.jpg)'
+  id: totrans-58
   prefs: []
   type: TYPE_IMG
+  zh: '![WHERE筛选器和SQL操作符](img/8123OS_03_04.jpg)'
 - en: And so now our buddy Du has popped into the result set!
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: '`LIMIT`子句仅仅允许您限制要返回的行数。`LIMIT`有两种格式：'
 - en: DISTINCT and LIMIT clauses
+  id: totrans-60
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: '`DISTINCT`和`LIMIT`子句'
 - en: 'Powering on, let''s take a look at the `DISTINCT` clause in SQL:'
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，我们的朋友Du已经出现在结果集中！
 - en: '[PRE11]'
+  id: totrans-62
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: The `DISTINCT` clause is also relatively straightforward it allows you to specify
     in your query that for the given columns you only want to return a subset of rows
     which have distinct values for that column. Notice that I emphasize for the given
     columns, as in order for the `DISTINCT` clause to be meaningful, a column must
     be specified in your query.
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: '`DISTINCT`子句也相对简单直接，它允许您在查询中指定，对于给定的列，您只想返回具有该列不同值的行子集。需要注意的是，为了使`DISTINCT`子句有意义，一个列必须在您的查询中被指定。'
 - en: 'In my previous example, we''ll notice a couple of things. First off, in our
     query, notice that we follow the `DISTINCT` clause with the column that we want
     it to apply to namely the `State` column. Essentially, we''re asking my query
@@ -306,30 +409,44 @@
     `query()` statement that we were previously using in the second method - this
     time switching it to a more general `query()` method which has parameters for
     specifying a `DISTINCT` clause. The results for this query were:'
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于这个查询的结果是：
 - en: '![DISTINCT and LIMIT clauses](img/8123OS_03_05.jpg)'
+  id: totrans-65
   prefs: []
   type: TYPE_IMG
+  zh: '![DISTINCT和LIMIT子句](img/8123OS_03_05.jpg)'
 - en: 'Which is indeed the case for our current table! And last but not least, let''s
     take a look at the `LIMIT` clause:'
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 这确实是我们当前表的案例！最后但同样重要的是，让我们来看看`LIMIT`子句：
 - en: '[PRE12]'
+  id: totrans-67
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'The `LIMIT` clause simply allows you to limit how many rows to return. The
     `LIMIT` clause takes on two formats:'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我之前的示例中，我们会注意到一些事情。首先，在我们的查询中，请注意我们遵循`DISTINCT`子句与想要应用它的列，即`State`列。本质上，我们要求查询只返回数据库中每个州的不同行。换句话说，我们想要知道学生来自哪些州，并且每个州只想要一行数据。另外值得一提的是，我们已经更改了之前使用的`query()`语句——这次改为使用更通用的`query()`方法，该方法具有指定`DISTINCT`子句的参数。
 - en: '`LIMIT n, m`'
+  id: totrans-69
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`LIMIT n, m`'
 - en: '`LIMIT n`'
+  id: totrans-70
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`LIMIT n`'
 - en: 'The first format tells the query to return just m rows (that is, limiting how
     many rows to return) starting from row n. The second format simply tells the query
     to return the first n rows which satisfy the given conditions. The first format
@@ -341,15 +458,21 @@
     of trading versatility for convenience and abstraction. In any case, let''s just
     make one last sanity check here to make sure our queries are actually only returning
     three rows:'
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一种格式告诉查询只返回m行（也就是说，限制返回的行数）从第n行开始。第二种格式简单告诉查询返回满足给定条件的第一个n行。第一种格式确实为我们提供了更大的灵活性，但是不幸的是，第二种和第三种格式都不允许我们利用这种格式（由于它自动为我们构建查询的方式），而原始SQL查询（原始SQL查询）可以执行任何有效的SQL查询。这是一个小示例，展示了执行原始SQL查询给我们的多用途性，是交换灵活性和便利性以及抽象性的完美示例。
 - en: '![DISTINCT and LIMIT clauses](img/8123OS_03_06.jpg)'
+  id: totrans-72
   prefs: []
   type: TYPE_IMG
+  zh: '![DISTINCT 和 LIMIT 子句](img/8123OS_03_06.jpg)'
 - en: Yup - looks good to me! In all methods, even though we didn't specify any `WHERE`
     filters, we were still only returned the first three valid results, as expected.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 是的，看起来不错！在所有方法中，尽管我们没有指定任何`WHERE`筛选器，但我们仍然只得到了预期的前三个有效结果。
 - en: In this section, we looked at a number of clauses built-into the SQL language
     which allow us to have control over our data. By introducing these clauses one
     by one, the hope was that you could first see all of the pieces of the puzzle.
@@ -358,50 +481,74 @@
     data. However, before we wrap up this chapter, let's look at some advanced queries,
     which will take more time to master and understand, but again will add another
     tool under your belt.
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一部分，我们查看了一些内置于SQL语言中的子句，它们允许我们控制数据。通过逐个引入这些子句，希望你能首先看到所有谜题的碎片。然后，当你需要实现自己的数据库时，你将能够把碎片拼凑起来，执行强大的查询，快速返回有意义的数据。然而，在我们结束本章之前，让我们看看一些高级查询，它们需要更多时间来掌握和理解，但同样会为你增加一个工具。
 - en: ORDER BY and GROUP BY clauses
+  id: totrans-75
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: ORDER BY和GROUP BY子句
 - en: 'In this section, we''ll look at some of the more advanced and more nuanced
     features of the SQL language as well as their implementations in the various SQL
     convenience classes of Android. Again, before we dive in and attack these features,
     here''s a list of what we''ll be covering in this next section:'
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一部分，我们将查看SQL语言中一些更高级和更细微的功能以及它们在Android各种SQL便捷类中的实现。同样，在我们深入探讨这些特性之前，以下是我们在下一部分将要涵盖的内容列表：
 - en: '`ORDER BY` clauses'
+  id: totrans-77
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ORDER BY`子句'
 - en: '`GROUP BY` clauses'
+  id: totrans-78
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GROUP BY`子句'
 - en: '`HAVING` filters'
+  id: totrans-79
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`HAVING`筛选器'
 - en: SQL Functions
+  id: totrans-80
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: SQL函数
 - en: JOINS
+  id: totrans-81
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 联接（JOINS）
 - en: 'So let''s look at `ORDER BY` clauses in SQL:'
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看SQL中的`ORDER BY`子句：
 - en: '[PRE13]'
+  id: totrans-83
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Here the syntax for the `ORDERBY` clause is:'
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里是`ORDERBY`子句的语法：
 - en: '[PRE14]'
+  id: totrans-85
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'So in the first method, we see this syntax in action, and then in the latter
     two methods, we see that we simply need to pass in the column name followed by
     either `ASC` or `DESC` (as a String) into the `ORDERBY` parameter of the respective
@@ -410,39 +557,56 @@
     to know the components of an SQL `ORDERBY` clause. In all three methods shown,
     we are sorting our resulting subtable by the state column, and so to validate
     our query, we check the output and see the following:'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 在第一个方法中，我们看到了这个语法的实际应用，然后在后两个方法中，我们看到只需将列名后跟`ASC`或`DESC`（作为字符串）传递给相应查询方法的`ORDERBY`参数。在后两个方法中，语法本质上相同，因此我在这里不过多赘述，但重要的是要了解SQL
+    `ORDERBY`子句的组成部分。在展示的所有三种方法中，我们都是通过州（state）列对结果子表进行排序，因此为了验证我们的查询，我们检查输出并看到以下内容：
 - en: '![ORDER BY and GROUP BY clauses](img/8123OS_03_07.jpg)'
+  id: totrans-87
   prefs: []
   type: TYPE_IMG
+  zh: '![ORDER BY 与 GROUP BY 子句](img/8123OS_03_07.jpg)'
 - en: So, indeed, we see that the resulting rows are sorted in ascending order by
     the state. Furthermore, just like with the basic queries, we can see the outputted
     SQL query that is created by the `SQLiteQueryBuilder` class, and can verify that
     this is the same query that is executed in our first method.
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 事实上，我们可以看到，结果行是按照州（state）以升序排列的。此外，就像在基本查询中一样，我们可以看到由`SQLiteQueryBuilder`类创建的输出SQL查询，并可以验证这是我们第一个方法中执行的相同查询。
 - en: 'Now, moving on to `GROUPBY` clauses:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们继续讨论`GROUPBY`子句：
 - en: '[PRE15]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'Now, it is again crucial to understand the structure of a `GROUPBY` query,
     as it is unlike any of the previous clauses or filters that we have seen. The
     structure is as follows:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，理解`GROUPBY`查询的结构再次变得至关重要，因为它与我们之前所见过的任何子句或筛选器都不同。结构如下：
 - en: '[PRE16]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: The trickiest part is in the `aggregate_function(your_column)` segment of the
     query. In our case, we use what's known as the `COUNT()` function in SQL, which,
     as its name suggests, simply counts the number of rows returned in a query (or
     subquery) and returns the counted value. You can use any number of `aggregate_functions`
     in SQL, but for now let's stick with `COUNT()` and later when we discuss SQL Functions,
     I'll list out some of the others.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 查询中最棘手的部分是`aggregate_function(your_column)`部分。在我们的例子中，我们使用SQL中所谓的`COUNT()`函数，顾名思义，它只是计算查询（或子查询）返回的行数，并返回计算值。在SQL中你可以使用任何数量的`aggregate_functions`，但现在我们先坚持使用`COUNT()`，稍后当我们讨论SQL函数时，我会列出其他一些函数。
 - en: 'The idea here is simple – first we''re selecting a column to group our data
     by (in our case, by state), and then we''re telling the query to return two columns:
     the first is simply the states themselves, and the second is the number of times
@@ -454,22 +618,32 @@
     just like a standard `SELECT` query with columns! Note that the `COUNT()` function
     also takes a * as a parameter, which simply returns a count of all the rows in
     the subtable.'
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里的思路很简单——首先我们选择一列来对数据进行分组（在我们的案例中，是按州），然后我们告诉查询返回两列：第一列是州本身，第二列是那个州在表中出现的次数（即表中状态的聚合数量）。你还会注意到，在第二种和第三种方法中，`GROUPBY`查询的完成方式非常简单，唯一棘手的部分是指定用`COUNT()`函数包裹的列名（看看我们如何声明字符串`colName`）。一旦你这样做了，其余部分就非常直观，表现得就像带有列的标准`SELECT`查询一样！注意`COUNT()`函数也可以接受一个`*`作为参数，它只是返回子表中所有行的计数。
 - en: 'And now, let''s see what our output is:'
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们看看我们的输出是什么：
 - en: '![ORDER BY and GROUP BY clauses](img/8123OS_03_08.jpg)'
+  id: totrans-96
   prefs: []
   type: TYPE_IMG
+  zh: '![ORDER BY和GROUP BY子句](img/8123OS_03_08.jpg)'
 - en: And voila! Just as we expected – our queries return each state followed by their
     respective frequencies!
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 看吧！正如我们所预期的——我们的查询返回了每个状态以及它们各自的出现频率！
 - en: HAVING filters and Aggregate functions
+  id: totrans-98
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: '`HAVING`过滤器和聚合函数'
 - en: Now, with `GROUPBY` clauses come the `HAVING` filters. The `HAVING` filter is
     to be used only with a `GROUPBY` clause, and taking the previous queries as an
     example, say we want to group by the number of states in our table, but we only
@@ -477,25 +651,35 @@
     we can essentially phrase our query such that it groups by the number of states,
     and then only returns those states having a total count greater or less than some
     value.
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，随着`GROUPBY`子句的出现，也有了`HAVING`过滤器。`HAVING`过滤器只能与`GROUPBY`子句一起使用，以前面的查询为例，假设我们想要按照表中状态的数量进行分组，但我们只关心出现特定次数的状态。使用`HAVING`过滤器，我们本质上可以构建这样的查询：先按照状态数量分组，然后只返回那些总计数大于或小于某个值的状态。
 - en: 'Let''s take a look at the following code and pay close attention to how I structure
     my query (it will look very similar to the `GROUPBY` query but with an extra filter
     at the end):'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看以下代码，并仔细注意我是如何构建查询的（它将与`GROUPBY`查询非常相似，但在最后加上了一个额外的过滤器）：
 - en: '[PRE17]'
+  id: totrans-101
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'And so you have it. Again, notice the structure of my query in the first method
     and notice how it translates into the `HAVING` parameter of the query convenience
     methods in the second and third methods. Let''s see now how the query did and
     whether or not it eliminated AR from the output:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 你看，就是这样。再次注意我在第一种方法中的查询结构，以及它是如何转化为第二种和第三种方法的查询便捷方法中的`HAVING`参数的。现在让我们看看查询结果如何，以及它是否从输出中排除了AR：
 - en: '![HAVING filters and Aggregate functions](img/8123OS_03_09.jpg)'
+  id: totrans-103
   prefs: []
   type: TYPE_IMG
+  zh: '![HAVING过滤器和聚合函数](img/8123OS_03_09.jpg)'
 - en: 'Perfect - pretty straightforward. Earlier we ran into the `COUNT()` aggregate
     function, which along with `SUM()` and `AVG()` are amongst the most popular of
     the aggregate functions (see here for the full list: [http://www.sqlite.org/lang_aggfunc.html)](http://www.sqlite.org/lang_aggfunc.html)).
@@ -504,18 +688,26 @@
     column in your subtable, or average of the values of that column in your subtable,
     and so on. First, let''s examine some of these aggregate functions, listed as
     follows (notice how the column names change):'
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 很完美——非常直观。之前我们遇到了`COUNT()`聚合函数，它与`SUM()`和`AVG()`一样，是最受欢迎的聚合函数之一（完整列表请见：[http://www.sqlite.org/lang_aggfunc.html)](http://www.sqlite.org/lang_aggfunc.html)。这些函数，如它们的名字所暗示的，可以统计子表特定列返回的行总数，或者该列值的总和，或者该列值的平均值，等等。首先，让我们检查以下一些聚合函数（注意列名如何变化）：
 - en: '[PRE18]'
+  id: totrans-105
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'So, here we use each of the three methods to test out a different aggregate
     function. The results are shown as follows:'
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以，这里我们使用这三种方法中的每一种来测试不同的聚合函数。结果如下所示：
 - en: '![HAVING filters and Aggregate functions](img/8123OS_03_10.jpg)'
+  id: totrans-107
   prefs: []
   type: TYPE_IMG
+  zh: '![HAVING过滤器和聚合函数](img/8123OS_03_10.jpg)'
 - en: 'After referencing the state of the table from earlier, you can quickly validate
     the outputted numbers and confirm that the functions are indeed doing as they
     should. Outside of aggregate functions (which are typically used for numerical-typed
@@ -523,17 +715,25 @@
     that help you manipulate everything from Strings to Date types, and so on. A complete
     list of these core functions can be found [http://www.sqlite.org/lang_corefunc.html](http://www.sqlite.org/lang_corefunc.html)
     but for now, let''s just take a look at a couple:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 引用之前表的状况后，你可以快速验证输出的数字，并确认这些函数确实在按预期工作。除了聚合函数（通常用于数值类型的列），SQLite还提供了一系列其他核心函数，帮助你操作从字符串到日期类型等所有内容。这些核心函数的完整列表可以在[http://www.sqlite.org/lang_corefunc.html](http://www.sqlite.org/lang_corefunc.html)找到，但现在，让我们来看几个例子：
 - en: '[PRE19]'
+  id: totrans-109
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Again, here is the associated output of these core functions:'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 再次，以下是这些核心函数的相关输出：
 - en: '![HAVING filters and Aggregate functions](img/8123OS_03_11.jpg)'
+  id: totrans-111
   prefs: []
   type: TYPE_IMG
+  zh: '![HAVING过滤器和聚合函数](img/8123OS_03_11.jpg)'
 - en: Now, as far as how much of a performance boost running some of these functions
     in SQLite as opposed to just doing them on the Java side, this is debatable and
     is highly dependent on the size of your database and the function you are calling.
@@ -542,17 +742,23 @@
     comparison is something we'll look more into in the next section, but regardless,
     it's always better to be aware of the functions available to you in SQLite and
     add them to your arsenal of weapons!
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，关于在SQLite中运行这些函数与在Java端执行它们相比能带来多大的性能提升，这是一个有争议的问题，并且高度依赖于你的数据库大小和你调用的函数。例如，一些字符串操作函数可能不会提供像其他更复杂的聚合函数那样的性能提升。实际上，我们将在下一节更深入地研究SQLite与Java的比较，但不管怎样，了解SQLite中可用的函数并添加到你的武器库中总是更好的！
 - en: 'And lastly, it''s about time we looked at the benefits of using the `SQLiteQueryBuilder`
     (until now, much of the syntax was very similar to just the `query()` method in
     `SQLiteDatabase)` and see how we can leverage this convenience class to perform
     more complicated joins:'
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，是时候看看使用`SQLiteQueryBuilder`的好处了（到目前为止，很多语法与`SQLiteDatabase`中的`query()`方法非常相似），我们来看看如何利用这个便捷类来执行更复杂的连接：
 - en: '[PRE20]'
+  id: totrans-114
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: First, let me point out a couple of things specific to `JOIN` statements. In
     essence, a `JOIN` statement allows you to connect two tables based on some column
     values. For example, in our case, our schema was built so that we would have a
@@ -563,8 +769,10 @@
     class mappings as well as the course listings (that is, asking for two tables
     back) and then manually doing these lookups, we can use an SQL `JOIN` statement
     to return a joint table.
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，让我指出一些与`JOIN`语句相关的问题。本质上，`JOIN`语句允许你根据某些列值连接两个表。例如，在我们的案例中，我们的模式构建了一个用于班级的表，每个班级都映射了学生ID和课程ID。但是，假设我们不仅想要快速知道班级映射是什么，还想要知道每个映射的课程名称（即课程的名称和哪些学生在上这门课）。我们不需要返回所有的班级映射以及课程列表（即请求两个表回来）然后手动进行这些查找，我们可以使用SQL的`JOIN`语句返回一个联合表。
 - en: 'Now, because when doing `JOIN` statements we are asking for multiple tables
     back, oftentimes when you ask for specific columns to return, you''ll need to
     specify what table the column comes from. For instance, consider a situation where
@@ -572,11 +780,16 @@
     cause an error, as it''s ambiguous which table''s ID column you really want. This
     is what we''re doing when we initiate the strings `courseIdCol, classIdCol`, and
     `classCourseIdCol`, and the syntax is simply as follows:'
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，由于在进行`JOIN`语句时我们请求返回多个表，通常当你要求返回特定列时，你需要指定该列来自哪个表。例如，考虑两个表都有ID字段的情况——在这种情况下，仅仅请求ID列会导致错误，因为不清楚你真正想要的是哪个表的ID列。这就是我们在初始化字符串`courseIdCol,
+    classIdCol`和`classCourseIdCol`时所做的事情，语法如下：
 - en: '[PRE21]'
+  id: totrans-117
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'Then in our `SQLiteQueryBuilder` class, we use the method `setTables()` to
     format our `JOIN` statement. Again, you can see the exact syntax that we used
     in the previous example, but the general format is first you specify the two tables
@@ -592,18 +805,27 @@
     as the syntax for each, I invite you to look at [http://www.w3schools.com/sql/sql_join.asp](http://www.w3schools.com/sql/sql_join.asp)
     and read through the documentation. The output for the previous `JOIN` statement
     is as follows:'
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后在我们的`SQLiteQueryBuilder`类中，我们使用`setTables()`方法来格式化我们的`JOIN`语句。同样，你可以看到我们在上一个示例中使用的确切语法，但一般的格式是首先指定你想连接的两个表，然后告诉查询你想使用哪种类型的`JOIN`（在我们的案例中，我们想使用`INNER
+    JOIN`）。之后，你需要告诉查询对哪两列执行`JOIN`，在我们的案例中，我们希望通过课程ID连接这两个表，因此我们指定了`Class`表的课程ID列以及`Course`表对应的课程ID列。这样做，`JOIN`语句就知道对于每个班级映射，它应该取课程ID，然后转到`Course`表找到相应的课程ID，并将该表的行附加到`Class`表。关于不同类型的JOIN以及每种JOIN的语法深入讨论，我邀请你查看[http://www.w3schools.com/sql/sql_join.asp](http://www.w3schools.com/sql/sql_join.asp)并阅读文档。上一个`JOIN`语句的输出如下：
 - en: '![HAVING filters and Aggregate functions](img/8123OS_03_12.jpg)'
+  id: totrans-119
   prefs: []
   type: TYPE_IMG
+  zh: '![HAVING过滤和聚合函数](img/8123OS_03_12.jpg)'
 - en: And so you can immediately see both the syntax of the query as well as the results.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样你就可以立即看到查询的语法以及结果。
 - en: SQL vs. Java performance comparisons
+  id: totrans-121
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: SQL与Java性能比较
 - en: So just how powerful and efficient is the SQL language? In the previous two
     sections, we explored both basic and more advanced features of SQL – all of whose
     functionality (in theory) could be mimicked with just Java (that is, just do a
@@ -613,29 +835,41 @@
     to on the Java end), and if so, how much of an advantage it provides. And so,
     to start, we'll need a much bigger data set to better illustrate the improvements
     in performance.
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 那么，SQL语言究竟有多强大和高效呢？在前两节中，我们探讨了SQL的基本和更高级功能 - 所有这些功能（理论上）仅用Java就可以模仿（也就是说，仅用最基础的`SELECT`语句获取整个表，并用Java
+    `if`语句解析等）。然而，现在是探索在SQLite端过滤和操作我们的数据是否真的有实际优势（相对于在Java端），如果有，它提供了多少优势的时候了。因此，首先，我们需要一个更大的数据集来更好地说明性能的改进。
 - en: 'First, we create a new table under a new schema which simply has a column for
     name, state, and income – think of this as a United States database with each
     family''s name, the state they live in, and their family income. The table has
     17,576 rows - still not a lot considering the magnitude of some real application
     tables - but hopefully this test table will illustrate some of these performance
     differences. Let''s begin with the `WHERE` filter:'
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们创建一个具有新架构的新表，该表仅包含姓名、州和收入列 - 可以将这个看作是一个美国数据库，包含每个家庭的名字、他们居住的州以及家庭收入。该表有17,576行
+    - 考虑到一些实际应用程序表的规模，这并不算多 - 但希望这个测试表能说明一些性能差异。让我们从`WHERE`过滤器开始：
 - en: '[PRE22]'
+  id: totrans-124
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'On the SQLite side, we''re simply using a `WHERE` filter which returns to us
     all families in our table that have a family income of over 500,000\. On the Java
     side, we get back the entire table and loop through each row and use an `if` statement
     to perform the same filtering. We can verify that the outputted rows are the same,
     and at the same time look at the speeds of the two methods for comparison:'
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 在SQLite方面，我们仅使用了一个`WHERE`过滤器，它返回给我们表中所有家庭收入超过500,000的家庭。在Java方面，我们获取整个表，并遍历每一行，使用`if`语句执行相同的过滤。我们可以验证输出的行是相同的，同时比较两种方法的速度：
 - en: '![SQL vs. Java performance comparisons](img/8123OS_03_13.jpg)'
+  id: totrans-126
   prefs: []
   type: TYPE_IMG
+  zh: '![SQL与Java性能比较](img/8123OS_03_13.jpg)'
 - en: 'So we see that here there''s almost a 5x boost in performance! Next, let''s
     take a look at the performance boost gained when using the `GROUPBY` clause. On
     the SQLite side, we''ll simply be doing a `GROUPBY` statement on the states column
@@ -643,17 +877,25 @@
     side, we''ll ask for the whole table back and manually go through each row, using
     a standard `Map` object to keep track of each state and its respective count as
     follows:'
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以看到，这里性能提升了近5倍！接下来，让我们看看使用`GROUPBY`子句时性能的提升。在SQLite方面，我们只需在states列上执行一个`GROUPBY`语句，并统计每个州有多少家庭。然后，在Java方面，我们将请求整个表格，并手动遍历每一行，使用标准的`Map`对象来跟踪每个州及其相应的计数，如下所示：
 - en: '[PRE23]'
+  id: totrans-128
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'And let''s see how well we did:'
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看我们做得如何：
 - en: '![SQL vs. Java performance comparisons](img/8123OS_03_14.jpg)'
+  id: totrans-130
   prefs: []
   type: TYPE_IMG
+  zh: '![SQL与Java性能对比](img/8123OS_03_14.jpg)'
 - en: 'So we see that in this case, the performance boost was there but less noticeable,
     giving us a 33 percent boost in efficiency. It''s important to note that these
     stated statistics are highly dependent on the schema and size of your tables,
@@ -661,31 +903,45 @@
     experiments is to just give us an idea of how these two methodologies compare.
     Lastly, let''s take a look at how a built-in aggregate function like `avg()` in
     SQL compares with Java. The code for both methodologies is as follows:'
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以在这种情况下，我们看到了性能的提升，但不太明显，效率提高了33%。需要注意的是，这些统计数据高度依赖于您的表模式和表大小，所以对这些数字要持保留态度。然而，这些小实验的目标只是让我们了解这两种方法如何比较。最后，让我们看看像SQL中的`avg()`这样的内置聚合函数与Java相比如何。两种方法的代码如下：
 - en: '[PRE24]'
+  id: totrans-132
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'And taking a quick look at what the output gives us:'
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 快速查看输出结果：
 - en: '![SQL vs. Java performance comparisons](img/8123OS_03_15.jpg)'
+  id: totrans-134
   prefs: []
   type: TYPE_IMG
+  zh: '![SQL与Java性能对比](img/8123OS_03_15.jpg)'
 - en: And wow – enough said. The results for both methods are the same, but when using
     the SQL function you saw a 16x gain in performance.
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 哇——无需多言。两种方法的结果相同，但使用SQL函数时，性能提高了16倍。
 - en: Summary
+  id: totrans-136
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: In this chapter, we started by focusing on the Android OS and by looking at
     what types of query methods are at your disposal. We saw that there are three
     well-known ways to interact with the SQLite database, some more 'convenient' than
     the others, and some more flexible and powerful than the others.
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们从关注Android OS开始，查看了可用哪些类型的查询方法。我们了解到，与SQLite数据库交互有三种众所周知的方式，有些方式比其他方式更“方便”，有些则更灵活、更强大。
 - en: However, we also saw that though each method had its pros and cons, all three
     query methods could ultimately perform the same kinds of queries, just using different
     sets of syntax or using different sets of parameters. This is when we moved away
@@ -694,8 +950,10 @@
     queries that allowed you to specify specific columns and rows. And later, we talked
     about more advanced queries, which ranged from `ORDERBY` and `GROUPBY` queries
     to the most complex and involved `JOIN` statements.
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，我们也看到，尽管每种方法都有其优缺点，但所有三种查询方法最终都能执行相同的查询，只是使用了不同的语法集或不同的参数集。这时，我们从这些方法本身转移开，更多地关注查询本身，从简单的查询开始，这些查询从最基本的`SELECT`查询到允许您指定特定列和行的更复杂的查询。后来，我们讨论了更高级的查询，这些查询从`ORDERBY`和`GROUPBY`查询到最复杂、最深入的`JOIN`语句。
 - en: And lastly, being the curious and performance-minded programmers that we are,
     we spent the last section comparing the speeds of SQL and Java implementing a
     variety of queries in both SQL and Java and then running them to look at the respective
@@ -705,8 +963,10 @@
     boost). And so, the moral of the story for this section is that when possible,
     find ways to manipulate your data on the SQL side as opposed to the Java side,
     as it will help you optimize speed as well as memory usage!
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，作为我们这些好奇且注重性能的程序开发者，我们在上一节中比较了SQL和Java的执行速度，在SQL和Java中实施各种查询，然后运行它们以观察各自的执行速度。我们看到，在每种情况下，能够将你所需的功能嵌入到SQL查询中，与在Java中执行相同功能相比，都可以提供性能提升（在一个案例中，它提供了高达16倍的性能提升）。因此，本节的结论是，当可能时，应尽量在SQL端而非Java端处理数据，这将帮助你优化速度和内存使用！
 - en: But before moving on, let's take a second to synthesize what we've learned so
     far. Earlier in [Chapter 2](ch02.html "Chapter 2. Using a SQLite Database"), *Using
     a SQLite Database*, we learned about implementing SQLite database schemas in your
@@ -721,5 +981,7 @@
     calendar-based applications) to query for the user's existing tasks? All of these
     things are don e through what's called a `ContentProvider`, and it's in the next
     two chapters that we flush out this extremely important class in Android.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 但在我们继续之前，让我们花点时间来总结一下我们已经学到的知识。在之前的[第二章](ch02.html "第二章. 使用SQLite数据库")中，*使用SQLite数据库*，我们学习了如何在Android应用程序中实现SQLite数据库架构，刚才我们又了解了内置于SQL中的所有不同特性，这些特性最终能让你以极其强大和高效的方式处理数据。但是，如果你想要访问用户Android设备上的现有数据呢？每个Android设备都包含大量的数据，其中许多数据可供外部应用程序查询，因此在开发应用程序时这一点很重要。此外，如果你想要将数据库和架构暴露给其他应用程序呢？如果你正在构建一个任务列表应用程序，并希望允许其他应用程序（可能是基于日历的应用程序）查询用户的现有任务，该怎么办？所有这些功能都是通过一个称为`ContentProvider`的机制实现的，接下来的两章我们将详细讲解这个在Android中极其重要的类。
