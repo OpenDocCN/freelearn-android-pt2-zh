@@ -1,0 +1,662 @@
+- en: Chapter 5. Scene and Layer Management
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Managing scenes and layers is a necessity for a game that utilizes menus and
+    multiple game levels. This chapter will cover the creation and use of a scene
+    manager with the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the scene manager
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up the resource manager for scene resources
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Customizing managed scenes and layers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up an activity to use the scene manager
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Creating a process to manage and handle menus and scenes for a game is one
+    of the quickest ways to improve a framework. A well-designed game usually relies
+    on a robust and customized scene manager to handle menus and in-game levels. There
+    are various approaches to customize a scene manager, but the foundation usually
+    consists of:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Switching between scenes
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Automatic loading and unloading of scene resources and elements
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Showing a loading screen while handling scene resources and scene construction
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In addition to the core functions of a scene manager, we are going to create
+    a method of showing layers on top of our scenes so that we can add another level
+    of usability to our games.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the scene manager
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Creating a scene manager that just swaps the engine's current scene for another
+    scene is quite simple, but not graphically appealing to players. Showing a loading
+    screen while resources load and the scene is constructed has become a well-accepted
+    practice in game design because it lets the player know that the game is doing
+    more than just idling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Open the `SceneManager.java` class in this chapter's code bundle. Also, open
+    the `ManagedScene.java` and `ManagedLayer.java` classes. We will be referencing
+    all three of these classes throughout this recipe. The inline comments within
+    the classes provide additional information to what is discussed throughout this
+    recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Follow these steps to understand how a `SceneManager` class functions so that
+    we can create a custom-tailored one for future projects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, notice that the `SceneManager` class is created as a singleton so that
+    we can access it from anywhere in our project. Furthermore, it uses the `getEngine()`
+    reference provided by our `ResourceManager` class to store a local reference to
+    the engine object, but this reference could be set at the creation of the `SceneManager`
+    class if we opted to not use a resource manager.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Second, note the variables created after the `getInstance()` method. The first
+    two variables, `mCurrentScene` and `mNextScene`, hold references to the currently
+    loaded scene and next scene to be loaded. The `mEngine` variable holds a reference
+    to the engine. We will use the engine reference to set our managed scenes and
+    for registering/unregistering the `mLoadingScreenHandler` update handler. The
+    `mNumFramesPassed` integer counts the number of rendered frames within the update
+    handler to ensure that the loading screen has been shown for at least one frame.
+    The functionality of showing a loading screen is achieved by the next variable,
+    `mLoadingScreenHandler`, at which we will take a closer look in the next step.
+    The remaining variables are used for the management of layers and either keep
+    track of the state of the layering process or hold references to entities related
+    to the layering process.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Third, look at the `onUpdate()` method within the `mLoadingScreenHandler IUpdateHandler`
+    update handler. Take note that there are two conditional blocks—the first waits
+    one frame before it unloads the previous scene and subsequently loads the next,
+    while the second waits until the loading screen for the next scene has been shown
+    for the minimum amount of time before it hides the loading screen and resets the
+    variables used by the update handler. This entire process within the update handler
+    enables the use of a loading screen while `ManagedScene` loads and constructs
+    itself.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The next method in the class is the `showScene()` method, which we will call
+    when we want to navigate away from the current scene to a following scene. It
+    first resets the position and size of the engine's camera to its starting location
+    and size to prevent any prior adjustments to the camera from ruining the presentation
+    of a new scene. Next, we check if the new scene will show a loading screen via
+    the `hasLoadingScreen` property of the `ManagedScene` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the new `ManagedScene` class' will be showing a loading screen, we set its
+    child scene to the scene returned by the `onLoadingScreenLoadAndShown()` method
+    and pause all of the `ManagedScene` class' renderings, updates, and touch events.
+    The following `if` block ensures that a new scene can load if one is already in
+    the loading stage. This case should be rare, but can happen if a new scene is
+    called to be shown from the UI thread. The `mNextScene` variable is then set to
+    the new `ManagedScene` class' to be used by the `mLoadingScreenHandler` update
+    handler and the engine's scene is set to the new `ManagedScene` class.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: If the new `ManagedScene` class will not be showing a loading screen, we set
+    the `mNextScene` variable to the new `ManagedScene` class, set the new `ManagedScene`
+    class as the engine's scene, unload the previously shown scene, and load the new
+    scene. If no loading screen is shown, the `showScene()` method simply acts to
+    swap the new scene for the previously shown one.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Next, take a look at the `showLayer()` method. Because our layers are shown
+    on top of everything else in the game, we attach them as the camera `HUD` object's
+    child scene. This method starts by first determining if the camera has a `HUD`
+    object to attach a child scene. If so, it sets the `mCameraHadHud` Boolean value
+    to `true`. If not, we create a placeholder HUD object and set it as the camera's
+    `HUD` object. Next, if the `showLayer()` method is called to suspend rendering,
+    updates, or touch events of the underlying `ManagedScene`, we set a placeholder
+    scene as the `ManagedScene` scene's child scene with the modal properties passed
+    to the `showLayer()` method. Finally, we set the layer's camera to the engine's
+    camera, scale the layer to match the camera's screen-dependent scale, and set
+    the local layer-related variables to be used by the `hideLayer()` method referenced
+    in the next step.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `hideLayer()` method first checks whether a layer is currently being shown.
+    If it is, the camera `HUD` object's child scene is cleared, the placeholder child
+    scene is cleared from the `ManagedScene` class, and the layer-showing system is
+    reset.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Follow these steps to understand how the `ManagedScene` and `Man` `gedLayer`
+    classes are constructed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Looking at the `ManagedScene` class, take note of the variables listed at the
+    beginning of the class. The `hasLoadingScreen` Boolean, `minLoadingScreenTime`
+    float, and `elapsedLoadingScreenTime` float variables are used by the `SceneManager`
+    class when it is handling the `ManagedScene` class' loading screen. The `isLoaded`
+    Boolean value reflects the completion state of the `ManagedScene` class' construction.
+    The first constructor is a convenient constructor in the event that no loading
+    screen is needed. The second constructor sets the loading screen variables according
+    to the passed value, which determines the minimum length of time that the loading
+    screen should be shown. The public methods following the constructor are called
+    by the `SceneManager` class and call the appropriate abstract methods, listed
+    at the bottom of the class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `ManagedLayer` class is very similar to the `ManagedScene` class, but its
+    inherent function and lack of a loading screen make it easier to create. The constructors
+    set whether the layer should be unloaded after it is hidden according to the passed
+    `pUnloadOnHidden` Boolean variable. The public methods following the constructors
+    call the appropriate abstract methods below them.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The scene manager stores a reference to the engine's current scene. When the
+    scene manager is told to show a new scene, it hides and unloads the current scene
+    before setting the new scene as the current scene. Then, it loads and shows the
+    new scene's loading screen if the scene has one. To show the loading screen before
+    loading the rest of the scene, we have to allow the engine to render one frame.
+    The `mNumFramesPassed` integer value keeps track of how many updates, and thus
+    scene renderings, have occurred since the start of the process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After the loading screen is shown, or if no loading screen will be used, the
+    scene manager calls the scene to load itself by calling `onLoadManagedScene()`.
+    Upon completion of the load, and after the loading screen—if present—has been
+    shown for a minimum amount of time, the loading screen is hidden and the scene
+    is shown. In case the loading screen has not been shown for the minimum amount
+    of time, we pause the scene's updates so that the scene will keep from starting
+    until the loading screen is hidden. Refer to the inline comments of the supplemental
+    code in `SceneManager.java` to learn even more about how this scene manager handles
+    the switching of scenes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To facilitate the use of layers, the scene manager utilizes the camera's HUD
+    to ensure that the layer is drawn on top of everything else. If the camera has
+    a HUD already, we store it before applying the layer so that we can restore the
+    original HUD after the layer is hidden. Furthermore, we have the option of pausing
+    the underlying scene's updates, renderings, and touch-areas via the use of a placeholder
+    scene. The placeholder scene is attached as a child to the underlying scene, so
+    we must store any child scene that the underlying scene already has attached.
+    The loading and showing of layers is handled by the same method call from the
+    scene manager to let the layer's subclasses determine if reloading is necessary
+    or if the layer should be loaded only once to reduce performance-heavy loading.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Customizing managed scenes and layers* given in this chapter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Setting up an activity to use the scene manager* given in this chapter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Applying a HUD to the camera* in [Chapter 4](ch04.html "Chapter 4. Working
+    with Cameras"), *Working with Cameras*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up the resource manager for scene resources
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In order to facilitate the loading of resources by the menu and game scenes,
+    the resource manager must be first set up to handle the resources. Our resource
+    manager will automatically load the respective resources when we call its `loadMenuResources()`
+    or `loadGameResources()` methods. Likewise, unloading resources for menus or game
+    scenes that use a large amount of memory will simply be a call to the resource
+    manager using `unloadMenuResources()`, `unloadGameResources()`, or `unloadSharedResources()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Open the `ResourceManager.java` class in this chapter's code bundle, as we will
+    be referencing it for this recipe. Also, refer to the inline comments of the class
+    for more information on specific portions of code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Follow these steps to understand how the `ResourceManager` class is set up
+    to be used with our managed scenes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Take note of the public, non-static variables defined in the `ResourceManager`
+    class. The engine and context variables are used in the class when loading textures,
+    but they also give us a way to access those important objects throughout our project.
+    The `cameraWidth`, `cameraHeight`, `cameraScaleFactorX`, and `cameraScaleFactorY`
+    variables are not used in this class, but will be used throughout the project
+    for placing and scaling entities relative to the screen.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Find the `setup()` method. This method sets the non-static variables referenced
+    in the previous step and will be called from the overridden `onCreateResources()`
+    method in our activity class. It is important that `setup()` is called prior to
+    any other calls to the `ResourceManager` class as every other method and variable
+    relies on the engine and context variables.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Next, take a look at the static resource variables. These will be used by our
+    scenes for entities or sounds and must be set before they are called. Also note
+    that the static variables with a game or menu prefix will be respectively used
+    by our game or menu scenes while the static variables without a prefix will be
+    shared between the two types.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now find the `loadGameResources()` and `loadMenuResources()` methods. Our managed
+    game and menu scenes will call these methods when they first start. These methods
+    have the important duty of calling the subsequent `ResourceManager` methods that
+    set the static variables referenced in the previous step. Conversely, `unloadGameResources()`
+    and `unloadMenuResources()` unload the resources for their respective scenes and
+    should be called when the application's flow is finished with the resources.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The resource manager, at its most basic level, provides a means of loading and
+    unloading resources. In addition to this, we define a set of variables, including
+    the engine and context objects, that gives us easy access to some common elements
+    of the game when creating entities in our scenes. These variables can be placed
+    within a game manager or object factory as well, but we will include it in our
+    resource manager since most calls to the resource manager will be near code used
+    to create entities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Creating the resource manager* in [Chapter 1](ch01.html "Chapter 1. AndEngine
+    Game Structure"), *AndEngine Game Structure*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Creating the game manager* in [Chapter 1](ch01.html "Chapter 1. AndEngine
+    Game Structure"), *AndEngine Game Structure*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Creating object factories* in [Chapter 1](ch01.html "Chapter 1. AndEngine
+    Game Structure"), *AndEngine Game Structure*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Customizing managed scenes and layers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The main purpose of the scene manager is to handle the managed scenes in our
+    game. The managed scenes are highly customizable, but we want to avoid rewriting
+    as much of our code as possible. To achieve that task, we will use two classes
+    that extend the `ManagedScene` class, `ManagedGameScene` and `ManagedMenuScene`.
+    By structuring our scene classes in this way, we will have menus and game scenes
+    that share a common, respective foundation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Open the following classes from this chapter''s code bundle: `ManagedMenuScene.java`,
+    `ManagedGameScene.java`, `MainMenu.java`, `GameLevel.java`, and `OptionsLayer.java`.
+    We will be referencing these classes throughout this recipe.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Follow these steps to understand how the `ManagedMenuScene` and `ManagedGameScene`
+    classes build upon the `ManagedScene` class to create customized, extendable scenes
+    that can be passed to the `SceneManager` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Look at the `ManagedMenuScene` class. It holds only two simple constructors
+    and the overridden `onUnloadManagedScene()` method. The overridden method keeps
+    the `isLoaded` Boolean value from being set because we will not be taking advantage
+    of the scene manager's automatic unloading of menu scenes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now, we turn our attention to the `ManagedGameScene` class. The class starts
+    off by creating an in-game `HUD` object, a loading screen `Text` object, and a
+    loading screen `Scene` object. The main constructor of the `ManagedGameScene`
+    class starts by setting the touch-event-binding settings of the scene to true.
+    Next, the scene's scale is set to mirror the camera's screen-dependent scaling
+    and the scene's position is set to the bottom-center of the camera. Finally, the
+    constructor sets the HUD's scale to match the camera's scale.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `ManagedGameScene` class overrides the `onLoadingScreenLoadAndShown()` and
+    `onLoadingScreenUnloadAndHidden()` methods of the `ManagedScene` class to show
+    and hide a simple loading screen that displays a single `Text` object.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The `onLoadScene()` method from the `ManagedScene` class is overridden to construct
+    a scene that represents the in-game portion of a game with a background and two
+    buttons that allow the player to return to the `MainMenu` or show the `OptionsLayer`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Follow these steps to understand how the `ManagedMenuScene` and `ManagedGameScene`
+    classes can be extended to create the `MainMenu` and `GameLevel` scenes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `MainMenu` class is created as a singleton to prevent more than one instance
+    of the class from being created and taking up valuable memory. It also foregoes
+    a loading screen because it is loaded and created almost instantly. All of the
+    entities that make up the `MainMenu` class are defined as class level variables
+    and include the background, buttons, text, and moving entities. The scene-flow
+    methods inherited from the `ManagedScene` class by the `MainMenu` class are the
+    `onLoadScene()`, `onShowScene()`, `onHideScene()`, and `onUnloadScene()` methods,
+    of which only the `onLoadScene()` method contains any code. The `onLoadScene()`
+    method loads and constructs a scene consisting of a background, 20 horizontally-moving
+    clouds, a title, and two buttons. Notice that each of the buttons makes a call
+    to the scene manager—the play button shows the `GameLevel` scene and the options
+    button shows `OptionsLayer`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `GameLevel` class extends the `ManagedGameScene` class and only overrides
+    the `onLoadScene()` method to create and randomly position a square rectangle
+    on the scene. This shows that the `ManagedGameScene` class creates the bulk of
+    the `GameLevel` class and that elements that differ between levels can still use
+    the same foundation created by the `ManagedGameScene` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Follow these steps to understand how the `OptionsLayer` class extends the layer-functionality
+    of the `ManagedLayer` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Concerning the `OptionsLayer` class, first notice that it is defined as a singleton,
+    so that it will remain in memory after it is first created. Next, note the two
+    update handlers, `SlideIn` and `SlideOut`. These animate the layer when it is
+    shown or hidden and give an extra layer of graphical interest to the game. The
+    update handlers simply move the layer to a specific position at a speed that is
+    proportional to the `pSecondsElapsed` parameter of the `onUpdate()` method to
+    make the movement smooth.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `onLoadLayer()` method inherited from the `ManagedLayer` class is overridden
+    to create a black rectangle, which acts as a background for the layer, and two
+    `Text` objects that show a title and the way to exit the layer. The `onShowLayer()`
+    and `onHideLayer()` methods register the appropriate update handler with the engine.
+    Upon sliding the layer offscreen, notice that the `SlideOut` update handler calls
+    the scene manager to hide the layer—this is how an ending animation is implemented
+    using this particular sene manager's framework.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The single purpose of the `ManagedMenuScene` class is to override the `onUnloadManagedScene()`
+    method inherited from the `ManagedScene` class to prevent the recreation of entities
+    within the scene. Take note of the overridden `onUnloadScene()` method within
+    the `MainMenu` class, which extends `ManagedMenuScene`. We leave it empty to ensure
+    that the `MainMenu` class is kept in memory so that we can quickly switch back
+    to it from the game scenes and other menus.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When running this project, if there are any animations in the main menu, take
+    note that the animations pause while another scene is being displayed, but resume
+    as soon as the main menu is shown again. This is because the main menu is not
+    updated as the engine's current scene even though it is still loaded in memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `ManagedGameScene` class uses a `HUD` object to allow the game levels a
+    set of controls that move with the engine's camera. Even though we add buttons
+    to the `GameHud` object in this example, any control may be used on the HUD. The
+    constructors that we use for the `ManagedGameScene` class set the loading screen
+    duration, touch options, and the scales of the game scene and `GameHud` to improve
+    the visual appeal of the game across devices. For the game scenes, we take advantage
+    of the loading screens enabled by the scene manager. For the loading screen, we
+    create a simple scene that shows the text, **Loading...**, but any arrangement
+    of non-animated entities can be used. While the loading screen is shown, we load
+    the game resources and create the game scene. In this case, a simple background
+    is constructed from a single sprite, and the onscreen controls are added to the
+    `GameHud` object. Notice that the controls added to the `GameHud` object are scaled
+    to the inverse of the camera's scale factor. This is necessary because we want
+    to create them to be the same physical size across all devices. The last method
+    that we define in the `ManagedGameScene` class, `onUnloadScene()`, unloads the
+    scene.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Notice that we do all of the unloading on the update thread. This keeps the
+    engine from trying to process an entity if it was removed earlier in the thread
+    and prevents an `ArrayIndexOutOfBoundsException` exception from being thrown.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For the main menu we do not need a loading screen so we simply return `null`
+    in the `onLoadingScreenLoadAndShown()` method. When creating the simple sprite
+    background for the main menu, we must scale it to fill the screen. Notice how
+    the main menu utilizes the menu assets from the `ResourceManager` class when creating
+    sprites and buttons. Also, notice that by clicking the buttons, we call the `SceneManager`
+    class to load the next scene or show a layer. The following two screenshots show
+    the main menu on two different devices to demonstrate how the camera scaling functions
+    with the scene''s composition. The first screenshot is on a 10.1 inch Motorola
+    Xoom:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/8987OS_05_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'And, the second is on a 5.3 inch Samsung Galaxy Note:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/8987OS_05_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Our `GameLevel` class is relatively small compared to its super class, `ManagedGameScene`.
+    This is because we want the levels to include only the information needed for
+    each individual level. The following screenshot shows the `GameLevel` class in
+    action:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/8987OS_05_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The `OptionsLayer` class can be shown from any scene, as seen in the following
+    two screenshots. The first is at the main menu:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/8987OS_05_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'While the second is in-game with the `GameLevel` class loaded:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/8987OS_05_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Creating the scene manager* in this chapter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Attaching a controller to the display* in [Chapter 4](ch04.html "Chapter 4. Working
+    with Cameras"), *Working wit* *Cameras*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up an activity to use the scene manager
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Because of the way that our scene manager works, setting it up for use by an
+    `Activity` class that extends AndEngine's `BaseGameActivity` class requires little
+    effort. We are also going to implement an accurate screen-resolution scaling approach
+    to ensure a consistent appearance across all devices. The `SceneManager` class
+    and `ManagedScenes` class rely on the variables defined in the `ResourceManager`
+    class to register update handlers and create entities. As we go through the recipe,
+    take note that we set up the `ResourceManager` class prior to using any functions
+    of the `SceneManager` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Create a new activity that extends AndEngine's `BaseGameActivity` class, or
+    load one that you have already created. Adapting an existing activity to use the
+    scene manager requires the same steps as a new one would require, so do not worry
+    about starting over on a project just to implement the scene manager.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Follow these steps to prepare an activity to use our scene manager:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Define the following variables in your activity to handle accurate screen-resolution
+    scaling. Doing so will make onscreen elements almost physically identical across
+    all Android devices:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Place the following method in the activity''s class to handle the **Back**
+    button:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, fill the `onCreateEngineOptions()` method with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Place the following line in the `onCreateResources()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, add the following code to the `onCreateScene()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The first thing that we do is to define the attributes of our development device's
+    screen so that we can make the calculations to ensure that all players see our
+    game as close to the way that we see it as possible. The calculations are actually
+    handled in the `onCreateEngineOptions()` method as shown in the third step. For
+    the engine options, we enable sounds, music, dithering for smooth gradients, multisampling
+    for smooth edges, and wake-lock to keep our game's resources from being destroyed
+    if the player briefly switches away from our game.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In step 4, we set up the `ResourceManager` class by passing it the `Engine`
+    object, `Context`, the current camera width and height, and the ratio of the current
+    camera's size to the design device's screen size. Lastly, we tell the `SceneManager`
+    class to show the main menu, and we pass the `MainMenu` class as the engine's
+    scene via the `pOnCreateSceneCallback` parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Creating the scene manager* in this chapter.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Know the life cycle* in [Chapter 1](ch01.html "Chapter 1. AndEngine Game Structure"),
+    *AndEngine Game Structure*.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

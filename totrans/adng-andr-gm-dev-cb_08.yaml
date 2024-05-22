@@ -1,0 +1,646 @@
+- en: Chapter 8. Maximizing Performance
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we''re going to cover some of the best practices to improve
+    the performance of our AndEngine applications. The topics included are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ignoring entity updates
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Disabling background window rendering
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Limiting simultaneous sound streams
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating sprite pools
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cutting down render time with sprite groups
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Disabling rendering with entity culling
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Game optimization plays a critical role in the success of a game on Google Play.
+    It is likely that a user will rate a game negatively if it doesn't run well on
+    their device. Unfortunately, with there being so many different devices out there
+    and no way to effectively mass-restrict low-end devices on Google Play, it's best
+    to optimize Android games as much as possible. Ignoring ratings, it's fair to
+    assume that a game with poor performance across the mid-level devices will not
+    reach its full potential as far as downloads and active users go. This chapter
+    is going to cover some of the most helpful solutions for performance issues related
+    to AndEngine. This will help us to improve performance for mid- to low-end devices,
+    eliminating the need to sacrifice quality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: While the recipes in this chapter can greatly improve the performance of our
+    games, it is important to keep in mind that clean and efficient code goes equally
+    as far. Game development is a very performance-critical task and, as with all
+    languages, there are plenty of little things to do or avoid. There are many resources
+    online that cover the majority of the good versus bad topics related to both Java
+    general practices as well as Android-specific tips and tricks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ignoring entity updates
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the most important rules for game development when it comes to optimizing
+    a game is, *don't do work that does not need to be done!*. In this recipe, we're
+    going to talk about how we can use the `setIgnoreUpdate()` method on our entities
+    in order to restrict the update thread to only update what should be updated,
+    rather than constantly updating all of our entities whether we're using them or
+    not.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The following `setIgnoreUpdate(boolean)` methods allow us to control which
+    entities will be updated via the engine''s update thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As we've discussed in the previous chapters, each child's `onUpdate()` method
+    is called via its parent. The engine first updates, calling the update method
+    for the main `Scene` object. The scene then proceeds to call all of the update
+    methods of its children. Next, the children of the scene will call the update
+    method to their children respectively and so on in that fashion. With this in
+    mind, by calling `setIgnoreUpdate()` on our main Scene object, we can effectively
+    ignore updates to all entities on the scene as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Ignoring updates to entities which are not in use, or even entities which should
+    not react unless a certain event occurs, can save quite a bit of CPU time. This
+    is especially true on a scene with a large number of entities. It may not seem
+    like much work, but keep in mind that for each entity with an entity modifier
+    or update handler, those objects must be updated as well. On top of that, each
+    of the entities' children then proceed to update due to the parent/child hierarchy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is best practice to set `setIgnoreUpdate(true)` to all entities which are
+    offscreen or do not require constant updates. For sprites which may not require
+    any updates at all, such as the background sprite of a scene, we can ignore updates
+    indefinitely and not cause any problems. In situations where the entity needs
+    to be updated, but not very frequently, such as a bullet being fired from a turret,
+    we can enable the updates to that bullet while it is traveling from the turret
+    to the destination, disabling it when it's no longer neded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Understanding AndEngine entities* section in [Chapter 2](ch02.html "Chapter 2. Working
+    with Entities"), *Working with Entities*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Disabling background window rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In most games, developers generally lean toward full-screen modes. This may
+    not seem obvious since we see no real difference visually, but the Android OS
+    doesn't realize which applications are running in full-screen. What this means
+    is that the background window will continue to be drawn underneath our application
+    unless otherwise specified in the `AndroidManifest.xml`. In this topic, we're
+    going to cover how to disable background rendering to improve application FPS,
+    mainly benefiting lower-end devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The first thing we must do in order to stop the background windows from rendering
+    is create a theme for our application. We will do this by adding a new xml file
+    to our project's `res/values/` folder, called `theme.xml`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Overwrite all code in the default xml file with the following code and save
+    the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Once we''ve created and filled out the `theme.xml` file, we can disable background
+    window rendering by applying the theme to our application tag in the `AndroidManifest.xml`
+    file of our project. The application tag''s attributes might look similar to this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that we can also apply the theme to specific activities, rather than on
+    an application-wide basis by adding the `android:theme="@style/Theme.NoBackground"`
+    code to individual activity tags. This would be most relevant for hybrid games
+    which require both the AndEngine view as well as native Android views across multiple
+    activities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Disabling the background window rendering is a simple task and can offer a few
+    percentages of performance gain, mostly in older devices. The main line of code
+    which takes care of the background window is found in the `theme.xml` file. By
+    nullifying the `android:windowBackground` item, we're notifying the device that,
+    rather than drawing the background window, we want to completely remove it from
+    being rendered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Limiting simultaneous sound streams
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sound playback is generally not a problem when it comes to game performance
+    with AndEngine. However, there are situations where a large number of sounds may
+    play in a very short time-span which can cause a noticeable amount of lag on older
+    and sometimes newer devices depending on how many sounds are playing. AndEngine
+    allows up to five simultaneous sound streams, of the same `Sound` object, to play
+    at any given time by default. In this topic, we're going to work with `EngineOptions`
+    in order to change the number of simultaneous sound streams in order to better
+    accommodate our application's needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In order to increase or decrease the number of simultaneous streams per Sound
+    object, we must make a simple adjustment to `EngineOptions` in the `onCreateEngineOptions()`
+    method of our activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `Engine` object's `AudioOptions` is set to allow five simultaneous sound
+    streams for each `Sound` object created within our applications by default. In
+    most cases, this will not cause any noticeable performance loss for applications
+    which do not rely heavily on sound playback. On the other hand, games which tend
+    to produce sounds on collision or forces applied to bodies may be susceptible
+    to large numbers of sound streams being played at the same time, especially in
+    games with more than 100 sprites on the scene at any given time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Limiting the number of simultaneous sound streams is an easy task to accomplish.
+    By simply calling `getAudioOptions().getSoundOptions().setMaxSimultaneousStreams(n)`
+    on our `EngineOptions`, where `n` is the number of maximum streams per `Sound`
+    object, we can reduce the number of unnecessary sounds to be played during gameplay
+    at inconvenient times.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Introducing sounds and music* section in [Chapter 1](ch01.html "Chapter 1. AndEngine
+    Game Structure"), *AndEngine Game Structure*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating sprite pools
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The `GenericPool` classes are an incredibly important part of AndEngine game
+    design considering mobile platforms are relatively limited when it comes to hardware
+    resources. In Android game development, the key to a smooth gameplay experience
+    throughout a lengthy session is to create the least amount of objects as possible.
+    This does not necessarily mean we should limit ourselves to four or five objects
+    on the screen, it means we should consider the option of recycling objects which
+    have already been created. This is where object pools come into play.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting started…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the class named `SpritePool` in the code bundle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `GenericPool` classes make use of a few useful methods, which make recycling
+    objects for later use very easy. We will cover the main methods to be used here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Constructing the `SpritePool` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Allocating pool items:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Obtaining pool items:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Recycling pool items:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The idea of the `GenericPool` class is very simple. Rather than creating new
+    objects when we need them and discarding them when we're finished with them, we
+    can tell the pool to allocate a limited number of objects and store them for later
+    use. We can now call the `obtainPoolItem()` method from the pool to obtain one
+    of the stored allocated objects for use in our levels, possibly as an enemy. Once
+    that enemy is destroyed by the player, for example, we can now call `recyclePoolItem(pItem)`
+    to send that enemy object back into the pool. This allows us to avoid garbage
+    collection invocations and gives us the potential to greatly reduce the memory
+    needed for new objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The four methods in the *How to do it...* section are all that is needed when
+    working with your average pool. We must obviously create the pool before we can
+    use it. Then the following three methods define what happens in the event of object
+    allocation, obtaining an object for use, and what happens once an object is recycled,
+    or sent back to be stored in the pool when we are finished with it until we need
+    a new object. Object pools can be used for more than just sprite recycling, though,
+    so we're going to go a little bit more in-depth about what each of these methods
+    does, how they do it, and why they do it, starting with the constructor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In step one, we must pass any objects needed for the pool object's constructor.
+    In this case, we need to obtain a `TextureRegion` and `VertexBufferObjectManager`
+    in order to create the Sprite objects. This is nothing new, but keep in mind that
+    the `GenericPool` class is not limited to creating pools for sprites. We can create
+    pools for any type of object or datatype. The key note is to use the pool's constructor
+    as a method to obtain the necessary parameters to be passed to the pool's object
+    allocations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In step two, we're overriding the `onAllocatePoolItem()` method. The pool will
+    call this method any time it needs to allocate a new object. Two instances are
+    if there are initially no objects in the pool or if all of the recycled objects
+    have been obtained and are in use. All we need to take care of in this method
+    is that we return a new instance of the object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Step three involves the `obtain` method used in order to retrieve an object
+    from the pool to be used in our game. We can see that the `obtainPoolItem()` method
+    in this case requires us to pass in `pX` and `pY` parameters to be used by the
+    sprite''s `setPosition(pX, pY)` method in order to reposition the sprite. We proceed
+    to set the sprite''s `visibility` to `true`, allow updates to the sprite, as well
+    as setting the color back to its initial value, white. In any case, this method
+    should be used to reset the values of the object back to a default state or otherwise
+    define the necessary *new* properties of the object. In the code, we might obtain
+    a new sprite from the pool as shown in the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the final method, we will use from the `GenericPool` class the `recyclePoolItem(pItem)`
+    method, where `pItem` is the object to recycle back into the pool. This method
+    should take care of all aspects related to disabling the object from use within
+    our game. In terms of sprites, in order to increase performance while sprites
+    are stored in the pool, we set the visibility to false, ignore updates to the
+    sprite, clear any entity modifiers and update handlers so that they are not still
+    running once we obtain a new sprite.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Even if not using pools, an option to consider is to use `setVisible(false)`
+    alongside `setIgnoreUpdate(true)` on an `Entity`, which is no longer needed. Constantly
+    attaching and detaching `Entity` objects may provide opportunities for the garbage
+    collector to run and potentially cause noticeable hiccups in frame rate during
+    gameplay.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Creating pools to handle object recycling is very important to aid in the reduction
+    of performance hiccups, but when a game is first initialized the pool will not
+    have any objects ready for use. This means that, depending on how many objects
+    the pool will need to allocate in order to satisfy the maximum number of objects
+    throughout a full level, a player may notice sudden bursts of frame rate interruption
+    during the first few minutes of gameplay. In order to avoid an issue such as this,
+    it is a good idea to preallocate pool objects during level loading to avoid any
+    object creation during gameplay.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to allocate a large number of pool items during loading, we can call
+    `batchAllocatePoolItems(pCount)` on any class extending `GenericPool`, where `pCount`
+    is the number of items we wish to allocate. Keep in mind it is a waste of resources
+    to load any more items than we need, but it can also cause hiccups in frame rate
+    if we don't allocate enough items. For example, in order to determine how many
+    enemy objects should be allocated within our game, we can come up with a formula
+    such as default enemy count multiplied by level difficulty. However, all games
+    are different and so too will be the formula neededfor object creation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Bringing a scene to life with sprites* section in [Chapter 2](ch02.html
+    "Chapter 2. Working with Entities"), *Working with Entities*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cutting down render time with sprite groups
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sprite groups are a great addition to any AndEngine game which deals with hundreds
+    of visible sprites on the scene at any given time. The `SpriteGroup` class allows
+    us to eliminate a large amount of overhead by grouping many sprite rendering calls
+    into a limited number of OpenGL calls. If a school bus were to pick up a single
+    child, drop them off at school, then pick up the next child, repeating until all
+    children were at school, the process would take a far greater time to complete.
+    The same goes for drawing sprites with OpenGL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting started…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Refer to the class named `ApplyingSpriteGroups` in the code bundle. This recipe
+    requires an image named `marble.png`, which is 32 pixels in width by 32 pixels
+    in height.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When creating a `SpriteGroup` for use in our games, we can treat them as an
+    `Entity` layer which is specifically meant for `Sprite` objects only. The following
+    steps explain how to create and attach `Sprite` objects to a `SpriteGroup`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Creating a sprite group can be achieved with the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Attaching sprites to the sprite group is an equally simple task:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this recipe, we're setting up a scene which applies roughly 375 sprites to
+    our scene, all drawn through the use of the `mSpriteGroup` object. Once the sprite
+    group is created, we can basically treat it as an ordinary entity layer, attaching
+    sprites as needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a `BuildableBitmapTextureAtlas` for our sprite in the `onCreateResources(`
+    method of our activity:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Creating the textures for use in a `SpriteGroup` can be handled as we would
+    an ordinary Sprite.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Construct our `mSpriteGroup` object and apply it to the scene:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`SpriteGroup` requires two new parameters that we''ve not dealt with yet. `SpriteGroup`
+    is an `Entity` subtype, so we already know that the first two parameters are the
+    x and y coordinates to position `SpriteGroup`. For the third parameter, we''re
+    passing a `BitmapTextureAtlas`. *The sprite group can only contain sprites which
+    share the same texture atlas as the sprite group!* The fourth parameter is the
+    maximum capacity that `SpriteGroup` is able to draw. If the capacity is 400, then
+    we can apply up to 400 sprites to `SpriteGroup`. It is important to limit the
+    capacity to the maximum number of sprites we wish to draw. *Exceeding the limit
+    will cause a force-closure of the application*.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The final step is to apply the sprites to the sprite group.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In this recipe, we have set a loop up in order to apply the sprites to various
+    positions on the screen. However, what we''re really interested in here is the
+    following code used to create a `Sprite` and attach it to the `SpriteGroup`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can create our sprite as we would create any other sprite. We can set the
+    position, scale, and texture region as usual. Brace for the tricky part now! We
+    must call `mSpriteGroup.attachChild(sprite)` in order to allow the `mSpriteGroup`
+    object to handle drawing of the sprite object. That's all it takes!
+  prefs: []
+  type: TYPE_NORMAL
+- en: Following these steps, we can successfully allow our sprite groups to draw many,
+    many sprites onto the screen before even noticing a drop in performance within
+    our application. The difference is huge compared to individually drawing sprites
+    with separate buffers. In many cases, users have claimed to achieve an improvement
+    of up to 50 percent when working with games which include large amounts of entities
+    on the scene at one time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It's not time to run off and convert all of your projects to use sprite groups
+    just yet! The benefits to using sprite groups speak for themselves, but that's
+    not to say there are no negative side effects either. The `SpriteGroup` class
+    is not supported directly by OpenGL. The class is more or less a 'hack', which
+    allows us to save some time with additional rendering calls. Setting up sprite
+    groups in more complex projects can be a hassle due to the 'side effects'.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are some situations after attaching and detaching many sprites which take
+    advantage of alpha modifiers and modified visibility, causing some of the sprites
+    on the sprite group to 'flicker'. This outcome is most noticeable after more and
+    more sprites have been attached and detached or set to invisible/visible multiple
+    times. There is a way around this that will not hurt performance too much, which
+    involves moving sprites off the screen rather than detaching them from the layer
+    or setting them to invisible. However, for larger games that only take advantage
+    of one activity and swap scenes based on the current level, moving the sprites
+    off the screen might only lead to future problems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Take this into account and plan wisely before deciding to use a sprite group.
+    It might also help to test the sprite group in terms of how you plan to use your
+    sprites before incorporating it into your game. The sprite group will not always
+    cause problems, but it's something to keep in mind. Additionally, AndEngine is
+    an open source project which is continuously being updated and enhanced. Keep
+    up to date with the latest revisions for fixes or improvements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Understanding AndEngine entities* section in [Chapter 2](ch02.html "Chapter 2. Working
+    with Entities"), *Working with Entities*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Bringing a scene to life with sprites* section in [Chapter 2](ch02.html
+    "Chapter 2. Working with Entities"), *Working with Entities*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Disabling rendering with entity culling
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Culling entities is a method used to prevent unnecessary entities from being
+    rendered. This can result in improved performance in cases where a sprite is not
+    visible within the viewing area of an AndEngine `Camera`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Make the following method call to any preexisting `Entity` or `Entity` subtype:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Culling entities disallows certain entities from being rendered depending on
+    their position on the scene relative to the portion of the scene visible by the
+    camera. This is useful when we have many sprites on a scene that might occasionally
+    move out of view of the camera. With culling enabled, those entities which are
+    outside of the camera view will not be rendered in order to save us from unnecessary
+    calls to OpenGL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that culling only takes place on those entities which are entirely out
+    of view of the camera. This takes into account the full area of the entity, from
+    the bottom left corner to the top right corner. Culling is not applied to portions
+    of an entity, which may be outside of the camera's iew.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Culling** will only stop rendering those entities which move out of visibility
+    of the `Camera`. Because of this, it is not a bad idea to enable culling on all
+    game objects (items, enemies, and so on.) that are constantly moving out of the
+    `Camera` area. For instances with large backgrounds made up of smaller textures,
+    culling can also greatly improve performance, especially considering the size
+    of background images.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Culling can really help us save some rendering time, but that doesn't necessarily
+    mean that we should enable it on all entities. After all, there's a reason why
+    it's not enabled by default. It is a bad idea to enable culling on HUD entities.
+    It might seem like a viable option to include it for pause menus or other large
+    entities which might transition in and out of the camera view, but this can lead
+    to problems when moving the camera. AndEngine works in such a way that the HUD
+    never really moves with the camera, so if we enable culling on HUD entities, then
+    move our camera 800 pixels to the right (assuming our camera width is 800 pixels)
+    our HUD entities would still physically respond as if they were in the proper
+    position on our screen but they will not render. They would still react with touch
+    events and other various scenarios, but we simply won't see them on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additionally, culling requires an added layer of visibility-checking before
+    an Entity is drawn on the Scene. Because of this, older devices have the potential
+    to actually notice a performance loss while Entity culling is enabled while those
+    entities are not being culled. It may not sound like much, but when we've got
+    players running on devices that are just barely capable of running at 30 frames
+    per second, there's a good chance that those additional visibility checks on,
+    for example, 200 sprites may be just enough to tilt the scale toward 'inconvenient
+    gameplay'.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Understanding AndEngine entities* section in [Chapter 2](ch02.html "Chapter 2. Working
+    with Entities"), *Working with Entities*.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
