@@ -1,157 +1,231 @@
 - en: Chapter 8. Writing a Match-3 Game
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第8章.编写匹配-3游戏
 - en: 'In this chapter we will cover:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖：
 - en: Handling asynchronous multi-touch input
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 处理异步多点触控输入
 - en: Improving the audio playback mechanism
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 改进音频播放机制
 - en: Shutting down the application
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 关闭应用程序
 - en: Implementing the main loop
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 实现主循环
 - en: Creating a multiplatform gaming engine
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建多平台游戏引擎
 - en: Writing the match-3 game
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 编写匹配-3游戏
 - en: Managing shapes
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 管理形状
 - en: Managing the game field logic
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 管理游戏场地逻辑
 - en: Implementing user interaction within a game loop
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在游戏循环中实现用户交互
 - en: Introduction
+  id: totrans-11
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 简介
 - en: In this chapter we start putting together the recipes from the previous chapters.
     Most of the following recipes are aimed at improving and integrating the material
     scattered over the preceding chapters.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们开始将前面章节的食谱整合在一起。以下的大部分食谱旨在改进和整合前面章节中散布的材料。
 - en: Note
+  id: totrans-13
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: 'The example project of this chapter is actually a simplified version of the
     MultiBricks game published by the books'' authors on Google Play: [http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks](http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks).'
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章节的示例项目实际上是Google Play上发布的MultiBricks游戏的简化版：[http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks](http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks)。
 - en: Handling asynchronous multi-touch input
+  id: totrans-15
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 处理异步多点触控输入
 - en: In the previous chapter we learned how to handle multi-touch events on Android.
     However, our simple example has one serious issue. Android touch events are sent
     asynchronously and can interfere with the game logic. As such, we need to create
     a queue to process events in a controllable way.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一章中，我们学习了如何在Android上处理多点触控事件。然而，我们简单的示例有一个严重的问题。Android的触摸事件是异步发送的，可能会干扰游戏逻辑。因此，我们需要创建一个队列，以可控的方式处理事件。
 - en: Getting ready
+  id: totrans-17
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Check out the Processing multi-touch events on Android recipe from [Chapter
     7](ch07.html "Chapter 7. Cross-platform UI and Input Systems"), *Cross-platform
     UI and Input System,* before proceeding.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在继续之前，请查看[第7章](ch07.html "第7章.跨平台UI和输入系统")中的“在Android上处理多点触控事件”的食谱，*跨平台UI和输入系统*。
 - en: How to do it…
+  id: totrans-19
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'In the previous chapter we invoked the touch handler directly from an asynchronous
     JNI callback:'
+  id: totrans-20
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在上一章中，我们直接从异步JNI回调中调用触摸处理器：
 - en: '[PRE0]'
+  id: totrans-21
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'This time, we have to store all the events in a queue rather then processing
     them immediately. The queue will hold the parameters to `GestureHandler_SendMotion()`
     in a struct:'
+  id: totrans-22
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这次，我们需要将所有事件存储在队列中，而不是立即处理它们。队列将持有传递给`GestureHandler_SendMotion()`的结构体中的参数：
 - en: '[PRE1]'
+  id: totrans-23
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'The queue implementation relies on `std::vector`, holding touch events and
     `Mutex`, providing queue access synchronization:'
+  id: totrans-24
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 队列实现依赖于`std::vector`，持有触摸事件和`Mutex`，提供队列访问同步：
 - en: '[PRE2]'
+  id: totrans-25
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'All the work our new `SendMotion()` JNI callback has to do is pack the touch
     event parameters into the queue:'
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们新的`SendMotion()` JNI回调需要做的工作就是将触摸事件参数打包进队列：
 - en: '[PRE3]'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: We can now process the touch events whenever we like.
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们现在可以随时处理触摸事件。
 - en: How it works…
+  id: totrans-29
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'To handle the touch events in the queue, we extend the implementation of the
     `DrawFrame()` JNI callback:'
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了处理队列中的触摸事件，我们扩展了`DrawFrame()` JNI回调的实现：
 - en: '[PRE4]'
+  id: totrans-31
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Note the scope of the `Lock` variable inside the additional`{}`. We need it
     because the mutex variable must be unlocked to prevent deadlocks, before proceeding
     with the game logic:'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意在额外的`{}`内的`Lock`变量的作用域。我们需要它，因为必须在继续游戏逻辑之前解锁互斥变量，以防止死锁：
 - en: '[PRE5]'
+  id: totrans-33
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Note
+  id: totrans-34
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: See the `jni/Wrappers.cpp` file from the example `1_Game` for the complete implementation,
     which can be retrieved from [www.packtpub.com/support](http://www.packtpub.com/support).
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 请查看示例`1_Game`中的`jni/Wrappers.cpp`文件，以获取完整的实现，可以从[www.packtpub.com/support](http://www.packtpub.com/support)获取。
 - en: There's more…
+  id: totrans-36
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: Our new approach is much more robust. However, the touch event timestamps generated
     inside `GestureHandler_SendMotion()`are slightly robust and do not correspond
     to the actual time of touches any more. This introduces a delay approximately
@@ -159,193 +233,281 @@
     games. We leave the exercise of adding genuine timestamps to the reader. This
     can be done by extending the `sSendMotionData` struct with a timestamp field,
     which is assigned inside the JNI callback `SendMotion()`.
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的新方法更加健壮。然而，在`GestureHandler_SendMotion()`内部生成的触摸事件时间戳稍微有些健壮，不再对应于触摸的实际时间。这引入了一个大约等于单帧渲染时间的延迟，在多人游戏中可能成为一个问题。我们将添加真实时间戳的练习留给读者。这可以通过扩展`sSendMotionData`结构体，添加一个时间戳字段来完成，该字段在JNI回调`SendMotion()`内部赋值。
 - en: See also
+  id: totrans-38
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Processing multi-touch events on Android* recipe in [Chapter 7](ch07.html
     "Chapter 7. Cross-platform UI and Input Systems"), *Cross-platform UI and Input
     Systems*
+  id: totrans-39
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第7章](ch07.html "Chapter 7. 跨平台UI和输入系统")，*跨平台UI和输入系统*中的*在Android上处理多触摸事件*配方'
 - en: Improving the audio playback mechanism
+  id: totrans-40
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 改进音频播放机制
 - en: In the previous chapters we learned how to play audio using OpenAL on Android.
     Our basic audio subsystem implementation in [Chapter 5](ch05.html "Chapter 5. Cross-platform
     Audio Streaming"), *Cross-platform Audio Streaming,* lacked automatic management
     of audio sources; we had to control them manually on a separate thread. Now, we
     will put all of that code into a new audio subsystem usable in a real game.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，我们学习了如何在Android上使用OpenAL播放音频。我们在[第5章](ch05.html "Chapter 5. 跨平台音频流")，*跨平台音频流*中实现的基本音频子系统缺乏对音频源的自动管理；我们不得不在单独的线程上手动控制它们。现在，我们将把所有这些代码放入一个新的音频子系统中，以便在实际游戏中使用。
 - en: Getting ready
+  id: totrans-42
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: The complete source code for this recipe is integrated in the example `1_Game`
     and can be found in the files `sound/Audio.h` and `sound/Audio.cpp`. Other files
     in the `sound` folder provide decoding capabilities for different audio formats—check
     them out.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 此配方的完整源代码已集成到示例`1_Game`中，可以在文件`sound/Audio.h`和`sound/Audio.cpp`中找到。`sound`文件夹中的其他文件提供了对不同音频格式的解码能力——可以查看它们。
 - en: How to do it…
+  id: totrans-44
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'We need our `clAudioThread` class to take care of active audio sources. Let''s
     extend it with methods responsible for their registration:'
+  id: totrans-45
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们需要我们的`clAudioThread`类来处理活动音频源。让我们通过负责注册的方法来扩展它：
 - en: '[PRE6]'
+  id: totrans-46
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'We also need a container for active sources as well as mutex to control the
     access to it:'
+  id: totrans-47
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们还需要一个用于活动源的容器以及控制对其访问的互斥锁：
 - en: '[PRE7]'
+  id: totrans-48
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'The method `clAudioThread::Run()` gets more complicated. Besides the initialization
     of OpenAL, it has to update active audio sources so they can pull the audio data
     from their providers:'
+  id: totrans-49
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`clAudioThread::Run()`方法变得更加复杂。除了初始化OpenAL之外，它还必须更新活动音频源，以便它们可以从提供者那里获取音频数据：'
 - en: '[PRE8]'
+  id: totrans-50
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'The inner loop updates active audio sources based on the elapsed time:'
+  id: totrans-51
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 内部循环根据经过的时间更新活动音频源：
 - en: '[PRE9]'
+  id: totrans-52
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'Note the following scope for the mutex:'
+  id: totrans-53
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 注意以下互斥锁的作用域：
 - en: '[PRE10]'
+  id: totrans-54
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Audio sources are updated every 100 milliseconds. This value is purely empirical
     and is suitable for non-realtime audio playback as a tradeoff between the audio
     subsystem lag and power consumption of your Android device:'
+  id: totrans-55
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 音频源每100毫秒更新一次。这个值纯粹是经验性的，适用于非实时音频播放，作为音频子系统滞后与Android设备功耗之间的折中：
 - en: '[PRE11]'
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Registration methods are needed to maintain the `FActiveSources` container.
     Their implementations can be found in the following code:'
+  id: totrans-57
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 需要注册方法来维护`FActiveSources`容器。它们的实现可以在以下代码中找到：
 - en: '[PRE12]'
+  id: totrans-58
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Don''t add the same audio source multiple times:'
+  id: totrans-59
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 不要多次添加同一个音频源：
 - en: '[PRE13]'
+  id: totrans-60
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Just find the source and erase it:'
+  id: totrans-61
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 只需找到源并删除它：
 - en: '[PRE14]'
+  id: totrans-62
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: The full implementation of this new `clAudioThread` class can be found in the
     `sound/Audio.cpp` and `sound/Audio.h` files in the example `1_Game`.
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个新的`clAudioThread`类的完整实现在示例`1_Game`中的`sound/Audio.cpp`和`sound/Audio.h`文件中可以找到。
 - en: How it works…
+  id: totrans-64
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'To take advantage of the new `AudioThread` class, audio sources must register
     themselves. We extend the constructor and the destructor of the `clAudioSource`
     class to perform RAII registration ([http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization](http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization)):'
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了利用新的`AudioThread`类，音频源必须注册自己。我们扩展了`clAudioSource`类的构造函数和析构函数，以执行RAII注册（[http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization](http://en.wikipedia.org/wiki/Resource_Acquisition_Is_Initialization)）：
 - en: '[PRE15]'
+  id: totrans-66
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'Now audio playback is very simple. Declare a global audio thread:'
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在音频播放非常简单。声明一个全局音频线程：
 - en: '[PRE16]'
+  id: totrans-68
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Start it from the main thread and wait until initialization completes:'
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 从主线程开始，等待初始化完成：
 - en: '[PRE17]'
+  id: totrans-70
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: Note
+  id: totrans-71
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: We can invoke other useful initialization routines between the `g_Audio.Start()`
     and `g_Audio.Wait()` calls, to take advantage of asynchronous initialization.
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以在`g_Audio.Start()`和`g_Audio.Wait()`调用之间调用其他有用的初始化例程，以利用异步初始化。
 - en: 'Create and configure a new audio source and play it:'
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建并配置一个新的音频源并播放它：
 - en: '[PRE18]'
+  id: totrans-74
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: All audio management is now done on another thread.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有的音频管理现在都在另一个线程上完成。
 - en: There's more…
+  id: totrans-76
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: Our audio thread is capable of playing different types of audio files such as
     `.ogg`, `.xm`, `.it,` and `.s3m` files. You can hide the creation of an appropriate
     wavedata provider by adding another method to `AudioSource`. Just switch the selection
     based on the file extension to create `ModPlugProvider` or `OggProvider` instances.
     We leave this as an exercise for you.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的音频线程能够播放不同类型的音频文件，如`.ogg`，`.xm`，`.it`和`.s3m`文件。你可以通过向`AudioSource`添加另一个方法来隐藏适当wavedata提供者的创建。只需根据文件扩展名切换选择以创建`ModPlugProvider`或`OggProvider`实例。我们把这个作为一个练习留给你。
 - en: See also
+  id: totrans-78
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Initializing OpenAL and playing the .wav files,* *Decoding Ogg Vorbis files*,
     *Decoding tracker music using ModPlug*, and *Streaming sounds* recipes in [Chapter
     5](ch05.html "Chapter 5. Cross-platform Audio Streaming"), *Cross-platform Audio
     Streaming*
+  id: totrans-79
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[第5章](ch05.html "第5章.跨平台音频流")，*跨平台音频流*中的*初始化OpenAL和播放.wav文件*，*解码Ogg Vorbis文件*，*使用ModPlug解码跟踪器音乐*，以及*流式声音*食谱
 - en: Shutting down the application
+  id: totrans-80
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 关闭应用程序
 - en: Smartphones' batteries are very limited making mobile devices very sensitive
     to any background activities they run. Our previous application samples stayed
     alive after the user switched to another activity. This means that instead of
@@ -353,85 +515,125 @@
     and pausing our application, we continued to waste precious system resources in
     the background. It's time we learnt how to handle the `onPause()` Android callback
     in our native code.
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 智能手机的电池非常有限，这使得移动设备对任何后台活动都非常敏感。我们之前的应用示例在用户切换到另一个活动后仍然保持运行。这意味着我们没有尊重Android活动生命周期（[http://developer.android.com/training/basics/activity-lifecycle](http://developer.android.com/training/basics/activity-lifecycle)），在后台继续浪费宝贵的系统资源，而是应该在`onPause()`回调中暂停我们的应用程序。
 - en: Getting ready
+  id: totrans-82
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'If you are not familiar with Android Activity lifecycle, refer to the developer
     manual: [http://developer.android.com/training/basics/activity-lifecycle/index.html](http://developer.android.com/training/basics/activity-lifecycle/index.html).'
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你不太熟悉Android活动生命周期，请参考开发者手册：[http://developer.android.com/training/basics/activity-lifecycle/index.html](http://developer.android.com/training/basics/activity-lifecycle/index.html)。
 - en: How to do it…
+  id: totrans-84
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何实现…
 - en: 'An Android application does not have to implement all of the lifecycle methods.
     Our strategy for lifecycle management will be very simple; save game state and
     terminate an application once the `onPause()` method is called. We need to write
     some Java code to make it work. Add this code to your `Activity` class, in our
     case it is `Game1Activity` in the `Game1Activity.java` file:'
+  id: totrans-85
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 一个Android应用程序不必实现所有的生命周期方法。我们的生命周期管理策略将非常简单；一旦调用`onPause()`方法，保存游戏状态并终止应用程序。我们需要编写一些Java代码来实现这个功能。将这段代码添加到你的`Activity`类中，在我们的例子中是`Game1Activity.java`文件中的`Game1Activity`类：
 - en: '[PRE19]'
+  id: totrans-86
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Implement the `ExitNative()` JNI method in the following way:'
+  id: totrans-87
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照以下方式实现`ExitNative()` JNI方法：
 - en: '[PRE20]'
+  id: totrans-88
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: Now we can implement the native `OnStop()`callback in our game.
+  id: totrans-89
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在我们可以在我们的游戏中实现本地`OnStop()`回调。
 - en: How it works…
+  id: totrans-90
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的…
 - en: 'A typical implementation of the `OnStop()` callback will save the game state,
     so it can be restored when the game resumes later. Since our first game does not
     require any saving, we will provide only an empty implementation:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: '`OnStop()`回调的典型实现将保存游戏状态，以便稍后游戏恢复时可以恢复状态。由于我们的第一个游戏不需要任何保存，我们只提供一个空的实现：'
 - en: '[PRE21]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: You may want to implement game saving later as an exercise.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能想要稍后作为一个练习来实现游戏保存。
 - en: There's more…
+  id: totrans-94
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'To make the `OnStop()` method work on Windows, just call it after the exit
     from the main loop in `Wrapper_Windows.cpp`:'
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使`OnStop()`方法在Windows上工作，只需在`Wrapper_Windows.cpp`中的主循环退出后调用它：
 - en: '[PRE22]'
+  id: totrans-96
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: The solution is now portable, and all of the logic can be debugged on Windows.
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在这个解决方案是可移植的，所有的逻辑都可以在Windows上进行调试。
 - en: See also
+  id: totrans-98
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Implementing the main loop*'
+  id: totrans-99
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*实现主循环*'
 - en: Implementing the main loop
+  id: totrans-100
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 实现主循环
 - en: In the previous chapters our code examples used the `OnTimer()` callback with
     a rough fixed timestep to update the state and the `OnDrawFrame()` callback to
     render graphics. This is not suitable for a real-time game where we should update
@@ -439,1126 +641,1673 @@
     still desirable to use a small fixed timestep in the call to `OnTimer()`. We can
     solve this problem by interleaving calls to `OnTimer()` and `OnDrawFrame()` in
     a tricky fashion and put this logic into a game main loop.
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，我们的代码示例使用了带有粗略固定时间步长的`OnTimer()`回调来更新状态，以及`OnDrawFrame()`回调来渲染图形。这对于需要根据自上一帧以来经过的真实时间来更新状态的真实游戏来说是不合适的。然而，我们仍然希望使用较小的固定时间步长在`OnTimer()`的调用中。我们可以通过巧妙地交错调用`OnTimer()`和`OnDrawFrame()`，并将此逻辑放入游戏主循环中，来解决此问题。
 - en: Getting ready
+  id: totrans-102
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: There is a very interesting article called **Fix Your Timestep!** available
     at [http://gafferongames.com/game-physics/fix-your-timestep](http://gafferongames.com/game-physics/fix-your-timestep),
     which explains in great detail different approaches to the implementation of a
     game main loop and why fixed timesteps are important.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[http://gafferongames.com/game-physics/fix-your-timestep](http://gafferongames.com/game-physics/fix-your-timestep)有一篇非常有趣的文章，名为**修复你的时间步长！**，它详细解释了实现游戏主循环的不同方法以及固定时间步长的重要性。
 - en: How to do it…
+  id: totrans-104
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The logic of the game main loop is platform-independent and can be put into
     a method:'
+  id: totrans-105
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 游戏主循环的逻辑与平台无关，可以放入一个方法中：
 - en: '[PRE23]'
+  id: totrans-106
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: '`GetSeconds()` returns monotonous time in seconds since the system start. However,
     only frame deltas matter:'
+  id: totrans-107
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`GetSeconds()`返回自系统启动以来的单调时间（秒）。然而，只有帧差是重要的：'
 - en: '[PRE24]'
+  id: totrans-108
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'We will update the game logic with a fixed timestep that corresponds to a game
     running at 60 frames per second:'
+  id: totrans-109
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们将使用与每秒60帧运行的游戏相对应的固定时间步长来更新游戏逻辑：
 - en: '[PRE25]'
+  id: totrans-110
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Also, we need a failsafe mechanism to prevent excessive slowdowns of the game
     due to slow rendering speed:'
+  id: totrans-111
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 同时，我们还需要一个故障安全机制，以防止由于渲染速度慢而导致的游戏过度减慢。
 - en: '[PRE26]'
+  id: totrans-112
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Now we accumulate the elapsed time:'
+  id: totrans-113
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，我们累积经过的时间：
 - en: '[PRE27]'
+  id: totrans-114
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'And invoke a sequence of the `OnTimer()` callbacks accordingly. All of `OnTimer()`
     callbacks receive the same fixed timestep value:'
+  id: totrans-115
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 并相应地调用一系列`OnTimer()`回调函数。所有的`OnTimer()`回调都接收相同的固定时间步长值：
 - en: '[PRE28]'
+  id: totrans-116
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'After the game has been updated, render the next frame:'
+  id: totrans-117
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新游戏后，渲染下一帧：
 - en: '[PRE29]'
+  id: totrans-118
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: How it works…
+  id: totrans-119
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'The `OnDrawFrame()` callback should be called after the update. If the device
     is fast enough, `OnDrawFrame()` will be invoked after every single `OnTimer()`
     call. Otherwise, some frames will be skipped to preserve the real-time speed of
     the game logic. And in the case when the device is too slow to run even the game
     logic, our safeguard code will spring into action:'
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: '`OnDrawFrame()`回调应该在更新后调用。如果设备足够快，每次`OnTimer()`调用后都会调用`OnDrawFrame()`。否则，为了保持游戏逻辑的实时速度，将跳过一些帧。如果设备太慢以至于无法运行游戏逻辑，我们的保护代码将启动：'
 - en: '[PRE30]'
+  id: totrans-121
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: The whole thing will work in slow motion, but the game can still be playable.
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 整个过程将以慢动作进行，但游戏仍然可以玩。
 - en: Note
+  id: totrans-123
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: You can try to scale the value that you pass to `OnTimer()`, for example, `OnTimer(
     k * TIME_QUANTUM )`. If `k` is less than `1.0`, the game logic will become slow-motion.
     It can be used to produce effects similar to bullet time ([http://en.wikipedia.org/wiki/Bullet_time](http://en.wikipedia.org/wiki/Bullet_time)).
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以尝试调整传递给`OnTimer()`的值，例如`OnTimer( k * TIME_QUANTUM )`。如果`k`小于`1.0`，游戏逻辑将变为慢动作。它可以用来制作类似于子弹时间（[http://en.wikipedia.org/wiki/Bullet_time](http://en.wikipedia.org/wiki/Bullet_time)）的效果。
 - en: There's more…
+  id: totrans-125
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'If the application is suspended but you want it to continue running in the
     background, it is wise to omit the rendering phase altogether or change the duration
     of the update quantum. You can do it by adding the `Paused` state to your game
     and check it in the main loop, for example:'
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果应用程序被挂起，但你想让它继续在后台运行，最好完全省略渲染阶段或更改更新量子的持续时间。你可以通过为你的游戏添加`Paused`状态并在主循环中检查它，例如：
 - en: '[PRE31]'
+  id: totrans-127
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: This will help to save precious CPU cycles while still running the game logic
     simulation in the background.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将有助于在后台运行游戏逻辑模拟的同时节省宝贵的CPU周期。
 - en: See also
+  id: totrans-129
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Implementing timing in physics* recipe in [Chapter 2](ch02.html "Chapter 2. Porting
     Common Libraries"), *Porting Common Libraries*
+  id: totrans-130
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第2章](ch02.html "第2章.移植通用库")中*实现物理中的定时*的食谱，*移植通用库*'
 - en: Creating a multiplatform gaming engine
+  id: totrans-131
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 创建一个多平台游戏引擎
 - en: In previous chapters and recipes, we handcrafted many ad hoc solutions to some
     multiplatform game development tasks. Now, we are going to combine all the relevant
     code into a nascent portable gaming engine and learn how to prepare makefiles
     for Windows and Android to build it.
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节和食谱中，我们手工制作了许多针对多平台游戏开发任务的临时解决方案。现在，我们将所有相关的代码整合到一个初生的便携式游戏引擎中，并学习如何为
+    Windows 和 Android 准备 makefile 以构建它。
 - en: Getting ready
+  id: totrans-133
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪。
 - en: To understand what is going on in this recipe, you are advised to read through
     the chapters 1 to 7 from the beginning of this book.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 要了解这个食谱中发生的情况，建议你从本书开始阅读第 1 章到第 7 章。
 - en: How to do it…
+  id: totrans-135
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'We split all our code into several logical subsystems and put them into the
     following folders:'
+  id: totrans-136
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们将所有代码分成几个逻辑子系统，并将它们放入以下文件夹中：
 - en: '`core`: This has low level facilities, such as the intrusive smartpointer and
     math library'
+  id: totrans-137
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`core`：这包含低级别的设施，例如侵入式智能指针和数学库。'
 - en: '`fs`: This contains filesystem related classes'
+  id: totrans-138
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`fs`：这包含与文件系统相关的类。'
 - en: '`GL`: This contains the official OpenGL headers'
+  id: totrans-139
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GL`：这包含官方的 OpenGL 头文件。'
 - en: '`include`: This contains the include files of some third-party libraries'
+  id: totrans-140
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`include`：这包含一些第三方库的头文件。'
 - en: '`graphics`: This contains high-level graphics-related code, such as fonts,
     canvas, and images'
+  id: totrans-141
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`graphics`：这包含高级图形相关代码，如字体、画布和图像。'
 - en: '`LGL`: This contains our OpenGL wrapper and functions-loading code together
     with the abstraction layer implemented in [Chapter 7](ch07.html "Chapter 7. Cross-platform
     UI and Input Systems"), *Cross-platform UI and Input System*'
+  id: totrans-142
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`LGL`：这包含我们在 [第7章](ch07.html "第7章.跨平台 UI 和输入系统") 中实现的 OpenGL 包装器和函数加载代码以及抽象层，*跨平台
+    UI 和输入系统*。'
 - en: '`Sound`: This contains audio-related classe and decoding libraries'
+  id: totrans-143
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Sound`：这包含音频相关类和解码库。'
 - en: '`threading`: This contains multithreading-related classes, including mutexes,
     events, queues, and our multiplatform threads wrapper'
+  id: totrans-144
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`threading`：这包含与多线程相关的类，包括互斥量、事件、队列和我们的多平台线程包装器。'
 - en: How it works…
+  id: totrans-145
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: Most of the code in each folder is split into classes. In our minimalistic gaming
     engine, we keep the number of classes to a reasonable minimum.
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个文件夹中的大部分代码都被分成了类。在我们的简约游戏引擎中，我们尽量保持类的数量在一个合理的最低限度。
 - en: 'The `graphics` folder contains the implementations of the following structs
     and classes:'
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: '`graphics` 文件夹包含了以下结构和类的实现：'
 - en: Struct `sBitmapParams` holds the parameters of the bitmaps, such as width, height,
     and pixel format.
+  id: totrans-148
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 结构体 `sBitmapParams` 保存位图的参数，如宽度、高度和像素格式。
 - en: Class `clBitmap` is an API-independent representation of a bitmap that holds
     actual pixel data together with `sBitmapParams`. It can be loaded into a clGLTexture.
+  id: totrans-149
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clBitmap` 是一个与 API 独立的位图表示，保存实际的像素数据以及 `sBitmapParams`。它可以加载到 clGLTexture
+    中。
 - en: Class `clCanvas` provides a mechanism for immediate rendering.
+  id: totrans-150
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clCanvas` 提供了一种立即渲染的机制。
 - en: Class `clVertexAttribs` is an API-independent representation of 3D geometry.
     It can be loaded into a `clGLVertexArray`.
+  id: totrans-151
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clVertexAttribs` 是一个与 API 独立的 3D 几何表示。它可以加载到 `clGLVertexArray` 中。
 - en: Class `clGeomServ` provides 3D geometry creation methods that return `clVertexAttribs`.
+  id: totrans-152
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clGeomServ` 提供了创建 3D 几何的方法，返回 `clVertexAttribs`。
 - en: Class `iGestureResponder` is an interface to be implemented if you want to respond
     to touches or gestures.
+  id: totrans-153
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `iGestureResponder` 是一个接口，如果你想要响应触摸或手势，就需要实现这个接口。
 - en: Structure `sMotionData` holds the current set of active touch points.
+  id: totrans-154
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 结构体 `sMotionData` 保存当前激活的触摸点集合。
 - en: Class `clTextRenderer` provides FreeType-based text rendering facilities. It
     can render a text string with a specified font into a `clBitmap`.
+  id: totrans-155
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clTextRenderer` 提供基于 FreeType 的文本渲染设施。它可以指定字体将文本字符串渲染到 `clBitmap` 中。
 - en: Structure `sTouchPoint` represents a single touch point with an identifier,
     2D normalized float coordinates, flags, and a timestamp.
+  id: totrans-156
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 结构体 `sTouchPoint` 表示一个带有标识符、2D 归一化浮点坐标、标志和时间戳的单个触摸点。
 - en: 'The `LGL` folder holds the classes specific to OpenGL:'
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: '`LGL` 文件夹保存了特定于 OpenGL 的类：'
 - en: Structure `sUniform` represents a single uniform inside a shader program. It
     is just a name and a location index.
+  id: totrans-158
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 结构体 `sUniform` 表示着色器程序中的一个统一变量。它只是一个名称和位置索引。
 - en: Class `clGLSLShaderProgram` represents a shader program written in GLSL and
     provides autoconversion capabilities between the desktop GLSL and mobile GLSL
     ES.
+  id: totrans-159
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clGLSLShaderProgram` 表示一个用 GLSL 编写的着色器程序，并提供桌面 GLSL 与移动 GLSL ES 之间的自动转换功能。
 - en: Class `clGLTexture` provides access to OpenGL textures and can read `clBitmap`
     pixel data.
+  id: totrans-160
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clGLTexture` 提供对 OpenGL 纹理的访问，并可以读取 `clBitmap` 的像素数据。
 - en: Class `clGLVertexArray` provides abstractions to OpenGL vertex array objects
     and vertex buffer objects. It uses data from `clVertexAttribs`.
+  id: totrans-161
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clGLVertexArray` 提供了对 OpenGL 顶点数组对象和顶点缓冲对象的抽象。它使用来自 `clVertexAttribs` 的数据。
 - en: 'Low-level classes, such as smarpointers, intrusive counters, and math-related
     code are put into the `core` folder:'
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 低级类，如智能指针、侵入式计数器和数学相关代码被放入 `core` 文件夹：
 - en: Class `clPtr` is an implementation of a reference-counted intrusive smartpointer.
+  id: totrans-163
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clPtr` 是一个引用计数式侵入式智能指针的实现。
 - en: Class `iObject` holds an intrusive reference counter.
+  id: totrans-164
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `iObject` 持有一个侵入式引用计数器。
 - en: Class `LRingBuffer` is an implementation of a wrap-around ring buffer.
+  id: totrans-165
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `LRingBuffer` 是一个环绕式环形缓冲区的实现。
 - en: Basic math library consists of vector classes, including `LVector2`, `LVector3`,
     `LVector4`, `LVector2i`, and matrix classes, including `LMatrix3` and `LMatrix4`.
     The math library also contains minimal code for projections setup.
+  id: totrans-166
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 基本数学库包括向量类，如 `LVector2`、`LVector3`、`LVector4`、`LVector2i` 和矩阵类，如 `LMatrix3`
+    和 `LMatrix4`。数学库还包含设置投影的最小代码。
 - en: 'The filesystem-related code is located in the `fs` folder:'
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 文件系统相关的代码位于 `fs` 文件夹中：
 - en: Class `clArchiveReader` implements a `.zip` archive unpacking algorithm using
     the **libcompress** library. It is used to access resources in Android `.apk`
     files.
+  id: totrans-168
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clArchiveReader` 使用 **libcompress** 库实现 `.zip` 归档解压算法。它用于访问 Android `.apk`
+    文件中的资源。
 - en: Class `clBlob` represents an array of bytes in memory that can be read or written
     to a file.
+  id: totrans-169
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clBlob` 表示内存中的字节数组，可以从中读取或写入文件。
 - en: Class `iRawFile` is a base class of all classes that represent a file.
+  id: totrans-170
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `iRawFile` 是所有表示文件的类的基类。
 - en: Class `clRawFile` represents a file on a physical filesystem.
+  id: totrans-171
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clRawFile` 表示物理文件系统上的文件。
 - en: Class `clMemRawFile` represents a memory chunk as a file, suitable for accessing
     downloaded data (images, for example).
+  id: totrans-172
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clMemRawFile` 将内存块表示为文件，适用于访问下载的数据（例如图像）。
 - en: Class `clManagedMemRawFile` is similar to `MemRawFile`, but the memory is managed
     by a `Blob` object inside it.
+  id: totrans-173
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clManagedMemRawFile` 与 `MemRawFile` 类似，但内存由内部的 `Blob` 对象管理。
 - en: Class `clFileMapper` is an abstraction of read-only memory-mapped files.
+  id: totrans-174
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clFileMapper` 是只读内存映射文件的抽象。
 - en: Class `clFileWriter` is an abstraction to write into files.
+  id: totrans-175
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clFileWriter` 是写入文件的抽象。
 - en: Class `clFileSystem` is a factory of streams and blobs. It provides facilities
     to manage virtual paths in our applications.
+  id: totrans-176
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clFileSystem` 是流和块（blobs）的工厂。它提供了管理我们应用程序中虚拟路径的功能。
 - en: Classes `iMountPoint`, `clPhysicalMountPoint`, `clAliasMountPoint`, and `clArchiveMountPoint`
     are used to route the access to the OS native filesystem and Android `.apk` archives
     in a portable multiplatform way.
+  id: totrans-177
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `iMountPoint`、`clPhysicalMountPoint`、`clAliasMountPoint` 和 `clArchiveMountPoint`
+    用于以可移植的多平台方式路由到操作系统本地文件系统和 Android `.apk` 归档的访问。
 - en: 'The `sound` folder contains abstractions for our audio subsystem:'
+  id: totrans-178
   prefs: []
   type: TYPE_NORMAL
+  zh: '`sound` 文件夹包含我们音频子系统的抽象：'
 - en: Class `clAudioSource` represents an audio source in a virtual environment. It
     can be played, paused, or stopped.
+  id: totrans-179
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clAudioSource` 表示虚拟环境中的音频源。它可以播放、暂停或停止。
 - en: Class `clAudioThread` updates the active sources and submits the data to the
     underlying OpenAL API.
+  id: totrans-180
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clAudioThread` 更新活动源并将数据提交到底层的 OpenAL API。
 - en: Class `iWaveDataProvider` abstracts the decoding of audio files.
+  id: totrans-181
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `iWaveDataProvider` 抽象了音频文件的解码。
 - en: Class `clStreamingWaveDataProvider` streams the data from audio files too large
     to be decoded into memory at once.
+  id: totrans-182
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clStreamingWaveDataProvider` 从太大而不能一次性解码到内存中的音频文件流式传输数据。
 - en: Class `clDecodingProvider` provides common rewinding logic for streaming audio
     providers. It is the base class for actual decoders.
+  id: totrans-183
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clDecodingProvider` 为流式音频提供者提供公共倒带逻辑。它是实际解码器的基类。
 - en: Classes `clOggProvider` and `clModPlugProvider` handle the decoding of the `.ogg`
     files with **libogg**/**libvorbis** and tracker music with **libmodplug**.
+  id: totrans-184
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clOggProvider` 和 `clModPlugProvider` 使用 **libogg**/**libvorbis** 处理 `.ogg`
+    文件的解码和 **libmodplug** 处理跟踪音乐。
 - en: 'The `threading` folder contains portable implementations of different multithreading
     primitives:'
+  id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: '`threading` 文件夹包含不同多线程原语的可移植实现：'
 - en: Classes `clMutex`, `LMutex`, and `iThread` implement basic low-level multithreading
     primitives in a portable way
+  id: totrans-186
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clMutex`、`LMutex` 和 `iThread` 以可移植的方式实现了基本的低级多线程原语。
 - en: Classes `clWorkerThread` and `iTask` are higher level abstractions based on
     `iThread`
+  id: totrans-187
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `clWorkerThread` 和 `iTask` 是基于 `iThread` 的高级抽象。
 - en: Classes `iAsyncQueue` and `iAsyncCapsule` are used to implement asynchronous
     callbacks
+  id: totrans-188
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 类 `iAsyncQueue` 和 `iAsyncCapsule` 用于实现异步回调。
 - en: Note
+  id: totrans-189
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The source code of out mini engine is located in the Engine folder within the
     examples for the last chapter.
+  id: totrans-190
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们小型引擎的源代码位于上一章示例中的Engine文件夹内。
 - en: See also
+  id: totrans-191
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Writing the match-3 game*'
+  id: totrans-192
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*编写匹配-3游戏*'
 - en: '[Chapter 9](ch09.html "Chapter 9. Writing a Picture Puzzle Game"), *Writing
     a Picture Puzzle Game*'
+  id: totrans-193
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第9章](ch09.html "第9章. 编写图片拼图游戏"), *编写图片拼图游戏*'
 - en: Writing the match-3 game
+  id: totrans-194
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 编写匹配-3游戏
 - en: 'Now it is time to start the development of a finished **match-3** game. A match-3
     is a type of puzzle where a player needs to align tiles in order to make adjacent
     tiles disappear. Here, `3` stands for the number of same-color tiles that will
     disappear when put into adjacent positions. The following screenshot is of the
     final version of the game:'
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在是开始开发一个完整的**匹配-3**游戏的时候了。匹配-3是一种拼图类型，玩家需要排列瓷砖以使相邻的瓷砖消失。这里，`3`表示当相同颜色的瓷砖相邻放置时将消失的数量。以下截图是游戏的最终版本：
 - en: '![Writing the match-3 game](img/7785_08_9.jpg)'
+  id: totrans-196
   prefs: []
   type: TYPE_IMG
+  zh: '![编写匹配-3游戏](img/7785_08_9.jpg)'
 - en: 'We use a set of 22 monomino, domino, tromino, tetromino, and pentomino shapes
     in our game:'
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的游戏中使用了22种单块、双块、三块、四块和五块形状。
 - en: '![Writing the match-3 game](img/7785_08_2.jpg)'
+  id: totrans-198
   prefs: []
   type: TYPE_IMG
+  zh: '![编写匹配-3游戏](img/7785_08_2.jpg)'
 - en: Since most of the impressions come from the results visualized on-screen, let
     us proceed with the essentials of how the game screen is rendered.
+  id: totrans-199
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于大部分印象来自于屏幕上可视化的结果，让我们继续了解游戏屏幕渲染的基本要点。
 - en: Getting ready
+  id: totrans-200
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: The complete ready-to-build source code is located in the `1_Game` folder of
     the supplementary materials.
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
+  zh: 完整的、可直接构建的源代码位于补充材料中的`1_Game`文件夹。
 - en: 'This game was released in 2011 by the book''s authors on Google Play in a somewhat
     extended form. You can find this game on the following websites, if you want to
     try it on your Android device immediately: [http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks](http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks)
     and [http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks_free](http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks_free).'
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
+  zh: 这款游戏于2011年由本书作者在Google Play以某种扩展形式发布。如果你想立即在Android设备上尝试这款游戏，可以在以下网站找到：[http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks](http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks)
+    和 [http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks_free](http://play.google.com/store/apps/details?id=com.linderdaum.engine.multibricks_free)。
 - en: Authors don't mind if you use the graphical artwork from this game in your own
     projects. It is a learning tool and not a commodity.
+  id: totrans-203
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你在自己的项目中使用这款游戏的图形作品，作者并不介意。这是一个学习工具，而不是商品。
 - en: 'Those interested in the general match-3 game mechanics can refer to the following
     Wikipedia article: [http://en.wikipedia.org/wiki/Match_3](http://en.wikipedia.org/wiki/Match_3).'
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 对通用匹配-3游戏机制感兴趣的人可以参考以下维基百科文章：[http://en.wikipedia.org/wiki/Match_3](http://en.wikipedia.org/wiki/Match_3)。
 - en: How to do it…
+  id: totrans-205
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The entire game screen is re-rendered every frame in several steps in the `OnDrawFrame()`
     callback. Let''s walk over its source code to see how to do it:'
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
+  zh: 每帧都在`OnDrawFrame()`回调中通过几个步骤重新渲染整个游戏屏幕。让我们通过源代码看看如何操作：
 - en: The fullscreen background image is rendered clearing the graphics from the previous
     frame. The image is stored as a square 512 x 512 `.png` file and is rescaled to
     the full screen restoring its proportions, as shown in the following screenshot:![How
     to do it…](img/7785_08_3.jpg)
+  id: totrans-207
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 全屏背景图像在清除前一个帧的图形后渲染。图像存储为512 x 512的方形`.png`文件，并按比例缩放到全屏，如下截图所示：![如何操作…](img/7785_08_3.jpg)
 - en: Note
+  id: totrans-208
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Power-of-two image was used to make the game compatible with old Android hardware.
     If you target OpenGL ES 3 as your minimal requirement, you can use textures of
     arbitrary sizes.
+  id: totrans-209
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 为了使游戏兼容旧的Android硬件，使用了2的幂次图像。如果你的最低要求是OpenGL ES 3，可以使用任意大小的纹理。
 - en: 'The following is the C++ code to render the background:'
+  id: totrans-210
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以下是渲染背景的C++代码：
 - en: '[PRE32]'
+  id: totrans-211
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'First, bind 3 textures and the shader:'
+  id: totrans-212
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，绑定3个纹理和着色器：
 - en: '[PRE33]'
+  id: totrans-213
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'Update the pressed flags of control buttons:'
+  id: totrans-214
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新控制按钮的按下标志：
 - en: '[PRE34]'
+  id: totrans-215
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'Finally, render a full-screen rectangle:'
+  id: totrans-216
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，渲染一个全屏矩形：
 - en: '[PRE35]'
+  id: totrans-217
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: The `float b_Flags[]` array corresponds to the state of control buttons; the
     value of `1.0f` means the button is pressed and `0.0f` means it is released. These
     values are passed to the shader to highlight buttons accordingly.
+  id: totrans-218
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`float b_Flags[]`数组对应于控制按钮的状态；`1.0f`的值表示按钮被按下，`0.0f`表示按钮被释放。这些值被传递给着色器，相应地突出显示按钮。'
 - en: Cells of the game field are rendered on top of the background followed by the
     current shape above them:![How to do it…](img/7785_08_4.jpg)
+  id: totrans-219
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 游戏场地的单元格在背景之上渲染，然后是当前形状：![如何操作…](img/7785_08_4.jpg)
 - en: '[PRE36]'
+  id: totrans-220
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'Every cell of the field is just a tiny rectangle with a texture:'
+  id: totrans-221
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 场的每个单元格只是一个带有纹理的小矩形：
 - en: '[PRE37]'
+  id: totrans-222
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'The current shape is rendered in one line:'
+  id: totrans-223
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当前行形状在一行中渲染：
 - en: '[PRE38]'
+  id: totrans-224
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: The next figure is rendered near the control buttons, as shown in the following
     screenshot:![How to do it…](img/7785_08_8.jpg)
+  id: totrans-225
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下一个图形在控制按钮附近渲染，如下面的截图所示：![如何操作…](img/7785_08_8.jpg)
 - en: 'The code is more complicated, since we need to evaluate the bounding box of
     the shape to render it properly:'
+  id: totrans-226
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 代码更为复杂，因为我们需要计算形状的边界框以正确渲染它：
 - en: '[PRE39]'
+  id: totrans-227
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: Render the current score text, as shown in the following screenshot:![How to
     do it…](img/7785_08_6.jpg)
+  id: totrans-228
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 渲染当前分数文本，如下面的截图所示：![如何操作…](img/7785_08_6.jpg)
 - en: 'Once the text changes, it is rendered into a bitmap, and the texture is updated:'
+  id: totrans-229
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 文本一旦更改，就会被渲染成位图，并更新纹理：
 - en: '[PRE40]'
+  id: totrans-230
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'We just need to render a textured rectangle in every frame:'
+  id: totrans-231
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们只需在每一帧中渲染一个带有纹理的矩形：
 - en: '[PRE41]'
+  id: totrans-232
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: Render the game-over message if needed, as shown in the following screenshot:![How
     to do it…](img/7785_08_7.jpg)
+  id: totrans-233
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果需要，渲染游戏结束信息，如下面的截图所示：![如何操作…](img/7785_08_7.jpg)
 - en: 'This is similar to text rendering, however, we can avoid caching here since
     this message box is shown infrequently:'
+  id: totrans-234
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这与文本渲染类似，然而，由于这个消息框显示得不频繁，我们可以避免缓存：
 - en: '[PRE42]'
+  id: totrans-235
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: Canvas does everything required to render the text and update the texture. However,
     it is a bit slow for anything more frequent. Check out the full implementation
     in the `graphics/Canvas.cpp` file.
+  id: totrans-236
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: Canvas完成了渲染文本和更新纹理所需的所有工作。然而，对于更频繁的操作来说，它有点慢。查看`graphics/Canvas.cpp`文件中的完整实现。
 - en: How it works…
+  id: totrans-237
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'In the preceding code, we used some helper functions that might need some explanation.
     The `DrawQuad()` and `DrawTexQuad()` functions draw a single cell of the game
     field. They consist of some hardcoded values to position the cells relative to
     the background image. The following is the source code of one function:'
+  id: totrans-238
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的代码中，我们使用了一些辅助函数，可能需要一些解释。`DrawQuad()`和`DrawTexQuad()`函数绘制游戏场的一个单元格。它们包含一些硬编码的值，用于将单元格相对于背景图像定位。以下是其中一个函数的源代码：
 - en: '[PRE43]'
+  id: totrans-239
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'Magic constants of `800.0f` and `600.0f` appear here to convert from the coordinate
     system of the UI, which was designed for a `600×800` screen in portrait orientation,
     to the floating-point normalized coordinates:'
+  id: totrans-240
   prefs: []
   type: TYPE_NORMAL
+  zh: '`800.0f`和`600.0f`的魔法常数在这里出现，用于将UI坐标系统（为`600×800`纵向屏幕设计）转换为浮点标准化坐标：'
 - en: '[PRE44]'
+  id: totrans-241
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'Other magic constants are also part of the design and were chosen empirically.
     Try adjusting them:'
+  id: totrans-242
   prefs: []
   type: TYPE_NORMAL
+  zh: 其他魔法常数也是设计的一部分，是通过经验选择的。尝试调整它们：
 - en: '[PRE45]'
+  id: totrans-243
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'The `DrawFigure()` method is used to draw a single shape anywhere in the game
     field:'
+  id: totrans-244
   prefs: []
   type: TYPE_NORMAL
+  zh: '`DrawFigure()`方法用于在游戏场地的任何位置绘制单个形状：'
 - en: '[PRE46]'
+  id: totrans-245
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'Skip invisible rows at the top of the game field:'
+  id: totrans-246
   prefs: []
   type: TYPE_NORMAL
+  zh: 跳过游戏场顶部不可见的行：
 - en: '[PRE47]'
+  id: totrans-247
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: '`DrawBorder()` function is just a shortcut to `Canvas`:'
+  id: totrans-248
   prefs: []
   type: TYPE_NORMAL
+  zh: '`DrawBorder()`函数只是`Canvas`的一个快捷方式：'
 - en: '[PRE48]'
+  id: totrans-249
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: There's more…
+  id: totrans-250
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: We mentioned that control buttons are highlighted in the fragment shader. Here
     is how it is done.
+  id: totrans-251
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们提到过，控制按钮在片段着色器中会被突出显示。以下是实现方法。
 - en: 'Pass the states of the buttons as uniforms:'
+  id: totrans-252
   prefs: []
   type: TYPE_NORMAL
+  zh: 将按钮的状态作为统一变量传递：
 - en: '[PRE49]'
+  id: totrans-253
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'The function to check whether a rectangle contains a specified point, as follows:'
+  id: totrans-254
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查矩形是否包含指定点的函数如下：
 - en: '[PRE50]'
+  id: totrans-255
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: 'Store some hardcoded values corresponding to the rectangles where our control
     buttons are located:'
+  id: totrans-256
   prefs: []
   type: TYPE_NORMAL
+  zh: 存储一些硬编码的值，对应于我们的控制按钮所在的位置：
 - en: '[PRE51]'
+  id: totrans-257
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'Read the background texture and the highlighted parts. Check the files `back.png`,
     `back_high_bottom.png`, and `back_high_top.png` from the accompanying project:'
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: 阅读背景纹理和突出部分。查看随附项目中的`back.png`、`back_high_bottom.png`和`back_high_top.png`文件：
 - en: '[PRE52]'
+  id: totrans-259
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'Check if buttons are pressed and choose the right texture accordingly:'
+  id: totrans-260
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查按钮是否被按下，并相应地选择正确的纹理：
 - en: '[PRE53]'
+  id: totrans-261
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'Voilà! We have textured the background with all the buttons in one pass:'
+  id: totrans-262
   prefs: []
   type: TYPE_NORMAL
+  zh: 哇！我们只用一次传递就为所有按钮纹理化了背景：
 - en: '[PRE54]'
+  id: totrans-263
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: See also
+  id: totrans-264
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Creating a multiplatform gaming engine*'
+  id: totrans-265
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*创建一个多平台游戏引擎*'
 - en: Managing shapes
+  id: totrans-266
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 管理形状
 - en: In the previous recipe, we learned how to render the game screen. Some classes
     remained unimplemented. In this recipe, we will implement the `clBricksShape`
     class responsible for the storage and manipulation of each of the shapes that
     appear in the game.
+  id: totrans-267
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一个食谱中，我们学习了如何渲染游戏屏幕。有些类尚未实现。在本食谱中，我们将实现`clBricksShape`类，负责存储和操作游戏中出现的每个形状。
 - en: Getting ready
+  id: totrans-268
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Take a look at how many different pentomino shapes can exist. Wikipedia provides
     a comprehensive overview: [http://en.wikipedia.org/wiki/Pentomino](http://en.wikipedia.org/wiki/Pentomino).'
+  id: totrans-269
   prefs: []
   type: TYPE_NORMAL
+  zh: 看看可以存在多少不同的五格拼板形状。维基百科提供了一个全面的概述：[http://en.wikipedia.org/wiki/Pentomino](http://en.wikipedia.org/wiki/Pentomino)。
 - en: How to do it…
+  id: totrans-270
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The interface of our `clBricksShape` class looks as follows:'
+  id: totrans-271
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们的`clBricksShape`类的接口如下所示：
 - en: '[PRE55]'
+  id: totrans-272
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: The size of shapes used in our game. We use `5x5` shapes.
+  id: totrans-273
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们游戏中使用的形状大小。我们使用`5x5`的形状。
 - en: '[PRE56]'
+  id: totrans-274
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: 'Store the colors of the cells this shape consists of. The colors are stored
     as indices:'
+  id: totrans-275
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 存储构成这个形状的单元格的颜色。颜色作为索引存储：
 - en: '[PRE57]'
+  id: totrans-276
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: 'The figure index defines the shape type:'
+  id: totrans-277
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 图形索引定义了形状类型：
 - en: '[PRE58]'
+  id: totrans-278
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: 'The rotation index corresponds to the rotation angle of the figure: `0`, `1`,
     `2`, and `3` stand for `0`, `90`, `180`, and `270` degrees:'
+  id: totrans-279
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 旋转索引对应于图形的旋转角度：`0`、`1`、`2`和`3`分别代表`0`、`90`、`180`和`270`度：
 - en: '[PRE59]'
+  id: totrans-280
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: 'The methods are very short and straightforward as follows:'
+  id: totrans-281
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这些方法非常简短直接，如下所示：
 - en: '[PRE60]'
+  id: totrans-282
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: 'The method `Rotate()` does not rotate the individual cells. It does nothing
     but adjust the rotation angle:'
+  id: totrans-283
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Rotate()`方法并不旋转单个单元格。它什么也不做，只是调整旋转角度：'
 - en: '[PRE61]'
+  id: totrans-284
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: 'Figure generation is also very simple. It is just a selection from the table
     of predefined figures:'
+  id: totrans-285
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 图形生成也非常简单。它只是从预定义图形的表格中选择：
 - en: '[PRE62]'
+  id: totrans-286
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: 'These methods are used to calculate the bounding box of the shape. Refer to
     the `game/Shape.h` file for their source code:'
+  id: totrans-287
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这些方法用于计算形状的边界框。参考《game/Shape.h》文件以获取它们的源代码：
 - en: '[PRE63]'
+  id: totrans-288
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: How it works…
+  id: totrans-289
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'The main trick behind the code in the preceding section is the table of predefined
     shapes. Its declaration is located in the `Pentomino.h` file:'
+  id: totrans-290
   prefs: []
   type: TYPE_NORMAL
+  zh: 前一节代码的主要技巧在于预定义形状的表格。其声明位于《Pentomino.h》文件中：
 - en: '[PRE64]'
+  id: totrans-291
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'That''s it. We store each and every shape in this 4D array. The content of
     the array is defined in the `Pentomino.cpp` file. The following code is the extract
     that defines all 4 rotations of a single shape:'
+  id: totrans-292
   prefs: []
   type: TYPE_NORMAL
+  zh: 就是这样。我们将每一个形状存储在这个4D数组中。《Pentomino.cpp》文件定义了数组的内容。以下代码是定义单个形状所有4种旋转的摘录：
 - en: '[PRE65]'
+  id: totrans-293
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: The non-zero values in the array define which cells belong to the shape. The
     magnitude of the value defines the color of the cell.
+  id: totrans-294
   prefs: []
   type: TYPE_NORMAL
+  zh: 数组中的非零值定义了哪些单元格属于形状。值的绝对定义了单元格的颜色。
 - en: See also
+  id: totrans-295
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Writing the match-3 game*'
+  id: totrans-296
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*编写匹配-3游戏*'
 - en: Managing the game field logic
+  id: totrans-297
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 管理游戏场逻辑
 - en: Now we know how to store different shapes and render them. Let's implement some
     game logic to make these shapes interact with each other on a game field.
+  id: totrans-298
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们知道如何存储不同的形状并渲染它们。让我们实现一些游戏逻辑，让这些形状在游戏场中相互交互。
 - en: Getting ready
+  id: totrans-299
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Refer to the *Writing the match-3 game* recipe to see how the game field is
     rendered.
+  id: totrans-300
   prefs: []
   type: TYPE_NORMAL
+  zh: 参阅《编写匹配-3游戏》的菜谱，了解如何渲染游戏场。
 - en: How to do it…
+  id: totrans-301
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The interface of `clBricksField` looks as follows:'
+  id: totrans-302
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`clBricksField`的接口如下所示：'
 - en: '[PRE66]'
+  id: totrans-303
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: 'The size of our game field is `11×22`:'
+  id: totrans-304
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们的游戏场大小为`11×22`：
 - en: '[PRE67]'
+  id: totrans-305
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: 'The methods to check if the figure fits freely into a position are as follows:'
+  id: totrans-306
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检查图形是否可以自由地放入某个位置的方法如下：
 - en: '[PRE68]'
+  id: totrans-307
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: 'This method stamps the shape into the specified position of the game field:'
+  id: totrans-308
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这个方法将形状印在游戏场的指定位置：
 - en: '[PRE69]'
+  id: totrans-309
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: 'The following code is the main game logic. Methods to calculate and delete
     same-colored cell regions:'
+  id: totrans-310
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以下代码是主要的游戏逻辑。计算并删除同色单元格区域的方法：
 - en: '[PRE70]'
+  id: totrans-311
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: 'Since we are making a match-3 game, we pass the value of `3` to this method.
     However, the logic is general; you can play with your own values to tweak the
     gameplay:'
+  id: totrans-312
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 由于我们正在制作一个匹配-3游戏，因此我们给这个方法传递了`3`的值。然而，逻辑是通用的；你可以使用自己的值调整游戏玩法：
 - en: '[PRE71]'
+  id: totrans-313
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: 'Cells of the game field are stored here. The values correspond to colors of
     the cells:'
+  id: totrans-314
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 游戏场的单元格存储在这里。值对应于单元格的颜色：
 - en: '[PRE72]'
+  id: totrans-315
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: How it works…
+  id: totrans-316
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'Shape fitting uses simple mask checking and is trivial. We will give more attention
     to the neighbor cells calculation. It is based on the recursive flood-fill algorithm
     ([http://en.wikipedia.org/wiki/Flood_fill](http://en.wikipedia.org/wiki/Flood_fill)):'
+  id: totrans-317
   prefs: []
   type: TYPE_NORMAL
+  zh: 形状拟合使用简单的遮罩检查，非常简单。我们将更多关注邻近单元格的计算。它基于递归的洪水填充算法（[http://en.wikipedia.org/wiki/Flood_fill](http://en.wikipedia.org/wiki/Flood_fill)）：
 - en: '[PRE73]'
+  id: totrans-318
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: 'Recursively, calculate the number of neighbors to each cell:'
+  id: totrans-319
   prefs: []
   type: TYPE_NORMAL
+  zh: 递归地计算每个单元格的邻居数量：
 - en: '[PRE74]'
+  id: totrans-320
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: 'Mark the cells if the number of neighbors is high enough:'
+  id: totrans-321
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果邻居数量足够多，则标记单元格：
 - en: '[PRE75]'
+  id: totrans-322
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: 'Remove the marked cells from the field:'
+  id: totrans-323
   prefs: []
   type: TYPE_NORMAL
+  zh: 从游戏场中移除标记的单元格：
 - en: '[PRE76]'
+  id: totrans-324
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE76]'
 - en: 'Return the number of deleted regions. This is used to evaluate the current
     score:'
+  id: totrans-325
   prefs: []
   type: TYPE_NORMAL
+  zh: 返回删除区域的数量。这用于评估当前分数：
 - en: '[PRE77]'
+  id: totrans-326
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE77]'
 - en: 'The recursive flood-fill is straightforward. The following code calculates
     the number of adjacent cells:'
+  id: totrans-327
   prefs: []
   type: TYPE_NORMAL
+  zh: 递归的洪水填充是直接的。以下代码计算相邻单元格的数量：
 - en: '[PRE78]'
+  id: totrans-328
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE78]'
 - en: 'The following code marks the adjacent cells:'
+  id: totrans-329
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下代码标记相邻的单元格：
 - en: '[PRE79]'
+  id: totrans-330
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE79]'
 - en: There's more…
+  id: totrans-331
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: There is also another variant of game logic implemented in this project. Check
     out the method `deleteLines()`in the file `game/Field.h` to learn how to implement
     it.
+  id: totrans-332
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个项目中还实现了另一种游戏逻辑变体。查看文件 `game/Field.h` 中的 `deleteLines()` 方法以了解如何实现它。
 - en: Implementing user interaction within a game loop
+  id: totrans-333
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在游戏循环中实现用户交互
 - en: 'In the previous recipes we learned how to render the game environment and implement
     the game logic. One more important aspect of the development needs our attention:
     the user interaction.'
+  id: totrans-334
   prefs: []
   type: TYPE_NORMAL
+  zh: 在之前的食谱中，我们学习了如何渲染游戏环境并实现游戏逻辑。开发中还有一个重要的方面需要我们关注：用户交互。
 - en: Getting ready
+  id: totrans-335
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Check out the file `main.cpp` in the project `1_Game` for the full implementation.
+  id: totrans-336
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看项目 `1_Game` 中的 `main.cpp` 文件以获取完整实现。
 - en: How to do it…
+  id: totrans-337
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'We need to implement some functions to move the currently falling shape:'
+  id: totrans-338
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要实现一些函数来移动当前下落的形状：
 - en: 'Enforce the game field constraints while moving a figure left or right:'
+  id: totrans-339
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在移动图形左右时强制执行游戏场地限制：
 - en: '[PRE80]'
+  id: totrans-340
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE80]'
 - en: 'The source code of `MoveFigureRight()` is similar to `MoveFigureLeft()`. The
     code of `MoveFigureDown()` needs to update the score once the shape has hit the
     ground:'
+  id: totrans-341
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`MoveFigureRight()` 的源代码与 `MoveFigureLeft()` 类似。`MoveFigureDown()` 的代码需要在形状触地后更新得分：'
 - en: '[PRE81]'
+  id: totrans-342
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE81]'
 - en: 'The rotation code needs to check if the rotation is actually possible:'
+  id: totrans-343
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 旋转代码需要检查旋转是否实际可行：
 - en: '[PRE82]'
+  id: totrans-344
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE82]'
 - en: We need to call these methods in response to key presses or touches.
+  id: totrans-345
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们需要响应按键或触摸来调用这些方法。
 - en: How it works…
+  id: totrans-346
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'The `ProcessClick()` function handles a single click. We store the position
     of the click in the `g_Pos` global variable for code simplicity:'
+  id: totrans-347
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ProcessClick()` 函数处理单个点击。为了简化代码，我们将点击位置存储在全局变量 `g_Pos` 中：'
 - en: '[PRE83]'
+  id: totrans-348
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE83]'
 - en: 'Reset the states of the buttons:'
+  id: totrans-349
   prefs: []
   type: TYPE_NORMAL
+  zh: 重置按钮的状态：
 - en: '[PRE84]'
+  id: totrans-350
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE84]'
 - en: 'Don''t allow to press any buttons once the game is over:'
+  id: totrans-351
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦游戏结束，不允许按下任何按钮：
 - en: '[PRE85]'
+  id: totrans-352
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE85]'
 - en: 'Run actions and update the buttons'' highlight states:'
+  id: totrans-353
   prefs: []
   type: TYPE_NORMAL
+  zh: 运行操作并更新按钮的高亮状态：
 - en: '[PRE86]'
+  id: totrans-354
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE86]'
 - en: 'This is used to implement autorepeat on a touchscreen:'
+  id: totrans-355
   prefs: []
   type: TYPE_NORMAL
+  zh: 这被用于在触摸屏上实现自动重复：
 - en: '[PRE87]'
+  id: totrans-356
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE87]'
 - en: There's more…
+  id: totrans-357
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'The main loop of our game is implemented in the `OnTimer()` callback:'
+  id: totrans-358
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们游戏的主循环是在 `OnTimer()` 回调中实现的：
 - en: '[PRE88]'
+  id: totrans-359
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE88]'
 - en: 'Here, we check the values of the flags to implement a convenient auto-repeat
     on a touchscreen:'
+  id: totrans-360
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们检查标志位的值以在触摸屏上实现方便的自动重复：
 - en: '[PRE89]'
+  id: totrans-361
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE89]'
 - en: 'Check for lines deletion:'
+  id: totrans-362
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查行删除：
 - en: '[PRE90]'
+  id: totrans-363
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE90]'
 - en: 'The auto-repeat values are picked to follow those typically used by developers
     in modern operating systems:'
+  id: totrans-364
   prefs: []
   type: TYPE_NORMAL
+  zh: 自动重复值是按照现代操作系统中开发人员通常使用的值来选择的：
 - en: '[PRE91]'
+  id: totrans-365
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE91]'
 - en: Our original MultiBricks game contains a Pause button. You can implement it
     as an exercise using the page-based user interface described in the [Chapter 9](ch09.html
     "Chapter 9. Writing a Picture Puzzle Game"), *Writing a Picture Puzzle Game*.
+  id: totrans-366
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们原始的 MultiBricks 游戏包含一个暂停按钮。你可以使用 [第9章](ch09.html "第9章. 编写图片谜题游戏") *编写图片谜题游戏*
+    中描述的基于页面的用户界面作为练习来实现它。
 - en: See also…
+  id: totrans-367
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅…
 - en: '*Writing the match-3 game*'
+  id: totrans-368
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*编写三消游戏*'
 - en: The *Page-based user interface* recipe in [Chapter 9](ch09.html "Chapter 9. Writing
     a Picture Puzzle Game")*, Writing a Picture Puzzle Game*
+  id: totrans-369
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第9章](ch09.html "第9章. 编写图片谜题游戏") *编写图片谜题游戏* 中的 *基于页面的用户界面* 食谱'
