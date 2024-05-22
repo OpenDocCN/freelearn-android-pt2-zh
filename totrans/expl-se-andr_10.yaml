@@ -1,47 +1,67 @@
 - en: Chapter 10. Placing Applications in Domains
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第十章. 将应用程序置于域中
 - en: In [Chapter 3](ch03.html "Chapter 3. Android Is Weird"), *Android Is Weird*,
     we introduced the zygote and that all applications, APKs in Android speak, emanate
     from the zygote just like services emanate from the `init` process. As such, they
     need to be labeled, as we did in the previous chapter. Recall that labeling is
     the same as placing a process in a domain of that label. Applications need to
     be labeled as well.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[第三章](ch03.html "第三章. 安卓古怪")，*安卓古怪*，我们介绍了zygote，所有应用程序（在安卓中称为APK）都源自zygote，就像服务源自`init`进程一样。因此，它们需要被标记，正如我们在前一章所做的那样。回想一下，标记等同于将进程放置在相应标签的域中。应用程序也需要被标记。
 - en: Note
+  id: totrans-2
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: APK is the file extension and format for installable application packages on
     Android. It's analogous to the desktop package formats like RPM (Redhat based)
     or DEB (Debian based).
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: APK是安卓上可安装应用程序包的文件扩展名和格式。它类似于桌面包格式，如RPM（基于Redhat）或DEB（基于Debian）。
 - en: 'In this chapter, we will learn to:'
+  id: totrans-4
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将学习：
 - en: Properly label application private data directories and their runtime contexts
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 正确标记应用程序的私有数据目录及其运行时上下文
 - en: Further examine zygote and methods to secure it
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 进一步检查zygote及其安全方法
 - en: Discover how a finished `mac_permssions.xml` file assigns `seinfo` value
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 了解一个完成的`mac_permssions.xml`文件是如何分配`seinfo`值的
 - en: Create a new custom domain
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建一个新的自定义域
 - en: The case to secure the zygote
+  id: totrans-9
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 保护zygote的情况
 - en: Android applications with elevated permissions and capabilities are spawned
     from the zygote. An example of this is the system server, a large process comprised
     of native and non-native code hosting a variety of services. The system server
@@ -49,45 +69,64 @@
     server also runs with a highly sensitive UID of `system` (`1000`). Also, many
     OEMs package what are known as **system apps**, which are standalone applications
     running with the `system` UID.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓上具有提升权限和能力的应用程序是从zygote中产生的。一个例子就是系统服务器，这是一个由本地和非本地代码组成的大型进程，提供各种服务。系统服务器包含了活动管理器、包管理器、GPS信息等。系统服务器也以高度敏感的`system`
+    UID（`1000`）运行。此外，许多OEM将所谓的**系统应用**打包，这些是使用`system` UID独立运行的应用程序。
 - en: The zygote also spawns applications that do not need elevated permissions. All
     third-party applications represent this. Third party applications run as their
     own UID, separate from sensitive UIDs, such as `system`. Additionally, applications
     get spawned into various UIDs such as `media`, `nfc`, and so on. OEMs tend to
     define additional UIDs.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: zygote还产生不需要提升权限的应用程序。所有第三方应用程序都属于这一类。第三方应用程序以自己的UID运行，与敏感的UID（如`system`）分开。此外，应用程序会被放入各种UID中，如`media`、`nfc`等。OEM倾向于定义额外的UID。
 - en: 'It''s important to note that to get into a special UID, like `system`, you
     must be signed with the proper key. Android has four major keys used to sign applications:
     `media`, `platform`, `shared`, and `testkey`. They are located in `build/target/product/security`,
     along with a `README`.'
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 需要注意的是，要进入像`system`这样的特殊UID，你必须使用适当的密钥签名。安卓有四个主要密钥用于签名应用程序：`media`、`platform`、`shared`和`testkey`。它们位于`build/target/product/security`目录中，以及一个`README`文件。
 - en: 'According to the `README`, the key usage is as follows:'
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据`README`，密钥使用如下：
 - en: '`testkey`: A generic key for packages that do not otherwise specify a key.'
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`testkey`：对于那些没有指定密钥的包的通用密钥。'
 - en: '`platform`: A test key for packages that are part of the core platform.'
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`platform`：为核心平台部分包的测试密钥。'
 - en: '`shared`: A test key for things that are shared in the home/contacts process.'
+  id: totrans-16
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`shared`：用于在home/contacts进程中共享事物的测试密钥。'
 - en: '`media`: A test key for packages that are part of the media/download system.'
+  id: totrans-17
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`media`：用于媒体/下载系统中部分的包的测试密钥。'
 - en: In order to request `system` UID for your application, you must be signed with
     the `platform` key. Possession of the private key is required to execute in these
     more privileged environments.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了为你的应用程序请求`system` UID，你必须使用`platform`密钥进行签名。在这些更加特权的环境中执行，需要拥有私钥。
 - en: As you can see, we have applications executing at a variety of permission levels,
     and trust levels. We cannot trust third party applications since they are created
     by unknown entities, and we can trust things signed with our private keys. However,
@@ -95,12 +134,17 @@
     limitations as those identified in [Chapter 1](ch01.html "Chapter 1. Linux Access
     Controls"), *Linux Access Controls*. Because of these properties, it makes the
     zygote a prime target for attack, as well as fortification with SELinux.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 如您所见，我们的应用程序在不同的权限级别和信任级别下执行。我们不能信任第三方应用程序，因为它们是由未知实体创建的，而我们可以信任使用我们的私钥签名的实体。然而，在SELinux之前，应用程序权限仍然受到与[第1章](ch01.html
+    "第1章. Linux访问控制")中提到的*Linux访问控制*相同的DAC权限限制。由于这些特性，zygote成为了攻击的主要目标，同时也需要用SELinux来加固。
 - en: Fortifying the zygote
+  id: totrans-20
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 加固zygote
 - en: Now that we have identified a problem with zygote, the next step is understanding
     how to get applications into appropriate domains. We need either SELinux policy
     or code changes to place new processes into a domain. In [Chapter 9,](ch09.html
@@ -111,18 +155,25 @@
     is no `exec` in the path, we would have to rely on code changes. However, one
     also has to consider the signing key in this security model, and there is no way
     in pure SELinux policy language to express the key the process was signed with.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们已经确定了zygote的问题，下一步就是了解如何将应用程序放入适当的域中。我们需要SELinux策略或代码更改来将新进程放入一个域中。在[第9章](ch09.html
+    "第9章. 将服务添加到域")中，我们讨论了基于init服务的动态域转换，并在章节末尾提到了`exec()`系统调用在“应用程序标签限制”部分的重要性。这是动态域转换发生的触发器。如果路径中没有`exec`，我们将不得不依赖代码更改。但是，在这个安全模型中，我们还必须考虑签名密钥，而纯粹的SELinux策略语言无法表达进程签名的密钥。
 - en: Rather than exploring the whole zygote, we can dissect the following patches
     that introduce application labeling into Android. Additionally, we can discover
     how the introduced design meets the requirements of respecting the signing key,
     working within the design of SELinux and the zygote.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们不必探索整个zygote，可以剖析以下引入应用程序标签到Android的补丁。此外，我们可以发现引入的设计如何满足尊重签名密钥、在SELinux和zygote的设计内工作的要求。
 - en: Plumbing the zygote socket
+  id: totrans-23
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 管理zygote套接字
 - en: In [Chapter 3](ch03.html "Chapter 3. Android Is Weird"), *Android Is Weird*,
     we learned that the zygote listens for requests to spawn a new application from
     a socket. The first patch to examine is [https://android-review.googlesource.com/#/c/31066/](https://android-review.googlesource.com/#/c/31066/).
@@ -133,14 +184,18 @@
     new argument called `seinfo`. Later on, we will see how this gets used. It appears
     that this patch is plumbing this new `seinfo` argument over the socket. Note that
     this code is called external to the zygote process.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[第3章](ch03.html "第3章. Android很奇怪")中，我们了解到zygote通过监听套接字来等待请求启动新的应用程序。要检查的第一个补丁是[https://android-review.googlesource.com/#/c/31066/](https://android-review.googlesource.com/#/c/31066/)。这个补丁修改了Android基础框架中的三个文件。第一个文件是`Process.java`中的`startViaZygote()`方法。这个方法是相对于构建字符串参数并将它们通过`zygoteSendArgsAndGetResult()`传递给zygote的其他方法的主要入口点。补丁引入了一个名为`seinfo`的新参数。稍后，我们将看到如何使用它。看起来这个补丁正在通过套接字传输这个新的`seinfo`参数。请注意，这段代码是在zygote进程外部调用的。
 - en: The next file to look at in this patch is `ZygoteConnection.java`. This code
     executes from within the context. The patch starts off by declaring a string member
     variable `peerContext` in the `ZygoteConnection` class. In the constructor, this
     `peerContext` member is set to the value obtained from a call to `SELinux.getPeerContext(mSocket.getFileDescriptor())`.
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个补丁中要查看的下一个文件是`ZygoteConnection.java`。这段代码从上下文中执行。补丁首先在`ZygoteConnection`类中声明了一个字符串成员变量`peerContext`。在构造函数中，这个`peerContext`成员被设置为调用`SELinux.getPeerContext(mSocket.getFileDescriptor())`得到的值。
 - en: 'Since the `LocalSocket` `mSocket` is a Unix domain socket under the hood, you
     can obtain the connected client''s credentials. In this case, the call to `getPeerContext()`
     gets the client''s security context, or in more formal terms, the process label.
@@ -151,11 +206,14 @@
     calls `forkandSpecialize()`. Each security policy check has been modified to use
     SELinux on top of the existing DAC security controls. If we review `applyUidSecurityPolicy`,
     we see they make the call:'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE0]'
+  id: totrans-27
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: This is an example of a userspace leveraging mandatory access controls in what
     is known as an object manager. Additionally, a security check has been added for
     the mysterious `seinfo` string in the `applyseInfoSecurityPolicy()` method. All
@@ -163,6 +221,7 @@
     we look into `sepolicy access_vectors`, we see the added class `zygote`. This
     is a custom class for Android and defines all the vectors checked in the security
     checks.
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
 - en: The last file we'll consider from this patch is `ActivityManagerService.java`.
@@ -170,6 +229,7 @@
     lifecycles. It's a consumer of the `Process.start` API and needs to specify `seinfo`.
     This patch is simple, and for now, just sends `null`. Later, we will see the patch
     enabling its use.
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
 - en: The next patch, [https://android-review.googlesource.com/#/c/31063/](https://android-review.googlesource.com/#/c/31063/),
@@ -178,6 +238,7 @@
     in this native routine. It enters using `static pid_t forkAndSpecializeCommon(const
     u4* args, bool isSystemServer)`. This routine is responsible for creating the
     new process that becomes the application.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
 - en: It begins with housekeeping code moving from Java to C and sets up the `niceName`
@@ -190,6 +251,7 @@
     do things like `setuid` and `setgid`. However, those permissions are best left
     to the `zygote` domain, so the application domain we entered can be as minimal
     as possible.
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
 - en: Continuing, `setSELinuxContext` eventually calls `selinux_android_setcontext()`.
@@ -197,12 +259,14 @@
     this commit, but prior to the 4.3 release. Also note that `selinux_android_setcontext()`
     is defined in `libselinux`, so our journey will take us there. Here we see the
     mysterious `seinfo` is still being passed along.
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
 - en: The next patch to evaluate is [https://android-review.googlesource.com/#/c/39601/](https://android-review.googlesource.com/#/c/39601/).
     This patch actually passes a more meaningful `seinfo` value from the Java layer.
     Rather than being set to `null`, this patch introduces some parsing logic from
     an XML file, and passes this along to the `Process.start` method.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
 - en: 'This patch modifies two major components: `PackageManager` and `installd`.
@@ -213,86 +277,109 @@
     server, and therefore `PackageManager`, the capability to create these directories,
     only `installd` has these permissions. Using this approach, even the system server
     cannot read data in your private data directories unless you make it world readable.'
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
 - en: This patch is larger than the others, so we are only going to inspect the parts
     directly relevant to our discussion. We'll start by looking at `PackageManagerService.java`.
     This class is the package manager, proper for Android. In the constructor for
     `PackageManagerService()`, we see the addition of `mFoundPolicyFile = SELinuxMMAC.readInstallPolicy();`.
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
 - en: Based on the naming, we can conjecture that this method is looking for some
     type of policy configuration file, and if found, returns true, setting the `mFoundPolicyFile`
     member variable. We also see some calls to `createDataDirs` and `mInstaller.*`
     calls. These we can ignore, since those calls are headed to `installd`.
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
 - en: 'The next major portion adds the following:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE1]'
+  id: totrans-38
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: It's important to note that this code was added into the `scanPackageLI()` method.
     This method is called every time a package needs to be scanned for installation.
     So at a high level, if some policy file is found during service startup, then
     a `seinfo` value is assigned to the package.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
 - en: The next file to look at is `ApplicationInfo.java`, a container class for maintaining
     meta information about a package. As we can see, the `seinfo` value is specified
     here for storage purposes. Additionally, there is some code for serializing and
     deserializing the class via the Android specific `Parcel` implementation.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
 - en: At this point, we should have a closer look at the `SELinuxMMAC.java` code to
     confirm our understanding of what's going on. The class starts by declaring two
     locations for policy files.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE2]'
+  id: totrans-42
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'According to this, policy files can exist in two locations- `/data/system/mac_permissions.xml`
     and `/system/etc/security/mac_permissions.xml`. Eventually, we see the call from
     `PackageManagerService` initialization to the method defined in the class `readInstallPolicy()`,
     which eventually reduces to a call of:'
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE3]'
+  id: totrans-44
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'With `policyFiles` set to `INSTALL_POLICY_FILE`, this code uses the array to
     find a file at the specified locations. It is priority based, with the `/data`
     location taking precedence over `/system`. The rest of the code in this method
     looks like parsing logic and fills up two hash tables that were defined in the
     class declaration:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE4]'
+  id: totrans-46
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: The `sSigSeinfo` maps `Signatures`, or signing keys, to `seinfo` strings. The
     other map, `sPackageSeinfo` maps a package name to a string.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
 - en: At this point, we can read some formatted XML from the `mac_permissions.xml`
     file and create internal mappings from signing key to `seinfo` and package name
     to `seinfo`.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
 - en: The other call from `PackageManagerService` into this class came from `void
     assignSeinfoValue(PackageParser.Package pkg)`.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
 - en: 'Let''s investigate what this method can do. It starts by checking if the application
     is system UID or a system installed app. In other words, it checks whether the
     application is a third-party application:'
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE5]'
+  id: totrans-51
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'This code has subsequently been dropped by Google, and was initially a requirement
     for merge. We can, however, continue our evaluation. The code loops over all the
     signatures in the package, and checks against the hash table. If it is signed
@@ -300,11 +387,14 @@
     is that it matches by package name. In either case, the package''s `ApplictionInfo`
     class `seinfo` value is updated to reflect this and be used elsewhere by `installd`
     and zygote application spawn:'
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE6]'
+  id: totrans-53
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: As an aside, what is merged into mainline AOSP and what is maintained in the
     NSA Bitbucket repositories is a bit different. The NSA has additional controls
     in these policy files that can cause an application installation to abort. Google
@@ -315,12 +405,14 @@
     `CAMERA` permissions or block applications signed with certain keys. This also
     highlights how important it can be to find patches within large code bases and
     quickly come up to speed on how projects evolve, which can often seem daunting.
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
 - en: The last file in this patch for us to consider is `ActivityManagerService.java`.
     This patch replaces the null with `app.info.seinfo`. After all that work and all
     that plumbing, we finally have the mystical `seinfo` value fully parsed, associated
     per application package, and sent along to the zygote for use in `selinux_android_setcontext()`.
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
 - en: Now it would benefit us to sit back and think about some of the properties we
@@ -329,9 +421,11 @@
     benefit of `seinfo`. This is a highly sensitive and trusted string associated
     value of a signing key. The actual contents of the string are arbitrary and dictated
     in `mac_permissions.xml`, which is the next stop on our adventure.
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
 - en: The mac_permissions.xml file
+  id: totrans-57
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -343,87 +437,105 @@
     layer. MMAC stands for "Middleware Mandatory Access Controls". Google has not
     merged any of the MMAC features. However, since we used the NSA Bitbucket repositories,
     our code base contains these features.
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
 - en: 'The `mac_permissions.xml` is an XML file, and should adhere to the following
     rules, where italicized portions are only supported on NSA branches:'
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
 - en: A signature is a hex encoded X.509 certificate and is required for each signer
     tag.
+  id: totrans-60
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'A `<signer signature="" >` element may have multiple child elements:'
+  id: totrans-61
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`allow-permission`: It produces a set of maximal allowed permissions (whitelist)'
+  id: totrans-62
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`deny-permission`: It produces a blacklist of permissions to deny'
+  id: totrans-63
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`allow-all`: It is a wildcard tag that will allow every permission requested'
+  id: totrans-64
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`package`: It is a complex tag which defines allow, deny, and wildcard sub-elements
     for a specific package name protected by the signature'
+  id: totrans-65
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Zero or more global `<package name="">` tags are allowed. These tags allow a
     policy to be set outside any signature for specific package names.
+  id: totrans-66
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: A `<default>` tag is allowed that can contain install policy for all apps not
     signed with a previously listed cert and not having a per package global policy.
+  id: totrans-67
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Unknown tags at any level are skipped.
+  id: totrans-68
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Zero or more signer tags are allowed.
+  id: totrans-69
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Zero or more package tags are allowed per signer tag.
+  id: totrans-70
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: A `<package name="">` tag may not contain another `<package name="">` tag. If
     found, it's skipped.
+  id: totrans-71
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'When multiple sub-elements appear for a tag, the following logic is used to
     ultimately determine the type of enforcement:'
+  id: totrans-72
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: A blacklist is used if at least one deny-permission tag is found.
+  id: totrans-73
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: A whitelist is used, if not a blacklist, and at least one allow-permission tag
     is found.
+  id: totrans-74
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: A wildcard (accept all permissions) policy is used if not a blacklist and not
     a whitelist, and at least one allow-all tag is present.
+  id: totrans-75
   prefs:
   - PREF_IND
   - PREF_UL
@@ -431,141 +543,195 @@
 - en: If a `<package name="">` sub-element is found, then that sub-element's policy
     is used according to the earlier logic and overrides any signature global policy
     type.
+  id: totrans-76
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: In order for a policy stanza to be enforced, at least one of the preceding situations
     must apply. Meaning, empty signer, default or package tags will not be accepted.
+  id: totrans-77
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 为了使策略段落得到执行，至少需要满足前述情况之一。这意味着，不接受空签名人、默认或软件包标签。
 - en: Each `signer/default/package` (global or attached to a signer) tag is allowed
     to contain one `<seinfo value=""/>` tag. This tag represents additional info that
     each app can use in setting an SELinux security context on the eventual process.
+  id: totrans-78
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 每个`signer/default/package`（全局或附加到签名人）标签允许包含一个`<seinfo value=""/>`标签。这个标签表示每个应用程序可以在设置SELinux安全上下文时使用的附加信息，在最终的处理过程中。
 - en: Strict enforcing of any XML stanza is not enforced in most cases. This mainly
     applies to duplicate tags, which are allowed. In the event that a tag already
     exists, the original tag is replaced.
+  id: totrans-79
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在大多数情况下，并不严格执行任何XML段落的规则。这主要适用于允许的重复标签。如果已经存在一个标签，则原始标签将被替换。
 - en: There are also no checks on the validity of permission names. Although valid
     Android permissions are expected, nothing prevents unknowns.
+  id: totrans-80
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 同时也没有检查权限名称的有效性。尽管预期是有效的安卓权限，但并未阻止未知权限。
 - en: 'Following are the enforcement decisions:'
+  id: totrans-81
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 以下是执行决策：
 - en: All signatures used to sign an app are checked for policy according to signer
     tags. However, only one of the signature policies has to pass.
+  id: totrans-82
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 用于签署应用程序的所有签名都将根据签名人标签检查策略。然而，只有一个签名策略需要通过。
 - en: In the event that none of the signature policies pass, or none even match, then
     a global package policy is sought. If found, this policy mediates the install.
+  id: totrans-83
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果所有的签名策略都未通过，或者没有任何匹配项，那么将寻求全局软件包策略。如果找到，此策略将调解安装。
 - en: The default tag is consulted last, if needed.
+  id: totrans-84
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果需要，最后将咨询默认标签。
 - en: A local package policy always overrides any parent policy.
+  id: totrans-85
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 本地软件包策略总是覆盖任何父策略。
 - en: If none of the cases apply, then the app is denied.
+  id: totrans-86
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果没有任何情况适用，那么应用程序将被拒绝。
 - en: 'The following examples ignore the Install MMAC support and focus on the mainline
     usage of `seinfo` mapping. The following is an example of stanza mapping all things
     signed with the platform key to `seinfo` value platform:'
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下示例忽略了安装MMAC支持，并专注于`seinfo`映射的主要用途。以下是将所有使用平台密钥签名的项映射到`seinfo`值平台的段落映射示例：
 - en: '[PRE7]'
+  id: totrans-88
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'Here is an example mapping all things signed with the release key to the release
     domain with the exception of the browser. The browser gets assigned a `seinfo`
     value of `browser`, as follows:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是一个将使用发布密钥签名的所有内容映射到发布域的示例，但浏览器除外。浏览器被分配了一个`seinfo`值为`browser`，如下所示：
 - en: '[PRE8]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Anything with an unknown key, gets mapped to the default tag:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 任何具有未知密钥的内容，都会被映射到默认标签：
 - en: '[PRE9]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: The signing tags are of interest, the `@PLATFORM` and `@RELEASE` are special
     processing strings used during build. Another mapping file maps these to actual
     key values. The file that is processed and placed onto the device has all key
     references replaced with hex encoded public keys rather than these placeholders.
     It also has all whitespace and comments stripped to reduce size. Let's take a
     look by pulling the built file from the device and formatting it.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 签名标签值得关注，`@PLATFORM`和`@RELEASE`是在构建期间使用的特殊处理字符串。另一个映射文件将这些映射到实际的关键值。处理过的文件被放置在设备上，所有密钥引用都被替换为十六进制编码的公钥，而不是这些占位符。它还删除了所有的空白和注释，以减少大小。让我们通过从设备中提取构建的文件并格式化它来查看。
 - en: '[PRE10]'
+  id: totrans-94
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Now, scroll to the top of the formatted output; you should see the following:'
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，滚动到格式化输出的顶部，你应该看到以下内容：
 - en: '[PRE11]'
+  id: totrans-96
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: Notice that `signature=@PLATFORM` is now a hex string. This hex string is a
     valid X509 certificate.
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，`signature=@PLATFORM`现在是一个十六进制字符串。这个十六进制字符串是一个有效的X509证书。
 - en: keys.conf
+  id: totrans-98
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: keys.conf
 - en: 'The actual magic doing the mapping from `signature=@PLATFORM` in `mac_permissions.xml`
     is `keys.conf`. This configuration file allows you to map a pem encoded x509 to
     an arbitrary string. The convention is to start them with `@`, but this is not
     enforced. The format of the file is based on the Python config parser and contains
     sections. The section names are the tags in the `mac_permissions.xml` file you
     wish to replace with key values. The platform example is:'
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 实际上，从`mac_permissions.xml`中的`signature=@PLATFORM`到`keys.conf`的映射才是魔法所在。这个配置文件允许你将一个pem编码的x509映射到一个任意的字符串。约定是使用`@`开始，但这不是强制性的。该文件的格式基于Python配置解析器，并包含部分。部分名称是你在`mac_permissions.xml`文件中希望用密钥值替换的标签。平台示例是：
 - en: '[PRE12]'
+  id: totrans-100
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'In Android, when you build, you can have three levels of builds: `engineering`,
     `userdebug`, or `user`. In the `keys.conf` file, you can associate a key to be
     used for all levels with the section attribute `ALL`, or you can assign different
     keys per level. This is helpful when building release or user builds with very
     special release keys. We see an example of this in the `@RELEASE` section:'
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE13]'
+  id: totrans-102
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: The file also allows the use of environment variables through the traditional
     `$` special character. The default location for the pem files is `build/target/product/security`.
     However, you should *never* use these keys for a user release build. These keys
     are the AOSP test keys and are public! By doing so, anyone can use the system
     key to sign their app and gain system privilege. The `keys.conf` file is only
     used during the build and is not located on the system.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
 - en: seapp_contexts
+  id: totrans-104
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -575,179 +741,214 @@
     file, `seapp_contexts`. Like `mac_permissions.xml`, it is loaded to the device.
     However, the default location is `/seapp_contexts`. The format of `seapp_contexts`
     is the `key=value` pair mappings per line, adhering to the following rules:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
 - en: 'Input selectors:'
+  id: totrans-106
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`isSystemServer` (boolean)'
+  id: totrans-107
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`user` (string)'
+  id: totrans-108
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`seinfo` (string)'
+  id: totrans-109
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`name` (string)'
+  id: totrans-110
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`sebool` (string)'
+  id: totrans-111
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Input selector rules:'
+  id: totrans-112
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`isSystemServer=true` can only be used once.'
+  id: totrans-113
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: An unspecified `isSystemServer` defaults to false.
+  id: totrans-114
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: An unspecified string selector will match any value.
+  id: totrans-115
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: A user string selector that ends in `*` will perform a prefix match.
+  id: totrans-116
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`user=_app` will match any regular app UID.'
+  id: totrans-117
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`user=_isolated` will match any isolated service UID.'
+  id: totrans-118
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: All specified input selectors in an entry must match (logical AND).
+  id: totrans-119
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Matching is case-insensitive.
+  id: totrans-120
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Precedence rules in order:'
+  id: totrans-121
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`isSystemServer=true` before `isSystemServer=false`'
+  id: totrans-122
   prefs:
   - PREF_IND
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Specified `user=` string before unspecified `user=` string
+  id: totrans-123
   prefs:
   - PREF_IND
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Fixed the `user=` string before the `user=` prefix (ending in `*`)
+  id: totrans-124
   prefs:
   - PREF_IND
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Longer `user=` prefix before shorter `user=` prefix
+  id: totrans-125
   prefs:
   - PREF_IND
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Specified `seinfo=` string before unspecified `seinfo=` string.
+  id: totrans-126
   prefs:
   - PREF_IND
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Specified `name=` string before unspecified `name=` string.
+  id: totrans-127
   prefs:
   - PREF_IND
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Specified `sebool=` string before unspecified `sebool=` string.
+  id: totrans-128
   prefs:
   - PREF_IND
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Outputs:'
+  id: totrans-129
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`domain` (string): It specifies the process domain for the application.'
+  id: totrans-130
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`type` (string): It specifies the disk label for the applications'' private
     data directory.'
+  id: totrans-131
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`levelFrom` (string; one of `none`, `all`, `app`, or `user`): It gives the
     MLS specifier.'
+  id: totrans-132
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`level` (string): It shows the hardcoded MLS value.'
+  id: totrans-133
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Output rules:'
+  id: totrans-134
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Only entries that specify `domain=` will be used for app process labeling.
+  id: totrans-135
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: Only entries that specify `type=` will be used for app directory labeling.
+  id: totrans-136
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`levelFrom=user` is only supported for `_app` or `_isolated` UIDs.'
+  id: totrans-137
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`levelFrom=app` or `levelFrom=all` is only supported for `_app` UIDs.'
+  id: totrans-138
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`level` may be used to specify a fixed level for any UID.'
+  id: totrans-139
   prefs:
   - PREF_IND
   - PREF_UL
@@ -758,23 +959,30 @@
     in `external/libselinux/src/android.c` and are recommended reads. For example,
     this entry places all applications with UID `bluetooth` in the `bluetooth` domain
     with a data directory label of `bluetooth_data_file`:'
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE14]'
+  id: totrans-141
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: This example places all third party or "default" applications into a process
     domain of `untrusted_app` and a data directory of `app_data_file`. It additionally
     uses MLS categories of `levelFrom=app` to help provide additional MLS-based separations.
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE15]'
+  id: totrans-143
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: Currently, this feature is experimental as this breaks some known application
     compatibility issues. At the time of this writing, this was a hot item of focus
     for both Google and NSA engineers. Since it is experimental, let's validate its
     functionality and then disable it.
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
 - en: 'We have not installed any third party applications yet, so we''ll need to do
@@ -783,30 +991,41 @@
     application located at [https://f-droid.org/repository/browse/?fdid=org.zeroxlab.zeroxbenchmark](https://f-droid.org/repository/browse/?fdid=org.zeroxlab.zeroxbenchmark)
     with an APK at [https://f-droid.org/repo/org.zeroxlab.zeroxbenchmark_9.apk](https://f-droid.org/repo/org.zeroxlab.zeroxbenchmark_9.apk),
     as follows:'
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE16]'
+  id: totrans-146
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: Tip
+  id: totrans-147
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
 - en: 'Check `logcat` for the install time `seinfo` value:'
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE17]'
+  id: totrans-149
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'From your UDOO, launch the `0xbenchmark` APK. We should see it running with
     its label in `ps`:'
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE18]'
+  id: totrans-151
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Notice the level portion of the context string `s0:c40,c256`. These categories
     were created with the `level=app` setting from `seapp_contexts`.
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
 - en: To disable it, we could simply remove the key-value pair for level from the
@@ -815,47 +1034,65 @@
     existing `untrusted_app` entry is modified, and a new one is added. Change `user=_app
     domain=untrusted_app type=app_data_file` to `user=_app sebool=app_level domain=untrusted_app
     type=app_data_file levelFrom=app`.
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
 - en: 'Build that with `mmm external/sepolicy`, as follows:'
+  id: totrans-154
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE19]'
+  id: totrans-155
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Well, there was a build error complaining about not finding the `selinux` Boolean
     on line 42 of `seapp_contexts`. Let''s attempt to correct the issue by declaring
     the Boolean. In `app.te`, add: `bool app_level false;`. Now push the newly built
     `seapp_contexts` and sepolicy file to the device and trigger a dynamic reload:'
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE20]'
+  id: totrans-157
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'We can verify that the Boolean exists by:'
+  id: totrans-158
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE21]'
+  id: totrans-159
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'Due to design limitations, we need to uninstall and reinstall the application:'
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE22]'
+  id: totrans-161
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'Re-install and check the context of the process *after* launching it:'
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE23]'
+  id: totrans-163
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: Great! It failed. After some debugging, we discovered the source of the issue
     is that the path `/data/security` is not world searchable, causing a DAC permissions
     failure.
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
 - en: Note
+  id: totrans-165
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
@@ -863,26 +1100,33 @@
     we saw the `fopen` on `seapp_contexts_file[]` array (files in priority order)
     while checking the result of `fp = fopen(seapp_contexts_file[i++], "r")` in `selinux_android_seapp_context_reload()`
     and using `selinux_log()` to dump the data to `logcat`.
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE24]'
+  id: totrans-167
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Remember the `set selinux` context occurs after the UID switch, so we need to
     make it searchable for others. We can fix the permissions on the UDOO `init.rc`
     script by changing `device/fsl/imx6/etc/init.rc`. Specifically, change the line
     `mkdir /data/security 0700 system system` to `mkdir /data/security 0711 system
     system`. Build and flash the `bootimage`, and try the context test again.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE25]'
+  id: totrans-169
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: So far, we've demonstrated how to use the `sebool` option on `seapp_contexts`
     to disable the MLS categories. It's important to note that when changing categories
     or types on APKs, it is required to remove and install the APK, or you will orphan
     the process from its data directory because it won't have access permissions under
     most circumstances.
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
 - en: 'Next, let''s take this APK, uninstall it, and assign it a unique domain by
@@ -891,69 +1135,98 @@
     custom things. For example, if you''re an OEM, you may need to allow custom permissions
     to third party applications that are not signed with an OEM controlled key. Start
     by uninstalling the APK:'
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE26]'
+  id: totrans-172
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Create a new entry in `mac_permissions.xml` by adding:'
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE27]'
+  id: totrans-174
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Now we need to get a pem file for `keys.conf`. So unpackage the APK and extract
     the public certificate:'
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE28]'
+  id: totrans-176
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'We''ll have to strip any cruft from the generated `CERT.pem` file. If you open
     it up, you should see these lines at the top:'
+  id: totrans-177
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE29]'
+  id: totrans-178
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: They need to be removed, so remove *only* the subject and issuer lines. The
     file should start with `BEGIN CERTIFICATE` and end with `END CERTIFICATE` scissor
     lines.
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
 - en: 'Let''s move this to a new folder in our workspace called `certs` and move the
     certificate into this folder with a better name:'
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE30]'
+  id: totrans-181
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'We can set up our `keys.conf` by adding:'
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE31]'
+  id: totrans-183
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Don''t forget to update `seapp_contexts` in order to use the new mapping:'
+  id: totrans-184
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE32]'
+  id: totrans-185
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'Now declare the new types to be used. The domain type should be declared in
     a file called `benchmark_app.te` in `sepolicy`:'
+  id: totrans-186
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE33]'
+  id: totrans-187
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'Also, add the `benchmark_app_data_file` in `file.te`:'
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE34]'
+  id: totrans-189
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: Tip
+  id: totrans-190
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
@@ -961,82 +1234,122 @@
     something security critical. Make sure you look at each attribute and macro and
     see its usage. You don't want to open up an unintended hole by having an overly
     permissive domain.
+  id: totrans-191
   prefs: []
   type: TYPE_NORMAL
 - en: Rebuild the policy, push the required pieces, and trigger a reload.
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE35]'
+  id: totrans-193
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Start a shell and grep logcat to see the `seinfo` value the benchmark APK is
     installed as. Then install the APK:'
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE36]'
+  id: totrans-195
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'On the `logcat` output, you should see:'
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`logcat`输出中，你应该看到：
 - en: '[PRE37]'
+  id: totrans-197
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: It should have been `seinfo=benchmark`! What could have happened?
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: 它应该是`seinfo=benchmark`！可能发生了什么？
 - en: 'The problem is in `frameworks/base/services/java/com/android/server/pm/SELinuxMMAC.java`.
     It looks in `/data/security/mac_permissions.xml`; so we can just push `mac_permissions.xml`.
     This is another bug in the dynamic policy reload and has to do with historical
     changes in this loading procedure. The culprit is within the `frameworks/base/services/java/com/android/server/pm/SELinuxMMAC.java`
     file:'
+  id: totrans-199
   prefs: []
   type: TYPE_NORMAL
+  zh: 问题出在`frameworks/base/services/java/com/android/server/pm/SELinuxMMAC.java`中。它查看`/data/security/mac_permissions.xml`；所以我们可以直接推送`mac_permissions.xml`。这是动态策略重载中的另一个错误，与加载过程中历史更改有关。罪魁祸首在`frameworks/base/services/java/com/android/server/pm/SELinuxMMAC.java`文件中：
 - en: '[PRE38]'
+  id: totrans-200
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: To get around this, remount `system` and push it to the default location.
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了解决这个问题，重新挂载`system`并将其推送到默认位置。
 - en: '[PRE39]'
+  id: totrans-202
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: 'This does *not* require a `setprop selinux.reload_policy 1`. Uninstall and
     reinstall the benchmark APK, and check the logs:'
+  id: totrans-203
   prefs: []
   type: TYPE_NORMAL
+  zh: 这不需要`setprop selinux.reload_policy 1`。卸载并重新安装基准测试APK，并检查日志：
 - en: '[PRE40]'
+  id: totrans-204
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'OK. It still didn''t work. When we examined the code, the `mac_permissions.xml`
     file was loaded during package manager service start. This file won''t get reloaded
     without a reboot, so let''s uninstall the benchmark APK, and reboot the UDOO.
     After it''s been booted and `adb` is enabled, trigger a dynamic reload, install
     the APK, and check `logcat`. It should have:'
+  id: totrans-205
   prefs: []
   type: TYPE_NORMAL
+  zh: 好的，它仍然没有工作。当我们检查代码时，发现`mac_permissions.xml`文件在包管理器服务启动时被加载。没有重启的情况下，这个文件不会被重新加载，所以让我们卸载基准测试APK，并重启UDOО。启动后，启用`adb`，触发动态重载，安装APK，并检查`logcat`。它应该包含：
 - en: '[PRE41]'
+  id: totrans-206
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'Now let''s verify the process domain by launching the APK, checking `ps`, and
     verifying its application private directory:'
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在让我们通过启动APK，检查`ps`，并验证其应用程序私有目录来验证进程域：
 - en: '[PRE42]'
+  id: totrans-208
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: This time, all the types check out. We successfully created a new custom domain.
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 这一次，所有类型都检查通过了。我们成功创建了一个新的自定义域。
 - en: Summary
+  id: totrans-210
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: In this chapter, we investigated how to properly label application private data
     directories as well as their runtime contexts via the configuration files and
     SELinux policy. We also looked into the subsystems and code to make all of this
     work as well as some basic things that may go wrong along the way. In the next
     chapter, we will expand on how the policy and configuration files get built by
     peering into the SE for Android build system.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们研究了如何通过配置文件和SELinux策略正确标记应用程序的私有数据目录及其运行时上下文。我们还探讨了使这一切正常工作的子系统及代码，以及在此过程中可能出错的一些基本问题。在下一章中，我们将通过查看SE
+    for Android构建系统，详细介绍策略和配置文件是如何构建的。
