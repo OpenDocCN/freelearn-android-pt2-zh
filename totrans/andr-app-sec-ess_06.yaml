@@ -1,7 +1,9 @@
 - en: Chapter 6. Your Tools – Crypto APIs
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第六章. 你的工具 - 加密 API
 - en: To respect user privacy, applications that process sensitive data need to protect
     this data from prying eyes. Although the Android stack provides layered security
     architecture with security built in the operating system itself, it is relatively
@@ -9,8 +11,11 @@
     the device. It is thus important for application developers to be aware of the
     tools that they can use to securely store data. On the same note, it is important
     for them to understand how to properly transmit data.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了尊重用户隐私，处理敏感数据的应用程序需要保护这些数据不被窥探。尽管 Android 栈提供了分层的安全架构，安全功能内置于操作系统本身，但在设备上获取
+    root 访问权限相对容易，从而危及存储在设备上的数据。因此，应用程序开发者了解他们可以用来安全存储数据的工具是很重要的。同样，他们了解如何正确传输数据也是至关重要的。
 - en: The Android stack provides tools that developers can use to perform tasks such
     as encryption and decryption, hashing, generating random numbers, and message
     authentication codes. These tools are the cryptographic APIs provided by various
@@ -19,8 +24,12 @@
     APIs. Random number generation is provided as a utility by the `java.util.Random`
     class, and the `java.security` package provides APIs for hashing, key generation,
     and certificate management.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 栈为开发者提供了工具，用于执行诸如加密和解密、散列、生成随机数以及消息认证码等任务。这些工具是栈中各个软件包提供的加密 API。`javax.crypto`
+    软件包提供了加密和解密消息、生成消息认证码和密钥协商 API 的能力。`java.util.Random` 类提供了生成随机数的工具，而 `java.security`
+    软件包提供了散列、密钥生成和证书管理的 API。
 - en: In this chapter, we will discuss crypto APIs provided by the Android stack and
     available to application developers to protect sensitive information. We begin
     the basic terminology used in cryptography, followed by information on how to
@@ -28,74 +37,99 @@
     generation followed by hashing functions. Asymmetric and symmetric key cryptography
     and different cipher modes are discussed next followed by message authentication
     codes.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将讨论 Android 栈提供的加密 API，应用程序开发者可以利用这些 API 来保护敏感信息。我们首先介绍密码学中使用的基本术语，然后是如何确定可用的安全提供者。接下来，我们将讨论随机数生成，随后是散列函数。接着会讨论非对称和对称密钥密码学以及不同的加密模式，然后是消息认证码。
 - en: Terminology
+  id: totrans-4
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 术语
 - en: Let us start off with an understanding of some terms that are used in cryptography.
     As we progress through the chapter, these terms will be repeatedly used, so it
     is important to become familiar with them before we proceed.
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们先了解一些在密码学中使用的术语。随着我们深入本章，这些术语将反复出现，因此在我们继续之前，熟悉它们是很重要的。
 - en: 'Cryptography: Cryptography is the study and practice of secure communication
     in an insecure environment and in the presence of adversaries. As our lives become
     more digitalized and connected, cryptography has gained increasing importance.
     Cryptography is practised in the form of algorithms and protocols that are designed
     using mathematical formulae and problems that are computationally hard.'
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 密码学：密码学是在不安全环境中以及在对手存在的情况下进行安全通信的研究和实践。随着我们的生活越来越数字化和互联，密码学的重要性日益增加。密码学以算法和协议的形式实践，这些算法和协议是使用数学公式和计算上困难的问题设计的。
 - en: 'Plaintext: Also called cleartext, plaintext is the message that a sender wants
     to transmit and that needs to be kept a secret. If Alice wants to send a message
     "Hello World" to Bob, then "Hello World" is the plaintext.'
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 明文：也称为纯文本，明文是发送者想要传输的需要保密的消息。如果爱丽丝想要向鲍勃发送一条消息"Hello World"，那么"Hello World"就是明文。
 - en: 'Ciphertext: Also called codetext, this is the encoded or encrypted message
     of plaintext that is sent to the receiver. Let us follow the previous example
     where Alice wants to sends the message "Hello World" to Bob. Alice uses a substitution
     method where each alphabet is replaced by the next alphabet to form the ciphertext.
     So, the plaintext "Hello World" is now transformed into "Ifmmp Xpsme". "Ifmmp
     Xpsme" is the ciphertext that is transmitted to Bob.'
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 密文：也称为编码文本，这是发送给接收者的经过编码或加密的明文消息。让我们继续之前的例子，爱丽丝想要将消息"Hello World"发送给鲍勃。爱丽丝使用了一种替换方法，每个字母被下一个字母替换，形成密文。因此，明文"Hello
+    World"现在变成了"Ifmmp Xpsme"。"Ifmmp Xpsme"就是传送给鲍勃的密文。
 - en: 'Encryption: Encryption is the process of converting plaintext into ciphertext
     such that an eavesdropper cannot decipher the message as it is being transmitted
     or stored, and only the parties that know the code can understand it. In the preceding
     example the process of converting "Hello World" to "Ifmmp Xpsme" is called encryption.![Terminology](img/5603_06_01.jpg)'
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 加密：加密是将明文转换为密文的过程，这样窃听者无法在传输或存储过程中解读信息，只有知道密码的双方才能理解。在上述示例中，将"Hello World"转换为"Ifmmp
+    Xpsme"的过程称为加密。![术语](img/5603_06_01.jpg)
 - en: 'Decryption: Decryption is the reverse of encryption. It is the process of converting
     a ciphertext back to a plaintext at the receiving end to retrieve the information.
     So, the conversion of "Ifmmp Xpsme" back to "Hello World" is called decryption.![Terminology](img/5603_06_02.jpg)'
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 解密：解密是加密的逆过程。它是在接收端将密文转换回明文以获取信息的过程。因此，将"Ifmmp Xpsme"转换回"Hello World"的过程称为解密。![术语](img/5603_06_02.jpg)
 - en: 'Key: In cryptographic terms, a key is the critical piece of information or
     mathematical parameter that determines the output of a cryptographic algorithm.
     In the preceding example, when "Hello World" is converted to "Ifmmp Xpsme", the
     critical information is adding one to each alphabet and this is the key. During
     decryption, the critical information is subtracting one from each alphabet and
     this is the key for decryption.'
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 关键：在密码学术语中，密钥是决定加密算法输出的关键信息或数学参数。在上述示例中，将"Hello World"转换为"Ifmmp Xpsme"时，关键信息是给每个字母加一，这就是密钥。在解密过程中，关键信息是从每个字母减一，这就是解密的密钥。
 - en: 'Cipher: A cipher is the cryptographic algorithm that performs the encryption
     and decryption of messages. It is also called a cryptographic algorithm. In the
     preceding example, the cipher is an algorithm of encrypting "Hello World" to "Ifmmp
     Xpsme" and then at the receiving end, converting "Ifmmp Xpsme" back to "Hello
     World".'
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 密码：密码是执行消息加密和解密的加密算法。它也被称为加密算法。在上述示例中，密码是一种将"Hello World"加密为"Ifmmp Xpsme"的算法，然后在接收端将"Ifmmp
+    Xpsme"转换回"Hello World"。
 - en: Security providers
+  id: totrans-13
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 安全提供者
 - en: The Android stack is customizable as far as the security providers are concerned.
     This means that the device manufacturers can add their own crypto providers. As
     an application developer, you are at liberty to use your own security provider
@@ -106,51 +140,74 @@
     providers and their complete list of algorithms supported at a given point of
     time. Also, make sure to test your application on different devices to confirm
     that the crypto algorithms work as expected.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 就安全提供者而言，Android堆栈是可定制的。这意味着设备制造商可以添加他们自己的加密提供者。作为应用程序开发者，您也可以自由使用自己的安全提供者。由于Android堆栈仅提供Bouncy
+    Castle安全提供者的一些功能，因此Spongy Castle非常受欢迎。此外，不同版本的Android堆栈通过移除不安全的加密算法并添加新的算法，不断更新其加密功能。您可能想要检查在特定时间点提供者及其支持算法的完整列表。同时，确保在不同的设备上测试您的应用程序，以确认加密算法按预期工作。
 - en: 'The following code snippet shows how to obtain a list of crypto providers by
     using the `java.security.Providers` method:'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的代码片段展示了如何使用`java.security.Providers`方法获取加密提供者列表：
 - en: '[PRE0]'
+  id: totrans-16
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: '![Security providers](img/5603_06_03.jpg)'
+  id: totrans-17
   prefs: []
   type: TYPE_IMG
+  zh: '![安全提供者](img/5603_06_03.jpg)'
 - en: 'Now to get the detailed information about each provider, let''s enhance the
     function to log more details, as follows:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在为了获取每个提供者的详细信息，让我们增强函数以记录更多细节，如下所示：
 - en: '[PRE1]'
+  id: totrans-19
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'The following screenshot shows the details about some security providers:'
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的屏幕截图显示了有关一些安全提供者的详细信息：
 - en: '![Security providers](img/5603_06_04.jpg)'
+  id: totrans-21
   prefs: []
   type: TYPE_IMG
+  zh: '![安全提供者](img/5603_06_04.jpg)'
 - en: Always use well-known, industry standard cryptographic algorithms. Writing a
     crypto routine sounds fun and easy, but it is much harder that it seems. Industry
     standard algorithms like we will study in the following section have been developed
     by cryptographic experts and thoroughly tested. If any weakness is found in such
     algorithms, then that is made aware to the public, and developers can update their
     code with stronger crypto algorithms.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 始终使用知名、行业标准的加密算法。编写加密例程听起来很有趣也很简单，但实际上比看上去要困难得多。我们将在下一节学习的行业标准算法是由加密专家开发并经过彻底测试的。如果发现这些算法有任何弱点，那么这些信息会被公开，开发者可以用更强大的加密算法更新他们的代码。
 - en: Random number generation
+  id: totrans-23
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 随机数生成
 - en: Generating a random number is one of the most important tasks in cryptography.
     A random number acts as a seed for other crypto functions, such as encryption
     and generating message authentication codes. It is hard to simulate the generation
     of true random numbers as it comes from unpredictable acts of nature. Computer
     systems generate pseudo random numbers which means that they are not truly random
     but appear random.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 生成随机数是密码学中最重要的任务之一。随机数作为其他加密功能的种子，如加密和生成消息认证码。模拟真正的随机数生成是很困难的，因为它们来自自然界不可预测的行为。计算机系统生成伪随机数，这意味着它们并不是真正的随机，但看起来是随机的。
 - en: 'There are two approaches to compute generated random numbers: **Pseudo Random
     Number Generators** (**PRNG**) and **True** **Random Number Generators** (**TRNG**).
     PRNGs are generated by an algorithm based on some mathematical formula. TRNGs
@@ -158,63 +215,92 @@
     cycles, clock, noise, and keystrokes. Dr. Mads Haahr, professor at Trinity College
     runs [www.random.org](http://www.random.org) and this is a very interesting stop
     for anyone who is interested in randomness. Check it out!'
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 计算生成的随机数有两种方法：**伪随机数生成器**（**PRNG**）和**真随机数生成器**（**TRNG**）。PRNG是基于某些数学公式算法生成的。TRNG基于系统特性，如**CPU**（**中央处理单元**）周期、时钟、噪声和按键操作等。都柏林三一学院的Mads
+    Haahr博士运行着[www.random.org](http://www.random.org)，这是任何对随机性感兴趣的人的一个非常有趣的站点。请查看！
 - en: Use cases of random numbers include gaming applications such as those where
     users roll a dice, gambling applications, music applications that play songs randomly,
     and as a seed for crypto operations like hashing, encryption, or key generation.
     Not all use cases require strong randomness. A music player playing tracks randomly
     does not require as strong randomness as a key generation algorithm might require.
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 随机数的应用场景包括游戏应用，比如用户掷骰子的应用、赌博应用、随机播放歌曲的音乐应用，以及作为加密操作（如哈希、加密或密钥生成）的种子等。并非所有的应用场景都需要强烈的随机性。比如，随机播放曲目的音乐播放器不需要像密钥生成算法那样强烈的随机性。
 - en: Android provides the ability to generate random numbers using the `java.util.Random`
     class of the `java.util` package. The class provides methods to generate one or
     more arrays of random double, byte, float, int, or long. This class is thread-safe.
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓提供了使用`java.util`包中的`java.util.Random`类生成随机数的能力。这个类提供了生成一个或多个随机双精度浮点数、字节、浮点数、整数或长整数的数组的方法。这个类是线程安全的。
 - en: The following code snippet shows an example of how to generate a random number
     within a range of 1 to 100.
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的代码片段展示了如何在1到100的范围内生成一个随机数的例子。
 - en: '[PRE2]'
+  id: totrans-29
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: A random number can be generated using a seed as well. However, since the Android
     stack has a pseudo random number generator that seeds itself with an initial state
     quite unpredictable, the seed actually makes the random number more predictable.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 也可以使用种子生成随机数。然而，由于安卓堆栈有一个伪随机数生成器，它使用一个相当不可预测的初始状态作为种子，实际上种子使得随机数更容易被预测。
 - en: Hashing functions
+  id: totrans-31
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 哈希函数
 - en: Hashing functions are algorithms that work on data of an arbitrary length to
     produce a fixed length output. Given the same input, the output is always the
     same and for different input values, the output is always different. These functions
     are one way, which means that the reverse operation on data is not possible.
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 哈希函数是处理任意长度数据以产生固定长度输出的算法。对于相同的输入，输出总是相同的，对于不同的输入值，输出总是不同的。这些函数是单向的，这意味着对数据的反向操作是不可能的。
 - en: 'In mathematical terms, a one-way hash function can be defined as follows:'
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 在数学术语中，单向哈希函数可以定义如下：
 - en: 'Given a message *M*, and a one-way hash function *H*, it is easy to compute
     *x* such that *H(M) = x*. But given *x* and *H*, it is infeasible to get the message
     *M*. This can be shown mathematically as follows:'
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 给定一个消息*M*，和一个单向哈希函数*H*，很容易计算出*x*使得*H(M) = x*。但是给定*x*和*H*，要得到消息*M*是不可行的。这可以数学上如下表示：
 - en: '*H(M) = x*'
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: '*H(M) = x*'
 - en: '*H(x) ≠ M*'
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: '*H(x) ≠ M*'
 - en: 'Another property of hash functions is low collision probability. This means
     that given a message *M*, it is hard to find another message *M*, such that:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 哈希函数的另一个特性是低碰撞概率。这意味着给定一个消息*M*，很难找到另一个消息*M*，使得：
 - en: '*H(M)* ≠ *H(M'')*'
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: '*H(M)* ≠ *H(M'')*'
 - en: One-way hash functions can be used for various applications. They are used to
     create a fixed size output for a variable length string. Using a hash, a value
     can be securely stored as given by the hash; it is unfeasible to retrieve the
@@ -222,8 +308,10 @@
     is stored in the table. Since the hash value is always the same for a given message,
     entering the correct password will lead to the generation of the same hash value.
     They are used as a checksum to ensure that the message is not altered in transit.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 单向哈希函数可用于各种应用。它们用于为可变长度字符串创建固定大小的输出。使用哈希，可以安全地存储给定哈希的值；无法检索原始消息。例如，在表中存储密码的哈希，而不是密码本身。由于给定的消息哈希值始终相同，输入正确的密码将导致生成相同的哈希值。它们用作校验和，以确保消息在传输过程中未被更改。
 - en: 'The most popular hash functions that are used today are the **MD5** (**Message
     Digest Algorithm**) and **SHA** (**Secure Hash Algorithm**) family of hash functions.
     All these hash functions are different in strength and collision probability,
@@ -232,85 +320,125 @@
     considered secure enough. For applications that require very high-level of security,
     stronger hash functions, such as SHA-3 should be considered. The following table
     summarizes the length of the output for some common hashing functions:'
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 目前广泛使用的最流行的哈希函数是**MD5**（**消息摘要算法**）和**SHA**（**安全哈希算法**）系列的哈希函数。所有这些哈希函数在强度和碰撞概率上都有所不同，你应该选择最适合你应用的一个。通常，使用SHA-256是一个不错的选择。许多应用程序仍然使用MD5和SHA-1，但现在这些被认为足够安全。对于需要非常高级别安全的应用程序，应考虑使用更强大的哈希函数，如SHA-3。以下表格总结了一些常见哈希函数的输出长度：
 - en: '| Hash algorithm | Block length (in bits) | Output length (in bits) |'
+  id: totrans-41
   prefs: []
   type: TYPE_TB
+  zh: '| 哈希算法 | 块长度（位） | 输出长度（位） |'
 - en: '| --- | --- | --- |'
+  id: totrans-42
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- | --- |'
 - en: '| MD5 | 512 | 128 |'
+  id: totrans-43
   prefs: []
   type: TYPE_TB
+  zh: '| MD5 | 512 | 128 |'
 - en: '| SHA-1 | 512 | 160 |'
+  id: totrans-44
   prefs: []
   type: TYPE_TB
+  zh: '| SHA-1 | 512 | 160 |'
 - en: '| SHA-256 | 512 | 256 |'
+  id: totrans-45
   prefs: []
   type: TYPE_TB
+  zh: '| SHA-256 | 512 | 256 |'
 - en: '| SHA-512 | 1024 | 512 |'
+  id: totrans-46
   prefs: []
   type: TYPE_TB
+  zh: '| SHA-512 | 1024 | 512 |'
 - en: 'The following image from Wikipedia shows how small changes in input change
     the output completely. The hash function in this case is SHA-1:'
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的维基百科图片展示了输入的微小变化如何完全改变输出。这个案例中的哈希函数是SHA-1：
 - en: '![Hashing functions](img/5603_06_05.jpg)'
+  id: totrans-48
   prefs: []
   type: TYPE_IMG
+  zh: '![哈希函数](img/5603_06_05.jpg)'
 - en: Hashing functionality is provided by the `java.security.MessageDigest` class
     of the `java.security` package. The following code snippet shows how to use this
     class to create a SHA-256 hash on string `s`. The method `update` updates the
     digest with bytes and the method `digest` creates the final digest.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: '`java.security`包中的`java.security.MessageDigest`类提供了哈希功能。以下代码片段展示了如何使用这个类对字符串`s`创建一个SHA-256哈希。`update`方法使用字节更新摘要，而`digest`方法创建最终的摘要。'
 - en: '[PRE3]'
+  id: totrans-50
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Public key cryptography
+  id: totrans-51
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 公钥密码学
 - en: 'Public key cryptography is a cryptographic system that uses two keys: one for
     encryption and one for decryption. One of the keys is made public and the other
     is kept private.'
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 公钥密码学是一种使用两个密钥的密码系统：一个用于加密，另一个用于解密。其中一个密钥是公开的，另一个是私有的。
 - en: Public key cryptography is most commonly used to target two use cases. One for
     confidentiality and the other is for authentication. In case of confidentiality,
     the sender encrypts the message using the receiver's public key and sends it over.
     Since the private key is in possession of the receiver, the receiver uses the
     private key to decrypt the message.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 公钥密码学最常见的用途是针对两个用例。一个是保密性，另一个是认证。在保密性情况下，发送者使用接收者的公钥加密消息并发送。由于接收者持有私钥，接收者使用私钥来解密消息。
 - en: In the case of authentication to serve as a digital signature, a sender uses
     their private key to encrypt the message (in most use cases, it is the hash of
     the message that is encrypted and not the entire message) and makes it available.
     Anyone with a public key can access it and be certain that the message comes from
     the sender.
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 在作为数字签名的认证情况下，发送者使用他们的私钥加密消息（在大多数使用场景中，加密的是消息的哈希值而不是整个消息），并将其公开。任何拥有公钥的人都可以访问它，并确信消息来自发送者。
 - en: 'Both the use cases are shown in the following screenshot:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的截图展示了两个使用场景：
 - en: '![Public key cryptography](img/5603_06_06.jpg)'
+  id: totrans-56
   prefs: []
   type: TYPE_IMG
+  zh: '![公钥密码学](img/5603_06_06.jpg)'
 - en: 'In the following section, we discuss two common public key cryptography algorithms:
     RSA for encryption and authentication, and Diffie-Hellman for key exchange.'
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 在以下章节中，我们讨论了两种常见的公钥密码算法：用于加密和认证的RSA，以及用于密钥交换的Diffie-Hellman。
 - en: RSA
+  id: totrans-58
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: RSA
 - en: Named after its inventors Ron Rivest, Adi Shamir, and Leonard Adleman, RSA is
     an algorithm based on the public key cryptography. The security of RSA is based
     on factoring two large primes. The algorithm itself is not a secret and neither
     is the public key. Only the primes are secret.
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 以其发明者Ron Rivest、Adi Shamir和Leonard Adleman的名字命名，RSA是基于公钥密码学的一种算法。RSA的安全性基于分解两个大素数。算法本身不是秘密，公钥也不是。只有素数是秘密的。
 - en: The length of the RSA key used can be 512, 1024, 2048, or 4096 bits based on
     the strength required. Currently the 2048 bit key is considered strong. RSA is
     very slow, so its use to encrypt large data sets should be avoided. It is important
@@ -318,65 +446,93 @@
     the length of modulus (length of the product of the two primes). Since RSA is
     inherently slow, the usual approach is to encrypt the plaintext with a symmetric
     key and then encrypt the key with RSA.
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据所需的强度，使用的RSA密钥长度可以是512、1024、2048或4096位。目前2048位的密钥被认为是强的。RSA非常慢，因此应避免用它来加密大量数据集。需要注意的是，可以用RSA加密的消息长度不能超过模数（两个素数的乘积的长度）。由于RSA本质上很慢，通常的做法是使用对称密钥加密明文，然后再用RSA加密密钥。
 - en: 'RSA can be used both for confidentiality and authentication using the digital
     signature. There are three main operations when using RSA which are discussed,
     as follows:'
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: RSA可以用于保密和认证的数字签名。在使用RSA时有三种主要操作，如下所述：
 - en: Key generation
+  id: totrans-62
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 密钥生成
 - en: 'The first step in implementing RSA is to generate the keys. In Android, this
     can be done by using the `java.security.KeyPairGenerator` class. The following
     code snippet shows how to generate a 2048 bit key pair:'
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 实现RSA的第一步是生成密钥。在Android中，可以通过使用`java.security.KeyPairGenerator`类来完成。以下代码片段展示了如何生成一个2048位的密钥对：
 - en: '[PRE4]'
+  id: totrans-64
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'If the key is already available in raw and the private and public keys need
     to be extracted from it, then the `java.security.KeyFactory` class can be used
     to extract the public and private keys from the key specs, as follows:'
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果密钥已经以原始形式存在，并且需要从中提取私钥和公钥，那么可以使用`java.security.KeyFactory`类从密钥规格中提取公钥和私钥，如下所示：
 - en: '[PRE5]'
+  id: totrans-66
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Encryption
+  id: totrans-67
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 加密
 - en: 'Both encryption and decryption can be performed by either private or public
     keys based on the use case. The following code snippet encrypts the data with
     the public key of the receiver. This example follows from the preceding method
     where a key pair is generated by using the `java.security.KeyPairGenerator` class.
     The following example uses the `java.security.Cipher` class to initialize the
     cipher and perform the operation:'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据使用场景，加密和解密可以通过私钥或公钥来执行。以下代码片段使用接收者的公钥加密数据。这个示例紧接着前面使用`java.security.KeyPairGenerator`类生成密钥对的方法。以下示例使用`java.security.Cipher`类来初始化密码并执行操作：
 - en: '[PRE6]'
+  id: totrans-69
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: Decryption
+  id: totrans-70
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 解密
 - en: Decryption is the opposite operation of encryption. The following code shows
     how to decrypt data using the private key. Following from the preceding example,
     this is the case where the sender encrypts the message using the receiver's public
     key and then the receiver decrypts it, by using their private key.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 解密是加密的相反操作。以下代码展示了如何使用私钥来解密数据。接着前面的示例，这是一个发送者使用接收者的公钥加密消息，然后接收者使用他们的私钥进行解密的案例。
 - en: '[PRE7]'
+  id: totrans-72
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Padding
+  id: totrans-73
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 填充（Padding）
 - en: In the previous examples you will notice that the cipher is initialized with
     **PKCS1Padding**. Let us talk more about padding. The RSA algorithm has no random
     components. This means that the same plaintext when encrypted with the same key
@@ -389,65 +545,92 @@
     ciphers are chosen based on results from the first set of decrypted ciphertexts.
     To mitigate these kinds of attacks, PKCS#1 v1.5 is recommended. Another kind of
     padding that can be used is **OAEP** (**Optical Asymmetric Encryption Padding**).
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的示例中，您会注意到加密算法是用**PKCS1Padding**进行初始化的。让我们来更多地了解一下填充。RSA算法没有随机成分。这意味着使用相同的密钥加密相同的明文将产生相同的密文。这种特性可能导致针对加密系统的选定明文攻击。在加密明文之前，通常会用随机数据填充。由RSA实验室发布的**PKCS#1**（**公钥密码学标准**）用于在明文中嵌入结构化随机数据。后来证明，即使是PKCS#1填充也不足以避免适应性选定明文攻击。这是一种选定密文攻击，在这种攻击中，随后的密文是根据第一组解密密文的结果来选择的。为了减轻这类攻击，建议使用PKCS#1
+    v1.5。另一种可以使用的填充是**OAEP**（**光不对称加密填充**）。
 - en: In the example you will also notice **CBC** (**Cipher Block Chaining**) as the
     parameter. This mode is discussed later in this chapter, under the *Block Cipher
     Modes* section.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 在示例中，您还会注意到参数中的**CBC**（**Cipher Block Chaining**，密文块链）。这种模式将在本章的*块密码模式*部分进行讨论。
 - en: The Diffie-Hellman algorithm
+  id: totrans-76
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Diffie-Hellman算法
 - en: Published by Whitefield Diffie and Martin Hellman in 1976, Diffie-Hellman is
     the most popular key exchange algorithm. The beauty of this algorithm is that
     two parties can independently generate a secret key over an insecure channel without
     exchanging the secret key. This secret key can then be used in symmetric encryption.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 由Whitefield Diffie和Martin Hellman于1976年发布，Diffie-Hellman是最受欢迎的密钥交换算法。这个算法的巧妙之处在于，双方可以在不安全的通道上独立生成一个秘密密钥，而无需交换秘密密钥。然后可以使用这个秘密密钥进行对称加密。
 - en: 'The Diffie-Hellman algorithm does not authenticate the two parties. It is thus
     susceptible to the man-in-the-middle attack where an eavesdropper sits in the
     middle and communicates with the two parties posing as the other party. The following
     illustration from Wikipedia explains the concept of Diffie-Hellman beautifully
     using two parties: Alice and Bob:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: Diffie-Hellman算法没有验证双方的身份。因此，它容易受到中间人攻击，在这种攻击中，窃听者坐在中间，冒充另一方与双方通信。维基百科下面的插图完美地解释了Diffie-Hellman的概念，使用了两方：Alice和Bob：
 - en: '![The Diffie-Hellman algorithm](img/5603_06_07.jpg)'
+  id: totrans-79
   prefs: []
   type: TYPE_IMG
+  zh: '![Diffie-Hellman算法](img/5603_06_07.jpg)'
 - en: 'The following code sample shows an example implementation of generating key
     pairs. The `java.security.KeyPairGenerator` class is used to generate the key
     pair based on the DH parameters. Next, the `javax.crypto` class is used to generate
     the key agreement:'
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的代码示例显示了生成密钥对的示例实现。使用`java.security.KeyPairGenerator`类基于DH参数生成密钥对。接下来，使用`javax.crypto`类生成密钥协商：
 - en: '[PRE8]'
+  id: totrans-81
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Symmetric key cryptography
+  id: totrans-82
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 对称密钥加密
 - en: The symmetric key cryptography is based on a secret key that is the same for
     both parties. The same key is used for both encryption and decryption. This is
     a problem compared to the public key cryptography, as it is required to exchange
     the secret keys securely by some means. If an eavesdropper gets hold of the key,
     the security of the system is defeated.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 对称密钥加密基于一个秘密密钥，双方都相同。加密和解密都使用相同的密钥。与公钥密码学相比，这是一个问题，因为需要通过某种方式安全地交换秘密密钥。如果窃听者获得了密钥，系统的安全性就被破坏了。
 - en: '![Symmetric key cryptography](img/5603_06_08.jpg)'
+  id: totrans-84
   prefs: []
   type: TYPE_IMG
+  zh: '![对称密钥加密](img/5603_06_08.jpg)'
 - en: Symmetric key is much faster than a public key and is ideal when encrypting/decrypting
     large chunks of data. Security of a symmetric key algorithm is based on the length
     of the key.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 对称密钥比公钥快得多，在加密/解密大量数据时非常理想。对称密钥算法的安全性基于密钥的长度。
 - en: Stream cipher
+  id: totrans-86
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 流密码
 - en: 'A stream cipher is a type of a symmetric key cryptography where each bit or
     byte of data is encrypted individually with a stream of random bits called a key
     stream. Usually, each bit or byte is **XOR**ed (**Exclusive OR**) with a key stream.
@@ -456,248 +639,365 @@
     stream is used for encrypting multiple data sets, then vulnerability in the algorithm
     can be identified and exploited. The following image shows a stream cipher in
     action:'
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 流密码是一种对称密钥加密类型，其中每个位或字节的数据是使用称为密钥流的随机位序列单独进行加密的。通常，每个位或字节与密钥流进行**异或**（**Exclusive
+    OR**）操作。密钥流的长度与数据的长度相同。流密码的安全性取决于密钥流的随机性。如果使用相同的密钥流对多个数据集进行加密，那么算法的漏洞可能会被发现并利用。下图展示了流密码的工作情况：
 - en: '![Stream cipher](img/5603_06_09.jpg)'
+  id: totrans-88
   prefs: []
   type: TYPE_IMG
+  zh: '![流密码](img/5603_06_09.jpg)'
 - en: The best use of a stream cipher is where the length of data is variable like
     in Wi-Fi or an encrypting voice data. They are also easy to implement in hardware.
     Some examples of algorithms that use stream cipher technique include RC4, A5/1,
     A5/2, and Helix.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 流密码的最佳应用场景是数据长度可变的情况，如在Wi-Fi或加密语音数据中。它们在硬件中的实现也相对容易。使用流密码技术的一些算法示例包括RC4、A5/1、A5/2和Helix。
 - en: Since the key is as long as the data in question, there are severe key management
     problems with stream ciphers.
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于密钥与需要加密的数据长度相同，流密码在密钥管理上存在严重问题。
 - en: Block cipher
+  id: totrans-91
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 块密码
 - en: In the case of a block cipher, a block of data is encrypted with a key one at
     a time. The plaintext is divided into fixed length blocks and each block is encrypted
     individually. The following figure shows the basic idea of a block cipher. Each
     plaintext is divided in fixed blocks of data. If the blocks cannot be evenly divided,
     they are padded with a standard set of bits to make them the desired length. Each
     block is then encrypted with a key and a fixed length encrypted block is generated.
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 在块密码的情况下，数据块是逐个使用密钥进行加密的。明文被划分为固定长度的块，每个块单独进行加密。下图展示了块密码的基本思想。每个明文被划分为固定大小的数据块。如果块不能均匀划分，它们会使用一组标准的位进行填充，以达到期望的长度。然后每个块使用一个密钥进行加密，并生成固定长度的加密块。
 - en: '![Block cipher](img/5603_06_10.jpg)'
+  id: totrans-93
   prefs: []
   type: TYPE_IMG
+  zh: '![块密码](img/5603_06_10.jpg)'
 - en: A problem with block ciphers is that if the same block of data is repeated,
     the output is always the same. Another problem is that if a block is lost in transit,
     there is no way to identify that a block has been lost. Various block cipher modes
     have been designed that help solve the previously mentioned problems. Block ciphers
     are widely used in cryptographic algorithms, such as AES, DES, RC5, and Blowfish.
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 块密码的一个问题是，如果相同的数据块被重复，输出总是相同的。另一个问题是，如果数据块在传输过程中丢失，没有办法识别出数据块已经丢失。已经设计出各种块密码模式来解决前面提到的问题。块密码在加密算法中得到了广泛的应用，例如AES、DES、RC5和Blowfish。
 - en: As plaintext is divided into blocks, it is common that the last block will not
     have enough bits to fill the block. In such a case, the last block is padded with
     additional bits to attain the desired length. This process is known as padding.
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于明文被划分为块，通常最后一个块将没有足够的位来填满块。在这种情况下，最后一个块会填充额外的位以达到所需的长度。这个过程被称为填充。
 - en: Block cipher modes
+  id: totrans-96
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 块密码模式
 - en: In the block cipher mode, the plaintext is divided into blocks and each block
     is encrypted with the same key. In the following section some techniques that
     are used to realize block encryption are discussed. These modes are used both
     for symmetric encryption and also for asymmetric encryption, such as RSA. In practice
     though, large chunks of data are rarely encrypted using the asymmetric ciphers,
     as these tend to be very slow.
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 在块密码模式下，明文被划分为多个块，每个块都使用相同的密钥进行加密。在下面一节中，将讨论实现块加密的一些技术。这些模式既用于对称加密，也用于非对称加密，如RSA。然而，在实际应用中，很少使用非对称密码对大量数据进行加密，因为它们通常速度非常慢。
 - en: Electronic Code Book (ECB)
+  id: totrans-98
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 电子密码本（ECB）
 - en: In the ECB mode, a plaintext is divided into blocks and each block is independently
     encrypted with the key. This mode can be easily parallelized and is therefore
     fast. This mode does not conceal patterns in plaintext. So, the same blocks will
     yield the same ciphertext. Any attacker can modify or steal the plaintext and
     it will be oblivious to the sender.
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 在ECB模式下，明文被划分为块，每个块独立地使用密钥进行加密。这种模式可以很容易地进行并行处理，因此速度很快。这种模式不隐藏明文模式。因此，相同的块将产生相同的密文。任何攻击者都可以修改或窃取明文，而发送者却一无所知。
 - en: 'The following figure shows how encryption and decryption is realized in the
     ECB mode:'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 下图展示了在ECB模式下如何实现加密和解密：
 - en: '![Electronic Code Book (ECB)](img/5603_06_11.jpg)'
+  id: totrans-101
   prefs: []
   type: TYPE_IMG
+  zh: '![电子密码本（ECB）](img/5603_06_11.jpg)'
 - en: 'The following code illustrates how to initialize the RSA cipher with the ECB
     mode:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的代码演示了如何使用ECB模式初始化RSA密码：
 - en: '[PRE9]'
+  id: totrans-103
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'Similarly, to initialize an AES symmetric algorithm with ECB, the following
     code can be used:'
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，为了使用ECB初始化AES对称算法，可以使用以下代码：
 - en: '[PRE10]'
+  id: totrans-105
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: Cipher Block Chaining (CBC)
+  id: totrans-106
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 密文块链（CBC）
 - en: In the CBC mode, each block of plaintext is XORed with the previous ciphertext
     and then encrypted. This mode takes care of the two shortcomings associated with
     the ECB mode. XORing the block with the previous plaintext block conceals any
     patterns in the plaintext. Additionally, except for the first and the last block
     if any other block is removed or altered, the receiver easily detects it.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 在CBC模式下，每个明文块与之前的密文块进行异或操作，然后进行加密。这种模式解决了与ECB模式相关的两个缺点。将块与之前的明文块进行异或操作可以隐藏明文中的任何模式。此外，如果除了第一个和最后一个块之外的任何块被删除或更改，接收者可以轻松检测到。
 - en: 'The following figure illustrates encryption and decryption of a plaintext block
     with the CBC mode. Note the use of an **Initialization Vector** (**IV**) for adding
     randomness to the first block. IV is a random set of bits that are XORed with
     the first block:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 下图说明了使用CBC模式对明文块进行加密和解密。注意使用**初始化向量**（**IV**）为第一个块添加随机性。IV是一组随机的位，与第一个块进行异或操作：
 - en: '![Cipher Block Chaining (CBC)](img/5603_06_12.jpg)'
+  id: totrans-109
   prefs: []
   type: TYPE_IMG
+  zh: '![密文块链（CBC）](img/5603_06_12.jpg)'
 - en: 'The following code illustrates how to initialize the RSA cipher with the CBC
     mode:'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的代码演示了如何使用CBC模式初始化RSA密码：
 - en: '[PRE11]'
+  id: totrans-111
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Similarly, to initialize an AES symmetric algorithm with CBC, the following
     code can be used:'
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，为了使用CBC初始化AES对称算法，可以使用以下代码：
 - en: '[PRE12]'
+  id: totrans-113
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: Cipher Feedback Chaining (CFB)
+  id: totrans-114
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 密文反馈链（CFB）
 - en: In the CFB mode, the previous ciphertext is first encrypted and then XORed with
     the plaintext to produce the ciphertext. This mode also conceals the plaintext
     patterns and creates dependency of one plaintext block on the previous block.
     This enables the tracking and integrity verification of blocks during transmission.
     Again, note the use of IV for the first block.
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 在CFB模式下，先对前一个密文块进行加密，然后与明文进行异或操作以生成密文。这种模式同样隐藏了明文模式，并使一个明文块依赖于前一个块。这使得在传输过程中可以跟踪和验证块的一致性。同样，注意第一个块使用了初始化向量（IV）。
 - en: '![Cipher Feedback Chaining (CFB)](img/5603_06_13.jpg)'
+  id: totrans-116
   prefs: []
   type: TYPE_IMG
+  zh: '![密文反馈链（CFB）](img/5603_06_13.jpg)'
 - en: 'The following code illustrates how to initialize the RSA cipher with the CFB
     mode:'
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的代码演示了如何使用CFB模式初始化RSA密码：
 - en: '[PRE13]'
+  id: totrans-118
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Similarly, to initialize an AES symmetric algorithm with CFB, the following
     code can be used:'
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，为了使用CFB初始化AES对称算法，可以使用以下代码：
 - en: '[PRE14]'
+  id: totrans-120
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: Output Feedback Mode (OFB)
+  id: totrans-121
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 输出反馈模式（OFB）
 - en: 'OFB is similar to the CFB mode except that the XORed ciphertext acts as a synchronous
     stream cipher such that an error in one bit affects only one bit and not the entire
     block. Again, an IV is used to seed the process as follows:'
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: OFB模式与CFB模式相似，不同之处在于异或的密文充当同步流密码，这样一位的错误只会影响一位，而不是整个块。同样，使用IV来启动该过程，如下所示：
 - en: '![Output Feedback Mode (OFB)](img/5603_06_14.jpg)'
+  id: totrans-123
   prefs: []
   type: TYPE_IMG
+  zh: '![输出反馈模式（OFB）](img/5603_06_14.jpg)'
 - en: 'The following code illustrates how to initialize the RSA cipher with the OFB
     mode:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的代码演示了如何使用OFB模式初始化RSA密码：
 - en: '[PRE15]'
+  id: totrans-125
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'Similarly, to initialize an AES symmetric algorithm with OFB, the following
     code can be used:'
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，为了使用OFB初始化AES对称算法，可以使用以下代码：
 - en: '[PRE16]'
+  id: totrans-127
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: Advanced Encryption Standard (AES)
+  id: totrans-128
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 高级加密标准（AES）
 - en: AES is the most popular block symmetric cipher. It is much more secure than
     the other common block symmetric ciphers, such as DES and DES3\. This cipher divides
     the plaintext into fixed block sizes of 128 bits and the keys could be 128 bit,
     192, or 256 bit keys. AES is fast and has low memory requirements. The Android
     disk encryption also uses AES 128 bit encryption and the master key is encrypted
     with AES 128 bit encryption as well.
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: AES是最受欢迎的块对称密码。它比其他常见的块对称密码（如DES和DES3）更安全。此密码将明文划分为固定块大小，为128位，密钥可以是128位，192或256位密钥。AES速度快，内存要求低。Android磁盘加密也使用AES
+    128位加密，主密钥也使用AES 128位加密。
 - en: 'The following code snippet shows how to generate a 128 bit AES key:'
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下代码段展示了如何生成128位AES密钥：
 - en: '[PRE17]'
+  id: totrans-131
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'Next, the following code shows how to encrypt a plaintext with an AES key:'
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，以下代码展示了如何使用AES密钥加密明文：
 - en: '[PRE18]'
+  id: totrans-133
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'Following from the preceding example, to decrypt with AES, the following code
     can be used:'
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 继续前面的示例，要使用AES解密，可以使用以下代码：
 - en: '[PRE19]'
+  id: totrans-135
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Message Authentication Codes
+  id: totrans-136
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 消息认证码
 - en: 'A **Message Authentication Code** (**MAC**) is a tag or checksum that is appended
     to a message to ascertain its authenticity and integrity. Authentication is provided
     by the possession of a secret key, and verifying accidental or intentional changes
     in the message provides integrity. The following figure illustrates the working
     of a MAC:'
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: '**消息认证码**（**MAC**）是附加到消息上以确定其真实性和完整性的标签或校验和。通过拥有一个秘密密钥来提供认证，验证消息的意外或有意更改提供了完整性。下图说明了MAC的工作原理：'
 - en: '![Message Authentication Codes](img/5603_06_15.jpg)'
+  id: totrans-138
   prefs: []
   type: TYPE_IMG
+  zh: '![消息认证码](img/5603_06_15.jpg)'
 - en: 'A MAC can be generated using different methods: by using a one time pad or
     one time secret key, by using a hash function, and by using a stream cipher or
     by using a block cipher and output the final block as a checksum. An example of
     the last method is DES with the CBC mode.'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 可以使用不同的方法生成MAC：使用一次性密钥或一次性秘密密钥、使用哈希函数、使用流密码，或者使用块密码并将最后一个块作为校验和输出。最后一种方法的例子是使用CBC模式的DES。
 - en: A hash function is used to create a checksum called **Hashed MAC** (**HMAC**).
     This hash is then encrypted with a symmetric key and appended to the message.
     This is the most popular method of generating the MAC. Some examples of this kind
     of MAC are AES 128 with SHA1 and AES 256 with SHA1.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 哈希函数用于创建称为**哈希MAC**（**HMAC**）的校验和。然后使用对称密钥加密此哈希并将其附加到消息中。这是生成MAC最受欢迎的方法。这种MAC的一些示例是带有SHA1的AES
+    128和带有SHA1的AES 256。
 - en: 'Android provides the capability to generate an HMAC by using the `javax.crypto.Mac`
     class. The following code snippet shows how to generate a digest with SHA-1:'
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 通过使用`javax.crypto.Mac`类提供了生成HMAC的能力。以下代码段展示了如何使用SHA-1生成摘要：
 - en: '[PRE20]'
+  id: totrans-142
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: Summary
+  id: totrans-143
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: In this chapter, we discussed the tools that application developers can use
     to protect the privacy of their application and user data. We discussed about
     random number generation for seeding, and for use as initialization vectors for
@@ -711,5 +1011,7 @@
     the following chapters we will use these tools and techniques to protect data.
     Now let's move on to the next chapter to learn how to decide the best storage
     option for different types of data.
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们讨论了应用程序开发人员可以使用哪些工具来保护其应用程序和用户数据的隐私。我们讨论了用于种子和加密算法初始化向量的随机数生成。讨论了哈希技术，如SHA-1和MD5，开发人员可以使用这些技术来存储密码。它们还非常适合将大量数据压缩成有限且定义的长度。我们讨论了用于交换密钥的公钥密码学和对称密钥算法，如AES加密大量数据。我们还讨论了流密码和块密码以及块密码模式。大多数算法都有已发布的测试向量，并且可以在网上找到。开发人员可以针对这些测试向量测试他们的实现。在以下章节中，我们将使用这些工具和技术来保护数据。现在让我们继续下一章，学习如何为不同类型的数据选择最佳的存储选项。
