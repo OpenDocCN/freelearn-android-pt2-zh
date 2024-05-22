@@ -1,40 +1,56 @@
 - en: Chapter 8. Adding Network Capabilities
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第8章.添加网络功能
 - en: In [Chapter 6](ch06.html "Chapter 6. Building a Chronotherm for Home Automation"),
     *Building a Chronotherm for Home Automation*, we explored the definition of home
     automation and, one step after another, we built a prototype capable of controlling
     a boiler programmatically according to user preferences. We extended this prototype,
     providing a preset configuration for storing different temperature schedules and
     also improving the user interaction through voice recognition and synthesis.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[第6章](ch06.html "第6章.为家庭自动化构建Chronotherm")，*为家庭自动化构建Chronotherm*中，我们探讨了家庭自动化的定义，并且一步一步地构建了一个可以根据用户偏好程序化控制锅炉的原型。我们扩展了这个原型，提供了一个预设配置以存储不同的温度计划，并通过语音识别和合成改善了用户交互。
 - en: This time, we're enhancing the Chronotherm application with another feature
     that makes use of network capabilities to collect data from the Internet. The
     goal of this chapter is to make our prototype capable of reacting to external
     events that can't be easily caught by connected sensors.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 这一次，我们通过添加另一个利用网络功能从互联网收集数据的功能来增强Chronotherm应用程序。本章的目标是使我们的原型能够对无法通过连接的传感器轻松捕获的外部事件做出反应。
 - en: 'In this chapter, we will cover the following topics:'
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下主题：
 - en: Extending the Chronotherm application with network capabilities
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用网络功能扩展Chronotherm应用程序
 - en: Using web services to collect weather forecast data
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用网络服务收集天气预报数据
 - en: Using collected data to change the Chronotherm behavior
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用收集的数据改变Chronotherm的行为
 - en: Extending Chronotherm with network capabilities
+  id: totrans-7
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 为Chronotherm扩展网络功能
 - en: The Chronotherm application solves a specific problem. It turns on the boiler
     every time the current temperature is below a configured setpoint for each hour
     of the day. This logic is sufficient for a traditional Chronotherm but we can
@@ -42,15 +58,19 @@
     the home temperature and weather conditions. For instance, the internal temperature
     usually drops faster during cold days; if we incorporate this information in the
     boiler logic, we can make our prototype smarter.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: Chronotherm应用程序解决了一个具体问题。它每天在当前温度低于每个小时的配置设定点时开启锅炉。这个逻辑对于传统Chronotherm来说已经足够，但我们可以改进这种行为，使其考虑家庭温度与天气条件之间的密切关系。例如，在寒冷的日子里，内部温度通常下降得更快；如果我们在锅炉逻辑中包含这些信息，我们可以使我们的原型更加智能。
 - en: Moreover, if it's really cold, our boiler may stop working because the water
     inside it has frozen. This issue can be solved if we implement an antifreeze feature
     that will start the boiler when the outside temperature drops below a defined
     value despite the user's preferences. Such features would handle unexpected situations
     when users are away from the house or overnight.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，如果天气真的很冷，我们的锅炉可能会因为内部的水结冰而停止工作。如果实现一个防冻功能，当外部温度降至一个定义值以下时，即使违背用户偏好，也会启动锅炉，这个问题就可以得到解决。这样的功能将处理用户不在家或夜间时的意外情况。
 - en: Unfortunately, it's not so easy to wire an external sensor and it may be too
     complicated to build and use a wireless thermal sensor. However, given that the
     external temperature is really important, we have to find a workaround to collect
@@ -59,134 +79,193 @@
     that provide forecast data, using this knowledge in our computation. In this way,
     we can even add a complete overview of the weather conditions, improving the user
     interface while providing users with useful information.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 不幸的是，连接外部传感器并不容易，而且构建和使用无线热传感器可能过于复杂。然而，考虑到外部温度的重要性，我们必须找到一种方法来收集天气条件数据。由于UDOOU
+    Chronotherm位于我们的家中，且很可能连接到互联网，我们可以从提供预报数据的网络服务中获取这些信息，在我们的计算中使用这些知识。这样，我们甚至可以添加完整的天气条件概览，在提供用户有用信息的同时改善用户界面。
 - en: 'According to the needs mentioned earlier, we can organize our work in the following
     steps:'
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据之前提到的需求，我们可以按以下步骤组织我们的工作：
 - en: Implement a module used to connect our prototype to weather REST APIs.
+  id: totrans-12
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现一个模块，用于将我们的原型连接到天气预报的REST API。
 - en: Collect and show weather forecast data at regular intervals.
+  id: totrans-13
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 定期收集并显示天气预报数据。
 - en: Write the boiler antifreeze logic that will use the preceding data.
+  id: totrans-14
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编写将使用先前数据的锅炉防冻逻辑。
 - en: Connecting to REST APIs
+  id: totrans-15
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 连接到REST API
 - en: We start our work by providing an implementation to connect to a RESTful web
     service. **REpresentational State Transfer** (**REST**) is a simple stateless
     architecture style usually running over the HTTP protocol. The idea behind REST
     involves exposing the state of the system as a collection of resources we can
     manipulate, addressing them by their name or ID. The backend service is responsible
     for persisting resource data, usually through the use of a database server.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的工作从提供一个实现开始，以连接到 RESTful 网络服务。**REpresentational State Transfer** (**REST**)
+    是一种通常运行在 HTTP 协议之上的简单无状态架构风格。REST 背后的理念涉及将系统的状态作为我们可以操作的资源集合暴露出来，通过它们的名称或 ID 来定位它们。后端服务负责通过通常使用数据库服务器来持久化资源数据。
 - en: When a client asks for a resource through the HTTP protocol, the application
     server retrieves the resource from the database server and sends it back to the
     client using an interchange format such as XML or JSON. Exposing a REST API makes
     it extremely easy to provide data to a mobile client, a browser extension, or
     any piece of software that needs to access and process application data.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 当客户端通过 HTTP 协议请求资源时，应用服务器从数据库服务器检索资源并发送回客户端，使用如 XML 或 JSON 的交换格式。暴露 REST API
+    可以极其容易地向移动客户端、浏览器扩展或任何需要访问和处理应用程序数据的软件提供数据。
 - en: In this chapter, we will use a REST API only for information retrieval. If you
     are interested in more detail about the REST architecture, follow this link [http://en.wikipedia.org/wiki/Representational_state_transfer](http://en.wikipedia.org/wiki/Representational_state_transfer).
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将仅使用 REST API 进行信息检索。如果您对 REST 架构有更多兴趣，请点击此链接 [http://en.wikipedia.org/wiki/Representational_state_transfer](http://en.wikipedia.org/wiki/Representational_state_transfer)。
 - en: 'Before we begin the implementation of the APIs connector, we should add the
     following permission (in order to use the Internet in our application) to the
     `AndroidManifest.xml` file just before the `<application>` tag,:'
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始实现API连接器之前，我们应在 `AndroidManifest.xml` 文件中的 `<application>` 标签之前添加以下权限（以便在我们的应用程序中使用互联网）：
 - en: '[PRE0]'
+  id: totrans-20
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Then, to provide network capabilities to our application, we have to create
     an abstraction to the `HttpURLConnection` class so that we can use external services
     through a simpler API. To create a connector for our application, perform the
     following steps:'
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，为了使我们的应用程序具备网络功能，我们必须创建一个对 `HttpURLConnection` 类的抽象，以便我们可以通过更简单的 API 使用外部服务。要为我们的应用程序创建一个连接器，请执行以下步骤：
 - en: Create the `UrlConnector` class in a new package named `http`.
+  id: totrans-22
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在名为 `http` 的新包中创建 `UrlConnector` 类。
 - en: 'At the top of the class, add the following declaration to store the `HttpURLConnection`
     class instance:'
+  id: totrans-23
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类的顶部，添加以下声明以存储 `HttpURLConnection` 类实例：
 - en: '[PRE1]'
+  id: totrans-24
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Add the following constructor that we will use to initialize the request parameters:'
+  id: totrans-25
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下构造函数，我们将使用它来初始化请求参数：
 - en: '[PRE2]'
+  id: totrans-26
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: We expect an `encodedUrl` parameter as the argument and we use it to initialize
     the URL object used later to open the connection. Then we set timeouts for the
     reading and connection phases, using values that are good for our prototype.
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们期望一个 `encodedUrl` 参数作为参数，并使用它来初始化稍后用于打开连接的 URL 对象。然后，我们为读取和连接阶段设置超时，使用适合我们原型的值。
 - en: 'Add a generic method to set the HTTP headers of our requests:'
+  id: totrans-28
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加一个泛型方法来设置我们请求的 HTTP 头：
 - en: '[PRE3]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Add the following code snippet below the `get()` method that is used to make
     the call:'
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `get()` 方法下面添加以下代码片段，用于进行调用：
 - en: '[PRE4]'
+  id: totrans-31
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: To the `mConnector` instance, we set the `GET` request method returning the
     status code of the response. This status code will be used to check whether the
     request finishes with a success or a failure.
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 对于 `mConnector` 实例，我们设置 `GET` 请求方法，返回响应的状态码。此状态码将用于检查请求是否成功或失败结束。
 - en: 'Add the following `getResponse()` method to get the result from the web server
     connection:'
+  id: totrans-33
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下 `getResponse()` 方法以从网络服务器连接获取结果：
 - en: '[PRE5]'
+  id: totrans-34
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: We create a buffered reader using the `mConnector` instance's input stream and
     then, through the above reader, we get the content sent by the server. When we've
     finished, we return the string without any further modifications.
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们使用 `mConnector` 实例的输入流创建一个缓冲阅读器，然后通过上述阅读器获取服务器发送的内容。当我们完成后，我们不进行任何修改直接返回字符串。
 - en: 'Create a `disconnect()` method to close the connection with the server:'
+  id: totrans-36
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个 `disconnect()` 方法以关闭与服务器连接：
 - en: '[PRE6]'
+  id: totrans-37
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'The `UrlConnector` class simplifies HTTP calls and this implementation is enough
     to connect to many web services that don''t use any authentication flows. Before
     we can proceed, we have to choose a web service that provides weather forecast
@@ -195,42 +274,63 @@
     flows, and it''s also available through REST APIs. You can find more information
     at [http://openweathermap.org/](http://openweathermap.org/) or [http://openweathermap.org/current](http://openweathermap.org/current)
     for the description of the service and to learn how their REST APIs are structured:'
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: '`UrlConnector` 类简化了 HTTP 调用，这种实现足以连接到许多不使用任何认证流程的 Web 服务。在我们继续之前，我们必须选择一个提供天气预报数据的
+    Web 服务，我们将对其进行查询。为了我们原型的目的，我们将使用 OpenWeatherMap 服务，因为它提供了一个无需认证流程的免费层级，并且它也通过
+    REST API 提供。你可以在 [http://openweathermap.org/](http://openweathermap.org/) 或 [http://openweathermap.org/current](http://openweathermap.org/current)
+    了解更多关于该服务的信息，以及学习它们的 REST API 是如何构建的：'
 - en: 'When we make a call to the above RESTful service, we should parse the JSON
     response, making it available within our application. This approach can be realized
     with a Java class that knows the response structure and parses it according to
     our needs. The implementation requires the following steps:'
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们调用上述 RESTful 服务时，我们应该解析 JSON 响应，使其在我们的应用程序中可用。这种方法可以通过一个知道响应结构并按照我们的需求进行解析的
+    Java 类来实现。实现需要以下步骤：
 - en: Create the `Weather` class in a new package called `weather`.
+  id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在名为 `weather` 的新包中创建 `Weather` 类。
 - en: 'At the top of the class, add the following declarations:'
+  id: totrans-41
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类的顶部，添加以下声明：
 - en: '[PRE7]'
+  id: totrans-42
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: We declare variables according to what we will use from the given response.
     In our case, we use an `mStatus` variable to store the weather condition so users
     will know if it's, for example, sunny or cloudy. We also use the `mTemperature`
     variable, which is our first requirement, and the `mHumidity` attribute to provide
     a plus to our users.
+  id: totrans-43
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们根据需要从给定的响应中声明变量。在我们的例子中，我们使用 `mStatus` 变量来存储天气状况，以便用户知道天气是晴朗还是多云。我们还使用 `mTemperature`
+    变量，这是我们第一个需求，以及 `mHumidity` 属性为用户提供额外信息。
 - en: 'Add the class constructor as follows:'
+  id: totrans-44
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加如下类构造函数：
 - en: '[PRE8]'
+  id: totrans-45
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: We expect as argument a `JSONObject` parameter, the API result after a successful
     call. From this object, we get the first element of the `weather` field and, within
     the `JSONObject` object, we get the value of the `description` key. Then we get
@@ -239,84 +339,120 @@
     is in Kelvin. The last step is to get the `humidity` parameter from the same field.
     This code could raise some exceptions during JSON parsing and, because of this,
     we add these exceptions if the constructor throws a list.
+  id: totrans-46
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们期望作为参数的 `JSONObject` 参数，是成功调用后的 API 结果。从这个对象中，我们获取 `weather` 字段的第一元素，并在 `JSONObject`
+    对象中获取 `description` 键的值。然后我们从 `main` 字段获取 `temperature` 变量的值；这应该传递给 `convertTempKtoC()`
+    函数，因为服务返回的值是以开尔文为单位的。最后一步是从同一个字段获取 `humidity` 参数。这段代码在 JSON 解析期间可能会引发一些异常，因此，如果构造函数抛出列表，我们会添加这些异常。
 - en: 'Add the `convertTempKtoC()` member function, used in the constructor, that
     converts Kelvin to Celsius:'
+  id: totrans-47
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加 `convertTempKtoC()` 成员函数，该函数在构造函数中使用，用于将开尔文转换为摄氏度：
 - en: '[PRE9]'
+  id: totrans-48
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Note
+  id: totrans-49
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: This is just an example; you can use any unit of measurement that you prefer
     for temperature.
+  id: totrans-50
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这只是一个示例；你可以使用你喜欢的任何温度单位。
 - en: 'Add the following getters to the Weather class, to retrieve instance data:'
+  id: totrans-51
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 向 `Weather` 类添加以下获取器，以获取实例数据：
 - en: '[PRE10]'
+  id: totrans-52
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Now that we have an abstraction to make HTTP calls and a JSON results parser,
     we need to implement the latest building block that calls the REST API and returns
     a `Weather` instance. We can achieve this implementation through the following
     steps:'
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们已经有一个抽象的 HTTP 调用和 JSON 结果解析器，我们需要实现最后一个调用 REST API 并返回 `Weather` 实例的构建块。我们可以通过以下步骤实现这个实现：
 - en: Create the `WeatherApi` class within the `weather` package.
+  id: totrans-54
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `weather` 包内创建 `WeatherApi` 类。
 - en: 'At the top of the class, declare the following variables:'
+  id: totrans-55
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类的顶部，声明以下变量：
 - en: '[PRE11]'
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: The `BASE_URL` attribute defines the endpoint we should call to get weather
     data. The `API_PARAM` attribute defines the used query string where the `q` parameter
     is the location we want to query, while the `lang` parameter asks the server to
     translate the result for the given locale.
+  id: totrans-57
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`BASE_URL`属性定义了我们调用以获取天气数据的端点。`API_PARAM`属性定义了使用的查询字符串，其中`q`参数是我们想要查询的位置，而`lang`参数要求服务器为给定的地区翻译结果。'
 - en: 'Define a `static` method to generate a valid request URL:'
+  id: totrans-58
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 定义一个`static`方法以生成有效的请求URL：
 - en: '[PRE12]'
+  id: totrans-59
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: This method expects a `location` argument used with a valid location to generate
     the `params` string. In this way, it sets both the `q` and `lang` parameters and
     then returns the `BASE_URL` attribute with the appropriate concatenation.
+  id: totrans-60
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 此方法期望一个`location`参数，与有效的位置一起生成`params`字符串。这样，它设置`q`和`lang`参数，然后返回与适当连接的`BASE_URL`属性。
 - en: 'Add the static method to make the API call and to return an instance of the
     `Weather` class:'
+  id: totrans-61
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加静态方法以进行API调用并返回`Weather`类的一个实例：
 - en: '[PRE13]'
+  id: totrans-62
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: This method expects the `location` argument, which is passed to the `getUrl()`
     method we saw earlier to generate the endpoint that should be queried. Through
     the `addHeader()` method, we define the request media type as an `application/json`
@@ -325,549 +461,774 @@
     the status code for a success. After the call, we close the connection, returning
     the initialized `Weather` instance or the `null` reference if an exception is
     raised.
+  id: totrans-63
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 此方法期望传入`location`参数，该参数被传递到我们之前看到的`getUrl()`方法，以生成应该查询的端点。通过`addHeader()`方法，我们将请求媒体类型定义为`application/json`参数，服务器使用它来推断我们请求的格式。我们使用正确配置了端点的`api`实例进行HTTP调用，检查状态码以确认成功。调用后，我们关闭连接，如果引发异常，则返回初始化的`Weather`实例或`null`引用。
 - en: Tip
+  id: totrans-64
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: In this section, we're handling a different status code, an `IOException` exception,
     and a `JSONException` exception that are respectively raised when the API call
     doesn't finish with a success, when a network error occurs, or when our API call
     results in a response parsing error. Every time you deal with exceptions in your
     prototypes, remember that *errors should never pass silently*. We should always
     handle such errors, notifying the problem to users with proper feedback.
+  id: totrans-65
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在本节中，我们将处理不同的状态码，`IOException`异常和`JSONException`异常，这些异常分别在API调用未成功完成、发生网络错误或API调用响应解析错误时引发。每次在您的原型中处理异常时，请记住*错误绝不应该默默传递*。我们应该始终处理这些错误，并通过适当的反馈通知用户问题。
 - en: Extending the Android user interface
+  id: totrans-66
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 扩展Android用户界面
 - en: Now that we can collect weather forecast data through the `WeatherApi` class,
     we should start thinking about user interaction. As a first step, we should ask
     users their home location, updating the Chronotherm user interface with the current
     selected location and related weather conditions. Second, we should provide a
     component to set an antifreeze setpoint that can be enabled or disabled, according
     to the user's preferences.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们可以通过`WeatherApi`类收集天气预报数据，我们应该开始考虑用户交互。首先，我们应该询问用户的家庭位置，使用当前选定的位置和相关天气条件更新Chronotherm用户界面。其次，我们应该提供一个组件来设置一个防冻设定点，根据用户的偏好，该设定点可以被启用或禁用。
 - en: 'To achieve both interactions, we can use a clickable `TextView` object that
     starts voice recognition based on user input, as we did in [Chapter 7](ch07.html
     "Chapter 7. Using Android APIs for Human Interaction"), *Using Android APIs for
     Human Interactions*. All the required components are summarized in the following
     mock-up:'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了实现这两种交互，我们可以使用一个可点击的`TextView`对象，根据用户输入启动语音识别，正如我们在[第7章](ch07.html "第7章. 使用Android
+    API进行人机交互")《*使用Android API进行人机交互*》中所做的那样。所有必需的组件在以下模拟中都有总结：
 - en: '![Extending the Android user interface](img/1942OS_08_01.jpg)'
+  id: totrans-69
   prefs: []
   type: TYPE_IMG
+  zh: '![扩展Android用户界面](img/1942OS_08_01.jpg)'
 - en: 'The first step is to update the `Overview` parameter layout. Following the
     preceding suggestion, we should:'
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一步是更新`Overview`参数布局。按照前面的建议，我们应该：
 - en: 'Add the *Weather Forecast* `TextView`: This component changes whenever a short-lived
     thread loads a `Weather` instance using the `WeatherApi` class. In this case,
     it shows the current location, the weather condition, the temperature, and the
     humidity. When users click on this component, we should launch the voice recognition
     intent to get the user''s location.'
+  id: totrans-71
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 添加*天气预报* `TextView`：每当短时线程使用`WeatherApi`类加载`Weather`实例时，此组件会发生变化。在这种情况下，它会显示当前位置、天气状况、温度和湿度。当用户点击此组件时，我们应该启动语音识别意图来获取用户的位置。
 - en: 'Add the *Antifreeze* `TextView`: This component shows the current antifreeze
     setpoint with a green color when the antifreeze feature is enabled; on the other
     hand, it becomes gray when users disable the antifreeze check. When users click
     on this component, we should launch the voice recognition intent to get the user''s
     antifreeze setpoint; if antifreeze is enabled, the setpoint should be removed
     from the user''s preferences.'
+  id: totrans-72
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 添加*防冻* `TextView`：当启用防冻功能时，此组件以绿色显示当前的防冻设定点；另一方面，当用户禁用防冻检查时，它会变成灰色。当用户点击此组件时，我们应该启动语音识别意图来获取用户的防冻设定点；如果启用了防冻，应该从用户的偏好设置中移除设定点。
 - en: 'We begin working with the layout that can be achieved, updating the `activity_overview.xml`
     file under `res/layout/` and the `Overview` class, as you can see in the following
     steps:'
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们开始处理可以实现的布局，更新`res/layout/`下的`activity_overview.xml`文件和`Overview`类，如下面的步骤所示：
 - en: 'Change the `LinearLayout` that contains the `view_container` and `temperature`
     views, with the following highlighted code:'
+  id: totrans-74
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更改包含`view_container`和`temperature`视图的`LinearLayout`，使用以下高亮代码：
 - en: '[PRE14]'
+  id: totrans-75
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Below the previous `LinearLayout`, add the following layout that will containing
     both TextViews:'
+  id: totrans-76
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在之前的`LinearLayout`下方，添加以下布局，其中将包含两个`TextViews`：
 - en: '[PRE15]'
+  id: totrans-77
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'In the previous container, add the *Antifreeze* and the *Weather Forecast*
     TextViews with the following code:'
+  id: totrans-78
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在之前的容器中，使用以下代码添加*防冻*和*天气预报* `TextViews`：
 - en: '[PRE16]'
+  id: totrans-79
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: In both components we define the `onClick` attribute that calls the `changeAntifreeze`
     and the `changeLocation` methods. These member functions realize the interaction
     described earlier and we will proceed with their implementation in the next section.
+  id: totrans-80
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在这两个组件中，我们定义了调用`changeAntifreeze`和`changeLocation`方法的`onClick`属性。这些成员函数实现了之前描述的交互，我们将在下一节继续实现它们。
 - en: 'Now we should proceed with the `Overview` activity, implementing the missing
     code to update both TextViews. As the first step, declare their references at
     the top of the `Overview` class:'
+  id: totrans-81
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，我们应该继续处理`Overview`活动，实现更新两个`TextViews`的缺失代码。首先，在`Overview`类的顶部声明它们的引用：
 - en: '[PRE17]'
+  id: totrans-82
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'In the `onCreate()` activity method, get both references with the highlighted
     code:'
+  id: totrans-83
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`onCreate()`活动方法中，用高亮代码获取这两个引用：
 - en: '[PRE18]'
+  id: totrans-84
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'Because a short-lived thread should update the `mWeatherStatus` `TextView`
     parameter, we have to provide a callback in the `OnDataChangeListener` parameter
     interface that expects a `Weather` instance. Add the highlighted method in the
     `OnDataChangeListener` parameter interface:'
+  id: totrans-85
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 因为短时线程应该更新`mWeatherStatus` `TextView`参数，我们必须在`OnDataChangeListener`参数接口中提供一个回调，该接口期待一个`Weather`实例。在`OnDataChangeListener`参数接口中添加高亮的方法：
 - en: '[PRE19]'
+  id: totrans-86
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'As the last step, add the `onWeatherChanged()` interface implementation with
     the following code at the bottom of the `Overview` class:'
+  id: totrans-87
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 作为最后一步，在`Overview`类的底部添加以下代码，实现`onWeatherChanged()`接口：
 - en: '[PRE20]'
+  id: totrans-88
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: As we discussed earlier, if we have a `weather` instance we update the `mWeatherStatus`
     attribute with a formatted string showing the current location, the weather conditions,
     the temperature, and the humidity.
+  id: totrans-89
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如我们之前所讨论的，如果我们有一个`weather`实例，我们会用格式化的字符串更新`mWeatherStatus`属性，显示当前位置、天气状况、温度和湿度。
 - en: 'With the preceding changes, we can upload our Chronotherm application. It presents
     itself as shown in the following screenshot:'
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过前面的更改，我们可以上传我们的Chronotherm应用程序。它的展示效果如下截图所示：
 - en: '![Extending the Android user interface](img/1942OS_08_02.jpg)'
+  id: totrans-91
   prefs: []
   type: TYPE_IMG
+  zh: '![扩展Android用户界面](img/1942OS_08_02.jpg)'
 - en: Collecting weather forecast data
+  id: totrans-92
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 收集天气预报数据。
 - en: 'Now that our application''s user interface is completed, we can proceed to
     implement the logic to store the user''s location while fetching weather data
     from the RESTful web service. This implementation could be organized in the following
     steps:'
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们的应用程序用户界面已完成，我们可以继续实现存储用户位置并从RESTful网络服务获取天气数据的逻辑。此实现可以按照以下步骤组织：
 - en: Update the `Preset` class to store the user's location.
+  id: totrans-94
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新`Preset`类以存储用户的位置。
 - en: Handle voice recognition results when the user clicks on the `weather_status`
     `TextView` parameter.
+  id: totrans-95
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当用户点击`weather_status` `TextView`参数时，处理语音识别结果。
 - en: Add a new scheduled thread that fetches weather data and updates the user interface
     using the `onWeatherChanged()` callback.
+  id: totrans-96
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加一个新的计划线程，获取天气数据并使用`onWeatherChanged()`回调更新用户界面。
 - en: 'We start updating the `Preset` class and realizing it with the following steps:'
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们开始更新`Preset`类，并按照以下步骤实现它：
 - en: 'Add, at the top of the class, the highlighted declaration used as a key to
     store and retrieve the location set by users:'
+  id: totrans-98
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类的顶部，添加高亮声明，用作存储和检索用户设置位置的键：
 - en: '[PRE21]'
+  id: totrans-99
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'At the bottom of the class, add the following setter to store the given location:'
+  id: totrans-100
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类的底部，添加以下setter以存储给定的位置：
 - en: '[PRE22]'
+  id: totrans-101
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'To retrieve the stored value, add the following getter:'
+  id: totrans-102
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 要检索存储的值，请添加以下getter：
 - en: '[PRE23]'
+  id: totrans-103
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: Through the `CURRENT_LOCATION` key, we retrieve the stored location and, if
     it isn't set, we return a `null` value. In this way, we cover the first run when
     no location is set, preventing any useless API call.
+  id: totrans-104
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 通过`CURRENT_LOCATION`键，我们检索存储的位置，如果未设置，则返回`null`值。这样，我们涵盖了未设置位置时的首次运行，防止了任何无用的API调用。
 - en: 'Now we can proceed with updating the application''s interaction to change the
     currently stored location through voice recognition. To complete this step, proceed
     with the following changes:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们可以继续更新应用程序的交互，通过语音识别来更改当前存储的位置。要完成这一步，请进行以下更改：
 - en: 'At the top of the `Overview` class, add the highlighted declaration to define
     a request code for the new `Intent` result that will ask for the user''s location:'
+  id: totrans-106
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`Overview`类的顶部，添加高亮声明以定义新`Intent`结果的请求代码，该结果将请求用户的位置：
 - en: '[PRE24]'
+  id: totrans-107
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'Implement the `changeLocation()` method used by the `weather_status` clickable
     view:'
+  id: totrans-108
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现`weather_status`可点击视图使用的`changeLocation()`方法：
 - en: '[PRE25]'
+  id: totrans-109
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Implement the member function that will set the current location using the
     `Preset` class, while providing the appropriate feedback to users:'
+  id: totrans-110
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现一个成员函数，使用`Preset`类来设置当前位置，并为用户提供适当的反馈：
 - en: '[PRE26]'
+  id: totrans-111
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: After we store the current location in the application's shared preferences,
     we update the `weather_status` view with a placeholder message until the scheduled
     thread retrieves the weather conditions.
+  id: totrans-112
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在应用程序的共享偏好设置中存储当前位置后，我们使用占位符消息更新`weather_status`视图，直到计划线程获取天气条件。
 - en: 'Add the highlighted code into the `onRecognitionDone()` callback, to pass the
     `bestMatch` parameter to the previous method:'
+  id: totrans-113
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`onRecognitionDone()`回调中添加高亮代码，将`bestMatch`参数传递给上一个方法：
 - en: '[PRE27]'
+  id: totrans-114
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'The last building block we''re missing is to collect and show weather forecast
     data at regular intervals through a new scheduled thread. This last part can be
     realized by updating the `DataReader` class with the following steps:'
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们缺少的最后一个构建块是通过新的计划线程定期收集和显示天气预报数据。这最后一部分可以通过以下步骤更新`DataReader`类来实现：
 - en: 'At the top of the class, add the highlighted declarations:'
+  id: totrans-116
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类的顶部，添加高亮声明：
 - en: '[PRE28]'
+  id: totrans-117
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: Tip
+  id: totrans-118
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: In the preceding snippet, we set the weather thread polling time to 5 seconds
     but we have to bear in mind that the external temperature will never change so
     fast, so it's useless to create too many queries to the web service. We chose
     this value only for testing purposes; when the prototype is ready, we will need
     to set more reasonable timings.
+  id: totrans-119
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在前面的代码片段中，我们将天气线程轮询时间设置为5秒，但我们必须考虑到外部温度永远不会变化得这么快，因此创建太多对网络服务的查询是没有用的。我们仅为了测试目的选择了这个值；当原型准备好时，我们将需要设置更合理的时序。
 - en: 'At the bottom of the class, add the following `Runnable` implementation that
     collects weather data and publishes the `Weather` instance to the main thread:'
+  id: totrans-120
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类的底部，添加以下`Runnable`实现，用于收集天气数据并将`Weather`实例发布到主线程：
 - en: '[PRE29]'
+  id: totrans-121
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'Add, the new scheduler initialization that spawns short-lived threads for weather
     data fetching to the `start()` method, as you can see in the highlighted code:'
+  id: totrans-122
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`start()`方法中添加新的调度器初始化，为天气数据获取生成短生命周期的线程，如高亮代码所示：
 - en: '[PRE30]'
+  id: totrans-123
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Stop the preceding scheduler, changing the `stop()` method with the following
     code:'
+  id: totrans-124
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 停止之前的调度器，使用以下代码更改`stop()`方法：
 - en: '[PRE31]'
+  id: totrans-125
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Update the main thread handler, passing the `Weather` instance to the appropriate
     callback according to the message type:'
+  id: totrans-126
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新主线程处理器，根据消息类型将`Weather`实例传递给适当的回调：
 - en: '[PRE32]'
+  id: totrans-127
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: Now that we have a prototype capable of collecting and showing weather data
     at regular intervals, we can upload our application into the UDOO board. After
     we click on the weather status view and insert our location through voice recognition,
     the application should update the `Overview` interface with the current weather
     conditions. The next step is to improve the boiler ignition check, adding the
     antifreeze feature.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们有一个能够定期收集和显示天气数据的原型，我们可以将应用程序上传到UDOOboard。当我们点击天气状态视图并通过语音识别输入我们的位置后，应用程序应该使用当前天气条件更新`Overview`界面。下一步是改进锅炉点火检查，添加防冻功能。
 - en: Improving the boiler with an antifreeze check
+  id: totrans-129
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 改进带有防冻检查的锅炉
 - en: 'Now that the forecast fetching is up and running, we can proceed with implementing
     the antifreeze feature. To achieve the interaction and the logic previously discussed,
     we should:'
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然天气预报已经可以获取并运行，我们可以继续实现防冻功能。为了实现之前讨论的交互和逻辑，我们应当：
 - en: Enhance the `Preset` class storing the user's antifreeze setpoint. In this class,
     we should provide two utilities to disable the antifreeze check and to find out
     whether the feature is enabled or not.
+  id: totrans-131
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 加强`Preset`类，存储用户的防冻设定点。在这个类中，我们应该提供两个实用工具来禁用防冻检查以及判断功能是否启用。
 - en: Handle the antifreeze feature in the `Overview` activity, updating the user
     interface when a setpoint is selected.
+  id: totrans-132
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`Overview`活动中处理防冻功能，在选择设定点时更新用户界面。
 - en: Update the boiler logic in the `SensorThread` class so it takes into account
     the antifreeze check when it's enabled.
+  id: totrans-133
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新`SensorThread`类中的锅炉逻辑，以便在启用防冻检查时考虑在内。
 - en: 'We begin our work by changing the `Preset` class with the following steps:'
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们通过以下步骤开始工作，更改`Preset`类：
 - en: 'At the top of the class, add the highlighted declarations:'
+  id: totrans-135
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类顶部，添加高亮声明：
 - en: '[PRE33]'
+  id: totrans-136
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: We use the `ANTIFREEZE_DISABLED` attribute as a default temperature that is
     impossible to reach. In this way, we can match this variable to know whether the
     antifreeze is activated or not.
+  id: totrans-137
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们使用`ANTIFREEZE_DISABLED`属性作为一个不可能达到的默认温度。这样，我们可以匹配这个变量以判断防冻功能是否激活。
 - en: 'Add the following setter to store the antifreeze setpoint at the bottom of
     the class:'
+  id: totrans-138
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类底部添加以下setter来存储防冻设定点：
 - en: '[PRE34]'
+  id: totrans-139
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'In line with the preceding method, add the following getter to retrieve the
     antifreeze setpoint:'
+  id: totrans-140
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 与前一个方法保持一致，添加以下getter来检索防冻设定点：
 - en: '[PRE35]'
+  id: totrans-141
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: With this approach, we return the value of the `CURRENT_ANTIFREEZE` key or the
     `ANTIFREEZE_DISABLED` attribute, if it isn't set.
+  id: totrans-142
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 采用这种方法，我们返回`CURRENT_ANTIFREEZE`键的值，如果未设置则返回`ANTIFREEZE_DISABLED`属性。
 - en: 'Add the following method to remove the antifreeze setpoint:'
+  id: totrans-143
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下方法来移除防冻设定点：
 - en: '[PRE36]'
+  id: totrans-144
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'Add the following utility that returns values if the antifreeze feature is
     enabled:'
+  id: totrans-145
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下实用程序，如果启用了防冻功能，则返回值：
 - en: '[PRE37]'
+  id: totrans-146
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'For the next step, we should add the antifreeze feature in the `Overview` activity,
     providing all methods to update the user interface while handling user input through
     voice recognition. The implementation requires the following steps:'
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一步中，我们应在`Overview`活动中添加防冻功能，提供所有更新用户界面同时通过语音识别处理用户输入的方法。实现该功能需要以下步骤：
 - en: 'At the top of the `Overview` class, add the `mFreeze` Boolean that points out
     whether the antifreeze check is currently activated :'
+  id: totrans-148
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`Overview`类的顶部，添加`mFreeze`布尔值，指出当前是否激活了防冻检查：
 - en: '[PRE38]'
+  id: totrans-149
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'At the bottom of the class, add the following method used to update the `Overview`
     layout:'
+  id: totrans-150
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在类底部，添加以下用于更新`Overview`布局的方法：
 - en: '[PRE39]'
+  id: totrans-151
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: As the first step, we retrieve the antifreeze temperature available in shared
     preferences, setting the `mFreeze` Boolean through the `antifreezeIsEnabled()`
     method. At this point, if the antifreeze feature is enabled, we show a green message
     with the given setpoint; otherwise, we show a gray message stating that the feature
     is disabled.
+  id: totrans-152
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 作为第一步，我们从共享偏好设置中获取防冻温度，通过`antifreezeIsEnabled()`方法设置`mFreeze`布尔值。在这一点上，如果启用了防冻功能，我们会显示一个带有给定设定点的绿色信息；否则，我们会显示一个灰色信息，表明该功能已禁用。
 - en: 'Call the `updateAntifreeze()` method at the bottom of the `readPreferences()`
     member function, as we can see in the highlighted code:'
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`readPreferences()`成员函数的底部调用`updateAntifreeze()`方法，如高亮代码所示：
 - en: '[PRE40]'
+  id: totrans-154
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'Now that we have a layout that works with the stored antifreeze setpoint, we
     should provide users with voice recognition and synthesis to activate or deactivate
     the antifreeze check. To realize this implementation, the following steps are
     required:'
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们已经有一个与存储的防冻设定点一起工作的布局，我们应该为用户提供语音识别和合成功能，以激活或关闭防冻检查。要实现这一实现，需要执行以下步骤：
 - en: 'At the top of the `Overview` class, add the highlighted `Intent` request code:'
+  id: totrans-156
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`Overview`类的顶部，添加高亮的`Intent`请求码：
 - en: '[PRE41]'
+  id: totrans-157
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'Add the `changeAntifreeze()` method to enable or disable the feature, when
     users click on the `weather_antifreeze` view:'
+  id: totrans-158
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加`changeAntifreeze()`方法，以在用户点击`weather_antifreeze`视图时启用或禁用该功能：
 - en: '[PRE42]'
+  id: totrans-159
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'Implement the member function to enable and store the antifreeze setpoint:'
+  id: totrans-160
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现成员函数以启用并存储防冻设定点：
 - en: '[PRE43]'
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'Add the highlighted code to the `onRecognitionDone()` callback, passing the
     `bestMatch` attribute to the previous method:'
+  id: totrans-162
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将高亮代码添加到`onRecognitionDone()`回调中，将`bestMatch`属性传递给前面的方法：
 - en: '[PRE44]'
+  id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: If the recognition intent is related to the `VOICE_ANTIFREEZE` request code,
     we try to parse the `bestMatch` parameter as a float, passing the value to the
     `enableAntifreeze()` method. If float parsing fails, we provide proper feedback
     through voice synthesis.
+  id: totrans-164
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果识别意图与`VOICE_ANTIFREEZE`请求码相关，我们会尝试将`bestMatch`参数解析为浮点数，并将值传递给`enableAntifreeze()`方法。如果浮点解析失败，我们会通过语音合成提供适当的反馈。
 - en: 'The Chronotherm prototype is almost done; the only task left is to improve
     the boiler logic using the antifreeze feature. In the `DataReader` class, we should
     add the following highlighted code in the `isBelowSetpoint()` method to make the
     `SensorThread` class aware of the antifreeze setpoint, as follows:'
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: Chronotherm原型几乎完成；剩下的唯一任务是使用防冻功能改进锅炉逻辑。在`DataReader`类中，我们应在`isBelowSetpoint()`方法中添加以下高亮代码，使`SensorThread`类能够了解防冻设定点，如下所示：
 - en: '[PRE45]'
+  id: totrans-166
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: With this code, if the outside temperature is less than the stored antifreeze
     setpoint, the boiler will turn on regardless of the user's preferences. If this
     condition doesn't happen, the default behavior continues.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用此代码，如果外部温度低于存储的防冻设定点，锅炉将不管用户的偏好而开启。如果此条件不发生，将继续默认行为。
 - en: 'The prototype is completed; through weather forecast data, it keeps our house
     warm and also removes the risk of the boiler breaking down due to freezing temperatures.
     We can upload the application and then we can set the antifreeze temperature.
     The following screenshot shows the expected result:'
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 原型已完成；通过天气预报数据，它保持了我们的房屋温暖，同时也消除了由于温度过低导致锅炉损坏的风险。我们可以上传应用程序，然后我们可以设置防冻温度。以下屏幕截图显示了预期的结果：
 - en: '![Improving the boiler with an antifreeze check](img/1942OS_08_03.jpg)'
+  id: totrans-169
   prefs: []
   type: TYPE_IMG
+  zh: '![通过防冻检查改进锅炉](img/1942OS_08_03.jpg)'
 - en: Now that the prototype is completed, we can update the Chronotherm application
     in the `app/build.gradle` file with a `0.3.0` version.
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然原型已经完成，我们可以在`app/build.gradle`文件中将Chronotherm应用程序更新为`0.3.0`版本。
 - en: Summary
+  id: totrans-171
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 概述
 - en: In this chapter, we discovered how important the Internet is to our devices,
     thanks to its huge amount of data and services. We found that our prototype could
     be improved using the external temperature and, without any changes to the circuit,
     we collected weather conditions through the network.
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们了解到互联网对我们的设备有多么重要，这得益于它的大量数据和服务。我们发现，通过使用外部温度，我们的原型可以得到改进，而且在不改变电路的情况下，通过网络收集天气条件。
 - en: In the first part, we wrote a generic connector so we could make HTTP calls
     without too much work. Then we used this component to implement a partial abstraction
     of the RESTful web service, capable of retrieving the current weather for the
     given location. We added new elements in the Chronotherm layout to show forecast
     data and to handle location input with voice recognition.
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 在第一部分，我们编写了一个通用连接器，这样我们可以不用做太多工作就能发出HTTP调用。然后我们使用这个组件实现了一个RESTful网络服务的部分抽象，能够获取给定位置的当前天气。我们在Chronotherm布局中添加了新元素以显示天气预报数据，并通过语音识别处理位置输入。
 - en: Finally, we decided to integrate the external temperature in our boiler logic.
     Indeed, we implemented antifreeze capability, which turns on the boiler regardless
     of the user's preferences when the external temperature is too low.
+  id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们决定将外部温度整合到我们的锅炉逻辑中。实际上，我们实现了防冻功能，当外部温度过低时，无论用户的偏好如何，都会开启锅炉。
 - en: This prototype was this book's last foray into the many features provided by
     the UDOO board together with the Android operating system. However, if you're
     interested in one further improvement to the Chronotherm application, you could
@@ -877,5 +1238,8 @@
     another prototyping board or technology, I hope that you've found useful advice
     and that you've enjoyed the work we've done together to build simple, but interactive,
     devices.
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个原型是本书最后一次探讨 UDOO 板与 Android 操作系统提供的众多功能。然而，如果你对 Chronotherm 应用程序还有进一步的改进兴趣，你可以深入研究附加章节，*第9章*，*使用
+    MQTT 监控你的设备*，它介绍了*物联网*的主要概念和*MQTT 协议*，这些协议用于物理设备之间的数据交换。即使你的下一个项目使用的是另一个原型板或技术，我也希望你能找到有用的建议，并且享受我们一起完成的构建简单但互动的设备的工作。
