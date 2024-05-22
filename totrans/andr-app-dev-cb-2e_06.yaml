@@ -1,0 +1,1683 @@
+- en: Chapter 6. Working with Data
+  id: totrans-0
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 第六章.数据处理
+- en: 'In this chapter, we will cover the following topics:'
+  id: totrans-1
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下主题：
+- en: Storing simple data
+  id: totrans-2
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 存储简单数据
+- en: Read and write a text file to internal storage
+  id: totrans-3
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 读写内部存储的文本文件
+- en: Read and write a text file to external storage
+  id: totrans-4
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 读写外部存储的文本文件
+- en: Including resource files in your project
+  id: totrans-5
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 在项目中包含资源文件
+- en: Creating and using an SQLite database
+  id: totrans-6
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 创建和使用SQLite数据库
+- en: Access data in the background using a Loader
+  id: totrans-7
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 使用加载器在后台访问数据
+- en: Introduction
+  id: totrans-8
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 简介
+- en: 'Since almost any application, big or small, requires saving some kind of data,
+    Android offers many options. From saving a simple value to creating full databases
+    using SQLite, storage options include the following:'
+  id: totrans-9
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于几乎任何大小应用都需要保存某种类型的数据，Android提供了许多选项。从保存一个简单值到使用SQLite创建完整的数据库，存储选项包括以下内容：
+- en: 'Shared preferences: simple name/value pairs'
+  id: totrans-10
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 共享偏好设置：简单的名称/值对
+- en: 'Internal storage: data files in private storage'
+  id: totrans-11
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 内部存储：私有存储中的数据文件
+- en: 'External storage: data files in private or public storage'
+  id: totrans-12
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 外部存储：在私有或公共存储中的数据文件
+- en: 'SQLite database: private data can expose the data through a Content Provider'
+  id: totrans-13
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: SQLite数据库：私有数据可以通过内容提供者暴露数据
+- en: 'Cloud storage: Private server or Service Provider'
+  id: totrans-14
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 云存储：私有服务器或服务提供商
+- en: 'There are benefits and tradeoffs to using internal and external storage. We
+    will list some of the differences here to help you decide whether to use internal
+    or external storage:'
+  id: totrans-15
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 使用内部和外部存储有其优点和权衡。我们将在这里列出一些差异，以帮助你决定是使用内部存储还是外部存储：
+- en: '**Internal storage**:'
+  id: totrans-16
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**内部存储**：'
+- en: Unlike external storage, internal storage is always available, but generally
+    has less free space
+  id: totrans-17
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 与外部存储不同，内部存储始终可用，但通常可用空间较少
+- en: Files are not accessible to the user (unless the device has root access)
+  id: totrans-18
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 文件对用户不可见（除非设备拥有root权限）
+- en: Files are automatically deleted when your app is uninstalled (or with the Clear
+    Cache/Cleanup File option in the App Manager)
+  id: totrans-19
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 当你的应用被卸载时，文件会自动删除（或者在应用管理器中使用清除缓存/清理文件选项）
+- en: '**External storage**:'
+  id: totrans-20
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**外部存储**：'
+- en: The device may not have external storage or it may be inaccessible (such as
+    when it's connected to a computer)
+  id: totrans-21
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 设备可能没有外部存储，或者可能无法访问（例如连接到计算机时）
+- en: Files are accessible to the user (and other apps) without requiring root access
+  id: totrans-22
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 文件对用户（和其他应用）可见，无需root权限
+- en: Files are not deleted when your app is uninstalled (unless you use `getExternalFilesDir()`
+    to get app-specific public storage)
+  id: totrans-23
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 当你的应用被卸载时，文件不会被删除（除非你使用`getExternalFilesDir()`获取特定于应用的公共存储）
+- en: In this chapter, we will demonstrate working with shared preferences, internal
+    and external storage, and SQLite databases. For cloud storage, take a look at
+    the Internet recipes in [Chapter 12](ch12.html "Chapter 12. Telephony, Networks,
+    and the Web"), *Telephony, Networks, and the Web* and Online Service Providers
+    in [Chapter 15](ch15.html "Chapter 15. The Backend as a Service Options"), *Backend
+    as a Service Options*.
+  id: totrans-24
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在本章中，我们将演示如何使用共享偏好设置、内部和外部存储以及SQLite数据库。对于云存储，请查看[第十二章](ch12.html "第十二章. 电信、网络和互联网")中的互联网食谱，*电信、网络和互联网*以及[第十五章](ch15.html
+    "第十五章. 后端即服务选项")中的在线服务提供商，*后端即服务选项*。
+- en: Storing simple data
+  id: totrans-25
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 存储简单数据
+- en: It's a common requirement to store simple data, and Android makes it simple
+    using the Preferences API. It's not limited to just user preferences either; you
+    can store any of the primitive data types using a name/value pair.
+  id: totrans-26
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 存储简单数据是一个常见需求，Android使用偏好设置API使其变得简单。不仅限于用户偏好；你可以使用名称/值对存储任何原始数据类型。
+- en: 'We''ll demonstrate saving a name from an `EditText` and displaying it when
+    the application starts. The following screenshot shows how the application looks
+    the first time with no saved name, and then on startup, after a name is saved:'
+  id: totrans-27
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将演示如何从`EditText`保存一个名字，并在应用启动时显示它。以下屏幕截图显示了应用首次启动时没有保存名字的样子，以及在保存名字后启动时的样子：
+- en: '![Storing simple data](img/B05057_06_01.jpg)'
+  id: totrans-28
+  prefs: []
+  type: TYPE_IMG
+  zh: '![存储简单数据](img/B05057_06_01.jpg)'
+- en: Getting ready
+  id: totrans-29
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备工作
+- en: 'Create a new project in Android Studio and call it: `Preferences`. Use the
+    default **Phone & Tablet** options and select **Empty Activity** when prompted
+    for the **Activity Type**.'
+  id: totrans-30
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，并将其命名为：`Preferences`。使用默认的**手机 & 平板**选项，在选择**活动类型**时选择**空活动**。
+- en: How to do it...
+  id: totrans-31
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'We''ll use the existing **TextView** to display a **Welcome back** message
+    and create a new `EditText` button to save the name. Start by opening `activity_main.xml`:'
+  id: totrans-32
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将使用现有的**TextView**显示**欢迎回来**的消息，并创建一个新的`EditText`按钮来保存名字。首先打开`activity_main.xml`文件：
+- en: 'Replace the existing **TextView** and add the following new views:'
+  id: totrans-33
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 替换现有的**TextView**并添加以下新的视图：
+- en: '[PRE0]'
+  id: totrans-34
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE0]'
+- en: 'Open `ActivityMain.java` and add the following global declarations:'
+  id: totrans-35
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 打开`ActivityMain.java`文件，并添加以下全局声明：
+- en: '[PRE1]'
+  id: totrans-36
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE1]'
+- en: 'Add the following code to `onCreate()` to save a reference to the `EditText`
+    and to load any saved name:'
+  id: totrans-37
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在`onCreate()`中添加以下代码，以便保存对`EditText`的引用并在加载已保存名称时使用：
+- en: '[PRE2]'
+  id: totrans-38
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE2]'
+- en: 'Add the following `saveName()` method:'
+  id: totrans-39
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 添加以下`saveName()`方法：
+- en: '[PRE3]'
+  id: totrans-40
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE3]'
+- en: Run the program on a device or emulator. Since we are demonstrating persisting
+    data, it loads the name during the `onCreate()`, so save a name and restart the
+    program to see it load.
+  id: totrans-41
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行程序。由于我们要演示持久化数据，所以在`onCreate()`期间会加载名称，因此保存一个名称并重新启动程序以查看加载过程。
+- en: How it works...
+  id: totrans-42
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 它是如何工作的...
+- en: To load the name, we first get a reference to `SharedPreference` so we can call
+    the `getString()` method. We pass in the key for our name/value pair and the default
+    value to return if the key is not found.
+  id: totrans-43
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了加载名称，我们首先获取对`SharedPreference`的引用，这样就可以调用`getString()`方法。我们传入名称/值对的关键字，以及如果找不到关键字时要返回的默认值。
+- en: To save the preference, we first need to get a reference to the Preference Editor.
+    We use `putString()` and follow it with `commit().` Without `commit()`, the change
+    will not be saved.
+  id: totrans-44
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了保存首选项，我们首先需要获取对首选项编辑器的引用。我们使用`putString()`然后调用`commit()`。如果没有`commit()`，更改将不会被保存。
+- en: There's more...
+  id: totrans-45
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 还有更多...
+- en: Our example stores all the preferences in a single file. We can also store preferences
+    in different files using `getSharedPreferences()` and passing in the name. This
+    option can be used if you want to have separate profiles for multiple users.
+  id: totrans-46
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们的示例将所有首选项存储在单个文件中。我们还可以使用`getSharedPreferences()`并传递名称，在不同文件中存储首选项。如果你想要为多个用户设置不同的配置文件，可以使用这个选项。
+- en: Read and write a text file to internal storage
+  id: totrans-47
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 在内部存储中读写文本文件
+- en: When simple name/value pairs are not sufficient, Android also supports regular
+    file operations including working with text and binary data.
+  id: totrans-48
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当简单的名称/值对不够用时，Android还支持常规文件操作，包括处理文本和二进制数据。
+- en: The following recipe demonstrates how to read and write a file to internal or
+    private storage.
+  id: totrans-49
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以下示例展示了如何将文件读取和写入内部或私有存储。
+- en: Getting ready
+  id: totrans-50
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备工作
+- en: 'Create a new project in Android Studio and call it: `InternalStorageFile`.
+    Use the default **Phone & Tablet** options and select **Empty Activity** when
+    prompted for the **Activity Type**.'
+  id: totrans-51
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，并将其命名为`InternalStorageFile`。选择默认的**Phone & Tablet**选项，并在提示**Activity
+    Type**时选择**Empty Activity**。
+- en: How to do it...
+  id: totrans-52
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'To demonstrate both reading and writing text, we''ll need a layout with an
+    `EditText` and two buttons. Start by opening `main_activity.xml` and follow these
+    steps:'
+  id: totrans-53
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了演示读取和写入文本，我们需要一个带有`EditText`和两个按钮的布局。首先打开`main_activity.xml`文件，并按照以下步骤操作：
+- en: 'Replace the existing `<TextView>` element with the following views:'
+  id: totrans-54
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 用以下视图替换现有的`<TextView>`元素：
+- en: '[PRE4]'
+  id: totrans-55
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE4]'
+- en: 'Now open `ActivityMain.java` and add the following global variables:'
+  id: totrans-56
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 现在打开`ActivityMain.java`文件，并添加以下全局变量：
+- en: '[PRE5]'
+  id: totrans-57
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE5]'
+- en: 'Add the following to the `onCreate()` method, after `setContentView ()`:'
+  id: totrans-58
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在`setContentView()`方法后，向`onCreate()`方法中添加以下内容：
+- en: '[PRE6]'
+  id: totrans-59
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE6]'
+- en: 'Add the following `writeFile()` method:'
+  id: totrans-60
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 添加以下`writeFile()`方法：
+- en: '[PRE7]'
+  id: totrans-61
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE7]'
+- en: 'Now add the `readFile()` method:'
+  id: totrans-62
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 现在添加`readFile()`方法：
+- en: '[PRE8]'
+  id: totrans-63
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE8]'
+- en: Run the program on a device or emulator.
+  id: totrans-64
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行程序。
+- en: How it works...
+  id: totrans-65
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 它是如何工作的...
+- en: We use the `InputStream` and `FileOutputStream` classes to read and write, respectively.
+    Writing to the file is as simple as getting the text from the `EditText` and calling
+    the `write()` method.
+  id: totrans-66
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们使用`InputStream`和`FileOutputStream`类分别进行读取和写入操作。将文件写入操作简化为从`EditText`获取文本并调用`write()`方法。
+- en: Reading back the contents is a little more involved. We could use the `FileInputStream`
+    class for reading, but when working with text, the helper classes make it easier.
+    In our example, we open the file with `openFileInput()`, which returns an `InputStream`
+    object. We then use the `InputStream` to get a `BufferedReader`, which offers
+    the `ReadLine()` method. We loop through each line in the file and append it to
+    our `StringBuilder`. When we're finished reading the file, we assign the text
+    to the `EditText`.
+  id: totrans-67
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 读取内容会稍微复杂一些。我们可以使用`FileInputStream`类进行读取，但在处理文本时，辅助类会使操作更简单。在我们的示例中，我们使用`openFileInput()`打开文件，它返回一个`InputStream`对象。然后我们使用`InputStream`获取一个`BufferedReader`，它提供了`ReadLine()`方法。我们遍历文件中的每一行并将其附加到我们的`StringBuilder`中。当我们完成文件读取后，我们将文本赋值给`EditText`。
+- en: Tip
+  id: totrans-68
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: 'Our previous file was created in the app''s private data folder. To view the
+    contents of the file, you can use the Android Device Monitor to pull the file
+    to your computer. The full file path is: `/data/data/com.packtpub.androidcookbook.`
+    `internalstoragetile/files/testfile.txt`.'
+  id: totrans-69
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们之前的文件是在应用的私有数据文件夹中创建的。要查看文件内容，你可以使用Android设备监视器将文件拉取到你的电脑上。完整的文件路径是：`/data/data/com.packtpub.androidcookbook.internalstoragetile/files/testfile.txt`。
+- en: 'The following screenshot shows how the file appears when viewed through the
+    **Android Device Monitor**:'
+  id: totrans-70
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 下面的屏幕截图显示了通过**Android设备监视器**查看文件时的样子：
+- en: '![How it works...](img/B05057_06_02.jpg)'
+  id: totrans-71
+  prefs: []
+  type: TYPE_IMG
+  zh: '![工作原理...](img/B05057_06_02.jpg)'
+- en: Note
+  id: totrans-72
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: You will need a device with root access to view the private folder shown previously.
+  id: totrans-73
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你需要一个具有root权限的设备来查看之前显示的私有文件夹。
+- en: There's more...
+  id: totrans-74
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 还有更多...
+- en: Let's see some additional information that can be helpful.
+  id: totrans-75
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们看看一些可能有所帮助的额外信息。
+- en: Cache Files
+  id: totrans-76
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 缓存文件
+- en: 'If all you need is to temporarily store data, you can also use the cache folder.
+    The following method returns the cache folder as a `File` object (the next recipe
+    demonstrates working with the `File` object):'
+  id: totrans-77
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你只需要临时存储数据，也可以使用缓存文件夹。以下方法返回缓存文件夹作为一个`File`对象（下一个食谱演示了如何使用`File`对象）：
+- en: '[PRE9]'
+  id: totrans-78
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE9]'
+- en: The main benefit of the cache folder is that the system can clear the cache
+    if running low on storage space. (The user can also clear the cache folder from
+    Apps Management in Settings.)
+  id: totrans-79
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 缓存文件夹的主要优点是，如果存储空间不足，系统可以清除缓存。（用户还可以在设置中的应用管理中清除缓存文件夹。）
+- en: For example, if your app downloads news articles, you could store those in the
+    cache. When your app starts, you can display the news already downloaded. These
+    are files that are not required to make your app work. If the system is low on
+    resources, the cache can be cleared without adversely affecting your app. (Even
+    though the system may clear the cache, it's still a good idea for your app to
+    remove old files as well.)
+  id: totrans-80
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 例如，如果你的应用下载新闻文章，你可以将这些文章存储在缓存中。当你的应用启动时，可以显示已经下载的新闻。这些文件不是使你的应用工作所必需的。如果系统资源不足，可以清除缓存，而不会对你的应用产生不利影响。（尽管系统可能会清除缓存，但你的应用删除旧文件仍然是一个好主意。）
+- en: See also
+  id: totrans-81
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 另请参阅
+- en: The next recipe, *Read and write a text file to external storage*.
+  id: totrans-82
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 下一个食谱，*读取和写入外部存储的文本文件*。
+- en: Read and write a text file to external storage
+  id: totrans-83
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 读取和写入外部存储的文本文件
+- en: The process of reading and writing files to external storage is basically the
+    same as using internal storage. The difference is in obtaining a reference to
+    the storage location. Also, as mentioned in the *Introduction*, external storage
+    may not be available, so it's best to check availability before attempting to
+    access it.
+  id: totrans-84
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 读取和写入外部存储的文件过程基本上与使用内部存储相同。区别在于获取存储位置的引用。另外，如*介绍*中提到的，外部存储可能不可用，因此在尝试访问之前最好检查其可用性。
+- en: This recipe will read and write a text file, as we did in the previous recipe.
+    We'll also demonstrate how to check the external storage state before we access
+    it.
+  id: totrans-85
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这个食谱将读取和写入文本文件，就像之前的食谱中所做的那样。我们还将演示如何在访问之前检查外部存储状态。
+- en: Getting ready
+  id: totrans-86
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备工作
+- en: 'Create a new project in Android Studio and call it: `ExternalStorageFile`.
+    Use the default **Phone & Tablet** options and select **Empty Activity** when
+    prompted for the **Activity Type**. We will use the same layout as the previous
+    recipe, so you can just copy and paste if you typed it in already. Otherwise,
+    use the layout from Step 1 in the previous recipe, *Read and write a text file
+    to internal storage*.'
+  id: totrans-87
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，将其命名为：`ExternalStorageFile`。使用默认的**手机 & 平板**选项，并在提示**活动类型**时选择**空活动**。我们将使用之前的食谱中的相同布局，所以如果你已经输入了，可以直接复制粘贴。否则，使用之前食谱中的第1步布局，*读取和写入内部存储的文本文件*。
+- en: How to do it...
+  id: totrans-88
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'As mentioned previously in the *Getting ready* section, we''ll use the layout
+    from the previous recipe. With the layout file done, the first step will be to
+    add permission to access the write to external storage. Here are the steps:'
+  id: totrans-89
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如之前在*准备工作*部分提到的，我们将使用之前的食谱中的布局。布局文件完成后，第一步将是添加访问外部存储的写入权限。以下是步骤：
+- en: 'Open the Android Manifest and add the following permission:'
+  id: totrans-90
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 打开Android Manifest并添加以下权限：
+- en: '[PRE10]'
+  id: totrans-91
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE10]'
+- en: 'Next, open `ActivityMain.java` and add the following global variables:'
+  id: totrans-92
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 接下来，打开`ActivityMain.java`并添加以下全局变量：
+- en: '[PRE11]'
+  id: totrans-93
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE11]'
+- en: 'Add the following to the `onCreate()` method, after `setContentView ()`:'
+  id: totrans-94
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在`onCreate()`方法中，在`setContentView()`之后添加以下内容：
+- en: '[PRE12]'
+  id: totrans-95
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE12]'
+- en: 'Add the following two methods to check the storage state:'
+  id: totrans-96
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 添加以下两种方法来检查存储状态：
+- en: '[PRE13]'
+  id: totrans-97
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE13]'
+- en: 'Add the following `writeFile()` method:'
+  id: totrans-98
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 添加以下`writeFile()`方法：
+- en: '[PRE14]'
+  id: totrans-99
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE14]'
+- en: 'Add the following `readFile()`method:'
+  id: totrans-100
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 添加以下`readFile()`方法：
+- en: '[PRE15]'
+  id: totrans-101
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE15]'
+- en: Run the program on a device or emulator with external storage.
+  id: totrans-102
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在具有外部存储的设备或模拟器上运行程序。
+- en: How it works...
+  id: totrans-103
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 工作原理...
+- en: Reading and writing files are basically the same for both internal and external
+    storage. The main difference is that we should check for the availability of the
+    external storage before attempting to access it, which we do with the `isExternalStorageWritable()`
+    and `isExternalStorageReadable()` methods. When checking the storage state, `MEDIA_MOUNTED`
+    means we can read and write to it.
+  id: totrans-104
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 对于内部和外部存储，读取和写入文件基本上是相同的。主要的区别在于，在尝试访问它之前，我们应该检查外部存储的可用性，这是通过`isExternalStorageWritable()`和`isExternalStorageReadable()`方法完成的。在检查存储状态时，`MEDIA_MOUNTED`意味着我们可以读取和写入它。
+- en: 'Unlike the internal storage example, we request the working path as we do in
+    this line of code:'
+  id: totrans-105
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与内部存储示例不同，我们请求工作路径，就像在这行代码中所做的那样：
+- en: '[PRE16]'
+  id: totrans-106
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE16]'
+- en: The actual reading and writing is done with the same classes, as it is just
+    the location that is different.
+  id: totrans-107
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 实际的读写操作是由相同的类完成的，因为只是位置不同。
+- en: Tip
+  id: totrans-108
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: It is not safe to hard code an external folder path. The path can vary between
+    versions of the OS and especially between hardware manufacturers. It is always
+    best to call `getExternalStorageDirectory()`, as shown.
+  id: totrans-109
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 硬编码外部文件夹路径是不安全的。该路径可能会因操作系统的版本不同而有所差异，尤其是在不同硬件制造商之间。最佳的做法是调用`getExternalStorageDirectory()`，如所示。
+- en: There's more...
+  id: totrans-110
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 还有更多...
+- en: Some additional information are discussed as follows.
+  id: totrans-111
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以下是一些额外的信息讨论。
+- en: Getting public folders
+  id: totrans-112
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 获取公共文件夹
+- en: 'The `getExternalStorageDirectory()` method returns the root folder of the external
+    storage. If you want to obtain specific public folders, such as the `Music` or
+    `Ringtone` folder, use `getExternalStoragePublicDirectory()` and pass in the desired
+    folder type, for example:'
+  id: totrans-113
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`getExternalStorageDirectory()`方法返回外部存储的根目录。如果你想获取特定的公共文件夹，比如`Music`或`Ringtone`文件夹，请使用`getExternalStoragePublicDirectory()`并传入所需的文件夹类型，例如：'
+- en: '[PRE17]'
+  id: totrans-114
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE17]'
+- en: Checking available space
+  id: totrans-115
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 检查可用空间
+- en: 'One issue consistent between internal and external storage is limited space.
+    If you know how much space you will need ahead of time, you can call the `getFreeSpace()`
+    method on the `File` object. (`getTotalSpace()` will return the total space.)
+    Here is a simple example to using the call to `getFreeSpace()`:'
+  id: totrans-116
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 内部存储和外部存储之间的一致问题是空间有限。如果你提前知道你需要多少空间，可以在`File`对象上调用`getFreeSpace()`方法。（`getTotalSpace()`将返回总空间。）以下是一个使用`getFreeSpace()`调用的简单示例：
+- en: '[PRE18]'
+  id: totrans-117
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE18]'
+- en: Deleting a file
+  id: totrans-118
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 删除文件
+- en: 'There are many helper methods available through the `File` object, including
+    deleting a file. If we wanted to delete the text file we created in the example,
+    we could call `delete()` as follows:'
+  id: totrans-119
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通过`File`对象提供了许多帮助方法，包括删除文件。如果我们想删除在示例中创建的文本文件，我们可以如下调用`delete()`：
+- en: '[PRE19]'
+  id: totrans-120
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE19]'
+- en: Working with directories
+  id: totrans-121
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 使用目录
+- en: 'Though it''s called a `File` object, it supports directory commands as well,
+    such as making and removing directories. If you want to make or remove a directory,
+    build the `File` object, then call the respective methods: `mkdir()` and `delete()`.
+    (There''s also a method called `mkdirs()` (plural) that will create parent folders
+    as well.) See the following link for a complete list.'
+  id: totrans-122
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 尽管它被称为`File`对象，但它也支持目录命令，比如创建和删除目录。如果你想创建或删除目录，构建`File`对象，然后调用相应的方法：`mkdir()`和`delete()`。（还有一个方法叫做`mkdirs()`（复数形式），它也会创建父目录。）有关完整列表，请参见以下链接。
+- en: Preventing files from being included in galleries
+  id: totrans-123
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 防止文件被包含在图库中
+- en: Android employs a **media scanner** that automatically includes sound, video,
+    and image files in the system collections, such as the Image Gallery. To exclude
+    your directory, create an empty file called `.nomedia` (note the preceding period)
+    in the same directory as the files you wish to exclude.
+  id: totrans-124
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安卓使用了一个**媒体扫描器**，它会自动将声音、视频和图像文件包含在系统集合中，比如图片库。要排除你的目录，请在你要排除的文件所在的同一目录中创建一个名为`.nomedia`的空文件（注意前面的句点）。
+- en: See also
+  id: totrans-125
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 另请参阅
+- en: For a complete list of methods available in the `File` class, visit [http://developer.android.com/reference/java/io/File.html](http://developer.android.com/reference/java/io/File.html)
+  id: totrans-126
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 有关`File`类中可用方法的完整列表，请访问[http://developer.android.com/reference/java/io/File.html](http://developer.android.com/reference/java/io/File.html)
+- en: Including resource files in your project
+  id: totrans-127
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 在项目中包含资源文件
+- en: 'Android provides two options for including files in your project: the `raw`
+    folder and the `Assets` folder. Which option you use depends on your requirements.
+    To start, we''ll give a brief overview of each option to help you decide when
+    to use each option:'
+  id: totrans-128
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android 为您的项目提供了两种包含文件的方式：`raw` 文件夹和 `Assets` 文件夹。您使用哪种选项取决于您的需求。首先，我们将简要概述每种选项，帮助您决定何时使用每种选项：
+- en: '**Raw files**'
+  id: totrans-129
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**原始文件**'
+- en: 'Included in the resource directory: `/res/raw`'
+  id: totrans-130
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 包含在资源目录中：`/res/raw`
+- en: 'As a resource, accessed through the raw identifier: `R.raw.<resource>`'
+  id: totrans-131
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 作为资源，通过原始标识符访问：`R.raw.<资源名>`
+- en: A good place for storing media files such as MP3, MP4, and OOG files
+  id: totrans-132
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 存储媒体文件（如 MP3、MP4 和 OOG 文件）的好地方
+- en: '**Asset files**'
+  id: totrans-133
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**资产文件**'
+- en: Creates a filesystem compiled in your APK (does *NOT* provide a resource ID)
+  id: totrans-134
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 在您的 APK 中编译文件系统（*不*提供资源 ID）
+- en: Access files using their file names, generally making them easier to use with
+    dynamically created names
+  id: totrans-135
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 通过文件名访问文件，通常使得它们更容易与动态创建的名称一起使用。
+- en: Some APIs do not support a Resource Identifier and therefore require including
+    as an Asset
+  id: totrans-136
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 某些 API 不支持资源标识符，因此需要作为资产包含
+- en: Generally, `raw` files are easier to work with since they are accessed through
+    the resource identifier. As we'll demonstrate in this recipe, the main difference
+    is how you access the file. In this example, we will load both a `raw` text file
+    and an `asset` text file and display the contents.
+  id: totrans-137
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通常，`raw` 文件更容易处理，因为它们是通过资源标识符访问的。正如我们将在本食谱中演示的，主要区别在于您如何访问文件。在这个例子中，我们将加载一个
+    `raw` 文本文件和一个 `asset` 文本文件，并显示其内容。
+- en: Getting ready
+  id: totrans-138
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备工作
+- en: 'Create a new project in Android Studio and call it: `ReadingResourceFiles`.
+    Use the default **Phone & Tablet** options and select **Empty Activity** when
+    prompted for the **Activity Type**.'
+  id: totrans-139
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 Android Studio 中创建一个新项目，并将其命名为：`ReadingResourceFiles`。使用默认的 **手机 & 平板** 选项，并在提示
+    **活动类型** 时选择 **空活动**。
+- en: How to do it...
+  id: totrans-140
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'To demonstrate reading content from both resource locations, we''ll create
+    a split layout. We also need to create both resource folders as they are not included
+    in the default Android project. Here are the steps:'
+  id: totrans-141
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了演示从两个资源位置读取内容，我们将创建一个分割布局。我们还需要创建这两个资源文件夹，因为它们不包括在默认的 Android 项目中。以下是步骤：
+- en: 'Open `activity_main.xml` and replace the contents with the following layout:'
+  id: totrans-142
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 打开 `activity_main.xml` 文件，并将其内容替换为以下布局：
+- en: '[PRE20]'
+  id: totrans-143
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE20]'
+- en: 'Create the `raw` resource folder in the res folder. It will read as: `res/raw`.'
+  id: totrans-144
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在 res 文件夹中创建 `raw` 资源文件夹。它将被读取为：`res/raw`。
+- en: Create a new text file by right-clicking on the `raw` folder and select **New**
+    | **File**. Name the file `raw_text.txt` and type some text in the file. (This
+    text will display when you run the application.)
+  id: totrans-145
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在 `raw` 文件夹上右键点击，选择 **新建** | **文件** 创建一个新文本文件。将文件命名为 `raw_text.txt`，并在文件中输入一些文本。（运行应用程序时将显示此文本。）
+- en: Create the `asset` folder. The `asset` folder is trickier because of the location.
+    Fortunately, Android Studio provides a menu option that makes creating it very
+    easy. Go to the **File** menu (or right-click on the **app** node) and select
+    **New** | **Folder** | **Assets Folder** as shown in this screenshot:![How to
+    do it...](img/B05057_06_03.jpg)
+  id: totrans-146
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 创建 `asset` 文件夹。由于位置的原因，`asset` 文件夹更难以处理。幸运的是，Android Studio 提供了一个菜单选项，使得创建它变得非常简单。转到
+    **文件** 菜单（或者在 **app** 节点上右键点击），然后选择 **新建** | **文件夹** | **资产文件夹**，如下截图所示：![如何操作...](img/B05057_06_03.jpg)
+- en: Create another text file in the asset folder called `asset_text.txt`. Again,
+    whatever text you type here will be shown when you run the app. Here's how the
+    final result should look after both text files are created:![How to do it...](img/B05057_06_04.jpg)
+  id: totrans-147
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在 asset 文件夹中创建另一个名为 `asset_text.txt` 的文本文件。同样，您在这里输入的任何文本在运行应用时都会显示。以下是创建两个文本文件后的最终结果应该看起来像这样：![如何操作...](img/B05057_06_04.jpg)
+- en: 'Now it''s time for the code. Open `MainActivity.java` and add the following
+    method to read the text file (which is passed into the method):'
+  id: totrans-148
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 现在是编写代码的时候了。打开 `MainActivity.java` 文件，并添加以下方法来读取文本文件（传递到该方法中）：
+- en: '[PRE21]'
+  id: totrans-149
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE21]'
+- en: 'Finally, add the following code to the `onCreate()` method:'
+  id: totrans-150
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 最后，在 `onCreate()` 方法中添加以下代码：
+- en: '[PRE22]'
+  id: totrans-151
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE22]'
+- en: Run the program on a device or emulator.
+  id: totrans-152
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行程序。
+- en: How it works...
+  id: totrans-153
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 工作原理...
+- en: 'To summarize, the only difference is in how we get a reference to each file.
+    This line of code reads the `raw` resource:'
+  id: totrans-154
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 总结一下，唯一的区别在于我们如何获取对每个文件的引用。这行代码读取 `raw` 资源：
+- en: '[PRE23]'
+  id: totrans-155
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE23]'
+- en: 'And this code reads the `asset` file:'
+  id: totrans-156
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 而这段代码读取 `asset` 文件：
+- en: '[PRE24]'
+  id: totrans-157
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE24]'
+- en: Both calls return an `InputStream`, which the `getText()` method uses to read
+    the file contents. It is worth noting, though, that the call to open the `asset`
+    text file requires an additional `try`/`catch`. As noted in the recipe introduction,
+    resources are indexed so we have compile time verification, which the `asset`
+    folder does not have.
+  id: totrans-158
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这两个调用都返回一个 `InputStream`，`getText()` 方法使用它来读取文件内容。值得注意的是，打开 `asset` 文本文件的调用需要一个额外的
+    `try`/`catch`。正如菜谱介绍中所提到的，资源是经过索引的，因此我们有编译时验证，而 `asset` 文件夹没有。
+- en: There's more...
+  id: totrans-159
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 还有更多...
+- en: A common approach is to include resources in your APK, but download new resources
+    as they become available. (See the network communication in [Chapter 12](ch12.html
+    "Chapter 12. Telephony, Networks, and the Web"), *Telephony, Networks, and the
+    Web*.) If new resources aren't available, you can always fall back on the resources
+    in your APK.
+  id: totrans-160
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一种常见的方法是将资源包含在 APK 中，但在新资源可用时下载它们。（请参阅 [第12章](ch12.html "第12章. 电信、网络和互联网")中的网络通信，*电信、网络和互联网*。）如果新资源不可用，你总是可以退回到
+    APK 中的资源。
+- en: See also
+  id: totrans-161
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 另请参阅
+- en: Network communication recipes in [Chapter 12](ch12.html "Chapter 12. Telephony,
+    Networks, and the Web"), *Telephony, Networks, and the Web.*
+  id: totrans-162
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '[第12章](ch12.html "第12章. 电信、网络和互联网")中的网络通信菜谱，*电信、网络和互联网*。'
+- en: Creating and using an SQLite database
+  id: totrans-163
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 创建和使用 SQLite 数据库
+- en: In this recipe, we're going to demonstrate working with an SQLite database.
+    If you are already familiar with SQL databases from other platforms, then much
+    of what you know will apply. If you are new to SQLite, take a look at the reference
+    links in the "See also" section as this recipe assumes a basic understanding of
+    database concepts including schemas, tables, cursors, and raw SQL.
+  id: totrans-164
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这个菜谱中，我们将演示如何使用 SQLite 数据库。如果你已经熟悉来自其他平台的 SQL 数据库，那么你所知道的大部分内容都将适用。如果你是 SQLite
+    的新手，请查看“另请参阅”部分中的参考链接，因为此菜谱假设你具有数据库概念的基本理解，包括模式、表、游标和原始 SQL。
+- en: 'To get you up and running with an SQLite database quickly, our example implements
+    the basic CRUD operations. Generally, when creating a database in Android, you
+    create a class that extends `SQLiteOpenHelper`, which is where your database functionality
+    is implemented. Here is a list of the functions to provide each of the basic operations:'
+  id: totrans-165
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了让你快速开始使用 SQLite 数据库，我们的示例实现了基本的 CRUD 操作。通常，在 Android 中创建数据库时，你会创建一个扩展 `SQLiteOpenHelper`
+    的类，这是实现数据库功能的地方。以下是为每个基本操作提供功能的函数列表：
+- en: 'Create: `insert()`'
+  id: totrans-166
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 创建：`insert()`
+- en: 'Read: `query()` and `rawQuery()`'
+  id: totrans-167
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 读取：`query()` 和 `rawQuery()`
+- en: 'Update: `update()`'
+  id: totrans-168
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 更新：`update()`
+- en: 'Delete: `delete()`'
+  id: totrans-169
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 删除：`delete()`
+- en: To demonstrate a fully working database, we will create a simple `Dictionary`
+    database, so we can store words and their definitions. We'll demonstrate the CRUD
+    operations by allowing adding new words (with their definitions) and updating
+    existing word definitions. We'll show words in a `ListView` using a cursor. Pressing
+    a word in the `ListView` will read the definition from the database and display
+    it in a Toast message. A long press will delete the word.
+  id: totrans-170
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了演示一个完全工作的数据库，我们将创建一个简单的 `Dictionary` 数据库，以便我们可以存储单词及其定义。我们将通过允许添加新单词（及其定义）和更新现有单词定义来演示
+    CRUD 操作。我们将使用游标在 `ListView` 中显示单词。点击 `ListView` 中的单词将从数据库中读取定义并在 Toast 消息中显示。长按将删除单词。
+- en: Getting ready
+  id: totrans-171
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备就绪
+- en: 'Create a new project in Android Studio and call it: `SQLiteDatabase`. Use the
+    default **Phone & Tablet** options and select **Empty Activity** when prompted
+    for the **Activity Type**.'
+  id: totrans-172
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在 Android Studio 中创建一个新项目，命名为 `SQLiteDatabase`。使用默认的 **Phone & Tablet** 选项，并在提示选择
+    **Activity Type** 时选择 **Empty Activity**。
+- en: How to do it...
+  id: totrans-173
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'First, we''ll create the UI, which will consist of two `EditText` fields, a
+    button, and a `ListView`. As we add words to the database, they will populate
+    the `ListView`. To start, open `activity_main.xml` and follow these steps:'
+  id: totrans-174
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 首先，我们将创建一个UI，它包括两个 `EditText` 字段，一个按钮，和一个 `ListView`。当我们向数据库添加单词时，它们将填充 `ListView`。开始时，打开
+    `activity_main.xml` 并按照以下步骤操作：
+- en: 'Replace the existing `<TextView>` with these new views:'
+  id: totrans-175
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 用以下新视图替换现有的 `<TextView>`：
+- en: '[PRE25]'
+  id: totrans-176
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE25]'
+- en: 'Add a new Java class to the project named `DictionaryDatabase`. This class
+    extends from `SQLiteOpenHelper` and handles all the SQLite functions. Here is
+    the class declaration:'
+  id: totrans-177
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 向项目中添加一个名为 `DictionaryDatabase` 的新 Java 类。这个类从 `SQLiteOpenHelper` 扩展而来，处理所有的
+    SQLite 函数。以下是类声明：
+- en: '[PRE26]'
+  id: totrans-178
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE26]'
+- en: 'Below the declaration, add the following constants:'
+  id: totrans-179
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在声明下方，添加以下常量：
+- en: '[PRE27]'
+  id: totrans-180
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE27]'
+- en: 'Add the following constructor, `OnCreate()` and `onUpgrade()` methods:'
+  id: totrans-181
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 添加以下构造函数，`OnCreate()` 和 `onUpgrade()` 方法：
+- en: '[PRE28]'
+  id: totrans-182
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE28]'
+- en: 'The following methods are responsible for creating, updating, and deleting
+    the records:'
+  id: totrans-183
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 以下方法负责创建、更新和删除记录：
+- en: '[PRE29]'
+  id: totrans-184
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE29]'
+- en: 'And these methods handle reading the information from the database:'
+  id: totrans-185
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 而这些方法处理从数据库读取信息：
+- en: '[PRE30]'
+  id: totrans-186
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE30]'
+- en: 'With the database class finished, open `MainActivity.java`. Add the following
+    global variables below the class declaration:'
+  id: totrans-187
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 数据库类完成后，打开`MainActivity.java`。在类声明下面添加以下全局变量：
+- en: '[PRE31]'
+  id: totrans-188
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE31]'
+- en: 'Add the following method to save the fields when the button is clicked:'
+  id: totrans-189
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 添加以下方法以在点击按钮时保存字段：
+- en: '[PRE32]'
+  id: totrans-190
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE32]'
+- en: 'Add this method to populate the `ListView`:'
+  id: totrans-191
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 添加这个方法来填充`ListView`：
+- en: '[PRE33]'
+  id: totrans-192
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE33]'
+- en: 'Finally, add the following code to `onCreate()`:'
+  id: totrans-193
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: '最后，在`onCreate()`中添加以下代码： '
+- en: '[PRE34]'
+  id: totrans-194
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE34]'
+- en: Run the program on a device or emulator and try it out.
+  id: totrans-195
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行程序并尝试一下。
+- en: How it works...
+  id: totrans-196
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 它的工作原理是...
+- en: 'We''ll start by explaining the `DictionaryDatabase` class as that''s the heart
+    of an SQLite database. The first item to note is the constructor:'
+  id: totrans-197
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将从解释`DictionaryDatabase`类开始，因为这是SQLite数据库的核心。首先要注意的是构造函数：
+- en: '[PRE35]'
+  id: totrans-198
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE35]'
+- en: Notice `DATABASE_VERSION`? Only when you make changes to your database schema
+    do you need to increment this value.
+  id: totrans-199
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 注意`DATABASE_VERSION`吗？只有当你对数据库架构进行更改时，才需要增加这个值。
+- en: Next is `onCreate()`, where the database is actually created. This is only called
+    the first time the database is created, not each time the class is created. It's
+    also worth noting the `_id` field. Android does not require tables to have a primary
+    field, except for some classes such as `SimpleCursorAdapter`, require `_id`.
+  id: totrans-200
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 接下来是`onCreate()`，实际创建数据库的地方。这只有在第一次创建数据库时才会被调用，而不是每次创建类时。还值得注意的是`_id`字段。Android并不要求表具有主字段，除了像`SimpleCursorAdapter`这样的某些类需要`_id`。
+- en: We're required to implement the `onUpgrade()` callback, but as this is a new
+    database, there's nothing to do. This method will be called when the database
+    version is incremented.
+  id: totrans-201
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们需要实现`onUpgrade()`回调，但因为是新的数据库，所以不需要做任何事情。当数据库版本增加时，将调用此方法。
+- en: The `saveRecord()` method handles calling `addRecord()` or `updateRecord()`,
+    as appropriate. Since we are going to modify the database, both methods call `getWritableDatabase()`
+    so we can make changes. A writeable database requires more resources so if you
+    don't need to make changes, get a read-only database instead.
+  id: totrans-202
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`saveRecord()`方法负责调用`addRecord()`或`updateRecord()`，视情况而定。由于我们将要修改数据库，这两个方法都调用`getWritableDatabase()`以便我们可以进行更改。可写数据库需要更多资源，所以如果你不需要进行更改，请获取只读数据库。'
+- en: 'The last method to note is `getWordList()`, which returns all the words in
+    the database using a cursor object. We use this cursor to populate the `ListView`,
+    which brings us to `ActivityMain.java`. The `onCreate()` method does the standard
+    initialization we''ve seen before and also creates an instance of the database
+    with the following line of code:'
+  id: totrans-203
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 需要注意的最后一个方法是`getWordList()`，它使用游标对象返回数据库中的所有单词。我们使用这个游标来填充`ListView`，这就把我们带到了`ActivityMain.java`。`onCreate()`方法进行了我们之前见过的标准初始化，并使用以下代码行创建数据库实例：
+- en: '[PRE36]'
+  id: totrans-204
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE36]'
+- en: The `onCreate()` method is also where we set up the events to show the word
+    definition (with a Toast) when an item is pressed and to delete the word on a
+    long press. Probably the most complicated code is in `updateWordList()`.
+  id: totrans-205
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`onCreate()`方法也是我们设置事件的地方，当点击项目时显示单词定义（通过Toast弹出），以及长按删除单词。最复杂的代码可能是在`updateWordList()`方法中。'
+- en: This isn't the first time we've used an adapter, but this is the first cursor
+    adapter, so we'll explain. We use the `SimpleCursorAdapter` to create a mapping
+    between our field in the cursor and the `ListView` item. We use the `layout.simple_list_item_1`
+    layout, which only includes a single text field with ID `android.R.id.text1`.
+    In a real application, we'd probably create a custom layout and include the definition
+    in the `ListView` item, but we wanted to demonstrate a method to read the definition
+    from the database.
+  id: totrans-206
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这不是我们第一次使用适配器，但这是我们第一次使用游标适配器，所以我们会解释一下。我们使用`SimpleCursorAdapter`来创建游标中的字段与`ListView`项之间的映射。我们使用`layout.simple_list_item_1`布局，它只包括一个带有ID
+    `android.R.id.text1`的单个文本字段。在实际应用中，我们可能会创建一个自定义布局，并在`ListView`项中包含定义，但我们想要演示一种从数据库读取定义的方法。
+- en: We call `updateWordList()` in three places—during `onCreate()` to create the
+    initial list, then again after we add/update a list, and lastly when deleting
+    a list.
+  id: totrans-207
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们在三个地方调用`updateWordList()`——在`onCreate()`时创建初始列表，添加/更新列表后再次调用，以及删除列表时最后调用。
+- en: There's more...
+  id: totrans-208
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 还有更多...
+- en: Though this is a fully functioning example of SQLite, it is still just the basics.
+    A whole book can, and has, been written on SQLite for Android.
+  id: totrans-209
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 尽管这是一个功能完整的 SQLite 示例，但它仍然只是基础。整本书都可以，也确实有，关于 Android 中的 SQLite 的内容。
+- en: Upgrading a database
+  id: totrans-210
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 升级数据库
+- en: As we mentioned previously, when we increment the database version, the `onUpgrade()`
+    method will be called. What you do here is dependent on the change(s). If you
+    changed an existing table, ideally you'll want to migrate the user data to the
+    new format by querying the existing data and inserting it into the new format.
+    Keep in mind, there is no guarantee the user will upgrade in consecutive order—so
+    they could jump from version 1 to version 4, for example.
+  id: totrans-211
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如我们之前提到的，当增加数据库版本时，将调用 `onUpgrade()` 方法。这里需要执行的操作取决于所做的更改。如果你更改了现有的表，理想情况下，你将希望通过查询现有数据并将其插入到新格式中来迁移用户数据。请记住，不能保证用户会按连续的顺序升级——例如，他们可能会从版本
+    1 直接跳到版本 4。
+- en: See also
+  id: totrans-212
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 另请参阅
+- en: 'SQLite Home Page: [https://www.sqlite.org/](https://www.sqlite.org/)'
+  id: totrans-213
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: SQLite 主页：[https://www.sqlite.org/](https://www.sqlite.org/)
+- en: 'SQLite Database Android Reference: [http://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html](http://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html)'
+  id: totrans-214
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: SQLite 数据库 Android 参考文档：[http://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html](http://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html)
+- en: Access data in the background using a Loader
+  id: totrans-215
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 在后台使用 Loader 访问数据
+- en: Any potentially long-running operations should not be done on the UI thread,
+    as this can cause your application to be slow or become non-responsive. The Android
+    OS will bring up the **Application Not Responding** (**ANR**) dialog when apps
+    become non-responsive.
+  id: totrans-216
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 任何可能长时间运行的操作都不应该在 UI 线程上执行，因为这可能导致应用程序变慢或无响应。当应用程序无响应时，Android OS 会弹出 **应用程序无响应**
+    (**ANR**) 对话框。
+- en: Since querying databases can be time-consuming, Android introduced the Loader
+    API in Android 3.0\. A Loader processes the query on a background thread and notifies
+    the UI thread when it finishes.
+  id: totrans-217
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 由于查询数据库可能很耗时，Android 在 Android 3.0 中引入了 Loader API。Loader 在后台线程上处理查询，并在完成后通知
+    UI 线程。
+- en: 'The two primary benefits to Loaders include:'
+  id: totrans-218
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Loaders 的两个主要优点包括：
+- en: Querying the database is (automatically) handled on a background thread
+  id: totrans-219
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 数据库查询操作（自动）在后台线程中处理
+- en: The Query auto-updates (when using a Content Provider data source)
+  id: totrans-220
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 查询（在使用内容提供者数据源时）会自动更新
+- en: To demonstrate a Loader, we will modify the previous SQLite database example
+    to use a `CursorLoader` to populate the `ListView`.
+  id: totrans-221
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了演示 Loader，我们将修改之前的 SQLite 数据库示例，使用 `CursorLoader` 填充 `ListView`。
+- en: Getting ready
+  id: totrans-222
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 准备工作
+- en: 'We will use the project from the previous example, *Creating and using an SQLite
+    database,* as the base for this recipe. Create a new project in Android Studio
+    and call it: `Loader`. Use the default **Phone & Tablet** options and select **Empty
+    Activity** when prompted for the **Activity Type**. Copy the `DictionaryDatabase`
+    class and the layout from the previous recipe. Though we will use parts of the
+    previous `ActivityMain.java` code, we will start at the beginning in this recipe
+    to make it easier to follow.'
+  id: totrans-223
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将使用上一个示例中的项目，*创建和使用 SQLite 数据库*，作为这个示例的基础。在 Android Studio 中创建一个新项目，将其命名为
+    `Loader`。使用默认的 **Phone & Tablet** 选项，并在提示 **Activity Type** 时选择 **Empty Activity**。复制上一个示例中的
+    `DictionaryDatabase` 类和布局。尽管我们将使用之前 `ActivityMain.java` 代码的部分内容，但在这个示例中我们将从头开始，以便更容易跟随。
+- en: How to do it...
+  id: totrans-224
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 如何操作...
+- en: 'With the project set up as described previously, we will start by creating
+    two new Java classes, and then tie it all together in `ActivityMain.java`. Here
+    are the steps:'
+  id: totrans-225
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 按照之前的描述设置项目后，我们将从创建两个新的 Java 类开始，然后在 `ActivityMain.java` 中将所有内容整合在一起。以下是步骤：
+- en: 'Create a new Java class called `DictionaryAdapter` that extends `CursorAdapter`.
+    This class replaces the `SimpleCursorAdapater` we used in the previous recipe.
+    Here is the full code:'
+  id: totrans-226
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 创建一个名为 `DictionaryAdapter` 的新 Java 类，该类继承自 `CursorAdapter`。这个类替代了我们在上一个示例中使用的
+    `SimpleCursorAdapter`。以下是完整代码：
+- en: '[PRE37]'
+  id: totrans-227
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE37]'
+- en: 'Next, create another new Java class and call this one `DictionaryLoader`. Though
+    this is the class that handles the data loading on the background thread, it''s
+    actually very simple:'
+  id: totrans-228
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 接下来，创建另一个新的 Java 类，将这个类命名为 `DictionaryLoader`。尽管这是处理后台线程数据加载的类，但它实际上非常简单：
+- en: '[PRE38]'
+  id: totrans-229
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE38]'
+- en: 'Next, open `ActivityMain.java`. We need to change the declaration to implement
+    the `LoaderManager.LoaderCallbacks<Cursor>` interface as follows:'
+  id: totrans-230
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 接下来，打开 `ActivityMain.java`。我们需要将声明更改为实现 `LoaderManager.LoaderCallbacks<Cursor>`
+    接口，如下所示：
+- en: '[PRE39]'
+  id: totrans-231
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE39]'
+- en: 'Add the adapter to the global declarations. The complete list is as follows:'
+  id: totrans-232
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 将适配器添加到全局声明中。完整的列表如下：
+- en: '[PRE40]'
+  id: totrans-233
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE40]'
+- en: 'Change `onCreate()` to use the new adapter and add a call to update the Loader
+    after deleting a record. The final `onCreate()` method should look as follows:'
+  id: totrans-234
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 修改`onCreate()`以使用新的适配器，并在删除记录后添加调用以更新加载器。最终的`onCreate()`方法应如下所示：
+- en: '[PRE41]'
+  id: totrans-235
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE41]'
+- en: 'We no longer have the `updateWordList()` method, so change `saveRecord()` as
+    follows:'
+  id: totrans-236
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 我们不再有`updateWordList()`方法，因此按照以下方式更改`saveRecord()`：
+- en: '[PRE42]'
+  id: totrans-237
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE42]'
+- en: 'Finally, implement these three methods for the Loader interface:'
+  id: totrans-238
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 最后，为加载器接口实现以下三个方法：
+- en: '[PRE43]'
+  id: totrans-239
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE43]'
+- en: Run the program on a device or emulator.
+  id: totrans-240
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行程序。
+- en: How it works...
+  id: totrans-241
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 工作原理...
+- en: The default `CursorAdapter` requires a Content Provider URI. Since we are accessing
+    the SQLite database directly (and not through a Content Provider), we don't have
+    a URI to pass, so instead we created a custom adapter by extending the `CursorAdapter`
+    class. `DictionaryAdapter` still performs the same functionality as the previous
+    `SimpleCursorAdapter` from the previous recipe, namely mapping the data from the
+    cursor to the item layout.
+  id: totrans-242
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 默认的`CursorAdapter`需要一个内容提供者URI。由于我们直接访问SQLite数据库（而不是通过内容提供者），我们没有URI传递，因此我们通过扩展`CursorAdapter`类创建了一个自定义适配器。`DictionaryAdapter`仍然执行与之前的`SimpleCursorAdapter`相同的功能，即将游标中的数据映射到项目布局。
+- en: The next class we added was `DictionaryLoader`, which is the actual Loader.
+    As you can see, it's actually very simple. All it does is return the cursor from
+    `getWordList()`. The key here is that this query is being handled in a background
+    thread and will call the `onLoadFinished()` callback (in `MainActivity.java`)
+    when it finishes. Fortunately, most of the heavy lifting is handled in the base
+    class.
+  id: totrans-243
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们添加的下一个类是`DictionaryLoader`，这是实际的加载器。如您所见，它实际上非常简单。它所做的只是从`getWordList()`返回游标。关键在于此查询是在后台线程中处理的，并在完成时调用`onLoadFinished()`回调（在`MainActivity.java`中）。幸运的是，大部分繁重的工作都在基类中处理。
+- en: 'This takes us to `ActivityMain.java`, where we implemented the following three
+    callbacks from the `LoaderManager.LoaderCallbacks` interface:'
+  id: totrans-244
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这将我们带到`ActivityMain.java`，在那里我们实现了`LoaderManager.LoaderCallbacks`接口的以下三个回调：
+- en: '`onCreateLoader()`: It''s initially called in `onCreate()` with the `initLoader()`
+    call. It''s called again with the `restartLoader()` call, after we make changes
+    to the database.'
+  id: totrans-245
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`onCreateLoader()`: 最初在`onCreate()`中的`initLoader()`调用时调用。在我们对数据库进行更改后，通过`restartLoader()`调用再次调用。'
+- en: '`onLoadFinished()`: It''s called when the Loader `loadInBackground()` finishes.'
+  id: totrans-246
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`onLoadFinished()`: 当加载器的`loadInBackground()`完成时调用。'
+- en: '`onLoaderReset()`: It''s called when the Loader is being recreated (such as
+    with the `restart()` method). We set the old cursor to `null` because it will
+    be invalidated and we don''t want a reference kept around.'
+  id: totrans-247
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`onLoaderReset()`: 当加载器被重新创建时调用（例如使用`restart()`方法）。我们将旧的游标设置为`null`，因为它将无效，我们不想保留引用。'
+- en: There's more...
+  id: totrans-248
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 还有更多...
+- en: As you saw in the previous example, we need to manually notify the Loader to
+    requery the database using `restartLoader()`. One of the benefits of using a Loader
+    is that it can auto-update, but it requires a Content Provider as the data source.
+    A Content Provider supports using an SQLite database as the data source, and for
+    a serious application, would be recommended. See the following Content Provider
+    link to get started.
+  id: totrans-249
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如您在前一个示例中看到的，我们需要手动通知加载器使用`restartLoader()`重新查询数据库。使用加载器的一个好处是它可以自动更新，但这需要一个内容提供者作为数据源。内容提供者支持使用SQLite数据库作为数据源，对于严肃的应用程序，建议使用。请参阅以下内容提供者链接以开始操作。
+- en: See also
+  id: totrans-250
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 另请参阅
+- en: The *AsyncTask* recipe in [Chapter 14](ch14.html "Chapter 14. Getting your app
+    ready for the Play Store"), *Getting Your App Ready for the Play Store*.
+  id: totrans-251
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '[第14章](ch14.html "第14章。让你的应用准备好上架Play商店")中的*AsyncTask*配方，*让你的应用准备好上架Play商店*。'
+- en: 'Creating a Content Provider: [http://developer.android.com/guide/topics/providers/content-provider-creating.html](http://developer.android.com/guide/topics/providers/content-provider-creating.html)'
+  id: totrans-252
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 创建内容提供者：[http://developer.android.com/guide/topics/providers/content-provider-creating.html](http://developer.android.com/guide/topics/providers/content-provider-creating.html)

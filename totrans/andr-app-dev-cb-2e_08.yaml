@@ -1,1242 +1,1842 @@
 - en: Chapter 8. Using the Touchscreen and Sensors
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第八章. 使用触摸屏和传感器
 - en: 'In this chapter, we will cover the following topics:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下主题：
 - en: Listening for click and long-press events
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 监听点击和长按事件
 - en: Recognizing tap and other common gestures
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 识别轻敲和其他常见手势
 - en: Pinch-to-zoom with multi-touch gestures
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 多指触控下的捏合缩放手势
 - en: Swipe-to-Refresh
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 滑动刷新
 - en: Listing available sensors – an introduction to the Android Sensor Framework
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 列出可用的传感器——安卓传感器框架简介
 - en: Reading sensor data – using the Android Sensor Framework events
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 读取传感器数据——使用安卓传感器框架事件
 - en: Reading device orientation
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 读取设备方向
 - en: Introduction
+  id: totrans-9
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: These days, mobile devices are packed with sensors, often including a gyroscope,
     magnetic, gravity, pressure, and/or temperature sensors, not to mention the touchscreen.
     This provides many new and exciting options to interact with your user. Through
     the sensors, you can determine three-dimensional device location and how the device
     itself is being used, such as shaking, rotation, tilt, and so on. Even the touchscreen
     offers many new input methods from just the simple click to gestures and multi-touch.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 如今，移动设备配备了众多传感器，通常包括陀螺仪、磁力、重力、压力和/或温度传感器，更不用说触摸屏了。这为与用户互动提供了许多新颖而激动人心的选项。通过传感器，您可以确定三维设备位置以及设备本身的使用方式，如摇晃、旋转、倾斜等。即使是触摸屏也提供了许多新的输入方法，从简单的点击到手势和多指触控。
 - en: We'll start this chapter by exploring touchscreen interactions, starting with
     a simple click and long-press, then move on to detecting common gestures using
     the `SimpleOnGestureListener` class. Next we'll look at a multi-touch using the
     pinch-to-zoom gesture with `ScaleGestureDetector`.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从探索触摸屏交互开始本章内容，先从简单的点击和长按开始，然后使用`SimpleOnGestureListener`类来检测常见的手势。接下来，我们将通过`ScaleGestureDetector`来探讨多指触控下的捏合缩放手势。
 - en: This book is meant to offer a quick guide to adding features and functionality
     to your own applications. As such, it focuses on the code needed. It's highly
     recommended that you spend some time reading the Design Guidelines as well.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 本书旨在为您的应用添加特性和功能提供快速指南。因此，它专注于所需的代码。强烈建议您花些时间阅读设计指南。
 - en: Tip
+  id: totrans-13
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Google Gesture Design Guidelines at [https://www.google.com/design/spec/patterns/gestures.html](https://www.google.com/design/spec/patterns/gestures.html)
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 请参考[谷歌手势设计指南](https://www.google.com/design/spec/patterns/gestures.html)
 - en: In the later part of this chapter we'll look at the sensor abilities in Android,
     using the Android Sensor Framework. We'll demonstrate how to obtain a list of
     all the available sensors, plus how to check for a specific sensor. Once we obtain
     a sensor, we'll demonstrate setting up a listener to read the sensor data. Finally,
     we'll end the chapter with a demonstration on how to determine the device orientation.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章的后面部分，我们将探讨安卓中的传感器能力，使用安卓传感器框架。我们将演示如何获取所有可用传感器的列表，以及如何检查特定传感器。一旦获取到传感器，我们将演示如何设置一个监听器来读取传感器数据。最后，我们将通过确定设备方向来结束本章的演示。
 - en: Listening for click and long-press events
+  id: totrans-16
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 监听点击和长按事件
 - en: Almost every application needs to recognize and respond to basic events such
     as clicks and long-presses. It's so basic, in most of the recipes, we use the
     XML `onClick` attribute, but the more advanced listeners require setting up through
     code.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 几乎每个应用都需要识别并响应基本的点击和长按事件。这是如此基础，在大多数菜谱中，我们使用XML的`onClick`属性，但对于更高级的监听器，需要通过代码设置。
 - en: 'Android provides an Event Listener interface for receiving a single notification
     when certain actions occur, as shown in the following list:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓提供了一个事件监听器接口，当发生某些特定动作时会收到通知，如下所示：
 - en: '`onClick()`: It''s called when a View is pressed'
+  id: totrans-19
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onClick()`: 当视图被按下时调用'
 - en: '`onLongClick()`: It''s called when the View is long-pressed'
+  id: totrans-20
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onLongClick()`: 当视图被长按时调用'
 - en: '`onFocusChange()`: It''s called when the user navigates to or from the View'
+  id: totrans-21
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onFocusChange()`: 当用户导航到或离开视图时调用'
 - en: '`onKey()`: It''s called when a hardware key is pressed or released'
+  id: totrans-22
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onKey()`: 当硬件按键被按下或释放时调用'
 - en: '`onTouch()`: It''s called when a touch event occurs'
+  id: totrans-23
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onTouch()`: 当触摸事件发生时调用'
 - en: This recipe will demonstrate responding to the click event, as well as the long-press
     event.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 本节将演示如何响应用户的点击事件以及长按事件。
 - en: Getting ready
+  id: totrans-25
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Create a new project in Android Studio and call it: `PressEvents`. Use the
     default **Phone & Tablet** options and select **Empty Activity** when prompted
     for the **Activity Type**.'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，命名为`PressEvents`。使用默认的**手机 & 平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: How to do it...
+  id: totrans-27
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Setting up to receive basic View events is very simple. First we will create
     a View; we''ll use a button for our example, then set the Event Listener in the
     Activity''s `onCreate()` method. Here are the steps:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 接收基本视图事件设置非常简单。首先我们将创建一个视图；我们的示例将使用按钮，然后在活动的`onCreate()`方法中设置事件监听器。以下是步骤：
 - en: 'Open `activity_main.xml` and replace the existing `TextView` with the following
     `Button`:'
+  id: totrans-29
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开`activity_main.xml`，并用以下`Button`替换现有的`TextView`：
 - en: '[PRE0]'
+  id: totrans-30
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Now open `MainActivy.java` and add the following code to the existing `onCreate()`
     method:'
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在打开`MainActivy.java`，并在现有的`onCreate()`方法中添加以下代码：
 - en: '[PRE1]'
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: Run the application on a device or emulator and try a regular click and long-press.
+  id: totrans-33
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行应用程序，尝试常规点击和长按。
 - en: How it works...
+  id: totrans-34
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'In most of the examples used in this book, we set up the `onClick` listener
     in XML using the following attribute:'
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本书中使用的大多数示例中，我们使用以下属性在XML中设置`onClick`监听器：
 - en: '[PRE2]'
+  id: totrans-36
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'You may notice the XML `onClick()` method callback requires the same method
     signature as the `setOnClickListener` .`onClick()` callback:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能会注意到XML的`onClick()`方法回调需要与`setOnClickListener`的`.onClick()`回调具有相同的方法签名：
 - en: '[PRE3]'
+  id: totrans-38
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: That's because Android automatically sets up the callback for us when we use
     the XML `onClick` attribute. This example also demonstrates that we can have multiple
     listeners on a single View.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是因为当我们使用XML的`onClick`属性时，Android会自动为我们设置回调。此示例还演示了我们可以对单个视图设置多个监听器。
 - en: The last point to note is that the `onLongClick()` method returns a Boolean,
     as do most of the other event listeners. Return `true` to indicate the event has
     been handled.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 需要注意的最后一点是，`onLongClick()`方法返回一个布尔值，大多数其他事件监听器也是如此。返回`true`表示事件已被处理。
 - en: There's more...
+  id: totrans-41
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: Although a button is typically used to indicate where a user should "press",
     we could have used both the `setOnClickListener()` and `setOnLongClickListener()`
     with any View, even a `TextView`.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管按钮通常用于指示用户应该“按下”的位置，但我们也可以在任何视图上使用`setOnClickListener()`和`setOnLongClickListener()`，甚至是一个`TextView`。
 - en: 'As mentioned in the introduction, there are other Event Listeners. You can
     use Android Studio''s auto-complete feature. Start by typing the following command:'
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 如引言所述，还有其他事件监听器。你可以使用Android Studio的自动完成功能。首先输入以下命令：
 - en: '[PRE4]'
+  id: totrans-44
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: Then press *Ctrl* + *Spacebar* to see the list.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后按*Ctrl* + *空格键*查看列表。
 - en: Recognizing tap and other common gestures
+  id: totrans-46
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 识别轻敲和其他常见手势
 - en: 'Unlike the Event Listeners described in the previous recipe, gestures require
     a two-step process:'
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 与前一个食谱中描述的事件监听器不同，手势识别需要两个步骤的过程：
 - en: Gather the movement data
+  id: totrans-48
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 收集移动数据
 - en: Analyze the data to determine whether it matches a known gesture
+  id: totrans-49
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 分析数据以确定它是否与已知的手势匹配
 - en: 'Step 1 begins when the user touches the screen, which fires the `onTouchEvent()`
     callback with the movement data sent in a `MotionEvent` object. Fortunately, Android
     makes Step 2, analyzing the data, easier with the `GestureDetector` class, which
     detects the following gestures:'
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一步是当用户触摸屏幕时开始，此时会触发`onTouchEvent()`回调，并通过`MotionEvent`对象发送移动数据。幸运的是，Android通过`GestureDetector`类使第二步（分析数据）变得更容易，该类可以检测以下手势：
 - en: '`onTouchEvent()`'
+  id: totrans-51
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onTouchEvent()`'
 - en: '`onDown()`'
+  id: totrans-52
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onDown()`'
 - en: '`onFling()`'
+  id: totrans-53
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onFling()`'
 - en: '`onLongPress()`'
+  id: totrans-54
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onLongPress()`'
 - en: '`onScroll()`'
+  id: totrans-55
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onScroll()`'
 - en: '`onShowPress()`'
+  id: totrans-56
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onShowPress()`'
 - en: '`onDoubleTap()`'
+  id: totrans-57
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onDoubleTap()`'
 - en: '`onDoubleTapEvent()`'
+  id: totrans-58
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onDoubleTapEvent()`'
 - en: '`onSingleTapConfirmed()`'
+  id: totrans-59
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onSingleTapConfirmed()`'
 - en: This recipe will demonstrate using the `GestureDetector.SimpleOnGestureListener`
     to recognize the touch and double tap gestures.
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱将演示使用`GestureDetector.SimpleOnGestureListener`来识别触摸和双击手势。
 - en: Getting ready
+  id: totrans-61
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Create a new project in Android Studio and call it: `CommonGestureDetector`.
     Use the default **Phone & Tablet** options and select **Empty Activity** when
     prompted for the **Activity Type**.'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，命名为`CommonGestureDetector`。使用默认的**手机 & 平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: How to do it...
+  id: totrans-63
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'We will be using the activity itself for detecting gestures, so we don''t need
     to add any Views to the layout. Open `MainActivity.java` and follow these steps:'
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将使用活动本身来检测手势，因此不需要向布局中添加任何视图。打开`MainActivity.java`并按照以下步骤操作：
 - en: 'Add the following global variable:'
+  id: totrans-65
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下全局变量：
 - en: '[PRE5]'
+  id: totrans-66
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Add the following `GestureListener` class within the `MainActivity` class:'
+  id: totrans-67
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`MainActivity`类中添加以下`GestureListener`类：
 - en: '[PRE6]'
+  id: totrans-68
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Override the `onTouchEvent()` as follows:'
+  id: totrans-69
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如下重写`onTouchEvent()`：
 - en: '[PRE7]'
+  id: totrans-70
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'Last, add the following line of code to `onCreate()`:'
+  id: totrans-71
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，在`onCreate()`中添加以下代码行：
 - en: '[PRE8]'
+  id: totrans-72
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Run this application on a device or emulator.
+  id: totrans-73
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行此应用程序。
 - en: How it works...
+  id: totrans-74
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: We're using `GestureDetectorCompat`, which is from the Support Library allowing
     gesture support on devices running Android 1.6 and later.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用了来自支持库的`GestureDetectorCompat`，它使得Android 1.6及以上版本的设备能够支持手势操作。
 - en: As mentioned in the recipe introduction, detecting gestures is a two-step process.
     To gather the movement, or gesture, data, we start tracking the movement with
     the touch event. Every time the `onTouchEvent()` is called, we send that data
     to the `GestureDetector`. The `GestureDetector` handles the second step, analyzing
     the data. Once a gesture has been detected, the appropriate callback is made.
     Our example handles both the single and double tap gestures.
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 如食谱介绍中所述，检测手势是一个两步的过程。为了收集运动或手势数据，我们从触摸事件开始追踪运动。每次调用`onTouchEvent()`时，我们将这些数据发送给`GestureDetector`。`GestureDetector`处理第二步，即分析数据。一旦检测到手势，就会进行适当的回调。我们的示例处理了单点和双击手势。
 - en: There's more...
+  id: totrans-77
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: Your application can easily add support for the remaining gestures detected
     by the `GestureDetector` simply by overriding the appropriate callback.
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 您的应用程序只需通过重写适当的回调，就可以轻松添加对`GestureDetector`检测到的其余手势的支持。
 - en: See also
+  id: totrans-79
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: See the next recipe, *Pinch-to-zoom with multi-touch gestures*, for multi-touch
     gestures
+  id: totrans-80
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 有关多指手势，请参阅下一个食谱，*使用多指手势进行捏合缩放*
 - en: Pinch-to-zoom with multi-touch gestures
+  id: totrans-81
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用多指手势进行捏合缩放
 - en: The previous recipe used the `SimpleOnGestureListener` to provide detection
     of simple, one-finger, gestures. In this recipe, we will demonstrate multi-touch
     with the common pinch-to-zoom gesture using the `SimpleOnScaleGestureListener`
     class.
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前的食谱使用了`SimpleOnGestureListener`来提供简单的一指手势的检测。在本食谱中，我们将使用`SimpleOnScaleGestureListener`类来演示常见的捏合缩放多指手势。
 - en: 'The following screenshot shows the icon zoomed out using the application created
     in the following recipe:'
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的截图展示了使用以下食谱创建的应用程序中图标缩小后的效果：
 - en: '![Pinch-to-zoom with multi-touch gestures](img/B05057_08_01.jpg)'
+  id: totrans-84
   prefs: []
   type: TYPE_IMG
+  zh: '![使用多指手势进行捏合缩放](img/B05057_08_01.jpg)'
 - en: 'The following screenshot shows the icon zoomed in:'
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的截图展示了图标放大后的效果：
 - en: '![Pinch-to-zoom with multi-touch gestures](img/B05057_08_02.jpg)'
+  id: totrans-86
   prefs: []
   type: TYPE_IMG
+  zh: '![使用多指手势进行捏合缩放](img/B05057_08_02.jpg)'
 - en: Getting ready
+  id: totrans-87
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Create a new project in Android Studio and call it: `MultiTouchZoom`. Use the
     default **Phone & Tablet** options and select **Empty Activity** when prompted
     for the **Activity Type**.'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，命名为`MultiTouchZoom`。使用默认的**Phone & Tablet**选项，并在提示**Activity
+    Type**时选择**Empty Activity**。
 - en: How to do it...
+  id: totrans-89
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To provide a visual indication of the pinch-to-zoom, we''ll use an `ImageView`
     with the application icon. Open `activity_main.xml` and follow these steps:'
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了提供捏合缩放的视觉提示，我们将使用一个带有应用图标的`ImageView`。打开`activity_main.xml`并按照以下步骤操作：
 - en: 'Replace the existing `TextView` with the following `ImageView`:'
+  id: totrans-91
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下`ImageView`替换现有的`TextView`：
 - en: '[PRE9]'
+  id: totrans-92
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'Now open `MainActivity.java` and add the following global variables to the
     class:'
+  id: totrans-93
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在打开`MainActivity.java`，并向类中添加以下全局变量：
 - en: '[PRE10]'
+  id: totrans-94
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Override `onTouchEvent()` as follows:'
+  id: totrans-95
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如下重写`onTouchEvent()`：
 - en: '[PRE11]'
+  id: totrans-96
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Add the following `ScaleListener` class to the `MainActivity` class:'
+  id: totrans-97
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`MainActivity`类中添加以下`ScaleListener`类：
 - en: '[PRE12]'
+  id: totrans-98
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Add the following code to the existing `onCreate()` method:'
+  id: totrans-99
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在现有的`onCreate()`方法中添加以下代码：
 - en: '[PRE13]'
+  id: totrans-100
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: To experiment with the pinch-to-zoom functionality, run the application on a
     device with a touchscreen.
+  id: totrans-101
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 要实验捏合缩放功能，请在带有触摸屏的设备上运行应用程序。
 - en: How it works...
+  id: totrans-102
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The `ScaleGestureDetector` does all the work by analyzing the gesture data and
     reporting the final scale factor through the `onScale()` callback. We get the
     actual scale factor by calling `getScaleFactor()` on `ScaleGestureDetector`.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ScaleGestureDetector`通过分析手势数据并最终通过`onScale()`回调报告缩放因子来完成所有工作。我们通过在`ScaleGestureDetector`上调用`getScaleFactor()`来获取实际的缩放因子。'
 - en: 'We use an `ImageView` with the application icon to provide a visual representation
     of the scaling by setting the `ImageView` scale using the scale factor returned
     from `ScaleGestureDetector`. To prevent the scaling from becoming too large or
     too small, we add the following check:'
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用一个带有应用图标的`ImageView`，通过设置`ImageView`的缩放比例来提供视觉上的缩放表示，该比例来自`ScaleGestureDetector`返回的缩放因子。为了防止缩放过大或过小，我们添加了以下检查：
 - en: '[PRE14]'
+  id: totrans-105
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: Swipe-to-Refresh
+  id: totrans-106
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 滑动刷新
 - en: Pulling down a list to indicate a manual refresh is known as the Swipe-to-Refresh
     gesture. It's such a common feature that this functionality has been encapsulated
     in a single widget called `SwipeRefreshLayout`.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过下拉列表来表示手动刷新的手势称为Swipe-to-Refresh（下拉刷新）。这是一个如此常见的功能，以至于这个功能已经被封装在一个名为`SwipeRefreshLayout`的单个小部件中。
 - en: 'This recipe will show how to use the widget to add Swipe-to-Refresh functionality
     with a `ListView`. The following screenshot shows the refresh in action:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱将展示如何使用小部件为`ListView`添加Swipe-to-Refresh（下拉刷新）功能。以下屏幕截图显示了刷新动作：
 - en: '![Swipe-to-Refresh](img/B05057_08_03.jpg)'
+  id: totrans-109
   prefs: []
   type: TYPE_IMG
+  zh: '![Swipe-to-Refresh](img/B05057_08_03.jpg)'
 - en: Getting ready
+  id: totrans-110
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Create a new project in Android Studio and call it: `SwipeToRefresh`. Use the
     default **Phone & Tablet** options and select **Empty Activity** when prompted
     for the **Activity Type**.'
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，命名为`SwipeToRefresh`。选择默认的**Phone & Tablet**（手机和平板）选项，并在提示**Activity
+    Type**（活动类型）时选择**Empty Activity**（空活动）。
 - en: How to do it...
+  id: totrans-112
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'First, we need to add the `SwipeRefreshLayout` widget and `ListView` to the
     activity layout, then we will implement the refresh listener in the java code.
     Here are the detailed steps:'
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们需要将`SwipeRefreshLayout`小部件和`ListView`添加到活动布局中，然后我们将在java代码中实现刷新监听器。以下是详细步骤：
 - en: 'Open `activity_main.xml` and replace the existing `<TextView>` with the following:'
+  id: totrans-114
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开`activity_main.xml`文件，并用以下内容替换现有的`<TextView>`：
 - en: '[PRE15]'
+  id: totrans-115
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'Now open `MainActivity.java` and add the following global variables to the
     class:'
+  id: totrans-116
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在打开`MainActivity.java`文件，并向类中添加以下全局变量：
 - en: '[PRE16]'
+  id: totrans-117
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Add the following method to handle the refresh:'
+  id: totrans-118
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下方法以处理刷新：
 - en: '[PRE17]'
+  id: totrans-119
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'Add the following code to the existing `onCreate()` method:'
+  id: totrans-120
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在现有的`onCreate()`方法中添加以下代码：
 - en: '[PRE18]'
+  id: totrans-121
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Run the application on a device or emulator.
+  id: totrans-122
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行应用程序。
 - en: How it works...
+  id: totrans-123
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'Most of the code for this recipe is to simulate a refresh by adding items to
     the `ListView` each time the refresh method is called. The main steps for implementing
     the Swipe-to-Refresh include:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱的大部分代码是为了在每次调用刷新方法时向`ListView`添加项以模拟刷新。实现Swipe-to-Refresh（下拉刷新）的主要步骤包括：
 - en: Add the `SwipeRefreshLayout` widget.
+  id: totrans-125
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加`SwipeRefreshLayout`小部件。
 - en: Include the `ListView` within the `SwipeRefreshLayout`.
+  id: totrans-126
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`SwipeRefreshLayout`中包含`ListView`。
 - en: Add the `OnRefreshListener` to call your refresh method.
+  id: totrans-127
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加`OnRefreshListener`以调用你的刷新方法。
 - en: Call `setRefreshing(false)` after completing your update.
+  id: totrans-128
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新完成后调用`setRefreshing(false)`。
 - en: That's it. The widget makes adding Swipe-to-Refresh very easy!
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 就这样。这个小部件使得添加Swipe-to-Refresh（下拉刷新）变得非常简单！
 - en: There's more...
+  id: totrans-130
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Although the Swipe-to-Refresh gesture is a common feature of applications these
     days, it''s still good practice to include a menu item (especially for accessibility
     reasons). Here is a snippet of XML for the menu layout:'
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管Swipe-to-Refresh（下拉刷新）手势如今是应用程序的常见功能，但仍然建议包含一个菜单项（特别是出于可访问性的考虑）。以下是菜单布局的XML代码片段：
 - en: '[PRE19]'
+  id: totrans-132
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Call your refresh method in the `onOptionsItemSelected()` callback. When performing
     a refresh from code, such as from the menu item event, you want to notify `SwipeRefreshLayout`
     of the refresh so it can update the UI. Do this with the following code:'
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`onOptionsItemSelected()`回调中调用你的刷新方法。当从代码中执行刷新，比如从菜单项事件中，你需要通知`SwipeRefreshLayout`刷新，以便它可以更新UI。使用以下代码实现：
 - en: '[PRE20]'
+  id: totrans-134
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: This tells the `SwipeRefreshLayout` that a refresh is starting so it can display
     the in-progress indicator.
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 这告诉`SwipeRefreshLayout`刷新开始了，所以它可以显示进行中的指示器。
 - en: Listing available sensors – an introduction to the Android Sensor Framework
+  id: totrans-136
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 列出可用的传感器——Android传感器框架简介
 - en: 'Android includes support for hardware sensors using the Android Sensor Framework.
     The framework includes the following classes and interfaces:'
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: Android通过Android Sensor Framework支持硬件传感器。该框架包括以下类和接口：
 - en: '`SensorManager`'
+  id: totrans-138
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SensorManager`'
 - en: '`Sensor`'
+  id: totrans-139
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Sensor`'
 - en: '`SensorEventListener`'
+  id: totrans-140
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SensorEventListener`'
 - en: '`SensorEvent`'
+  id: totrans-141
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SensorEvent`'
 - en: 'Most Android devices include hardware sensors, but they vary greatly between
     different manufacturers and models. If your application utilizes sensors, you
     have two choices:'
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 大多数Android设备包括硬件传感器，但它们在不同的制造商和模型之间有很大差异。如果你的应用程序使用传感器，你有两个选择：
 - en: Specify the sensor in the Android Manifest
+  id: totrans-143
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android Manifest中指定传感器
 - en: Check for the sensor at runtime
+  id: totrans-144
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在运行时检查传感器
 - en: 'To specify your application uses a sensor, include the `<uses-feature>` declaration
     in the Android Manifest. Here is an example requiring a compass to be available:'
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
+  zh: 要指定你的应用程序使用传感器，请在Android Manifest中包含`<uses-feature>`声明。以下是一个要求提供指南针的示例：
 - en: '[PRE21]'
+  id: totrans-146
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: If your application utilizes the compass, but does not require it to function,
     you should set `android:required="false"` instead, otherwise the application will
     not be available through Google Play.
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你的应用程序使用指南针，但不需要它来正常工作，你应该设置`android:required="false"`，否则应用程序将无法通过Google Play获得。
 - en: 'Sensors are grouped into the following three categories:'
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 传感器被分为以下三个类别：
 - en: Motion sensors
+  id: totrans-149
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 运动传感器
 - en: Environmental sensors
+  id: totrans-150
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 环境传感器
 - en: Position sensors
+  id: totrans-151
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 位置传感器
 - en: 'The Android SDK provides support for the following sensor types:'
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: Android SDK支持以下传感器类型：
 - en: '| Sensor | Detects | Use |'
+  id: totrans-153
   prefs: []
   type: TYPE_TB
+  zh: '| 传感器 | 检测 | 用途 |'
 - en: '| --- | --- | --- |'
+  id: totrans-154
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- | --- |'
 - en: '| `TYPE_ACCELEROMETER` | Motion detection including gravity | Used to determine
     shake, tilt, and so on |'
+  id: totrans-155
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_ACCELEROMETER` | 包括重力在内的运动检测 | 用于确定震动、倾斜等 |'
 - en: '| `TYPE_AMBIENT_TEMPERATURE` | Measures ambient room temperature | Used for
     determining local temperature |'
+  id: totrans-156
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_AMBIENT_TEMPERATURE` | 测量环境室温 | 用于确定本地温度 |'
 - en: '| `TYPE_GRAVITY` | Measures the force of gravity on all three axes | Used for
     motion detection |'
+  id: totrans-157
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_GRAVITY` | 测量三个轴上的重力 | 用于运动检测 |'
 - en: '| `TYPE_GYROSCOPE` | Measures rotation on all three axes | Used to determine
     turn, spin, and so on |'
+  id: totrans-158
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_GYROSCOPE` | 测量三个轴上的旋转 | 用于确定转弯、旋转等 |'
 - en: '| `TYPE_LIGHT` | Measures light level | Used for setting screen brightness
     |'
+  id: totrans-159
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_LIGHT` | 测量光线水平 | 用于设置屏幕亮度 |'
 - en: '| `TYPE_LINEAR_ACCELERATION` | Motion detection excluding gravity | Used to
     determine acceleration |'
+  id: totrans-160
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_LINEAR_ACCELERATION` | 排除重力影响的运动检测 | 用于确定加速度 |'
 - en: '| `TYPE_MAGNETIC_FIELD` | Measures geomagnetic field | Used to create a compass
     or determine bearing |'
+  id: totrans-161
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_MAGNETIC_FIELD` | 测量地磁场 | 用于创建指南针或确定方位 |'
 - en: '| `TYPE_PRESSURE` | Measures air pressure | Used for barometer |'
+  id: totrans-162
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_PRESSURE` | 测量气压 | 用于气压计 |'
 - en: '| `TYPE_PROXIMITY` | Measures object relative to the screen | Used to determine
     whether the device is being held against the ear during a phone call |'
+  id: totrans-163
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_PROXIMITY` | 测量物体相对于屏幕的位置 | 用于确定在通话期间设备是否紧贴耳朵 |'
 - en: '| `TYPE_RELATIVE_HUMIDITY` | Measures relative humidity | Used to determine
     dew point and humidity |'
+  id: totrans-164
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_RELATIVE_HUMIDITY` | 测量相对湿度 | 用于确定露点和湿度 |'
 - en: '| `TYPE_ROTATION_VECTOR` | Measures device orientation | Used to detect motion
     and rotation |'
+  id: totrans-165
   prefs: []
   type: TYPE_TB
+  zh: '| `TYPE_ROTATION_VECTOR` | 测量设备方向 | 用于检测运动和旋转 |'
 - en: 'There are two additional sensors: `TYPE_ORIENTATION` and `TYPE_TEMPERATURE`,
     that have been deprecated as they have been replaced by newer sensors.'
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 还有两个额外的传感器：`TYPE_ORIENTATION`和`TYPE_TEMPERATURE`，它们已被弃用，因为它们已被新型传感器所取代。
 - en: 'This recipe will demonstrate retrieving a list of available sensors. Here is
     a screenshot from a physical device:'
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程将演示如何获取可用传感器的列表。以下是物理设备上的屏幕截图：
 - en: '![Listing available sensors – an introduction to the Android Sensor Framework](img/B05057_08_04.jpg)'
+  id: totrans-168
   prefs: []
   type: TYPE_IMG
+  zh: '![列出可用传感器 – Android传感器框架简介](img/B05057_08_04.jpg)'
 - en: Getting ready
+  id: totrans-169
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Create a new project in Android Studio and call it: `ListDeviceSensors`. Use
     the default **Phone & Tablet** options and select **Empty Activity** when prompted
     for the **Activity Type**.'
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，命名为：`ListDeviceSensors`。选择默认的**手机 & 平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: How to do it...
+  id: totrans-171
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'First, we''ll query the list of sensors available, then display the results
     in a `ListView`. Here are the detailed steps:'
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将查询可用的传感器列表，然后在`ListView`中显示结果。以下是详细步骤：
 - en: 'Open `activity_main.xml` and replace the existing `TextView` with the following:'
+  id: totrans-173
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开`activity_main.xml`，并用以下内容替换现有的`TextView`：
 - en: '[PRE22]'
+  id: totrans-174
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'Next, open `ActivityMain.java` and add the following code to the existing `onCreate()`
     method:'
+  id: totrans-175
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来，打开`ActivityMain.java`，并在现有的`onCreate()`方法中添加以下代码：
 - en: '[PRE23]'
+  id: totrans-176
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: Run the program on a device or emulator.
+  id: totrans-177
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行程序。
 - en: How it works...
+  id: totrans-178
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'The following line of code is responsible for getting the list of available
     sensors; the rest of the code is to populate the `ListView`:'
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下代码行负责获取可用传感器的列表；其余代码用于填充`ListView`：
 - en: '[PRE24]'
+  id: totrans-180
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Notice that we get back a list of `Sensor` objects. We only get the sensor name
     to display in the `ListView`, but there are other properties available as well.
     See the link provided in the *See also* section for a complete list.
+  id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，我们获得了一个`Sensor`对象的列表。我们只获取传感器名称以在`ListView`中显示，但还有其他属性可用。有关完整列表，请参阅*另请参阅*部分提供的链接。
 - en: There's more...
+  id: totrans-182
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'As shown in the introduction screenshot from a Nexus 9, a device can have multiple
     sensors of the same type. If you are looking for a specific sensor, you can pass
     in one of the constants from the table shown in the introduction. In this case,
     if you wanted to see all the Accelerometer sensors available, you could use this
     call:'
+  id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: 如介绍中的Nexus 9屏幕截图所示，一个设备可以有多个相同类型的传感器。如果你在寻找一个特定的传感器，可以传入介绍中表格显示的一个常量。在这种情况下，如果你想查看所有可用的加速度计传感器，可以使用以下调用：
 - en: '[PRE25]'
+  id: totrans-184
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'If you''re not looking for a list of sensors, but need to work with a specific
     sensor, you can check for a default sensor using this code:'
+  id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你不是在寻找传感器列表，而是需要与特定传感器一起工作，可以使用以下代码检查默认传感器：
 - en: '[PRE26]'
+  id: totrans-186
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: See also
+  id: totrans-187
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '**Android Developer Sensor** website at [http://developer.android.com/reference/android/hardware/Sensor.html](http://developer.android.com/reference/android/hardware/Sensor.html)'
+  id: totrans-188
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Android开发者传感器**网站在[http://developer.android.com/reference/android/hardware/Sensor.html](http://developer.android.com/reference/android/hardware/Sensor.html)'
 - en: Reading sensor data – using the Android Sensor Framework events
+  id: totrans-189
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 读取传感器数据——使用Android传感器框架事件
 - en: 'The previous recipe, *Listing available sensors – an introduction to the Android
     Sensor Framework*, provided an introduction to the Android Sensor Framework. Now
     we''ll look at reading the sensor data using the `SensorEventListener`. The `SensorEventListener`
     interface only has two callbacks:'
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 前一个菜谱，*列出可用传感器——Android传感器框架简介*，提供了对Android传感器框架的介绍。现在，我们将使用`SensorEventListener`来读取传感器数据。`SensorEventListener`接口只有两个回调：
 - en: '`onSensorChanged`()'
+  id: totrans-191
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onSensorChanged`()'
 - en: '`onAccuracyChanged`()'
+  id: totrans-192
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onAccuracyChanged`()'
 - en: When the sensor has new data to report, it calls the `onSensorChanged()` with
     a `SensorEvent` object. This recipe will demonstrate reading the Light sensor,
     but since all the sensors use the same framework, it's very easy to adapt this
     example to any of the other sensors. (See the list of sensor types available in
     the previous recipe's introduction.)
+  id: totrans-193
   prefs: []
   type: TYPE_NORMAL
+  zh: 当传感器有新数据要报告时，它会使用`SensorEvent`对象调用`onSensorChanged()`。本示例将演示如何读取光线传感器，但由于所有传感器都使用相同的框架，因此很容易将此示例适配到其他任何传感器。（请参阅前一个菜谱介绍中可用的传感器类型列表。）
 - en: Getting ready
+  id: totrans-194
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Create a new project in Android Studio and call it: `ReadingSensorData`. Use
     the default **Phone & Tablet** options and select **Empty Activity** when prompted
     for the **Activity Type**.'
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，并将其命名为：`ReadingSensorData`。使用默认的**手机 & 平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: How to do it...
+  id: totrans-196
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'We''ll add a `TextView` to the activity layout to display the sensor data,
     then we''ll add the `SensorEventListener` to the java code. We''ll use the `onResume()`
     and `onPause()` events to start and stop our Event Listener. To get started, open
     `activity_main.xml` and follow these steps:'
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将在活动布局中添加一个`TextView`以显示传感器数据，然后我们将`SensorEventListener`添加到java代码中。我们将使用`onResume()`和`onPause()`事件来启动和停止我们的事件监听器。要开始，请打开`activity_main.xml`并按照以下步骤操作：
 - en: 'Modify the existing `TextView` as follows:'
+  id: totrans-198
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照以下方式修改现有的`TextView`：
 - en: '[PRE27]'
+  id: totrans-199
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Now open `MainActivity.java` and add the following global variable declarations:'
+  id: totrans-200
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，打开`MainActivity.java`并添加以下全局变量声明：
 - en: '[PRE28]'
+  id: totrans-201
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'Add the `SensorListener` class to the `MainActivity` class as follows:'
+  id: totrans-202
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照以下方式将`SensorListener`类添加到`MainActivity`类：
 - en: '[PRE29]'
+  id: totrans-203
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'We''ll register and unregister the sensor events in the `onResume()` and `onPause()`
     as follows:'
+  id: totrans-204
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们将在`onResume()`和`onPause()`中如下注册和注销传感器事件：
 - en: '[PRE30]'
+  id: totrans-205
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Add the following code to the `onCreate()`:'
+  id: totrans-206
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`onCreate()`中添加以下代码：
 - en: '[PRE31]'
+  id: totrans-207
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: You can now run the application on a physical device to see the raw data from
     the light sensor.
+  id: totrans-208
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，你可以在物理设备上运行应用程序，以查看光传感器的原始数据。
 - en: How it works...
+  id: totrans-209
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: Using the Android Sensor Framework starts with obtaining the Sensor, which we
     do in `onCreate()`. Here, we call `getDefaultSensor(),` requesting `TYPE_LIGHT`.
     We register the listener in `onResume()` and unregister again in `onPause()` to
     reduce battery consumption. We pass in our `mSensorListener` object when we call
     `registerListener()`.
+  id: totrans-210
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用Android传感器框架从获取传感器开始，这一步我们在`onCreate()`方法中完成。在这里，我们调用`getDefaultSensor()`，请求`TYPE_LIGHT`类型的传感器。我们在`onResume()`中注册监听器，在`onPause()`中再次注销，以减少电池消耗。在调用`registerListener()`时，我们传入我们的`mSensorListener`对象。
 - en: In our case, we are only looking for the sensor data, which is sent in the `onSensorChanged()`
     callback. When the sensor changes, we update the `TextView` with the sensor data.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的案例中，我们只需要传感器数据，这些数据在`onSensorChanged()`回调中发送。当传感器变化时，我们使用传感器数据更新`TextView`。
 - en: There's more...
+  id: totrans-212
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: Now that you've worked with one sensor, you know how to work with all the sensors,
     as they all use the same framework. Of course, what you do with the data will
     vary greatly, depending on the type of data you're reading. The Environment sensors,
     as shown here, return a single value, but the Position and Motion sensors can
     also return additional elements, indicated as follows.
+  id: totrans-213
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在您已经使用了一个传感器，您就知道如何使用所有传感器了，因为它们都使用相同的框架。当然，您对数据的处理会根据您读取的数据类型而有很大差异。如这里所示，环境传感器返回单一值，但位置和运动传感器也可以返回其他元素，如下所示。
 - en: Environment sensors
+  id: totrans-214
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 环境传感器
 - en: 'Android supports the following four environment sensors:'
+  id: totrans-215
   prefs: []
   type: TYPE_NORMAL
+  zh: Android支持以下四种环境传感器：
 - en: Humidity
+  id: totrans-216
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 湿度
 - en: Light
+  id: totrans-217
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 光线
 - en: Pressure
+  id: totrans-218
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 压力
 - en: Temperature
+  id: totrans-219
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 温度
 - en: The environment sensors are generally easier to work with since the data returned
     is in a single element and doesn't usually require calibration or filtering. We
     used the Light sensor for this demonstration since most devices include a light
     sensor to control the screen brightness.
+  id: totrans-220
   prefs: []
   type: TYPE_NORMAL
+  zh: 环境传感器通常更容易处理，因为返回的数据是单一元素，通常不需要校准或过滤。由于大多数设备都包括一个控制屏幕亮度的光线传感器，我们在此演示中使用了光线传感器。
 - en: Position sensors
+  id: totrans-221
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 位置传感器
 - en: 'The Position sensors include:'
+  id: totrans-222
   prefs: []
   type: TYPE_NORMAL
+  zh: 位置传感器包括：
 - en: Geomagnetic Field
+  id: totrans-223
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 地磁场
 - en: Proximity
+  id: totrans-224
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 近距离
 - en: 'The following sensor types use the Geomagnetic field:'
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下传感器类型使用地磁场：
 - en: '`TYPE_GAME_ROTATION_VECTOR`'
+  id: totrans-226
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_GAME_ROTATION_VECTOR`'
 - en: '`TYPE_GEOMAGNETIC_ROTATION_VECTOR`'
+  id: totrans-227
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_GEOMAGNETIC_ROTATION_VECTOR`'
 - en: '`TYPE_MAGNETIC_FIELD`'
+  id: totrans-228
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_MAGNETIC_FIELD`'
 - en: '`TYPE_MAGNETIC_FIELD_UNCALIBRATED`'
+  id: totrans-229
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_MAGNETIC_FIELD_UNCALIBRATED`'
 - en: These sensors return three values in the `onSensorChanged()` event, except for
     the `TYPE_MAGNETIC_FIELD_UNCALIBRATED`, which sends six values.
+  id: totrans-230
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了`TYPE_MAGNETIC_FIELD_UNCALIBRATED`发送六个值外，这些传感器在`onSensorChanged()`事件中返回三个值。
 - en: 'A third sensor, the Orientation sensor, has been deprecated, and it is now
     recommended to use `getRotation()` and `getRotationMatrix()` to calculate the
     orientation changes. (For device orientation, such as Portrait and Landscape modes,
     see the next recipe: *Reading device orientation*.)'
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 第三个传感器，方向传感器，已被弃用，现在建议使用`getRotation()`和`getRotationMatrix()`来计算方向变化。（对于设备方向，例如纵向和横向模式，请参阅下一个菜谱：*读取设备方向*。）
 - en: Motion sensors
+  id: totrans-232
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 运动传感器
 - en: 'The Motion sensors include the following:'
+  id: totrans-233
   prefs: []
   type: TYPE_NORMAL
+  zh: 运动传感器包括以下内容：
 - en: Accelerometer
+  id: totrans-234
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 加速度计
 - en: Gyroscope
+  id: totrans-235
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 陀螺仪
 - en: Gravity
+  id: totrans-236
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 重力
 - en: Linear acceleration
+  id: totrans-237
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 线性加速度
 - en: Rotation vector
+  id: totrans-238
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 旋转矢量
 - en: 'These include the following sensor types:'
+  id: totrans-239
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些包括以下传感器类型：
 - en: '`TYPE_ACCELEROMETE`'
+  id: totrans-240
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_ACCELEROMETE`'
 - en: '`TYPE_GRAVITY`'
+  id: totrans-241
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_GRAVITY`'
 - en: '`TYPE_GYROSCOPE`'
+  id: totrans-242
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_GYROSCOPE`'
 - en: '`TYPE_GYROSCOPE_UNCALIBRATED`'
+  id: totrans-243
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_GYROSCOPE_UNCALIBRATED`'
 - en: '`TYPE_LINEAR_ACCELERATION`'
+  id: totrans-244
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_LINEAR_ACCELERATION`'
 - en: '`TYPE_ROTATION_VECTOR`'
+  id: totrans-245
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_ROTATION_VECTOR`'
 - en: '`TYPE_SIGNIFICANT_MOTION`'
+  id: totrans-246
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_SIGNIFICANT_MOTION`'
 - en: '`TYPE_STEP_COUNTER`'
+  id: totrans-247
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_STEP_COUNTER`'
 - en: '`TYPE_STEP_DETECTOR`'
+  id: totrans-248
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`TYPE_STEP_DETECTOR`'
 - en: These sensors also include three data elements, with the exception of the last
     three. The `TYPE_SIGNIFICANT_MOTION` and `TYPE_STEP_DETECTOR` indicate an event,
     while the `TYPE_STEP_COUNTER` returns the number of steps since last boot (while
     the sensor was active).
+  id: totrans-249
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了最后三个之外，这些传感器也包括三个数据元素。`TYPE_SIGNIFICANT_MOTION`和`TYPE_STEP_DETECTOR`表示事件，而`TYPE_STEP_COUNTER`返回自上次启动以来（传感器处于活动状态时）的步数。
 - en: See also
+  id: totrans-250
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Listing available sensors – an introduction to the Android Sensor Framework*
     recipe
+  id: totrans-251
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*列举可用传感器——介绍Android传感器框架*的菜谱'
 - en: The *Creating a Compass using sensor data and RotateAnimation* recipe in [Chapter
     9](ch09.html "Chapter 9. Graphics and Animation"), *Graphics and Animation*
+  id: totrans-252
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第9章](ch09.html "第9章 图形和动画")，*图形和动画*中的*使用传感器数据和RotateAnimation创建指南针*的菜谱'
 - en: For device orientation, see the *Reading device orientation* recipe
+  id: totrans-253
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 关于设备方向，请参阅*读取设备方向*的菜谱
 - en: '[Chapter 13](ch13.html "Chapter 13. Getting Location and Using Geofencing"),
     *Getting Location and Using Geofencing*, covers the *GPS and Location* recipe'
+  id: totrans-254
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第13章](ch13.html "第13章 获取位置和使用地理围栏")，*获取位置和使用地理围栏*，涵盖了*GPS和位置*的菜谱'
 - en: Reading device orientation
+  id: totrans-255
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 读取设备方向
 - en: 'Although the Android framework will automatically load a new resource (such
     as the layout) upon orientation changes, there are times when you may wish to
     disable this behavior. If you wish to be notified of the orientation change instead
     of Android handling it automatically, add the following attribute to the Activity
     in the Android Manifest:'
+  id: totrans-256
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管Android框架会在方向变化时自动加载新资源（如布局），但有时您可能希望禁用此行为。如果您希望被通知方向变化而不是让Android自动处理，请在Android
+    Manifest中的Activity添加以下属性：
 - en: '[PRE32]'
+  id: totrans-257
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'When any of the following configuration changes occur, the system will notify
     you through the `onConfigurationChanged()` method instead of handling it automatically:'
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: 当以下配置更改发生时，系统将通过`onConfigurationChanged()`方法通知你，而不是自动处理：
 - en: '`keyboardHidden`'
+  id: totrans-259
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`keyboardHidden`'
 - en: '`orientation`'
+  id: totrans-260
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`orientation`'
 - en: '`screenSize`'
+  id: totrans-261
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`screenSize`'
 - en: 'The `onConfigurationChanged()` signature is as follows:'
+  id: totrans-262
   prefs: []
   type: TYPE_NORMAL
+  zh: '`onConfigurationChanged()`的签名如下：'
 - en: '[PRE33]'
+  id: totrans-263
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: You'll find the new orientation in `newConfig.orientation`.
+  id: totrans-264
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以在`newConfig.orientation`中找到新的方向。
 - en: Tip
+  id: totrans-265
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Disabling the automatic configuration change (which causes the layout to be
     reloaded and state information to be reset) should not be used as a replacement
     for properly saving state information. Your application can still be interrupted
     or stopped altogether at any time and killed by the system. (See *Saving an activity's
     state* in [Chapter 1](ch01.html "Chapter 1. Activities"), *Activities*, for properly
     saving a state.)
+  id: totrans-266
   prefs: []
   type: TYPE_NORMAL
+  zh: 禁用自动配置更改（这会导致布局重新加载并重置状态信息）不应用于替代正确保存状态信息。你的应用程序仍然可能在任何时候被中断或完全停止，并被系统杀死。（请参阅[第1章](ch01.html
+    "第1章. 活动")中的*保存活动状态*，了解如何正确保存状态。）
 - en: This recipe will demonstrate how to determine the current device orientation.
+  id: totrans-267
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程将演示如何确定当前设备方向。
 - en: Getting ready
+  id: totrans-268
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Create a new project in Android Studio and call it: `GetDeviceOrientation`.
     Use the default **Phone & Tablet** options and select **Empty Activity** when
     prompted for the **Activity Type**.'
+  id: totrans-269
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，并将其命名为：`GetDeviceOrientation`。使用默认的**手机 & 平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: How to do it...
+  id: totrans-270
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'We''ll add a button to the layout to check the orientation on demand. Start
     by opening `activity_main.xml` and follow these steps:'
+  id: totrans-271
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将在布局中添加一个按钮，以便按需检查方向。首先打开`activity_main.xml`并按照以下步骤操作：
 - en: 'Replace the existing `TextView` with the following `Button`:'
+  id: totrans-272
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下`Button`替换现有的`TextView`：
 - en: '[PRE34]'
+  id: totrans-273
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'Add the following method to handle the button click:'
+  id: totrans-274
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下方法来处理按钮点击：
 - en: '[PRE35]'
+  id: totrans-275
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: Run the application on a device or emulator.
+  id: totrans-276
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在设备或模拟器上运行应用程序。
 - en: Tip
+  id: totrans-277
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Use *Ctrl* + *F11* to rotate the emulator.
+  id: totrans-278
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 使用*Ctrl* + *F11*旋转模拟器。
 - en: How it works...
+  id: totrans-279
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'All we need to do to get the current orientation is call this line of code:'
+  id: totrans-280
   prefs: []
   type: TYPE_NORMAL
+  zh: 要获取当前方向，我们只需调用以下代码行：
 - en: '[PRE36]'
+  id: totrans-281
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: The orientation is returned as an `int`, which we compare to one of three possible
     values, as demonstrated.
+  id: totrans-282
   prefs: []
   type: TYPE_NORMAL
+  zh: 方向以`int`类型返回，我们可以将其与三个可能值之一进行比较，如示例所示。
 - en: There's more...
+  id: totrans-283
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: Getting current device rotation
+  id: totrans-284
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 获取当前设备旋转
 - en: 'Another scenario where you may need to know the current orientation is when
     working with camera data—pictures and/or videos. Often, the image may be rotated
     according to the device orientation or to compensate for the current orientation.
     In this scenario, there''s another option available to get the rotation:'
+  id: totrans-285
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一个可能需要知道当前方向的情况是处理摄像头数据时——图片和/或视频。通常，图像可能会根据设备方向或补偿当前方向而旋转。在这种情况下，有另一个选项可用于获取旋转：
 - en: '[PRE37]'
+  id: totrans-286
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'In the preceding line of code, `rotation` will be one of the following values:'
+  id: totrans-287
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上面的代码行中，`rotation`将是以下值之一：
 - en: '`Surface.ROTATION_0`'
+  id: totrans-288
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Surface.ROTATION_0`'
 - en: '`Surface.ROTATION_90`'
+  id: totrans-289
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Surface.ROTATION_90`'
 - en: '`Surface.ROTATION_180`'
+  id: totrans-290
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Surface.ROTATION_180`'
 - en: '`Surface.ROTATION_270`'
+  id: totrans-291
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Surface.ROTATION_270`'
 - en: Tip
+  id: totrans-292
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The rotation value will be from its normal orientation. For example, when using
     a table with a normal orientation of landscape, if a picture is taken in portrait
     orientation, the value will be `ROTATION_90` or `ROTATION_270`.
+  id: totrans-293
   prefs: []
   type: TYPE_NORMAL
+  zh: 旋转值将从其正常方向开始。例如，当使用正常方向为横屏的桌子时，如果在纵向方向拍摄照片，该值将是`ROTATION_90`或`ROTATION_270`。
 - en: See also
+  id: totrans-294
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Saving an activity's state* recipe in [Chapter 1](ch01.html "Chapter 1. Activities"),
     *Activities*
+  id: totrans-295
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第1章](ch01.html "第1章. 活动")中的*保存活动状态*教程'
 - en: Refer to **Configuration Developer Link** at [http://developer.android.com/reference/android/content/res/Configuration.html](http://developer.android.com/reference/android/content/res/Configuration.html)
+  id: totrans-296
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考**配置开发者链接**在 [http://developer.android.com/reference/android/content/res/Configuration.html](http://developer.android.com/reference/android/content/res/Configuration.html)
 - en: Refer to **Display Developer Link** at [http://developer.android.com/reference/android/view/Display.html#getRotation()](http://developer.android.com/reference/android/view/Display.html#getRotation())
+  id: totrans-297
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考**显示开发者链接**在 [http://developer.android.com/reference/android/view/Display.html#getRotation()](http://developer.android.com/reference/android/view/Display.html#getRotation())
