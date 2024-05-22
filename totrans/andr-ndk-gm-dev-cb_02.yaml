@@ -1,58 +1,86 @@
 - en: Chapter 2. Porting Common Libraries
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第二章. 移植通用库
 - en: 'In this chapter, we will cover:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖：
 - en: Compiling the native static libraries for Windows
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 为Windows编译本地静态库
 - en: Compiling the native static libraries for Android
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 为Android编译本地静态库
 - en: Compiling the libcurl networking library
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 编译libcurl网络库
 - en: Compiling the OpenAL library
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 编译OpenAL库
 - en: Compiling libvorbis, libmodplug, and libtheora
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 编译libvorbis、libmodplug和libtheora
 - en: Using the FreeImage graphics library
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用FreeImage图形库
 - en: Using FreeType library for text rendering
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用FreeType库进行文本渲染
 - en: Implementing timing in physics
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在物理中实现定时
 - en: Rendering graphics in 2D
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在2D中渲染图形
 - en: Setting up Box2D simulations
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设置Box2D模拟
 - en: Building the ODE physical library
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 构建ODE物理库
 - en: Introduction
+  id: totrans-13
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: This chapter explains how to port existing popular C/C++ libraries to Android
     using **Android NDK**. These libraries are widely used to implement feature-rich
     applications with graphics, sounds, and physical simulations entirely in C++.
@@ -61,15 +89,20 @@
     of each library. Audio and networking libraries are discussed in greater detail
     in the subsequent chapters. We will show you how to compile libraries and, of
     course, give some short samples and hints on how to start using them.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章介绍如何使用**Android NDK**将现有的流行C/C++库移植到Android。这些库广泛应用于在C++中完全实现具有图形、声音和物理模拟的富特性应用程序。仅仅编译库并没有多大意义。因此，与FreeImage、FreeType和Box2D相关的部分提供了最小示例，以演示每个库的功能。音频和网络库将在后续章节中详细讨论。我们将向您展示如何编译库，当然也会提供一些简短的示例和关于如何开始使用它们的提示。
 - en: Typical caveats for porting libraries across different processors and operating
     systems are memory access (structure alignment/padding), byte-order (endianness),
     calling conventions, and floating-point issues. All the libraries described below
     address these issues quite well, and even if some of them do not officially support
     Android NDK, fixing this is just a matter of a few compiler switches.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 在不同的处理器和操作系统间移植库时典型的陷阱包括内存访问（结构对齐/填充）、字节序（大小端）、调用约定和浮点问题。下面描述的所有库都很好地处理了这些问题，即使其中一些库并不正式支持Android
+    NDK，修复这些问题也只是几个编译器开关的问题。
 - en: To build any of the mentioned libraries, we need to create makefile for the
     Windows version and a pair of the `Android.mk` and the `Application.mk` files
     for Android NDK. The source files of the library are compiled to object files.
@@ -77,513 +110,741 @@
     a static library. Later, this static library can be passed as an input to the
     linker. We start with the Windows version because the `Android.mk` and `Application.mk`
     files are built on top of standard makefiles.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 要构建上述任何库，我们需要为Windows版本创建makefile，并为Android NDK创建一对`Android.mk`和`Application.mk`文件。库的源文件被编译成目标文件。一系列目标文件组合成一个存档，这也称为静态库。稍后，这个静态库可以作为链接器的输入传递。我们从Windows版本开始，因为`Android.mk`和`Application.mk`文件是基于标准makefile构建的。
 - en: Compiling the native static libraries for Windows
+  id: totrans-17
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 为Windows编译本地静态库
 - en: To build the Windows version of libraries, we need a C++ compiler. We use MinGW
     with the GCC toolchain described in [Chapter 1](ch01.html "Chapter 1. Establishing
     a Build Environment"), *Establishing a Build Environment*. For each library, we
     have a collection of source-code files, and we need to get the static library,
     a file with the `.a` extension.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 要构建Windows版本的库，我们需要一个C++编译器。我们使用[第一章](ch01.html "第一章. 建立构建环境")中描述的GCC工具链的MinGW。对于每个库，我们有一系列的源代码文件，并且我们需要得到静态库，一个带有`.a`扩展名的文件。
 - en: Getting ready
+  id: totrans-19
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Let us assume the `src` directory contains the source code of a library we need
     to build for Android.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 假设`src`目录包含我们需要为Android构建的库的源代码。
 - en: How to do it...
+  id: totrans-21
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Let us start with writing a makefile:'
+  id: totrans-22
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让我们从编写makefile开始：
 - en: '[PRE0]'
+  id: totrans-23
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: This line defines a variable with a list of compiler command-line parameters.
     In our case, we instruct the compiler to search the `src` directory for header
     files. If the library source code spans across many directories, we need to add
     the `–I` switch for each of the directories.
+  id: totrans-24
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这行定义了一个变量，其中包含编译器命令行参数的列表。在我们的例子中，我们指示编译器在`src`目录中查找头文件。如果库的源代码跨越许多目录，我们需要为每个目录添加`–I`开关。
 - en: 'Next, we add the following lines for each source file:'
+  id: totrans-25
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来，我们为每个源文件添加以下行：
 - en: '[PRE1]'
+  id: totrans-26
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: '`<SourceFile>` should be replaced by the actual name of the `.cpp` source file,
     and these lines should be written for each of the source files.'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`<SourceFile>`应该被替换为实际的`.cpp`源文件名，并且针对每个源文件都要编写这些行。'
 - en: 'Now, we add the list of object files:'
+  id: totrans-28
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，我们添加目标文件列表：
 - en: '[PRE2]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Finally, we write the target for our library:'
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，我们编写库的目标：
 - en: '[PRE3]'
+  id: totrans-31
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Note
+  id: totrans-32
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Every line in the makefile, except the empty lines and the names of the targets,
     should start with a tabulation character.
+  id: totrans-33
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: makefile中的每一行，除了空行和目标名称，都应该以制表符开头。
 - en: 'To build the library, invoke the following command:'
+  id: totrans-34
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 要构建库，请调用以下命令：
 - en: '[PRE4]'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: When using the library in our programs, we pass the `LibraryName.a` file as
     a parameter to `gcc`.
+  id: totrans-36
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 当在程序中使用库时，我们将`LibraryName.a`文件作为参数传递给`gcc`。
 - en: How it works...
+  id: totrans-37
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: Makefiles consist of targets similar to subroutines in programming languages,
     and usually each target results in an object file being generated. For example,
     we have seen that each source file of the library gets compiled into the corresponding
     object file.
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: Makefiles由类似于编程语言中的子例程的目标组成，通常每个目标都会生成一个目标文件。例如，我们已经看到，库的每个源文件都被编译成相应的目标文件。
 - en: Target names may include the file name pattern to avoid copying and pasting,
     but in the simplest case, we just list all the source files and duplicate those
     lines replacing `SourceFile` with the appropriate file names. The `–c` switch
     after the `gcc` command is the option to compile the source file and `–o` specifies
     the name of the output object file. The `$(CFLAGS)` symbol denotes the substitution
     of the value of the `CFLAGS` variable to the command line.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 目标名称可能包含文件名模式，以避免复制和粘贴，但在最简单的情况下，我们只需列出所有的源文件，并替换`SourceFile`为适当的文件名，复制这些行。`gcc`命令后的`–c`开关是编译源文件的选项，`–o`指定输出目标文件的名字。`$(CFLAGS)`符号表示将`CFLAGS`变量的值替换到命令行中。
 - en: The GCC toolchain for Windows includes the `AR` tool, which is an abbreviation
     for the archiver. Makefiles for our libraries invoke this tool to create a static
     version of the library. This is done in the last lines of the makefile.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: Windows的GCC工具链包括`AR`工具，这是归档器的缩写。我们库的makefiles调用此工具来创建库的静态版本。这是在makefile的最后几行完成的。
 - en: There’s more...
+  id: totrans-41
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Here are some tips for writing makefiles:'
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是一些编写makefiles的技巧：
 - en: 'When a line, with a list of object files becomes too long, it can be split
     using the backslash symbol like the following:'
+  id: totrans-43
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当带有目标文件列表的行变得过长时，可以使用反斜杠符号进行拆分，如下所示：
 - en: '[PRE5]'
+  id: totrans-44
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Note
+  id: totrans-45
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: There should be no space after the backslash. It is a limitation of the `make`
     tool.
+  id: totrans-46
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 反斜杠后面不应该有空格。这是`make`工具的一个限制。
 - en: 'Sometimes, comments are required. This can be done by writing a line, which
     starts with a sharp character:'
+  id: totrans-47
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 有时需要注释。这可以通过编写以井号开头的行来完成：
 - en: '[PRE6]'
+  id: totrans-48
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: If the header files for the library do not reside in the same directory as the
     source files, we have to add those directories to the `CFLAGS` list.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果库的头文件不在源文件所在的目录中，我们必须将这些目录添加到`CFLAGS`列表中。
 - en: Compiling the native static libraries for Android
+  id: totrans-50
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 为Android编译本地静态库
 - en: Android NDK includes a number of GCC and Clang toolchains for each kind of the
     supported processors.
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: Android NDK包括针对每种支持处理器的多个GCC和Clang工具链。
 - en: Getting ready
+  id: totrans-52
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: When building a static library from the source code, we follow the steps similar
     to the Windows version.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 从源代码构建静态库时，我们遵循与Windows版本类似的步骤。
 - en: How to do it...
+  id: totrans-54
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Create a folder named `jni` and create the `Application.mk` file with the appropriate
     compiler switches, and set the name of the library accordingly. For example, one
     for the FreeImage library should look like the following:'
+  id: totrans-55
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`jni`的文件夹，并创建一个`Application.mk`文件，其中包含适当的编译器开关，并相应地设置库的名称。例如，FreeImage库的一个示例应如下所示：
 - en: '[PRE7]'
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'The `Android.mk` file is similar to the ones we have written for the sample
     applications in the previous chapter, yet with a few exceptions. At the top of
     the file, some required variables must be defined. Let us see what the `Android.mk`
     file for the FreeImage library may look like:'
+  id: totrans-57
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Android.mk`文件与我们之前章节为示例应用程序编写的类似，但有一些例外。在文件的顶部，必须定义一些必要的变量。让我们看看FreeImage库的`Android.mk`文件可能如下所示：'
 - en: '[PRE8]'
+  id: totrans-58
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Define some common compiler options: treat all warnings as errors (`-Werror`),
     the `ANDROID` pre-processing symbol is defined, and the `system` include directory
     is set:'
+  id: totrans-59
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 定义一些常见的编译器选项：将所有警告视为错误（`-Werror`），定义`ANDROID`预处理符号，设置`system`包含目录：
 - en: '[PRE9]'
+  id: totrans-60
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'The compilation flags are fixed, according to the selected CPU architecture:'
+  id: totrans-61
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编译标志根据选定的 CPU 架构而定：
 - en: '[PRE10]'
+  id: totrans-62
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Since we are building a static library, we need the following line at the end
     of the makefile:'
+  id: totrans-63
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 由于我们正在构建一个静态库，我们需要在 makefile 文件末尾添加以下行：
 - en: '[PRE11]'
+  id: totrans-64
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: How it works...
+  id: totrans-65
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The Android NDK developers provide their own set of rules to build applications
     and libraries. In the previous chapter we saw how to build a shared object file
     with the `.so` extension. Here we just replace the `BUILD_SHARED_LIBRARY` symbol
     to the `BUILD_STATIC_LIBRARY` and explicitly list the source files required to
     build each object file.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: Android NDK 开发者提供了一组自己的规则来构建应用程序和库。在前一章中，我们看到了如何构建带有`.so`扩展名的共享对象文件。在这里，我们只需将`BUILD_SHARED_LIBRARY`符号替换为`BUILD_STATIC_LIBRARY`，并明确列出构建每个对象文件所需的源文件。
 - en: Note
+  id: totrans-67
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Of course, you can build a shared library and link your application dynamically
     against it. However, this usually is a good choice when the library is located
     in the system and is shared between several applications. In our case, since our
     application is the sole user of the library, the static linking will make it easier
     to link and debug the project.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 当然，你可以构建一个共享库并以动态方式将你的应用程序链接到它。然而，这通常是在库位于系统内并被多个应用程序共享时是一个不错的选择。在我们的情况下，由于我们的应用程序是库的唯一用户，静态链接将使项目链接和调试更加容易。
 - en: Compiling the libcurl networking library
+  id: totrans-69
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 编译 libcurl 网络库
 - en: The libcurl library is a de facto standard for native applications, which deal
     with numerous networking protocols. The libcurl compilation for Android on a Windows
     host requires some additional steps to be done. We explain them in this recipe.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: libcurl 库是处理众多网络协议的本机应用程序的实际标准。在 Windows 主机上为 Android 编译 libcurl 需要进行一些额外的步骤。我们在此食谱中解释它们。
 - en: Getting ready
+  id: totrans-71
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Download the libcurl source code from the library homepage: [http://curl.haxx.se/libcurl/](http://curl.haxx.se/libcurl/).'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 从库主页下载 libcurl 源代码：[http://curl.haxx.se/libcurl/](http://curl.haxx.se/libcurl/)。
 - en: How to do it...
+  id: totrans-73
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Since the libcurl library build process is based on `Autoconf`, we will need
     to generate a `curl_config.h` file before actually building the library. Run the
     `configure` script from the folder containing the unpacked libcurl distribution
     package. Cross-compilation command-line flags should be set to:'
+  id: totrans-74
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 由于 libcurl 库的构建过程基于`Autoconf`，我们实际上在构建库之前需要生成一个`curl_config.h`文件。从包含未打包的 libcurl
+    发行包的文件夹中运行`configure`脚本。交叉编译命令行标志应设置为：
 - en: '[PRE12]'
+  id: totrans-75
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'The `-I` parameter of the `CPPFLAGS` variable should point to the `/system/core/include`
     subfolder of your NDK folder, in our case:'
+  id: totrans-76
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`CPPFLAGS`变量的`-I`参数应指向你的 NDK 文件夹中的`/system/core/include`子文件夹，在我们的情况下：'
 - en: '[PRE13]'
+  id: totrans-77
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'The libcurl library can be customized in many ways. We use this set of parameters
     (disable all protocols except HTTP):'
+  id: totrans-78
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: libcurl 库可以通过多种方式进行定制。我们使用这组参数（除了 HTTP 之外禁用所有协议）：
 - en: '[PRE14]'
+  id: totrans-79
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: The `configure` script will generate a valid `curl_config.h` header file. You
     may find it in the accompanying materials.
+  id: totrans-80
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`configure`脚本将生成一个有效的`curl_config.h`头文件。你可以在配套材料中找到它。'
 - en: Further compilation requires a usual set of `Android.mk/Application.mk` files,
     which is also available in the accompanying materials.
+  id: totrans-81
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 进一步编译需要一套常规的`Android.mk/Application.mk`文件，这些文件也包含在配套材料中。
 - en: How it works…
+  id: totrans-82
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'A simplistic usage example looks like the following:'
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 一个简单的使用示例如下所示：
 - en: '[PRE15]'
+  id: totrans-84
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'Here `MemoryCallback()` is a function that handles the received data. A minimalistic
     unsafe implementation to dump a network response to the terminal can be as follows:'
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，`MemoryCallback()`是处理接收到的数据的函数。将网络响应转储到终端的最小化不安全实现可以如下所示：
 - en: '[PRE16]'
+  id: totrans-86
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: The retrieved data will be printed on the screen in the Windows application.
     The same code will work like a dummy in Android, without producing any visible
     side effects.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Windows 应用程序中，检索到的数据将在屏幕上打印。同样的代码在 Android 中将像一个哑巴一样工作，不会产生任何可见的副作用。
 - en: There’s more…
+  id: totrans-88
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'In order to work with SSL-encrypted connections, we need to tell libcurl where
     our system certificates are located. This can be done with `CURL_CA_BUNDLE` defined
     in the beginning of the `curl_config.h` file:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了处理 SSL 加密连接，我们需要告诉 libcurl 我们的系统证书位于何处。这可以在`curl_config.h`文件开头通过定义`CURL_CA_BUNDLE`来完成：
 - en: '[PRE17]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: See also
+  id: totrans-91
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '[Chapter 3](ch03.html "Chapter 3. Networking"), *Networking*'
+  id: totrans-92
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第3章](ch03.html "第3章. 网络通信")，*网络通信*'
 - en: Compiling the OpenAL library
+  id: totrans-93
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 编译 OpenAL 库
 - en: OpenAL is a cross-platform audio library used in many gaming engines. Here are
     some notes on how to build it for Android.
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenAL 是一个跨平台的音频库，被许多游戏引擎使用。以下是如何为 Android 构建它的注意事项。
 - en: Getting ready
+  id: totrans-95
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Download the source code of the Martins Mozeiko port from his page: [http://pielot.org/2010/12/14/openal-on-android/](http://pielot.org/2010/12/14/openal-on-android/).'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 从Martins Mozeiko的页面下载他移植的源代码：[http://pielot.org/2010/12/14/openal-on-android/](http://pielot.org/2010/12/14/openal-on-android/)。
 - en: 'The home page of the library is as follows: [http://github.com/AerialX/openal-soft-android](http://github.com/AerialX/openal-soft-android).'
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 库的主页如下：[http://github.com/AerialX/openal-soft-android](http://github.com/AerialX/openal-soft-android)。
 - en: How to do it...
+  id: totrans-98
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: To render the generated, or saved, audio stream we use the OpenAL library, which
     is compiled using the standard `Android.mk` and `Application.mk` configuration
     files included in the accompanying materials.
+  id: totrans-99
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了渲染生成的或保存的音频流，我们使用OpenAL库，它是使用随附材料中包含的标准`Android.mk`和`Application.mk`配置文件编译的。
 - en: The Android port of the library is actually a wrapper made by Martins Mozeiko
     for the Android Java class `android.media.AudioTrack` using the JNI. The code
     is licensed under the GNU Library General Public License and is included in the
     book’s supplementary materials.
+  id: totrans-100
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 该库的Android端口实际上是由Martins Mozeiko为Android Java类`android.media.AudioTrack`使用JNI制作的一个包装器。代码是在GNU
+    Library General Public License下授权的，并包含在本书的补充材料中。
 - en: How it works…
+  id: totrans-101
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'The minimalistic source code to initialize and deinitialize OpenAL looks as
     follows:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 初始化和反初始化OpenAL的最小源代码如下所示：
 - en: '[PRE18]'
+  id: totrans-103
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: See also
+  id: totrans-104
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '[Chapter 5](ch05.html "Chapter 5. Cross-platform Audio Streaming"), *Cross-platform
     Audio Streaming*'
+  id: totrans-105
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第5章](ch05.html "第5章. 跨平台音频流传输")，*跨平台音频流传输*'
 - en: Compiling libvorbis, libmodplug, and libtheora
+  id: totrans-106
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 编译libvorbis、libmodplug和libtheora
 - en: For the loading of audio streams, we use **libogg**, **libvorbis**, and **libmodplug**.
     Video streams are handled in a similar way with the **libtheora** library. Here,
     we only give general hints on how to build the libraries from their sources, since
     the actual build process is straightforward once you have our typical `Android.mk`
     and `Application.mk` files in place.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于音频流的加载，我们使用**libogg**、**libvorbis**和**libmodplug**。视频流的处理方式类似，使用**libtheora**库。在这里，我们仅提供如何从源代码构建库的一般性提示，因为一旦你有了我们的典型`Android.mk`和`Application.mk`文件，实际的构建过程是非常简单的。
 - en: Getting ready
+  id: totrans-108
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Download the sources of libvorbis and libtheora codecs from [http://www.xiph.org/downloads](http://www.xiph.org/downloads)
     and the libmodplug library from [http://modplug-xmms.sourceforge.net](http://modplug-xmms.sourceforge.net).
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 从[http://www.xiph.org/downloads](http://www.xiph.org/downloads)下载libvorbis和libtheora编解码器的源代码，以及从[http://modplug-xmms.sourceforge.net](http://modplug-xmms.sourceforge.net)下载libmodplug库。
 - en: How to do it...
+  id: totrans-110
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: libvorbis and libtheora both depend on libogg. The compilation of these libraries
     is straightforward with the provided makefiles and a standard `Android.mk` file
     with the list of source files.
+  id: totrans-111
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: libvorbis和libtheora都依赖于libogg。使用提供的makefiles和包含源文件列表的标准`Android.mk`文件，这些库的编译是非常简单的。
 - en: Note
+  id: totrans-112
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Makefiles for libvorbis and libtheora libraries must refer to the include directories
     of libogg.
+  id: totrans-113
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: libvorbis和libtheora库的Makefiles必须引用libogg的包含目录。
 - en: libmodplug is an open source tracker music decoder by Olivier Lapicque. We provide
     a shortened version of his library, with loaders for the most popular tracker
     file formats. It consists of only three files, and there is an excellent support
     for Android and Linux. The library does not have any problems with big-endian
     CPUs.
+  id: totrans-114
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: libmodplug是Olivier Lapicque开发的开源跟踪音乐解码器。我们提供了他库的简化版本，包含最流行的跟踪文件格式的加载器。它仅由三个文件组成，并且对Android和Linux的支持非常出色。该库在大端CPU上没有任何问题。
 - en: Using the FreeImage graphics library
+  id: totrans-115
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用FreeImage图形库
 - en: FreeImage is a portable graphics library that unifies loading and saving of
     popular image formats, such as JPEG, TIFF, PNG, TGA, high dynamic range EXR images,
     and many others.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: FreeImage是一个可移植的图形库，它统一了诸如JPEG、TIFF、PNG、TGA、高动态范围EXR图像等流行图像格式的加载和保存。
 - en: Getting ready
+  id: totrans-117
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Download the most recent FreeImage source code from the library home page:
     [http://freeimage.sourceforge.net](http://freeimage.sourceforge.net). We used
     the Version 3.15.4, released in October 2012.'
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 从库的主页[http://freeimage.sourceforge.net](http://freeimage.sourceforge.net)下载最新的FreeImage源代码。我们使用的是2012年10月发布的Version
+    3.15.4。
 - en: How to do it...
+  id: totrans-119
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Both the `Android.mk` and `Application.mk` files are pretty standard. The former
     should contain this definition of the `GLOBAL_CFLAGS`:'
+  id: totrans-120
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Android.mk`和`Application.mk`文件都是相当标准的。前者应该包含以下`GLOBAL_CFLAGS`的定义：'
 - en: '[PRE19]'
+  id: totrans-121
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Unfortunately, the Android NDK runtime library is missing the `lfind()` function
     used inside FreeImage (in the LibTIFF4 library, which is used in FreeImage). Here
     is its implementation:'
+  id: totrans-122
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 不幸的是，Android NDK运行时库中缺少了FreeImage内部使用的`lfind()`函数（该函数在LibTIFF4库中使用，而FreeImage又使用了该库）。以下是它的实现方法：
 - en: '[PRE20]'
+  id: totrans-123
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'Now, a single command will do the job:'
+  id: totrans-124
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，一个命令就能完成这项工作：
 - en: '[PRE21]'
+  id: totrans-125
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: How it works...
+  id: totrans-126
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'An image is a 2D array represented as a collection of raw pixel data, but there
     are too many ways to store this array: there might be some compression applied,
     there might be some non-RGB color spaces involved, or non-trivial pixel layouts.
     To avoid dealing with all these complexities, we suggest using the FreeImage library
     by Herve Drolon.'
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 图像是作为原始像素数据集合的2D数组表示，但存储这个数组的方法有很多：可能会应用一些压缩，可能会涉及一些非RGB色彩空间，或者非平凡的像素布局。为了避免处理所有这些复杂性，我们建议使用Herve
+    Drolon的FreeImage库。
 - en: We need to be able to deal with image file data as a memory block and FreeImage
     supports this kind of input. Suppose, we have a file named `1.jpg` and we read
     it with an `fread()` or `ifstream::read()` calls into an array `char Buffer[]`.
@@ -596,43 +857,66 @@
     pixels row. And vice versa, our frame buffer or any other 2D RGB image can be
     encoded into a memory block with `FreeImage_SaveMemory()` and saved to a file
     using a single `fwrite()` or `ofstream::write()` call.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要能够将图像文件数据作为内存块处理，而FreeImage支持这种输入方式。假设我们有一个名为`1.jpg`的文件，我们使用`fread()`或`ifstream::read()`调用将其读取到数组`char
+    Buffer[]`中。数组的大小存储在`Size`变量中。然后，我们可以创建`FIBITMAP`结构，并使用`FreeImage_OpenMemory()`
+    API调用将缓冲区加载到这个`FIBITMAP`结构中。`FIBITMAP`结构几乎是我们想要的2D数组，包含了像素布局和图像大小的额外信息。要将它转换为2D数组，FreeImage提供了函数`FreeImage_GetRowPtr()`，它返回指向第*i*行原始RGB数据的指针。反之，我们的帧缓冲区或任何其他2D
+    RGB图像也可以使用`FreeImage_SaveMemory()`编码到内存块中，并通过单个`fwrite()`或`ofstream::write()`调用保存到文件。
 - en: Here is the code that loads any picture format supported by FreeImage, for example,
     JPEG, TIFF, or PNG, and converts it into a 24-bit RGB image. Any other supported
     pixel formats, such as RGBA or floating point EXR, will be automatically converted
     to a 24-bit color format. For the sake of brevity, we do not handle errors in
     this code.
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是加载FreeImage支持的任何图片格式（例如JPEG、TIFF或PNG）并将其转换为24位RGB图像的代码。其他支持的像素格式，如RGBA或浮点数EXR，将被自动转换为24位颜色格式。为了简洁起见，此代码中我们不处理错误。
 - en: 'Let us declare a structure that will hold the image dimensions and pixel data:'
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们声明一个结构体，用于保存图像尺寸和像素数据：
 - en: '[PRE22]'
+  id: totrans-131
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'Decoding the image from the memory block to the `sBitmap` structure is done
     this way:'
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 从内存块到`sBitmap`结构体解码图像的方式如下：
 - en: '[PRE23]'
+  id: totrans-133
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Saving the image is even simpler. Save the array `img` representing the image
     with width `W`, height `H`, and containing `BitsPP` bits per pixel:'
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 保存图像甚至更简单。保存表示图像的数组`img`，其宽度为`W`，高度为`H`，包含每像素`BitsPP`位：
 - en: '[PRE24]'
+  id: totrans-135
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Changing `FIF_PNG` to any of the `FIF_BMP`, `FIF_TIFF`, or `FIF_JPEG` forms
     will change the output file format to BMP, TIFF, or JPEG respectively.
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 将`FIF_PNG`更改为`FIF_BMP`、`FIF_TIFF`或`FIF_JPEG`中的任何一个，将输出文件格式分别更改为BMP、TIFF或JPEG。
 - en: There’s more…
+  id: totrans-137
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: To understand the importance of reading an image from memory blocks, we should
     keep two things in mind. Web services, such as **Picasa** and **Flickr**, provide
     URLs of images, which are then downloaded into memory using the techniques from
@@ -640,33 +924,48 @@
     time, we do not save this memory block to disk, and instead just decode it from
     memory using the FreeImage library. The same applies to reading an image file
     from a compressed archive.
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 要理解从内存块中读取图像的重要性，我们应牢记两点。诸如**Picasa**和**Flickr**之类的网络服务提供了图像的URL，然后使用[第三章](ch03.html
+    "第三章. 网络通信")*网络通信*中的技术将这些图像下载到内存中。为了避免浪费时间，我们不将这个内存块保存到磁盘，而是直接使用FreeImage库从内存中解码。从压缩档案中读取图像文件也同样适用。
 - en: See also
+  id: totrans-139
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '[Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
     a Virtual Filesystem*'
+  id: totrans-140
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第四章](ch04.html "第四章. 组织虚拟文件系统")，*组织虚拟文件系统*'
 - en: Using the FreeType library for text rendering
+  id: totrans-141
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用FreeType库进行文本渲染
 - en: FreeType has become a de facto standard for high-quality text rendering. The
     library itself is quite easy to use, and the compilation of a static version relies
     on the makefile similar to other libraries from this chapter.
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: FreeType 已成为高质量文本渲染的实际标准。该库本身非常易于使用，静态版本的编译依赖于与其他本章库类似的 makefile。
 - en: Getting ready
+  id: totrans-143
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备开始
 - en: 'Download the most recent source code from the library home page: [http://www.freetype.org](http://www.freetype.org).'
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 从库的主页下载最新的源代码：[http://www.freetype.org](http://www.freetype.org)。
 - en: 'The main FreeType concepts are: a font face, a glyph, and a bitmap. Font faces
     are collections of all the characters in a font for a given encoding. This is
     exactly what is stored in the `.ttf` files (besides copyrights and similar meta
@@ -674,17 +973,26 @@
     primitives, such as spline curves. These glyphs are not something that we can
     copy pixel-wise to the screen or a frame buffer. We have to rasterize a bitmap
     of the glyph using FreeType rasterization functions.'
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
+  zh: FreeType 的主要概念包括：字体面、字形和位图。字体面是针对给定编码的字体中所有字符的集合。这正是存储在 `.ttf` 文件中的内容（除了版权信息和其他类似的元信息）。每个字符称为字形，使用几何基本元素表示，如样条曲线。这些字形不是我们可以逐像素复制到屏幕或帧缓冲区的东西。我们需要使用
+    FreeType 光栅化函数来生成字形的位图。
 - en: 'Let’s look at a single glyph:'
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们来看一个单独的字形：
 - en: '![Getting ready](img/7785_03_1.jpg)'
+  id: totrans-147
   prefs: []
   type: TYPE_IMG
+  zh: '![准备开始](img/7785_03_1.jpg)'
 - en: FreeType glyph metrics
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: FreeType 字形度量
 - en: The `xMin`, `xMax`, `yMin`, and `yMax` values define the dimensions of the glyph
     in logical coordinates, and the advance value shows where the next glyph starts
     if we assume no kerning. Once we want to render on the screen, we need to transform
@@ -694,8 +1002,12 @@
     To convert these fancy values acquired from FreeType, we right-shift these values
     by six bits (equivalent to the integer division by 64) and get the value we can
     use with ease.
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: '`xMin`、`xMax`、`yMin` 和 `yMax` 值定义了字形在逻辑坐标中的尺寸，而前进值显示了如果没有字距调整，下一个字形开始的位置。一旦我们想要在屏幕上渲染，我们需要将
+    FreeType 使用的逻辑坐标转换为屏幕坐标。FreeType 避免使用浮点计算，并将所有内容存储在 26.6 定点格式中（[http://www.freetype.org/freetype2/docs/glyphs/glyphs-6.html](http://www.freetype.org/freetype2/docs/glyphs/glyphs-6.html)）。为了转换从
+    FreeType 获取的这些复杂值，我们将这些值向右移动六位（相当于整数除以64），得到我们可以轻松使用的值。'
 - en: Rendering the individual images of each character is not enough. Sometimes characters
     look better when they are rendered closer to each other and some letter combinations
     may even produce new glyphs. The variation of the distance between the characters
@@ -705,297 +1017,442 @@
     for details and references). In [Chapter 7](ch07.html "Chapter 7. Cross-platform
     UI and Input Systems"), *Cross-platform UI and Input System*, we use only simple
     kerning, which is good enough for our interactive applications.
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: 单独渲染每个字符的图像是不够的。有时字符在相互靠近渲染时看起来更好，某些字母组合甚至可能产生新的字形。屏幕上字符间距离的变化称为**字距调整**，FreeType
+    提供了计算字形之间偏移量的函数。将几个字形组合成一个字形称为**连字**，这超出了本书的范围（详情和参考资料请见[http://en.wikipedia.org/wiki/Typographic_ligature](http://en.wikipedia.org/wiki/Typographic_ligature))。在第[7章](ch07.html
+    "第7章.跨平台UI和输入系统")，*跨平台UI和输入系统*中，我们仅使用简单的字距调整，这对于我们的交互式应用程序来说已经足够好了。
 - en: 'To show the basic usage of FreeType, we are going to write the code in this
     recipe implementing:'
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了展示 FreeType 的基本使用方法，我们将在本食谱中编写代码实现：
 - en: An ASCII string renderer using a **monospaced font**.
+  id: totrans-152
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用**等宽字体**的 ASCII 字符串渲染器。
 - en: FreeType-based textures generator for monospaced fonts.
+  id: totrans-153
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 用于等宽字体的基于 FreeType 的纹理生成器。
 - en: Later, we shall return to the advanced FreeType usage involving proportional
     fonts, UTF-8 encoding, and kerning.
+  id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: 后面，我们将回到涉及比例字体、UTF-8 编码和字距调整的高级 FreeType 使用方法。
 - en: How to do it...
+  id: totrans-155
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'For a monospaced font and an 8-bit ASCII character set, we can use a single
     pre-rendered bitmap with all the 256 characters to simplify the rendering code.
     To make this bitmap, we write a small tool, which reads a TrueType font, and outputs
     a square bitmap 512 x 512 pixels, which contains a 16 × 16 characters grid:'
+  id: totrans-156
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 对于等宽字体和8位ASCII字符集，我们可以使用一个包含所有256个字符的单一预渲染位图来简化渲染代码。为了制作这个位图，我们编写了一个小工具，它读取TrueType字体，并输出一个512
+    x 512像素的方形位图，其中包含16 × 16字符网格：
 - en: '[PRE25]'
+  id: totrans-157
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Include FreeType headers:'
+  id: totrans-158
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 包含FreeType头文件：
 - en: '[PRE26]'
+  id: totrans-159
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Declare the number of characters on each side, and the size of each character:'
+  id: totrans-160
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 声明每侧的字符数以及每个字符的大小：
 - en: '[PRE27]'
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Declare an array to store the output bitmap in RGBA format:'
+  id: totrans-162
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 声明一个数组以RGBA格式存储输出位图：
 - en: '[PRE28]'
+  id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'Declaring an externally defined routine to save a `.bmp` file can be done using
     the FreeImage library:'
+  id: totrans-164
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用FreeImage库声明一个外部定义的例程来保存`.bmp`文件：
 - en: '[PRE29]'
+  id: totrans-165
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'Declaring a renderer of the `FT_Bitmap` at position `(x, y)` is as follows:'
+  id: totrans-166
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 声明在位置`(x, y)`处渲染`FT_Bitmap`的渲染器如下：
 - en: '[PRE30]'
+  id: totrans-167
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Iterate pixels of the source bitmap:'
+  id: totrans-168
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 遍历源位图的像素：
 - en: '[PRE31]'
+  id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Read the value `v` from the bitmap and copy each of the four RGBA components
     into the output:'
+  id: totrans-170
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从位图中读取值`v`并将四个RGBA组件的每一个复制到输出中：
 - en: '[PRE32]'
+  id: totrans-171
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'The `main()` function of the application goes as follows:'
+  id: totrans-172
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 应用程序的主函数`main()`如下所示：
 - en: '[PRE33]'
+  id: totrans-173
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'Clear the bitmap to black color:'
+  id: totrans-174
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将位图清除为黑色：
 - en: '[PRE34]'
+  id: totrans-175
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'Initialize the FreeType library:'
+  id: totrans-176
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 初始化FreeType库：
 - en: '[PRE35]'
+  id: totrans-177
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Create the face object:'
+  id: totrans-178
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建面(face)对象：
 - en: '[PRE36]'
+  id: totrans-179
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'Set the character size. We declared `CHAR_SIZE` to denote the number of pixels
     for a single char in our bitmap. The multiplier `64` is used, because FreeType
     units are equal to 1/64th of a point. The value `100` corresponds to the horizontal
     resolution of 100 dots per inch:'
+  id: totrans-180
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 设置字符大小。我们声明了`CHAR_SIZE`来表示位图中单个字符的像素数。乘数`64`是使用的，因为FreeType的单位等于1/64点。值`100`对应于每英寸100个点的水平分辨率：
 - en: '[PRE37]'
+  id: totrans-181
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'Render each character of the ASCII table:'
+  id: totrans-182
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 渲染ASCII表中的每个字符：
 - en: '[PRE38]'
+  id: totrans-183
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'Load the next glyph image into the slot, overwriting the previous one, and
     ignore errors:'
+  id: totrans-184
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 加载下一个字形图像到槽中，覆盖之前的图像，并忽略错误：
 - en: '[PRE39]'
+  id: totrans-185
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: 'Calculate the non-transformed origin of the glyph in the resulting bitmap:'
+  id: totrans-186
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 计算字形在结果位图中的非变换原点：
 - en: '[PRE40]'
+  id: totrans-187
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'Now, draw to our target bitmap, converting the position:'
+  id: totrans-188
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，转换位置，绘制到我们的目标位图：
 - en: '[PRE41]'
+  id: totrans-189
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'Save the generated font texture as a rectangular `.bmp` image file:'
+  id: totrans-190
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将生成的字体纹理保存为矩形`.bmp`图像文件：
 - en: '[PRE42]'
+  id: totrans-191
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'Clear the font face and release resources allocated by the library:'
+  id: totrans-192
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 清除字体面并释放库分配的资源：
 - en: '[PRE43]'
+  id: totrans-193
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: Now, we have an ASCII string written in a left-to-right language, and we want
     to build a graphical representation of this string. We iterate string characters
     to render them one by one. At the end of each iteration, we copy the bitmap of
     the current character to the frame buffer, and then increment the current position
     using the fixed font width (the `SLOT_SIZE` value).
+  id: totrans-194
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，我们有一个以左至右书写的ASCII字符串，我们想要构建这个字符串的图形表示。我们遍历字符串中的字符来逐个渲染它们。在每次迭代结束时，我们将当前字符的位图复制到帧缓冲区，然后使用固定的字体宽度（即`SLOT_SIZE`值）增加当前位置。
 - en: 'Here is the complete code to render a text string using the pre-rendered bitmap
     font. We use font array to store the RGB bitmap of our font:'
+  id: totrans-195
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这是使用预渲染位图字体来呈现文本字符串的完整代码。我们使用字体数组来存储我们字体的RGB位图：
 - en: '[PRE44]'
+  id: totrans-196
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'The width and height of the output frame buffer is defined as follows:'
+  id: totrans-197
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 输出帧缓冲区的宽度和高度定义如下：
 - en: '[PRE45]'
+  id: totrans-198
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'Render a single character into the bitmap buffer:'
+  id: totrans-199
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将单个字符渲染到位图缓冲区：
 - en: '[PRE46]'
+  id: totrans-200
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'Iterate through the pixels of the current character:'
+  id: totrans-201
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 遍历当前字符的像素：
 - en: '[PRE47]'
+  id: totrans-202
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'Paint only non-zero pixels. This will preserve the existing content of the
     frame buffer:'
+  id: totrans-203
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 只绘制非零像素。这将保留帧缓冲区中的现有内容：
 - en: '[PRE48]'
+  id: totrans-204
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: 'Render a complete line of ASCII text into the buffer:'
+  id: totrans-205
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将完整的ASCII文本行渲染到缓冲区：
 - en: '[PRE49]'
+  id: totrans-206
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'Advance by a fixed number of pixels:'
+  id: totrans-207
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以固定数量的像素前进：
 - en: '[PRE50]'
+  id: totrans-208
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: How it works…
+  id: totrans-209
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'Let’s read the output of the FreeType font generator. We use the following
     code to test it:'
+  id: totrans-210
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们读取FreeType字体生成器的输出。我们使用以下代码来测试它：
 - en: '[PRE51]'
+  id: totrans-211
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'Allocate and clear the output 3-channel RGB bitmap:'
+  id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 分配并清除输出3通道RGB位图：
 - en: '[PRE52]'
+  id: totrans-213
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'Render the white text line at position `(10,10)`:'
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 在位置`(10,10)`处渲染白色文本行：
 - en: '[PRE53]'
+  id: totrans-215
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'Save the resulting bitmap to a file:'
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 将结果位图保存到文件：
 - en: '[PRE54]'
+  id: totrans-217
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: There’s more...
+  id: totrans-218
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: We encourage the reader to find some free fonts at [http://www.1001freefonts.com](http://www.1001freefonts.com),
     use the described FreeType font generator to create `.bmp` files for those fonts
     and render the string using the pre-rendered characters.
+  id: totrans-219
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们鼓励读者访问[http://www.1001freefonts.com](http://www.1001freefonts.com)寻找一些免费字体，使用所描述的FreeType字体生成器为这些字体创建`.bmp`文件，并使用预渲染的字符来渲染字符串。
 - en: Implementing timing in physics
+  id: totrans-220
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在物理中实现计时
 - en: The rest of this chapter is dedicated to two physical simulation libraries,
     the Box2D (2D simulation) and Open Dynamics Engine (3D simulations). Building
     these is not hard, so we’ll focus on making real use of them. The APIs of Box2D
@@ -1004,172 +1461,249 @@
     we have to transform the bodies’ physical coordinates into a screen-related coordinate
     system. Connecting physical simulation with rendering and timing is the main problem
     treated in this recipe.
+  id: totrans-221
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章的其余部分专门介绍两个物理模拟库：Box2D（2D模拟）和Open Dynamics Engine（3D模拟）。构建这些并不困难，因此我们将重点放在如何实际使用它们。Box2D和ODE的API仅提供计算模拟中刚体当前位置的函数。首先，我们必须调用计算例程。然后，我们必须将身体的物理坐标转换成与屏幕相关的坐标系。将物理模拟与渲染和计时连接起来是本节处理的主要问题。
 - en: Getting ready
+  id: totrans-222
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Virtually, every rigid body physics library provides abstractions of the world,
     object (or body), constraint (or joint), and shape. The world here is just a collection
     of bodies and joints attached to bodies. Shapes define how bodies collide.
+  id: totrans-223
   prefs: []
   type: TYPE_NORMAL
+  zh: 几乎每个刚体物理库都提供了世界、物体（或身体）、约束（或关节）以及形状的抽象。这里的世界只是一个包含身体和附着在身体上的关节的集合。形状定义了身体如何碰撞。
 - en: To create a dynamic application based on the physical simulation, we have to
     be able to render the physical scene at any moment in time. We also need to convert
     discrete timer events into a seemingly continuous process of calculation of the
     bodies’ positions.
+  id: totrans-224
   prefs: []
   type: TYPE_NORMAL
+  zh: 要基于物理模拟创建动态应用程序，我们必须能够在任何时刻渲染物理场景。同时，我们还需要将离散的计时器事件转换成看似连续的物体位置计算过程。
 - en: Here, we give explanations about the timing and rendering, and then we provide
     a complete sample using the Box2D library, the `App4`.
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们解释了计时和渲染，然后提供了一个使用Box2D库的完整示例，即`App4`。
 - en: How to do it...
+  id: totrans-226
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'In order to animate everything on the screen, we need to set up a timer. In
     Android, we perform time stepping as fast as possible, and on each iteration of
     our rendering loop, we just call the `GetSeconds()` function and calculate the
     difference between the previous and the current time. The code for `GetSeconds()`
     in the `Wrappers_Android.h` file uses the standard **POSIX** `gettimeofday()`
     function:'
+  id: totrans-227
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了在屏幕上动画化所有内容，我们需要设置一个计时器。在Android中，我们尽可能快地进行时间步进，并且在渲染循环的每次迭代中，我们只需调用`GetSeconds()`函数并计算前一个时间与当前时间之间的差值。`Wrappers_Android.h`文件中的`GetSeconds()`函数代码使用了标准的**POSIX**
+    `gettimeofday()`函数：
 - en: '[PRE55]'
+  id: totrans-228
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'The coefficient to convert time from microseconds into seconds:'
+  id: totrans-229
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将时间从微秒转换为秒的系数：
 - en: '[PRE56]'
+  id: totrans-230
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: 'Get the current time:'
+  id: totrans-231
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 获取当前时间：
 - en: '[PRE57]'
+  id: totrans-232
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: 'Calculate the number of microseconds:'
+  id: totrans-233
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 计算微秒数：
 - en: '[PRE58]'
+  id: totrans-234
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: 'Return the current time in seconds. The `double` precision is necessary here,
     since the timer counts time since the moment the system starts and the 32-bit
     `float` precision is not enough:'
+  id: totrans-235
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 返回当前时间（秒）。这里需要`double`精度，因为计时器从系统启动时刻开始计时，32位的`float`精度不够：
 - en: '[PRE59]'
+  id: totrans-236
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: 'We use three variables with current, previous, and total time. First, we initialize
     the `g_OldTime` and `g_NewTime` time counters:'
+  id: totrans-237
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们使用三个变量来记录当前时间、之前的时间和总时间。首先，我们初始化`g_OldTime`和`g_NewTime`时间计数器：
 - en: '[PRE60]'
+  id: totrans-238
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: 'Before we start, the total time counter should be set to zero:'
+  id: totrans-239
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在开始之前，总时间计数器应设为零：
 - en: '[PRE61]'
+  id: totrans-240
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: 'Each frame we call the `GenerateTicks()` method to set up the animation:'
+  id: totrans-241
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 每帧我们调用`GenerateTicks()`方法来设置动画：
 - en: '[PRE62]'
+  id: totrans-242
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: 'Calculate how much time has passed since the previous update:'
+  id: totrans-243
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 计算自上次更新以来经过的时间：
 - en: '[PRE63]'
+  id: totrans-244
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: 'Call the `OnTimer()` routine with the non-zero number of seconds:'
+  id: totrans-245
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用非零秒数调用`OnTimer()`例程：
 - en: '[PRE64]'
+  id: totrans-246
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'For the Windows version, time stepping is done using the `SetTimer()` function,
     which enables a system timer event every 10 milliseconds:'
+  id: totrans-247
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 对于Windows版本，使用`SetTimer()`函数进行时间步进，该函数每隔10毫秒启用一个系统计时器事件：
 - en: '[PRE65]'
+  id: totrans-248
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: 'Each time these milliseconds pass, the `WM_TIMER` event is sent to our window
     function. We add another `case` in the `switch` construction, where we just call
     the `OnTimer()` method:'
+  id: totrans-249
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 每次这些毫秒经过，`WM_TIMER`事件会被发送到我们的窗口函数。我们在`switch`构造中添加另一个`case`，只需调用`OnTimer()`方法：
 - en: '[PRE66]'
+  id: totrans-250
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: 'Repaint everything since we’re about to change the state:'
+  id: totrans-251
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 由于我们即将改变状态，重新绘制一切：
 - en: '[PRE67]'
+  id: totrans-252
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: 'Recalculate everything using the time slice of 0.01 seconds:'
+  id: totrans-253
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用0.01秒的时间片重新计算一切：
 - en: '[PRE68]'
+  id: totrans-254
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: As in [Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting
     Common Libraries*, the new `OnTimer()` callback function is independent of the
     Windows or Android specifics.
+  id: totrans-255
   prefs: []
   type: TYPE_NORMAL
+  zh: 如[第2章](ch02.html "第2章。移植通用库")，*移植通用库*所述，新的`OnTimer()`回调函数与Windows或Android的特定内容无关。
 - en: How it works...
+  id: totrans-256
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'Now, when we have timer events generated for us, we may proceed to the calculation
     of rigid bodies’ positions. This is a somewhat complicated process of solving
     the equations of motion. In simple terms, given current positions and orientations,
     we want to calculate new positions and orientations of all the bodies in the scene:'
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，当我们有了为我们生成的时间器事件时，我们可以继续计算刚体的位置。这是一个解决运动方程的复杂过程。简单来说，给定当前的位置和方向，我们想要计算场景中所有刚体的新位置和方向：
 - en: '[PRE69]'
+  id: totrans-258
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: 'In this pseudo code, the `positions_new` and `positions_old` are the arrays
     with new and old rigid body positions and orientations, and `time_step` is the
     value in seconds, by which we should advance our time counter. Typically, we need
@@ -1177,295 +1711,429 @@
     we calculate positions and orientations with high enough accuracy. For each logical
     timer event, we may need to perform one or more calculation steps. To that end,
     we introduce the `TimeCounter` variable and implement the so-called **time slicing**:'
+  id: totrans-259
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个伪代码中，`positions_new`和`positions_old`是与刚体位置和方向的新旧数组，而`time_step`是我们应该推进时间计数器的秒数值。通常，我们需要使用`0.05`秒或更低的时间步长更新一切，以确保我们以足够高的精度计算位置和方向。对于每个逻辑计时器事件，我们可能需要进行一个或多个计算步骤。为此，我们引入了`TimeCounter`变量，并实现了所谓的**时间分片**：
 - en: '[PRE70]'
+  id: totrans-260
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: 'Call the Box2D’s method `Step()` to recalculate positions of rigid bodies and
     decrement the time counter for one step:'
+  id: totrans-261
   prefs: []
   type: TYPE_NORMAL
+  zh: 调用Box2D的`Step()`方法，重新计算刚体的位置，并将时间计数器减一：
 - en: '[PRE71]'
+  id: totrans-262
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: The presented code guarantees that the `Step()` method will be called `t / TIME_STEP`
     times for the time value `t` and that the difference between the physical time
     and logical time will be no more than `TIME_STEP` seconds.
+  id: totrans-263
   prefs: []
   type: TYPE_NORMAL
+  zh: 所提供的代码保证了对于时间值`t`，`Step()`方法会被调用`t / TIME_STEP`次，且物理时间和逻辑时间之间的差值不会超过`TIME_STEP`秒。
 - en: See also…
+  id: totrans-264
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅…
 - en: '[Chapter 8](ch08.html "Chapter 8. Writing a Match-3 Game"), *Writing a Match-3
     Game*'
+  id: totrans-265
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第8章](ch08.html "第8章。编写一个匹配3游戏")，*编写一个匹配3游戏*'
 - en: Rendering graphics in 2D
+  id: totrans-266
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在2D环境中渲染图形
 - en: 'To render a 2D scene, we use the wireframe mode. This requires only the `Line2D()`
     procedure to be implemented with the following prototype:'
+  id: totrans-267
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了渲染一个2D场景，我们使用线框模式。这只需要实现`Line2D()`过程，其原型如下：
 - en: '[PRE72]'
+  id: totrans-268
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: Getting ready
+  id: totrans-269
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备开始
 - en: This can be a simple implementation of the Bresenham’s algorithm ([http://en.wikipedia.org/wiki/Bresenham’s_line_algorithm](http://en.wikipedia.org/wiki/Bresenham’s_line_algorithm))
     and we do not present code here in the book to save space. See the accompanying
     `Rendering.h` and `Rendering.cpp` files for `App4`. The book’s supplementary materials
     can be downloaded from [www.packtpub.com/support](http://www.packtpub.com/support).
+  id: totrans-270
   prefs: []
   type: TYPE_NORMAL
+  zh: 这可以是对Bresenham算法的简单实现（[http://en.wikipedia.org/wiki/Bresenham’s_line_algorithm](http://en.wikipedia.org/wiki/Bresenham’s_line_algorithm)），本书中没有提供代码以节省空间。有关`App4`的`Rendering.h`和`Rendering.cpp`文件，请参见随书附带的材料。该书的补充材料可以从[www.packtpub.com/support](http://www.packtpub.com/support)下载。
 - en: How to do it…
+  id: totrans-271
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'To transform the objects from the simulated physical world to the screen in
     a 2D environment of the Box2D library, we have to set up a coordinate transform:'
+  id: totrans-272
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了将模拟物理世界中的对象转换到Box2D库的2D环境中，我们必须设置一个坐标变换：
 - en: '[PRE73]'
+  id: totrans-273
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: 'To do so, we introduce a few coefficients, `XScale`, `YScale`, `XOfs`, `YOfs`,
     and two formulas:'
+  id: totrans-274
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为此，我们引入了几个系数，`XScale`，`YScale`，`XOfs`，`YOfs`，以及两个公式：
 - en: '[PRE74]'
+  id: totrans-275
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: 'They work as follows:'
+  id: totrans-276
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 它们的工作原理如下：
 - en: '[PRE75]'
+  id: totrans-277
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: 'We also introduce a shortcut for the `Line2D()` routine with vector-valued
     arguments to use the `Vec2` type of the Box2D library directly:'
+  id: totrans-278
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们还引入了`Line2D()`例程的快捷方式，使用Box2D库的`Vec2`类型直接处理向量值参数：
 - en: '[PRE76]'
+  id: totrans-279
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE76]'
 - en: How it works…
+  id: totrans-280
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'To render a single box, we only need to draw four lines, connecting the corner
     points. If an angle of a body is `Alpha`, the center of mass coordinates are `x`
     and `y,` and the dimensions are specified by the width `w` and height `h`, then
     the corner points’ coordinates are calculated as:'
+  id: totrans-281
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了渲染一个单独的盒子，我们只需要绘制连接角点的四条线。如果一个刚体的角度是`Alpha`，质心坐标是`x`和`y`，且尺寸由宽度`w`和高度`h`指定，那么角点的坐标计算如下：
 - en: '[PRE77]'
+  id: totrans-282
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE77]'
 - en: 'Finally, the box is rendered as four lines:'
+  id: totrans-283
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，将盒子渲染为四条线：
 - en: '[PRE78]'
+  id: totrans-284
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE78]'
 - en: See also …
+  id: totrans-285
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅…
 - en: '[Chapter 6](ch06.html "Chapter 6. Unifying OpenGL ES 3 and OpenGL 3"), *Unifying
     OpenGL ES 3 and OpenGL 3*'
+  id: totrans-286
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第6章](ch06.html "第6章.统一OpenGL ES 3和OpenGL 3")，*统一OpenGL ES 3和OpenGL 3*'
 - en: Setting up Box2D simulations
+  id: totrans-287
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设置Box2D模拟
 - en: Box2D is a pure C++ library with no dependencies on the CPU architecture, so
     a simple `makefile` and `Android.mk` script, similar to those found in the previous
     sections, would suffice to build the library. Using the techniques described in
     the previous section, we set up a simulation. We also have the frame buffer from
     the previous chapter, and we only render the boxes using 2D lines.
+  id: totrans-288
   prefs: []
   type: TYPE_NORMAL
+  zh: Box2D是一个纯C++库，不依赖于CPU架构，因此使用与前面章节中类似的简单`makefile`和`Android.mk`脚本就足以构建该库。我们使用前面章节中描述的技术来设置一个模拟。我们还有上一章中的帧缓冲区，仅使用2D线条渲染盒子。
 - en: Getting ready
+  id: totrans-289
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: As a bonus, Erin Catto—the library author—provides a simplified version of Box2D.
     Once you are happy with just the boxes available, you can restrict yourself to
     using the **BoxLite** version.
+  id: totrans-290
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为奖励，库的作者Erin Catto提供了一个Box2D的简化版本。一旦你满足于仅使用现有的盒子，你可以限制自己使用**BoxLite**版本。
 - en: 'Download the most recent source code from the library home page: [http://box2d.org](http://box2d.org).'
+  id: totrans-291
   prefs: []
   type: TYPE_NORMAL
+  zh: 从库的主页下载最新的源代码：[http://box2d.org](http://box2d.org)。
 - en: How to do it...
+  id: totrans-292
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To start with Box2D, we adapt the standard sample for a slightly modified BoxLite
     version, which is included in this book’s materials. First, we declare the global
     `World` object:'
+  id: totrans-293
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了开始使用Box2D，我们采用了本书材料中包含的经过略微修改的BoxLite版本的标准示例。首先，我们声明全局的`World`对象：
 - en: '[PRE79]'
+  id: totrans-294
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE79]'
 - en: 'Initialize it at the end of the `OnStartup()` routine:'
+  id: totrans-295
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`OnStartup()`例程的最后初始化它：
 - en: '[PRE80]'
+  id: totrans-296
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE80]'
 - en: The `OnTimer()` callback (those used in the previous recipes) updates the `g_World`
     object using the `TIME_STEP` constant by calling the `Step()` method.
+  id: totrans-297
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`OnTimer()`回调（之前食谱中使用的）通过调用`Step()`方法使用`TIME_STEP`常量更新`g_World`对象。'
 - en: 'The `OnDrawFrame()` callback passes the parameters of each body to the `DrawBody()`
     function, which renders the body bounding box:'
+  id: totrans-298
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`OnDrawFrame()`回调将每个刚体的参数传递给`DrawBody()`函数，该函数渲染刚体的边界框：'
 - en: '[PRE81]'
+  id: totrans-299
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE81]'
 - en: 'Render each joint:'
+  id: totrans-300
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 渲染每个关节：
 - en: '[PRE82]'
+  id: totrans-301
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE82]'
 - en: 'Update the state as fast as possible:'
+  id: totrans-302
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 尽可能快地更新状态：
 - en: '[PRE83]'
+  id: totrans-303
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE83]'
 - en: The call to the `GenerateTicks()` function makes the actual update timing for
     the Android version. It is implemented using the ideas from the Implementing timing
     in physics recipe from this chapter.
+  id: totrans-304
   prefs: []
   type: TYPE_NORMAL
+  zh: 对`GenerateTicks()`函数的调用为Android版本实际更新定时。它是使用本章中“在物理中实现定时”食谱中的想法来实现的。
 - en: How it works...
+  id: totrans-305
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: The `Setup()` function is a modification of the original sample code from Box2D
     to set up a physics scene. The modification consists of defining a number of shortcuts
     to simplify the scene assembly.
+  id: totrans-306
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Setup()`函数是对Box2D原始示例代码的修改，用于设置一个物理场景。修改包括定义一些快捷方式以简化场景组装。'
 - en: The functions `CreateBody()` and `CreateBodyPos()` create rigid bodies with
     specified positions, orientations, dimensions, and masses. The function `AddGround()`
     adds a static immovable object to `g_World`, and the function `CreateJoint()`
     makes a new physical attachment of one body to another.
+  id: totrans-307
   prefs: []
   type: TYPE_NORMAL
+  zh: 函数`CreateBody()`和`CreateBodyPos()`根据指定的位置、方向、尺寸和质量创建刚体。函数`AddGround()`向`g_World`添加一个静态不可移动的物体，而函数`CreateJoint()`则创建一个将一个刚体附着到另一个刚体的新物理连接。
 - en: In this sample scene there are also some joints connecting the bodies.
+  id: totrans-308
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个示例场景中，还有一些关节连接着这些刚体。
 - en: 'The application `App4` produces the same results on Android and Windows, as
     in the following image, which is one of the simulation steps:'
+  id: totrans-309
   prefs: []
   type: TYPE_NORMAL
+  zh: 应用程序`App4`在Android和Windows上产生相同的结果，如下面的图像所示，这是其中一个模拟步骤：
 - en: '![How it works...](img/7785_03_2.jpg)'
+  id: totrans-310
   prefs: []
   type: TYPE_IMG
+  zh: '![它是如何工作的...](img/7785_03_2.jpg)'
 - en: There’s more...
+  id: totrans-311
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: As an exercise, we suggest that you experiment with the settings, and add more
     of your own 2D scenes to the `App4` sample.
+  id: totrans-312
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为练习，我们建议你尝试调整设置，并在`App4`示例中添加更多自己的2D场景。
 - en: See also
+  id: totrans-313
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: Implementing timing in physics
+  id: totrans-314
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在物理中实现定时
 - en: Building the ODE physical library
+  id: totrans-315
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 构建ODE物理库
 - en: This recipe is dedicated to the building of the open source **ODE** (**Open
     Dynamics Engine**) physical simulation library, which is one of the oldest rigid
     body simulators for interactive applications.
+  id: totrans-316
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱致力于构建开源**ODE**（**开放动力学引擎**）物理模拟库，这是互动应用中最古老的刚体模拟器之一。
 - en: Getting ready
+  id: totrans-317
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Download the most recent source code from the library home page: [http://www.ode.org/download.html](http://www.ode.org/download.html).'
+  id: totrans-318
   prefs: []
   type: TYPE_NORMAL
+  zh: 从库的主页下载最新的源代码：[http://www.ode.org/download.html](http://www.ode.org/download.html)。
 - en: How to do it...
+  id: totrans-319
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Compiling ODE is no different from other libraries. One subtle point, is the
     selection between `single` and `double` floating-point precision. Standard compilation
     involves the `autoconf` and `automake` tools, but here we just prepare `Android.mk`,
     `makefile` as usual, and `odeconfig.h`. We need to define either the `dDOUBLE`
     or `dSINGLE` symbol there to enable the `single` or `double` precision calculations.
     There is this line in the beginning of the `odeconfig.h` file:'
+  id: totrans-320
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编译ODE与其他库没有区别。一个微妙的点是选择`single`和`double`浮点精度。标准编译涉及`autoconf`和`automake`工具，但这里我们只需像往常一样准备`Android.mk`、`makefile`和`odeconfig.h`。我们需要在那里定义`dDOUBLE`或`dSINGLE`符号，以启用`single`或`double`精度计算。在`odeconfig.h`文件的开头有这一行：
 - en: '[PRE84]'
+  id: totrans-321
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE84]'
 - en: 'It enables the single-precision, 32-bit floating point calculations which are
     sufficient for simple interactive applications. Changing the value to `dDOUBLE`
     enables the double-precision, 64-bit floating point calculations:'
+  id: totrans-322
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 它启用了单精度、32位浮点计算，这对于简单的交互式应用程序来说已经足够了。将值更改为`dDOUBLE`可以启用双精度、64位浮点计算：
 - en: '[PRE85]'
+  id: totrans-323
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE85]'
 - en: ODE is rather complex software and it includes the **Ice** collision detection
     library, which unfortunately, has compilation problems when the strictest possible
     settings of the Clang compiler are used. However, it is easily fixed by commenting
     out the contents of the `_prefetch` function in the `OPCODE/Ice/IceUtils.h` file.
+  id: totrans-324
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: ODE是相当复杂的软件，它包含了**Ice**碰撞检测库，不幸的是，在使用Clang编译器的最严格设置时，它会有编译问题。但是，通过注释掉`OPCODE/Ice/IceUtils.h`文件中的`_prefetch`函数内容，可以轻松修复。
 - en: How it works...
+  id: totrans-325
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'Since ODE calculates positions and orientations of the rigid bodies in 3D space,
     we have to set up a tiny 3D rendering pipeline on top of the simple 2D rendering
     we have done in this chapter. To demonstrate the ODE library we cannot avoid some
@@ -1475,32 +2143,45 @@
     transforms: we convert the **object space** to **world space**, world space to
     **camera space** and the camera space to **post-perspective space** with a multiplication
     by the projection matrix.'
+  id: totrans-326
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于ODE在3D空间中计算刚体的位置和方向，因此我们必须在我们在本章中完成的简单2D渲染之上建立一个小型的3D渲染管道。为了演示ODE库，我们不可避免地需要一些3D数学知识。场景（世界）中的所有对象都有其坐标和方向，由3D向量和四元数组成的一对值指定。我们将它们转换为4x4仿射变换矩阵。然后，我们遵循坐标变换链：我们将**对象空间**转换为**世界空间**，世界空间转换为**相机空间**，然后通过乘以投影矩阵将相机空间转换为**透视后空间**。
 - en: Finally, the first post-perspective coordinates, `x` and `y`, are transformed
     into normalized device coordinates to fit our 2D frame buffer, like in the sample
     with Box2D. The camera is fixed at a stationary point and its viewing direction
     cannot be changed in our simple application. The projection matrix is also fixed,
     but there are no other restrictions.
+  id: totrans-327
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，第一个透视坐标`x`和`y`被转换成标准化设备坐标，以适应我们的2D帧缓冲区，就像在Box2D示例中一样。摄像机固定在一个静止点上，其观察方向在我们的简单应用程序中无法更改。投影矩阵也是固定的，但没有其他限制。
 - en: There’s more...
+  id: totrans-328
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'The 3D physical simulation is a very complex topic, which requires many books
     to be read. We would like to encourage the reader to check out the ODE Community
     Wiki pages at [http://ode-wiki.org/wiki](http://ode-wiki.org/wiki) to find the
     official documentation and open source examples. A good start in game physics
     can be made with the book *Learning Game Physics with Bullet Physics and OpenGL*
     from Packt Publishing: [http://www.packtpub.com/learning-game-physics-with-bullet-physics-and-opengl/book](http://www.packtpub.com/learning-game-physics-with-bullet-physics-and-opengl/book).'
+  id: totrans-329
   prefs: []
   type: TYPE_NORMAL
+  zh: 3D物理模拟是一个非常复杂的话题，需要阅读许多书籍。我们鼓励读者查看ODE社区维基页面，在[http://ode-wiki.org/wiki](http://ode-wiki.org/wiki)可以找到官方文档和开源示例。通过Packt
+    Publishing出版的《*使用Bullet Physics和OpenGL学习游戏物理*》一书，可以开始游戏物理的好学习：[http://www.packtpub.com/learning-game-physics-with-bullet-physics-and-opengl/book](http://www.packtpub.com/learning-game-physics-with-bullet-physics-and-opengl/book)。
 - en: See also
+  id: totrans-330
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: Setting up Box2D simulations
+  id: totrans-331
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设置Box2D模拟
