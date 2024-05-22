@@ -1,86 +1,123 @@
 - en: Chapter 5. Protecting Applications
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第5章. 保护应用
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将介绍以下技巧：
 - en: Securing application components
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 保护应用组件
 - en: Protecting components with custom permissions
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用自定义权限保护组件
 - en: Protecting content provider paths
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 保护内容提供者路径
 - en: Defending against the SQL-injection attacks
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 防范SQL注入攻击
 - en: Application signature verification (anti-tamper)
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 应用签名验证（防篡改）
 - en: Tamper protection by detecting the installer, emulator, and debug flag
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 通过检测安装程序、模拟器和调试标志来实现篡改保护
 - en: Removing all log messages with ProGuard
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用ProGuard移除所有日志消息
 - en: Advanced code obfuscation with DexGuard
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用DexGuard进行高级代码混淆
 - en: Introduction
+  id: totrans-10
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: So far, we've seen how to set up and customize an environment to discover and
     take advantage of vulnerabilities in the Android apps. In this chapter, we are
     going to discuss several protection techniques to make it more difficult for reverse
     engineers and attackers.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们已经了解了如何建立和自定义一个环境，以便发现并利用Android应用中的漏洞。在本章中，我们将讨论几种保护技术，使逆向工程师和攻击者更难以进行操作。
 - en: One of the common mistakes while developing applications is unintentionally
     leaving application components exposed. We'll focus on how to prevent the components
     from being exposed and accessible to other apps. We will also see how to restrict
     access with custom permissions if sharing data is required.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 开发应用时常见的错误之一是不小心暴露了应用组件。我们将重点关注如何防止组件被暴露并可供其他应用访问。如果需要共享数据，我们还将了解如何通过自定义权限限制访问。
 - en: Intrusion or tamper detection is the cornerstone of all good defense systems,
     and to this end, we'll try to detect if an attack is in progress and whether our
     app is running in a compromised state.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 入侵或篡改检测是所有优秀防御系统的基石，为此，我们将尝试检测是否正在发生攻击，以及我们的应用是否在受威胁的状态下运行。
 - en: Rounding up the chapter, we will cover two recipes to make a reverse engineer's
     job even more difficult. We will see how to use code obfuscation and customize
     ProGuard configuration to remove all logging messages from the app and hide-sensitive
     API calls.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章的最后，我们将介绍两个让逆向工程师工作更加困难的技巧。我们将了解如何使用代码混淆以及自定义ProGuard配置，从应用中移除所有日志消息并隐藏敏感的API调用。
 - en: The topic of protecting data in transit across the network is covered in [Chapter
     7](part0073_split_000.html#page "Chapter 7. Secure Networking"), *Secure Networking*,
     and how to keep data safe at rest with encryption is covered in [Chapter 9](part0083_split_000.html#page
     "Chapter 9. Encryption and Developing Device Administration Policies"), *Encryption
     and Developing Device Administration Policies*.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 网络传输过程中数据保护的主题在[第7章](part0073_split_000.html#page "Chapter 7. Secure Networking")，*安全网络*中进行讨论，而如何通过加密保护静止数据的安全将在[第9章](part0083_split_000.html#page
+    "Chapter 9. Encryption and Developing Device Administration Policies")，*加密与开发设备管理策略*中进行介绍。
 - en: Securing application components
+  id: totrans-16
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 保护应用组件
 - en: Application components can be secured both by making proper use of the `AndroidManifest.xml`
     file and by forcing permission checks at code level. These two factors of application
     security make the permissions framework quite flexible and allow you to limit
     the number of applications accessing your components in quite a granular way.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 应用组件可以通过正确使用`AndroidManifest.xml`文件以及在代码层面强制进行权限检查来得到保护。这两个应用安全因素使得权限框架相当灵活，并允许你以非常细致的方式限制访问你组件的应用数量。
 - en: There are many measures that you can take to lock down access to your components,
     but what you should do before anything else is make sure you understand the purpose
     of your component, why you need to protect it, and what kind of risks your users
@@ -88,17 +125,23 @@
     its data. This is called a risk-based approach to security, and it is suggested
     that you first answer these questions honestly before configuring your `AndroidManifest.xml`
     file and adding permission checks to your apps.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以采取许多措施来锁定对组件的访问，但在做任何事情之前，你应该确保你了解组件的目的，为什么需要保护它，以及如果恶意应用开始向你的应用发送意图并访问其数据，用户将面临哪些风险。这被称为基于风险的安全方法，建议你在配置`AndroidManifest.xml`文件并为你的应用添加权限检查之前，首先诚实回答这些问题。
 - en: In this recipe, I have detailed some of the measures that you can take to protect
     generic components, whether they are activities, broadcast receivers, content
     providers, or services.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个技巧中，我详细列出了一些你可以采取的措施来保护通用组件，无论它们是活动、广播接收器、内容提供者还是服务。
 - en: How to do it...
+  id: totrans-20
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To start off, we need to review your Android application `AndroidManifest.xml`
     file. The `android:exported` attribute defines whether a component can be invoked
     by other applications. If any of your application components do not need to be
@@ -106,47 +149,65 @@
     with the components on the rest of the Android system—other than components internal
     to your application—you should add the following attribute to the application
     component''s XML element:'
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们需要审查你的Android应用程序`AndroidManifest.xml`文件。`android:exported`属性定义了一个组件是否可以被其他应用程序调用。如果你的应用程序组件不需要被其他应用程序调用，或者需要显式地防止与Android系统其他部分的组件交互—除了应用程序内部的组件—你应在应用组件的XML元素中添加以下属性：
 - en: '[PRE0]'
+  id: totrans-22
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: Here the `[component name]` would either be an activity, provider, service,
     or receiver.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，`[组件名称]`可以是活动、提供者、服务或接收器。
 - en: How it works…
+  id: totrans-24
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它的工作原理…
 - en: 'Enforcing permissions via the `AndroidManifest.xml` file means different things
     to each of the application component types. This is because of the various **inter-process
     communications** (**IPC**) mechanisms that can be used to interact with them.
     For every application component, the `android:permission` attribute does the following:'
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过`AndroidManifest.xml`文件执行权限意味着对不同应用组件类型有不同的含义。这是因为可以用来与它们交互的不同的**进程间通信**（**IPC**）机制。对于每个应用组件，`android:permission`属性执行以下操作：
 - en: '**Activity**: Limits the application components which are external to your
     application that can successfully call `startActivity` or `startActivityForResult`
     to those with the required permission'
+  id: totrans-26
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**活动**: 限制可以成功调用 `startActivity` 或 `startActivityForResult` 的外部应用组件为具有所需权限的组件'
 - en: '**Service**: Limits the external application components that can bind (by calling
     `bindService()`) or start (by calling `startService()`) the service to those with
     the specified permission'
+  id: totrans-27
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**服务**: 限制可以绑定（通过调用`bindService()`）或启动（通过调用`startService()`）服务的的外部应用组件为具有指定权限的组件'
 - en: '**Receiver**: Limits the number of external application components that can
     send broadcasted intents to the receiver with the specified permission'
+  id: totrans-28
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**接收器**: 限制具有指定权限的外部应用组件向接收器发送广播意图的数量'
 - en: '**Provider**: Limits access to data that is made accessible via the content
     provider'
+  id: totrans-29
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**提供者**: 限制对通过内容提供者可访问的数据的访问'
 - en: The `android:permission` attribute of each of the component XML elements overrides
     the `<application>` element's `android:permission` attribute. This means that
     if you haven't specified any required permissions for your components and have
@@ -159,12 +220,16 @@
     enough and don't need any unauthorized interaction to happen with your application
     or its components, you should make use of the `android:permission` attribute of
     the `<application>` tag.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个组件XML元素的`android:permission`属性会覆盖`<application>`元素的`android:permission`属性。这意味着，如果你没有为你的组件指定任何所需的权限，并且在`<application>`元素中指定了一个，它将适用于其中包含的所有组件。尽管通过`<application>`元素指定权限并不是开发者经常做的事情，因为这样做会影响组件对Android系统本身的友好性（也就是说，如果你使用`<application>`元素覆盖了一个活动的所需权限），主屏幕启动器将无法启动你的活动。话虽如此，如果你足够谨慎，不需要任何未经授权的交互发生在你的应用程序或其组件上，你应该使用`<application>`标签的`android:permission`属性。
 - en: Tip
+  id: totrans-31
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: When you define an `<intent-filter>` element on a component, it will automatically
     be exported unless you explicitly set `exported="false"`. However, this seemed
     to be a lesser-known fact, as many developers were inadvertently opening their
@@ -172,216 +237,317 @@
     default behavior for `<provider>` in Android 4.2\. If you set either `android:minSdkVersion`
     or `android:targetSdkVersion` to `17`, the `exported` attribute on `<provider>`
     will default to `false`.
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你在组件上定义 `<intent-filter>` 元素时，除非你明确设置 `exported="false"`，否则它将被自动导出。然而，这似乎是一个鲜为人知的事实，因为许多开发者在无意中将自己的内容提供者开放给其他应用程序。因此，谷歌通过在
+    Android 4.2 中更改 `<provider>` 的默认行为作出了回应。如果你将 `android:minSdkVersion` 或 `android:targetSdkVersion`
+    设置为 `17`，则 `<provider>` 上的 `exported` 属性将默认为 `false`。
 - en: See also
+  id: totrans-33
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The `<service>` tag in the Android Developers Reference guide at [https://developer.android.com/guide/topics/manifest/service-element.html](https://developer.android.com/guide/topics/manifest/service-element.html)
+  id: totrans-34
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android 开发者参考资料](https://developer.android.com/guide/topics/manifest/service-element.html)中的
+    `<service>` 标签
 - en: The `<receiver>` tag in the Android Developers Reference guide at [https://developer.android.com/guide/topics/manifest/receiver-element.html](https://developer.android.com/guide/topics/manifest/receiver-element.html)
+  id: totrans-35
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android 开发者参考资料](https://developer.android.com/guide/topics/manifest/receiver-element.html)中的
+    `<receiver>` 标签
 - en: The `<activity>` tag in the Android Developers Reference guide at [https://developer.android.com/guide/topics/manifest/activity-element.html](https://developer.android.com/guide/topics/manifest/activity-element.html)
+  id: totrans-36
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android 开发者参考资料](https://developer.android.com/guide/topics/manifest/activity-element.html)中的
+    `<activity>` 标签
 - en: The `<application>` tag in the Android Developers Reference guide at [https://developer.android.com/guide/topics/manifest/application-element.html](https://developer.android.com/guide/topics/manifest/application-element.html)
+  id: totrans-37
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android 开发者参考资料](https://developer.android.com/guide/topics/manifest/application-element.html)中的
+    `<application>` 标签
 - en: The `AndroidManifest.xml` file in the Android Developers Reference guide at
     [http://developer.android.com/guide/topics/manifest/manifest-intro.html](http://developer.android.com/guide/topics/manifest/manifest-intro.html)
+  id: totrans-38
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android 开发者参考资料](http://developer.android.com/guide/topics/manifest/manifest-intro.html)中的
+    `AndroidManifest.xml` 文件
 - en: The `Context` class in the Android Developers Reference guide at [http://developer.android.com/reference/android/content/Context.html](http://developer.android.com/reference/android/content/Context.html)
+  id: totrans-39
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android 开发者参考资料](http://developer.android.com/reference/android/content/Context.html)中的
+    `Context` 类
 - en: The `Activity` class in the Android Developers Reference guide at [http://developer.android.com/reference/android/app/Activity.html](http://developer.android.com/reference/android/app/Activity.html)
+  id: totrans-40
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android 开发者参考资料](http://developer.android.com/reference/android/app/Activity.html)中的
+    `Activity` 类
 - en: Protecting components with custom permissions
+  id: totrans-41
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用自定义权限保护组件
 - en: The Android platform defines a set of default permissions, which are used to
     secure system services and application components. Largely, these permissions
     work in the most generic case, but often when sharing bespoke functionality or
     components between applications it will require a more tailored use of the permissions
     framework. This is facilitated by defining custom permissions.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 平台定义了一套默认权限，用于保护系统服务和应用程序组件。在很大程度上，这些权限在大多数通用情况下是有效的，但是当在应用程序之间共享定制功能或组件时，通常需要更具体地使用权限框架。这可以通过定义自定义权限来实现。
 - en: This recipe demonstrates how you can define your own custom permissions.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程展示了如何定义你自己的自定义权限。
 - en: How to do it…
+  id: totrans-44
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: Let's get started!
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧！
 - en: 'Before adding any custom permissions, you need to declare string resources
     for the permission labels. You can do this by editing the `strings.xml` file in
     your application project folder under `res/values/strings.xml`:'
+  id: totrans-46
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在添加任何自定义权限之前，你需要为权限标签声明字符串资源。你可以通过编辑你的应用程序项目文件夹下的 `res/values/strings.xml` 文件来实现这一点：
 - en: '[PRE1]'
+  id: totrans-47
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Adding normal protection-level custom permissions to your application can be
     done by adding the following lines to your `AndroidManifest.xml` file:'
+  id: totrans-48
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过向你的 `AndroidManifest.xml` 文件添加以下几行，可以为你的应用程序添加正常保护级别的自定义权限：
 - en: '[PRE2]'
+  id: totrans-49
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: We'll cover what the `android:protectionLevel` attribute means in the *How it
     works…* section.
+  id: totrans-50
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们将在*它是如何工作的...*部分解释`android:protectionLevel`属性的含义。
 - en: 'Making use of this permission works the same as any other permission; you need
     to add it to the `android:permission` attribute of an application component. For
     an activity:'
+  id: totrans-51
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用此权限与使用任何其他权限一样；你需要将其添加到应用程序组件的`android:permission`属性中。对于活动：
 - en: '[PRE3]'
+  id: totrans-52
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Or a content provider:'
+  id: totrans-53
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者一个内容提供者：
 - en: '[PRE4]'
+  id: totrans-54
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Or a service:'
+  id: totrans-55
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者一个服务：
 - en: '[PRE5]'
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Or a receiver:'
+  id: totrans-57
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 或者一个接收器：
 - en: '[PRE6]'
+  id: totrans-58
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'You can also allow other applications to request this permission by adding
     the `<uses-permission/>` tag to an application''s `AndroidManifest.xml` file:'
+  id: totrans-59
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你还可以通过将`<uses-permission/>`标签添加到应用程序的`AndroidManifest.xml`文件中，允许其他应用程序请求此权限：
 - en: '[PRE7]'
+  id: totrans-60
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Defining a permission group
+  id: totrans-61
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 定义一个权限组
 - en: 'Custom permissions can be grouped logically to assign semantic meaning to an
     application requesting a given permission or a component requiring certain permissions.
     Grouping permissions is done by defining a permissions group and assigning your
     permissions to these groups whenever they are defined, as demonstrated previously.
     Here''s how you define a permission group:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 自定义权限可以通过逻辑分组来为请求给定权限的应用程序或需要某些权限的组件分配语义意义。通过定义一个权限组并将你的权限分配给这些组来进行权限分组，正如之前所演示的。以下是定义权限组的方法：
 - en: 'Add a string resource for the label of the permission group, as done before.
     This is done by adding the following line to the `res/values/strings.xml` file:'
+  id: totrans-63
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为权限组的标签添加一个字符串资源，就像之前所做的那样。这可以通过将以下行添加到`res/values/strings.xml`文件来完成：
 - en: '[PRE8]'
+  id: totrans-64
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Then, add the following line to the `AndroidManifest.xml` file of your application:'
+  id: totrans-65
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，将以下行添加到你的应用程序的`AndroidManifest.xml`文件中：
 - en: '[PRE9]'
+  id: totrans-66
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'You will then be able to assign the permissions you define to groups as follows:'
+  id: totrans-67
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，你可以将你定义的权限分配给以下群组：
 - en: '[PRE10]'
+  id: totrans-68
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: How it works...
+  id: totrans-69
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: The preceding walkthrough demonstrated how to define custom permissions by making
     use of the `<permission>` element of the `AndroidManifest.xml` file, and how to
     define a permission group by making use of the `<permission-group>` element of
     the manifest. Here, we break down and detail the nuances of each of these elements
     and their attributes.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 前面的演练展示了如何通过使用`AndroidManifest.xml`文件中的`<permission>`元素来定义自定义权限，以及如何通过使用清单中的`<permission-group>`元素来定义一个权限组。这里，我们将详细解析这些元素及其属性的细微差别。
 - en: 'The `<permission>` element is pretty easy to understand. Here''s a breakdown
     of the attributes:'
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: '`<permission>`元素很容易理解。以下是属性分解：'
 - en: '`android:name`: This defines the name of the permissions, which is the string
     value that will be used to reference this permission'
+  id: totrans-72
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android:name`：这定义了权限的名称，这是一个字符串值，将用于引用此权限'
 - en: '`android:protectionLevel`: This defines the protection level of the permission
     and controls whether users will be prompted to grant the permission. We''ve discussed
     this in a previous chapter, but here''s a recap of the protection levels:'
+  id: totrans-73
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`android:protectionLevel`：这定义了权限的保护级别，并控制是否提示用户授予权限。我们之前已经讨论过这个问题，但这里是保护级别的回顾：'
 - en: '`normal`: This permission is used to define nondangerous permissions, these
     permissions will not be prompted and may be granted autonomously'
+  id: totrans-74
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`normal`：此权限用于定义非危险权限，这些权限不会被提示，可能会自动授予'
 - en: '`dangerous`: This permission is used to define permissions that expose the
     user to considerable fiscal, reputational, and legal risk'
+  id: totrans-75
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`dangerous`：此权限用于定义可能会让用户面临相当大的财务、声誉和法律风险的权限'
 - en: '`signature`: This permission is granted autonomously to applications that are
     signed with the same key as the application that defines them'
+  id: totrans-76
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`signature`：此权限自动授予与定义它们的程序使用相同密钥签名的应用程序'
 - en: '`signatureOrSystem`: This permission is automatically granted to any application
     that forms a part of the system image or is signed with the same key as the application
     that defines them'
+  id: totrans-77
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`signatureOrSystem`：此权限自动授予系统映像的一部分的任何应用程序，或者与定义它们的程序使用相同密钥签名的应用程序'
 - en: If you are interested in only sharing components across apps that you have developed,
     use the `signature` permission. Examples of this would be a free app with an unlocker
     app as a separate paid download, or an app with several optional plugins which
@@ -390,33 +556,48 @@
     for confirmation. This is useful if you want to flag to users when another app
     can access your app's data. The `normal` permission is automatically granted on
     install, and it will not be flagged to the user.
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你只想在你开发的应用间共享组件，请使用`signature`权限。例如，这可能是一个免费应用，而解锁应用则作为一个单独的付费下载，或者是一个带有多个可选插件的
+    应用，希望共享功能。危险权限不会自动授予。在安装时，可能会显示`android:description`属性以供用户确认。这在你希望向用户标记其他应用可以访问你的应用数据时非常有用。`normal`权限在安装时会自动授予，并且不会向用户标记。
 - en: See also
+  id: totrans-79
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The `<permission>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/permission-element.html](http://developer.android.com/guide/topics/manifest/permission-element.html)
+  id: totrans-80
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android开发者指南中的`<permission>`标签，链接为：[http://developer.android.com/guide/topics/manifest/permission-element.html](http://developer.android.com/guide/topics/manifest/permission-element.html)
 - en: The `<uses-permission>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/uses-permission-element.html](http://developer.android.com/guide/topics/manifest/uses-permission-element.html)
+  id: totrans-81
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android开发者指南中的`<uses-permission>`标签，链接为：[http://developer.android.com/guide/topics/manifest/uses-permission-element.html](http://developer.android.com/guide/topics/manifest/uses-permission-element.html)
 - en: The `<permission-group>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/permission-group-element.html](http://developer.android.com/guide/topics/manifest/permission-group-element.html)
+  id: totrans-82
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考Android开发者指南中的`<permission-group>`标签，链接为：[http://developer.android.com/guide/topics/manifest/permission-group-element.html](http://developer.android.com/guide/topics/manifest/permission-group-element.html)
 - en: The `Manifest.permission` class in the Android Developers Reference guide at
     [https://developer.android.com/reference/android/Manifest.permission.html](https://developer.android.com/reference/android/Manifest.permission.html)
+  id: totrans-83
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android开发者指南中的`Manifest.permission`类，链接为：[https://developer.android.com/reference/android/Manifest.permission.html](https://developer.android.com/reference/android/Manifest.permission.html)
 - en: Protecting content provider paths
+  id: totrans-84
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 保护内容提供者路径
 - en: Content providers are probably the most exploited application components, given
     that they often hold the data most critical to user authentication. They often
     hold a lot of sensitive data about users and their affinity to SQL-injection attacks
@@ -424,100 +605,137 @@
     take to protect your content providers' general information leakage caused by
     common errors in how permissions are configured for content providers. We'll also
     cover guarding database and content providers against SQL-injection attacks.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 内容提供者可能是最容易被利用的应用组件，因为它们经常包含对用户身份验证最关键的数据。它们通常包含大量关于用户及其对SQL注入攻击敏感的信息。本演练将详细介绍你可以采取的一些措施来保护你的内容提供者，防止由于配置权限时的常见错误导致的一般信息泄露。我们还将讨论如何保护数据库和内容提供者免受SQL注入攻击。
 - en: This recipe will discuss how to add certain configurations to your `AndroidManifest.xml`
     file to protect access to your content provider, down to the URI path level. It
     also discusses some of the security risks in misusing the grant URI mechanism,
     so as to not expose too much of your content provider paths to unauthorized or
     potentially malicious applications.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 本指南将讨论如何向你的`AndroidManifest.xml`文件添加特定配置，以保护对内容提供者的访问，直至URI路径级别。它还讨论了误用授权URI机制的一些安全风险，以避免将过多的内容提供者路径暴露给未经授权或潜在恶意应用。
 - en: '**Uniform resource identifiers** (**URIs**) are used with content providers
     to identify specific datasets, for example, `content://com.myprovider.android/email/inbox`.'
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: '**统一资源标识符**（**URIs**）与内容提供者一起使用，用于标识特定的数据集，例如，`content://com.myprovider.android/email/inbox`。'
 - en: How to do it...
+  id: totrans-88
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: The first step in securing any component is to make sure you've registered the
     permissions for it properly. Securing a content provider means not only providing
     permissions for general interaction with the content provider, but also for the
     related URI paths.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 保护任何组件的第一步是确保你已经正确注册了它的权限。保护内容提供者不仅仅是允许与内容提供者的一般交互，还包括相关的URI路径。
 - en: 'To secure your content provider with a permission that governs both read and
     write permissions for all of the paths related to your authority, you can add
     the following `provider` element of your android manifest:'
+  id: totrans-90
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了使用控制所有与你的权限相关的路径的读取和写入权限的权限来保护你的内容提供者，你可以在你的 Android 清单中添加以下 `provider` 元素：
 - en: '[PRE11]'
+  id: totrans-91
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: Here, `[permission name]` is the permission other applications must have in
     order to read or write to any of the content provider paths. Adding permissions
     at this level is a really good step to make sure that you have left nothing to
     chance when it comes to protecting the paths.
+  id: totrans-92
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在这里，`[permission name]` 是其他应用必须拥有的权限，以便读取或写入任何内容提供者路径。在这个级别添加权限是一个非常好的步骤，以确保在保护路径方面没有留下任何机会。
 - en: 'Naturally, content providers will have a couple of content paths they want
     to serve content from. You can add read and write permissions to them as follows:'
+  id: totrans-93
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 自然地，内容提供者会有几个他们希望从中提供内容的内容路径。你可以按照以下方式为它们添加读取和写入权限：
 - en: '[PRE12]'
+  id: totrans-94
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: The preceding `android:writePermission` and `android:readPermission` tags are
     used to declare that whenever an external application wants to perform any read-related
     (`query`) or write-related (`update` and `insert`) operations, they must have
     the specified permissions to do so.
+  id: totrans-95
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`android:writePermission` 和 `android:readPermission` 标签用于声明，每当外部应用想要执行任何读取相关（`query`）或写入相关（`update`
+    和 `insert`）的操作时，它们必须拥有指定的权限才能这么做。'
 - en: Tip
+  id: totrans-96
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: It's a common mistake to think that granting write access implicitly grants
     read access, too. However, this should not be the default behavior. Android happily
     follows the best practice and requires permission declaration for both read and
     write access separately.
+  id: totrans-97
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 一个常见的错误是认为授予写入权限会隐式地授予读取权限，但实际上，这不应是默认行为。Android 很好地遵循最佳实践，要求分别声明读取和写入权限。
 - en: 'Here''s a real-world example of this in action taken from the Android Google
     Chrome app:'
+  id: totrans-98
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 下面是来自 Android Google Chrome 应用的实际示例：
 - en: '[PRE13]'
+  id: totrans-99
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'You can also add more granular permissions to each of your paths by making
     use of the `<path-permission>` element of the `AndroidManifest.xml` schema; here''s
     how you do that:'
+  id: totrans-100
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你还可以通过使用 `AndroidManifest.xml` 架构中的 `<path-permission>` 元素，为每个路径添加更细粒度的权限；以下是操作方法：
 - en: '[PRE14]'
+  id: totrans-101
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: You may be wondering what would happen if you were to use both levels of permissions.
     At the `<provider>` and `<path-permission>` levels, would an application need
     to have all of the permissions registered at both levels? The answer is no, the
     path level read, write, and read/write permissions take precedence.
+  id: totrans-102
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你可能会想知道，如果你同时使用这两个级别的权限会发生什么情况。在 `<provider>` 和 `<path-permission>` 级别，应用是否需要拥有在这两个级别注册的所有权限？答案是否定的，路径级别的读取、写入和读写权限优先。
 - en: 'Another thing worth mentioning is the **grant URI** mechanism. You can configure
     this at the provider level to apply to all paths, or at the path level, which
     will only affect the related paths. Although, why you would specify permissions
@@ -527,79 +745,112 @@
     use it per path. So, if and only if you need to make sure any application can
     query, insert, or update on a certain path while still having permissions protecting
     your other paths, you would do this as follows:'
+  id: totrans-103
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 另一件值得一提的事情是 **授权 URI** 机制。你可以在提供者级别配置它以应用于所有路径，或者在路径级别配置，这只会影响相关路径。然而，如果在路径级别指定权限而在提供者级别授权
+    URI，这有点奇怪，因为实际上这意味着没有设置任何权限！完全建议开发人员不要在提供者级别使用授权 URI 权限，而应该按路径使用。所以，只有当你需要确保任何应用在仍具有保护其他路径权限的情况下，能够查询、插入或更新某个特定路径时，才应按以下方式操作：
 - en: '[PRE15]'
+  id: totrans-104
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'You can also specify a range of paths to grant URI permission for using the
     `pathPrefix` or `pathPattern` attributes. `pathPrefix` will ensure that the grant
     URI mechanism will apply to all paths starting with a given prefix. `pathPattern`
     will ensure that the grant URI mechanism will apply to all paths that match a
     given pattern. For example:'
+  id: totrans-105
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你还可以使用 `pathPrefix` 或 `pathPattern` 属性指定一个路径范围，以授权 URI 权限。`pathPrefix` 将确保授权
+    URI 机制适用于所有以给定前缀开头的路径。`pathPattern` 将确保授权 URI 机制适用于所有与给定模式匹配的路径。例如：
 - en: '[PRE16]'
+  id: totrans-106
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'This will apply grant URI permissions to all the paths starting with the "unsecured"
     string, for example:'
+  id: totrans-107
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这将应用授权 URI 权限到所有以 "unsecured" 字符串开头的路径，例如：
 - en: '`content://com.myprovider.android/unsecuredstuff`'
+  id: totrans-108
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.myprovider.android/unsecuredstuff`'
 - en: '`content://com.myprovider.android/unsecuredsomemorestuff`'
+  id: totrans-109
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.myprovider.android/unsecuredsomemorestuff`'
 - en: '`content://com.myprovider.android/unsecured/files`'
+  id: totrans-110
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.myprovider.android/unsecured/files`'
 - en: '`content://com.myprovider.android/unsecured/files/music`'
+  id: totrans-111
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`content://com.myprovider.android/unsecured/files/music`'
 - en: For the previous example, the grant URI permission would kick in if any of these
     paths are queried, updated, inserted, or deleted.
+  id: totrans-112
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 对于前一个示例，如果查询、更新、插入或删除这些路径中的任何一个，将触发授权 URI 权限。
 - en: See also
+  id: totrans-113
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The `<provider>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/provider-element.html](http://developer.android.com/guide/topics/manifest/provider-element.html)
+  id: totrans-114
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考 Android 开发者参考指南中的 `<provider>` 标签，链接为：[http://developer.android.com/guide/topics/manifest/provider-element.html](http://developer.android.com/guide/topics/manifest/provider-element.html)
 - en: The `<path-permission>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/path-permission-element.html](http://developer.android.com/guide/topics/manifest/path-permission-element.html)
+  id: totrans-115
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考 Android 开发者参考指南中的 `<path-permission>` 标签，链接为：[http://developer.android.com/guide/topics/manifest/path-permission-element.html](http://developer.android.com/guide/topics/manifest/path-permission-element.html)
 - en: Defending against the SQL-injection attack
+  id: totrans-116
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 防范 SQL 注入攻击
 - en: The previous chapter covered some of the common attacks against content providers,
     one of them being the infamous SQL-injection attack. This attack leverages the
     fact that adversaries are capable of supplying SQL statements or SQL-related syntax
     as part of their selection arguments, projections, or any component of a valid
     SQL statement. This allows them to extract more information from a content provider
     than they are not authorized.
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 前一章介绍了一些针对内容提供者的常见攻击方式，其中之一就是臭名昭著的 SQL 注入攻击。这种攻击利用了这样一个事实：攻击者能够提供 SQL 语句或与 SQL
+    相关的语法作为他们选择参数、投影或有效 SQL 语句的任何部分。这使得他们能够从内容提供者那里提取比未授权更多的信息。
 - en: The best way to make sure adversaries will not be able to inject unsolicited
     SQL syntax into your queries is to avoid using `SQLiteDatabase.rawQuery()` instead
     opting for a parameterized statement. Using a compiled statement, such as `SQLiteStatement`,
@@ -608,113 +859,164 @@
     not need to parse the statement for each execution. An alternative to `SQLiteStatement`
     is to use the `query`, `insert`, `update`, and `delete` methods on `SQLiteDatabase`
     as they offer parameterized statements via their use of string arrays.
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 确保攻击者无法将不受欢迎的 SQL 语法注入到您的查询中的最佳方法是避免使用 `SQLiteDatabase.rawQuery()`，而选择使用参数化语句。使用编译后的语句，如
+    `SQLiteStatement`，既提供了参数绑定和转义，以防范 SQL 注入攻击。此外，由于数据库不需要在每次执行时解析语句，因此还有性能上的优势。`SQLiteStatement`
+    的替代方法是使用 `SQLiteDatabase` 上的 `query`、`insert`、`update` 和 `delete` 方法，因为它们通过使用字符串数组提供参数化语句。
 - en: 'When we describe parameterized statement, we are describing an SQL statement
     with a question mark where values will be inserted or binded. Here''s an example
     of parameterized SQL `insert` statement:'
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们描述参数化语句时，我们指的是带有问号（?）的 SQL 语句，值将在这里插入或绑定。以下是参数化 SQL `insert` 语句的一个示例：
 - en: '[PRE17]'
+  id: totrans-120
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: Here `[table name]` would be the name of the relevant table in which values
     have to be inserted.
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，`[table name]` 将是相关表的名称，需要在该表中插入值。
 - en: How to do it...
+  id: totrans-122
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'For this example, we are using a simple **Data Access Object** (**DAO**) pattern,
     where all of the database operations for RSS items are contained within the `RssItemDAO`
     class:'
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本例中，我们使用了一个简单的 **数据访问对象** (**DAO**) 模式，所有针对 RSS 项的数据库操作都包含在 `RssItemDAO` 类中：
 - en: 'When we instantiate `RssItemDAO`, we compile the `insertStatement` object with
     a parameterized SQL `insert` statement string. This needs to be done only once
     and can be re-used for multiple inserts:'
+  id: totrans-124
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当我们实例化 `RssItemDAO` 时，我们使用带有参数化 SQL `insert` 语句字符串的 `insertStatement` 对象进行编译。这只需要做一次，并且可以多次重用进行多次插入：
 - en: '[PRE18]'
+  id: totrans-125
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: The order of the columns noted in the `INSERT_SQL` variable is important, as
     it directly maps to the index when binding values. In the preceding example, `content`
     maps to index `0`, `link` maps to index `1`, and `title` to index `2`.
+  id: totrans-126
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`INSERT_SQL` 变量中列的顺序很重要，因为它直接映射到绑定值时的索引。在上述示例中，`content` 映射到索引 `0`，`link` 映射到索引
+    `1`，`title` 映射到索引 `2`。'
 - en: 'Now, when we come to insert a new `RssItem` object to the database, we bind
     each of the properties in the order they appear in the statement:'
+  id: totrans-127
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，当我们向数据库中插入一个新的 `RssItem` 对象时，我们按语句中出现的顺序绑定每个属性：
 - en: '[PRE19]'
+  id: totrans-128
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Notice that we call `executeInsert`, a helper method that returns the ID of
     the newly created row. It's as simple as that to use a `SQLiteStatement` statement.
+  id: totrans-129
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 请注意，我们调用了`executeInsert`这个辅助方法，它返回新创建行的ID。使用`SQLiteStatement`语句就这么简单。
 - en: 'This shows how to use `SQLiteDatabase.query` to fetch `RssItems` that match
     a given search term:'
+  id: totrans-130
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下面的代码展示了如何使用`SQLiteDatabase.query`来获取与给定搜索词匹配的`RssItems`：
 - en: '[PRE20]'
+  id: totrans-131
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: We use `LIKE` and the SQL wildcard syntax to match any part of the text with
     a title column.
+  id: totrans-132
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们使用`LIKE`和SQL的通配符语法来匹配标题列中任何部分的文本。
 - en: See also
+  id: totrans-133
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The `SQLiteDatabase` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html](https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html)
+  id: totrans-134
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 安卓开发者参考指南中的`SQLiteDatabase`类，请访问[https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html](https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html)
 - en: The `SQLiteStatment` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/database/sqlite/SQLiteStatement.html](https://developer.android.com/reference/android/database/sqlite/SQLiteStatement.html)
+  id: totrans-135
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 安卓开发者参考指南中的`SQLiteStatment`类，请访问[https://developer.android.com/reference/android/database/sqlite/SQLiteStatement.html](https://developer.android.com/reference/android/database/sqlite/SQLiteStatement.html)
 - en: The *Query Parameterization Cheat Sheet* OWASP community page at [https://www.owasp.org/index.php/Query_Parameterization_Cheat_Sheet](https://www.owasp.org/index.php/Query_Parameterization_Cheat_Sheet)
+  id: totrans-136
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: OWASP社区页面《*查询参数化速查表*》在[https://www.owasp.org/index.php/Query_Parameterization_Cheat_Sheet](https://www.owasp.org/index.php/Query_Parameterization_Cheat_Sheet)
 - en: SQLite expression at [http://www.sqlite.org/lang_expr.html](http://www.sqlite.org/lang_expr.html)
+  id: totrans-137
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: SQLite表达式，请访问[http://www.sqlite.org/lang_expr.html](http://www.sqlite.org/lang_expr.html)
 - en: Application signature verification (anti-tamper)
+  id: totrans-138
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 应用签名验证（防篡改）
 - en: One of the cornerstones of Android security is that all apps must be digitally
     signed. Application developers sign apps using a private key in the form of a
     certificate. There's no need to use a certificate authority, and in fact, it's
     more common to use self-signed certificates.
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓安全的核心基石之一是所有应用都必须进行数字签名。应用开发者使用私钥证书的形式对应用进行签名。无需使用证书授权机构，实际上，更常见的是使用自签名证书。
 - en: Certificates are usually defined with an expiration date, and the Google Play
     store requires a validity period ending after October 22, 2033\. This highlights
     the fact that our app signing key stays consistent throughout the life of the
     app. One of the primary reasons is to protect and prevent app upgrades unless
     the signatures of the old and upgraded `.apk` files are identical.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 证书通常都有定义的过期日期，而谷歌应用商店要求证书的有效期截止日期在2033年10月22日之后。这突显了我们的应用签名密钥在整个应用生命周期中保持一致的重要性。其中一个主要原因是保护并防止应用升级，除非旧版本和升级后的`.apk`文件的签名完全相同。
 - en: So, if this verification already happens, why add a check for signature consistency?
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 那么，既然已经有了这种验证，为什么还要增加一个签名一致性的检查呢？
 - en: Part of the process of an attacker modifying your application's `.apk` file
     breaks the digital signature. This means that, if they want to install the `.apk`
     file on an Android device, it will need to be resigned using a different signing
@@ -725,120 +1027,176 @@
     our app, brand, and users from this potential risk. Fortunately, at runtime, Android
     apps can query `PackageManager` to find app signatures. This recipe shows how
     to compare the current app signature against the one you know that it should be.
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 攻击者修改你的应用程序的`.apk`文件的过程会破坏数字签名。这意味着，如果他们想在安卓设备上安装这个`.apk`文件，就需要使用不同的签名密钥重新签名。这样做可能有各种动机，从软件盗版到恶意软件都有可能。一旦攻击者修改了你的应用，他们可能会通过各种替代应用商店或更直接的途径，如电子邮件、网站或论坛进行分发。因此，本指南的目的是保护我们的应用、品牌和用户免受这种潜在风险。幸运的是，在运行时，安卓应用可以查询`PackageManager`以获取应用签名。本指南展示了如何将当前应用签名与你所知的应该一致的签名进行比较。
 - en: Getting ready
+  id: totrans-143
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'This recipe uses the Keytool command-line program and assumes you have already
     created a `.keystore` file that contains your private signing key. If not, you
     can create your app signing key using the Android tools export wizard in Eclipse,
     or by using the Keytool program with the following command in a terminal window:'
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱使用 Keytool 命令行程序，并假定您已经创建了一个包含私钥的 `.keystore` 文件。如果没有，您可以使用 Eclipse 中的 Android
+    工具导出向导创建应用签名密钥，或者通过在终端窗口中使用以下命令的 Keytool 程序：
 - en: '[PRE21]'
+  id: totrans-145
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: How to do it...
+  id: totrans-146
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: To start with, you need to find your certificate's SHA1 signature/fingerprint.
     We'll hardcode this into the app and compare against it at runtime.
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，您需要找到证书的 SHA1 签名/指纹。我们将把这个硬编码到应用中，并在运行时与之比较。
 - en: 'Using Keytool from a terminal window, you can type the following:'
+  id: totrans-148
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从终端窗口使用 Keytool，您可以输入以下内容：
 - en: '[PRE22]'
+  id: totrans-149
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: You'll be prompted for your keystore password.
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 系统会提示您输入 keystore 密码。
 - en: 'Keytool will now print the details of all of the keys contained in the keystore.
     Find your app key and under the certificate fingerprints heading, you should see
     a SHA1 in a hexadecimal format. Here''s a sample SHA1 value of a certificate that
     uses a sample keystore `71:92:0A:C9:48:6E:08:7D:CB:CF:5C:7F:6F:EC:95:21:35:85:BC:C5`:'
+  id: totrans-151
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: Keytool 现在将打印出 keystore 中包含的所有密钥的详细信息。找到您的应用密钥，在证书指纹标题下，您应该看到一个十六进制格式的 SHA1。下面是一个使用示例
+    keystore 的证书的 SHA1 值样本 `71:92:0A:C9:48:6E:08:7D:CB:CF:5C:7F:6F:EC:95:21:35:85:BC:C5`：
 - en: '![How to do it...](img/00116.jpeg)'
+  id: totrans-152
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00116.jpeg)'
 - en: Copy your SHA1 hash from the terminal window into your app, and define it as
     a static string in your Java `.class` file.
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从终端窗口复制您的 SHA1 哈希到您的应用中，并在 Java `.class` 文件中将其定义为静态字符串。
 - en: 'Remove the colons and you should end up with something like this:'
+  id: totrans-154
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 移除冒号后，您应该得到类似这样的结果：
 - en: '[PRE23]'
+  id: totrans-155
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'A quick and easy way to remove the colons is to copy and paste the hash to
     the following website and press the validate button:'
+  id: totrans-156
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 移除冒号的一个快速简便的方法是将哈希复制粘贴到以下网站，并按下验证按钮：
 - en: '[http://www.string-functions.com/hex-string.aspx](http://www.string-functions.com/hex-string.aspx)'
+  id: totrans-157
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '[http://www.string-functions.com/hex-string.aspx](http://www.string-functions.com/hex-string.aspx)'
 - en: 'Now, we need to write the code to get the current signature of the `.apk` file
     at runtime:'
+  id: totrans-158
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，我们需要编写代码以在运行时获取 `.apk` 文件的当前签名：
 - en: '[PRE24]'
+  id: totrans-159
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'We are storing the SHA1 hash of the signature; now, as we have the certificate,
     we need to generate the SHA1 and convert to the same format (hexadecimal):'
+  id: totrans-160
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们正在存储签名的 SHA1 哈希；现在，由于我们有了证书，我们需要生成 SHA1 并转换为相同的格式（十六进制）：
 - en: '[PRE25]'
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'We now compare the hash of the certificate we signed, the app that we hardcoded
     in to the app, and the hash of the current signing certificate. If these are equal,
     we can be confident that the app has not been signed again:'
+  id: totrans-162
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们现在比较我们签名的证书的哈希、应用中硬编码的哈希以及当前签名证书的哈希。如果它们相等，我们可以确信应用没有被重新签名：
 - en: '[PRE26]'
+  id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: If all is well and the `.apk` running is a version we have signed, the `validateAppSignature()`
     method will return `true`. However, if someone has edited the `.apk` file and
     signed it again, `currentSignature` will not match `CERTIFICATE_SHA1`. So, `validateAppSignature()`
     will return false.
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果一切正常，并且正在运行的是我们签名的 `.apk` 版本，`validateAppSignature()` 方法将返回 `true`。然而，如果有人编辑了
+    `.apk` 文件并重新签名，`currentSignature` 将不会与 `CERTIFICATE_SHA1` 匹配。所以，`validateAppSignature()`
+    将返回 false。
 - en: Tip
+  id: totrans-165
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Remember to either ensure that the hash is stored in upper case, or compare
     using the `String.equalsIgnoreCase()` method.
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 记得确保哈希以大写形式存储，或者使用 `String.equalsIgnoreCase()` 方法进行比较。
 - en: There's more...
+  id: totrans-167
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: This technique should be considered sufficient to thwart current automated app
     repackagers. However, it is worth understanding the limitations. Due to the fact
     that the hash of the signing certificate is hardcoded within the `.apk` file,
@@ -847,18 +1205,26 @@
     call to pass ok. Additionally, the method call to `verifyAppSignature` could be
     removed completely. Both of these options require time and reverse-engineering
     skills.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种技术应被视为足以阻止当前的自动化应用重新打包。然而，了解其局限性是值得的。由于签名证书的哈希值被硬编码在 `.apk` 文件中，熟练的逆向工程师有可能剖析
+    `.apk` 文件并用新证书的哈希替换 SHA1。这使得 `verifyAppSignature` 调用可以正常通过。此外，`verifyAppSignature`
+    的方法调用也可能被完全移除。这两种选项都需要时间和逆向工程技能。
 - en: We cannot talk about signing without mentioning the bug 8219321, otherwise known
     as the Master Key exploit publicized by Bluebox security at Blackhat USA 2013\.
     This bug has since been patched by Google and OEMs. A complete breakdown and analysis
     of this can be found at [http://www.saurik.com/id/17](http://www.saurik.com/id/17).
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 在讨论签名时，我们不能不提到bug 8219321，它是由Bluebox安全在2013年Blackhat USA上公布的，也被称为Master Key漏洞利用。此漏洞此后已被谷歌和OEM厂商修复。关于这一漏洞的完整分解和分析可以在[http://www.saurik.com/id/17](http://www.saurik.com/id/17)找到。
 - en: Responding to tamper detection
+  id: totrans-170
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 对篡改检测的响应
 - en: Of course, this is completely subjective and really depends on your application.
     The obvious and simple solution would be to check for tampering on startup, and
     if detected, exit the app optionally with a message to the user explaining why.
@@ -866,120 +1232,172 @@
     a notification to your servers would be appropriate. Alternatively, if you don't
     have a server and are using an analytics package such as Google Analytics, you
     could create a custom "tamper" event and report it.
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 当然，这完全取决于你的应用程序。最明显和简单的解决方案是在启动时检查篡改，如果检测到，可以选择退出应用程序并给用户一条解释原因的消息。此外，你可能还希望了解有关妥协的情况。因此，向你的服务器发送通知是适当的。另外，如果你没有服务器并正在使用像Google
+    Analytics这样的分析工具，你可以创建一个自定义的“篡改”事件并报告它。
 - en: To deter software pirates, you could disable premium app features. For games,
     disabling the multiplayer or deleting the game progress/high scores would be an
     effective deterrent.
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了阻止软件盗版，你可以禁用高级应用功能。对于游戏来说，禁用多人游戏或删除游戏进度/高分将是一个有效的威慑。
 - en: See also
+  id: totrans-173
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Advance code obfuscation with DexGuard* recipe later in this chapter, which
     provides a useful complement to tamper protection, making it more difficult for
     a reverse engineer to find, understand, and importantly remove the tamper check
+  id: totrans-174
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 本章后面提到的《使用DexGuard进行高级代码混淆》食谱，它为篡改保护提供了有用的补充，使得逆向工程师更难以找到、理解，更重要的是移除篡改检查
 - en: The *Signing Your Applications* page at the Android Developers site ([https://developer.android.com/tools/publishing/app-signing.html](https://developer.android.com/tools/publishing/app-signing.html))
+  id: totrans-175
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android开发者网站上的《签名你的应用程序》页面（[https://developer.android.com/tools/publishing/app-signing.html](https://developer.android.com/tools/publishing/app-signing.html)）
 - en: The gist of the signature-check code at [https://gist.github.com/scottyab/b849701972d57cf9562e](https://gist.github.com/scottyab/b849701972d57cf9562e)
+  id: totrans-176
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[https://gist.github.com/scottyab/b849701972d57cf9562e](https://gist.github.com/scottyab/b849701972d57cf9562e)的签名检查代码要点
 - en: The `Signature` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/Signature.html](https://developer.android.com/reference/android/content/pm/Signature.html)
+  id: totrans-177
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[https://developer.android.com/reference/android/content/pm/Signature.html](https://developer.android.com/reference/android/content/pm/Signature.html)的Android开发者参考指南中的`Signature`类
 - en: The `PackageManager` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/PackageManager.html](https://developer.android.com/reference/android/content/pm/PackageManager.html)
+  id: totrans-178
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[https://developer.android.com/reference/android/content/pm/PackageManager.html](https://developer.android.com/reference/android/content/pm/PackageManager.html)的Android开发者参考指南中的`PackageManager`类
 - en: The *Exploit (& Fix) Android "Master Key"* blog article describing the Master
     Key exploit at [http://www.saurik.com/id/17](http://www.saurik.com/id/17)
+  id: totrans-179
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 描述Master Key漏洞的《利用（和修复）Android "Master Key"》博客文章，在[http://www.saurik.com/id/17](http://www.saurik.com/id/17)
 - en: The Keytool Oracle documentation at [http://docs.oracle.com/javase/6/docs/technotes/tools/windows/keytool.html](http://docs.oracle.com/javase/6/docs/technotes/tools/windows/keytool.html)
+  id: totrans-180
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[http://docs.oracle.com/javase/6/docs/technotes/tools/windows/keytool.html](http://docs.oracle.com/javase/6/docs/technotes/tools/windows/keytool.html)的Keytool
+    Oracle文档
 - en: Tamper protection by detecting the installer, emulator, and debug flag
+  id: totrans-181
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 通过检测安装程序、模拟器、和调试标志来进行篡改保护
 - en: In this recipe, we will look at three additional checks that may indicate a
     tampered, compromised, or hostile environment. These are designed to be activated
     once you are ready for release.
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个食谱中，我们将查看三个额外的检查，这些检查可能表明一个被篡改、被破坏或敌对的环境。这些检查设计在你准备发布时激活。
 - en: How to do it...
+  id: totrans-183
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: These tamper checks can be located anywhere in your app, but it makes the most
     sense to allow them to be called from multiple places at a separate class or parent
     class.
+  id: totrans-184
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些篡改检查可以位于应用程序中的任何位置，但最合理的是让它们从单独的类或父类中的多个位置被调用。
 - en: 'Detect if Google Play store was the installer:'
+  id: totrans-185
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检测Google Play商店是否是安装程序：
 - en: '[PRE27]'
+  id: totrans-186
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Detect if it runs on an emulator:'
+  id: totrans-187
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检测是否在模拟器上运行：
 - en: '[PRE28]'
+  id: totrans-188
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'Detect if the app has the `debuggable` flag enabled—something that should only
     be enabled during development:'
+  id: totrans-189
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检测应用是否启用了`debuggable`标志——这应该只在开发期间启用：
 - en: '[PRE29]'
+  id: totrans-190
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: How it works...
+  id: totrans-191
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: Detecting if the installer was the Google Play store is a simple check that
     the package name of the installer app matches that of the Google Play store. Specifically,
     it checks if the installer's package starts with `com.google.android`. It is a
     useful check if you are distributed solely through the Google store.
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: 检测安装程序是否为Google Play商店是一个简单的检查，即安装程序应用的包名与Google Play商店的包名是否匹配。具体来说，它会检查安装器的包名是否以`com.google.android`开头。如果你只通过Google商店分发，这是一个有用的检查。
 - en: 'The Java Reflection API makes it possible to inspect classes, methods, and
     fields at runtime; and in this case, allows us to override the access modifiers
     that would prevent ordinary code from compiling. The emulator check uses reflection
     to access a hidden system class, `android.os.SystemProperties`. A word of warning:
     using hidden APIs can be risky, as they can change between Android versions.'
+  id: totrans-193
   prefs: []
   type: TYPE_NORMAL
+  zh: Java反射API使得在运行时检查类、方法和字段成为可能；在这种情况下，它允许我们覆盖那些会阻止普通代码编译的访问修饰符。模拟器检查使用反射来访问隐藏的系统类`android.os.SystemProperties`。警告一下：使用隐藏API可能会有风险，因为它们可能会在Android版本之间发生变化。
 - en: When `debuggable` is enabled, it is possible to connect via the Android Debug
     Bridge and preform detailed dynamic analysis. The `debuggable` variable is a simple
     property of the `<application>` element in the `AndroidManifest.xml` file. It
     is perhaps one of the easiest and most targeted properties to alter in order to
     perform dynamic analysis. In step 3, we saw how to check the value of the `debuggable`
     flag on the application info object.
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 当`debuggable`被启用时，可以通过Android调试桥连接并进行详细的动态分析。`debuggable`变量是`AndroidManifest.xml`文件中`<application>`元素的简单属性。它可能是最容易被修改以进行动态分析的属性之一。在第3步中，我们看到了如何检查应用信息对象上的`debuggable`标志的值。
 - en: There's more...
+  id: totrans-195
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: See the *Application signature verification (anti-tamper)* recipe for suggestions
     on what to do if you detect tampering. Once released to the Play store, on detecting
     that the app is running on an emulator or is being debugged, it is reasonable
@@ -988,34 +1406,48 @@
     such as wiping app data or the shared preferences. Although, if you are going
     to wipe user data, ensure this is noted in your license agreement to avoid any
     potential legal issues.
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果检测到篡改，请参阅*应用程序签名验证（防篡改）*的技巧，了解应采取的措施。一旦应用发布到Play商店，在检测到应用正在模拟器上运行或正在被调试时，可以合理地假设应用正在被分析和/或攻击。因此，在这种情况下，采取更积极的措施挫败攻击者，如清除应用数据或共享偏好设置是合理的。但是，如果你打算清除用户数据，请确保在许可协议中注明，以避免潜在的法律问题。
 - en: See also
+  id: totrans-197
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Advance code obfuscation with DexGuard* recipe, which provides a useful
     complement to tamper protection, making it more difficult for a reverse engineer
     to find, understand, and importantly remove these tamper checks
+  id: totrans-198
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用DexGuard进行*高级代码混淆*的技巧，它为防篡改提供了有用的补充，使得逆向工程师更难以找到、理解以及重要的是移除这些篡改检查。
 - en: The `SystemProperties.java` class from the Android source code at [https://github.com/android/platform_frameworks_base/blob/master/core/java/android/os/SystemProperties.java](https://github.com/android/platform_frameworks_base/blob/master/core/java/android/os/SystemProperties.java)
+  id: totrans-199
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 来自Android源代码的`SystemProperties.java`类，位于[https://github.com/android/platform_frameworks_base/blob/master/core/java/android/os/SystemProperties.java](https://github.com/android/platform_frameworks_base/blob/master/core/java/android/os/SystemProperties.java)
 - en: The `PackageManager` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/PackageManager.html](https://developer.android.com/reference/android/content/pm/PackageManager.html)
+  id: totrans-200
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android开发者参考指南](https://developer.android.com/reference/android/content/pm/PackageManager.html)中的`PackageManager`类
 - en: The `ApplicationInfo` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/ApplicationInfo.html](https://developer.android.com/reference/android/content/pm/ApplicationInfo.html)
+  id: totrans-201
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android开发者参考指南](https://developer.android.com/reference/android/content/pm/ApplicationInfo.html)中的`ApplicationInfo`类
 - en: Removing all log messages with ProGuard
+  id: totrans-202
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用ProGuard移除所有日志消息
 - en: 'ProGuard is an open source Java code obfuscator that is supplied with the Android
     SDK. For those unfamiliar with obfuscators, they remove any information from the
     code that is not needed for execution, for example, unused code and debugging
@@ -1024,264 +1456,374 @@
     one. Before, an object/method call might look something like this: `SecurityManager.encrypt(String
     text);`, but after obfuscation, it could look like: `a.b(String c);`. As you can
     see, it gives no clue about its purpose.'
+  id: totrans-203
   prefs: []
   type: TYPE_NORMAL
+  zh: ProGuard是一个开源的Java代码混淆器，它与Android SDK一起提供。对于那些不熟悉混淆器的人来说，它们会从代码中移除任何执行不需要的信息，例如，未使用的代码和调试信息。同时，标识符会被重命名为易于阅读、描述性和可维护性强的代码，你写的是优化后的、更短且非常难以阅读的代码。之前，一个对象/方法的调用可能看起来像这样：`SecurityManager.encrypt(String
+    text);`，但混淆后，它可能看起来像：`a.b(String c);`。正如你所看到的，它没有给出其目的的任何线索。
 - en: ProGuard also reduces the amount of code by removing unused methods, fields,
     and attributes, and makes it execute quicker by using machine-optimized code.
     This is ideal for a mobile context, as this optimization can drastically reduce
     the size of the exported `.apk` file. This is especially useful when only using
     a subset of third-party libraries.
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: ProGuard还通过移除未使用的方法、字段和属性来减少代码量，并通过使用机器优化的代码使其执行得更快。这对于移动环境来说非常理想，因为这种优化可以大大减少导出的`.apk`文件的大小。特别是当你只使用第三方库的一个子集时，这特别有用。
 - en: There are other Java obfuscators available, but due to the fact that ProGuard
     is part of the Android SDK, many third-party development libraries contain custom
     ProGuard configuration to ensure they function correctly.
+  id: totrans-205
   prefs: []
   type: TYPE_NORMAL
+  zh: 还有其他可用的Java混淆器，但由于ProGuard是Android SDK的一部分，许多第三方开发库包含自定义的ProGuard配置以确保它们能正确运行。
 - en: Getting ready
+  id: totrans-206
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'First, we''ll enable ProGuard on an Android application:'
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将在Android应用程序上启用ProGuard：
 - en: If you're developing your application using Eclipse with the Android ADT plugin,
     you'll need to locate your workspace and navigate to the folder containing your
     application code. Once you've found it, you should see a text file called `project.properties`:![Getting
     ready](img/00117.jpeg)
+  id: totrans-208
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果你使用带有Android ADT插件的Eclipse开发应用程序，你需要找到你的工作区，并导航到包含你的应用程序代码的文件夹。找到之后，你应该会看到一个名为`project.properties`的文本文件：![准备就绪](img/00117.jpeg)
 - en: 'To enable ProGuard, you need to make sure the following line is uncommented:'
+  id: totrans-209
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 要启用ProGuard，你需要确保以下行被取消注释：
 - en: '[PRE30]'
+  id: totrans-210
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'This assumes that you have the default folder structure for the Android SDK,
     since the previous configuration includes a static path, namely `/tools/proguard/proguard-android.txt`.
     If you don''t have the correct folder structure or you''re not using the Android
     Developer''s Toolkit plugin for Eclipse, you can fetch the `proguard-android.txt`
     file and place it one folder above your application''s working folder. In this
     case, you can configure this directory as follows:'
+  id: totrans-211
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这假设你有Android SDK的默认文件夹结构，因为之前的配置包括一个静态路径，即`/tools/proguard/proguard-android.txt`。如果你没有正确的文件夹结构或你没有使用Eclipse的Android
+    Developer's Toolkit插件，你可以获取`proguard-android.txt`文件并将其放在应用程序工作文件夹的上一级文件夹中。在这种情况下，你可以按以下方式配置这个目录：
 - en: '[PRE31]'
+  id: totrans-212
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Android Studio configuration requires the following lines in your `buildType`
     release to your Gradle build file:'
+  id: totrans-213
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: Android Studio配置需要以下行在你的`buildType`发布到Gradle构建文件中：
 - en: '[PRE32]'
+  id: totrans-214
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'It''s important to keep the reference to the `proGuard-android.txt` file, as
     it contains Android-specific exclusions and without them, the app will likely
     not run. Here''s an extract from the `proguard-android.txt` file instructing ProGuard
     to keep methods in activities that could be used in the XML attribute `onClick`:'
+  id: totrans-215
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 保留对`proGuard-android.txt`文件的引用很重要，因为它包含了Android特定的排除项，如果没有它们，应用程序很可能会无法运行。以下是`proguard-android.txt`文件的一个摘录，指导ProGuard保留在活动中可能被XML属性`onClick`使用的方法：
 - en: '[PRE33]'
+  id: totrans-216
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: How to do it...
+  id: totrans-217
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Once ProGuard is enabled for your project, there are two simple steps to ensure
     all logging messages are removed.
+  id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦为你的项目启用了ProGuard，有两个简单的步骤可以确保移除所有的日志消息。
 - en: 'To enable ProGuard to successfully find all of the log statements, we must
     use a wrapper class to wrap the Android log:'
+  id: totrans-219
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了让ProGuard成功找到所有的日志语句，我们必须使用一个包装类来包装Android日志：
 - en: '[PRE34]'
+  id: totrans-220
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'In your application code, use `LogWrap` instead of the standard `android.util.Log`.
     For example:'
+  id: totrans-221
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在你的应用程序代码中，使用`LogWrap`代替标准的`android.util.Log`。例如：
 - en: '[PRE35]'
+  id: totrans-222
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Insert the following custom ProGuard configuration into the project''s `proguard-project.txt`
     file:'
+  id: totrans-223
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在项目的`proguard-project.txt`文件中插入以下自定义ProGuard配置：
 - en: '[PRE36]'
+  id: totrans-224
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'Enable ProGuard Optimize by adding the optimize configuration file to the project:'
+  id: totrans-225
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过向项目添加优化配置文件来启用ProGuard优化：
 - en: '[PRE37]'
+  id: totrans-226
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'Build your application in release mode to apply ProGuard:'
+  id: totrans-227
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以发布模式构建你的应用程序以应用ProGuard：
 - en: Use the Android Tools export wizard in Eclipse
+  id: totrans-228
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用Eclipse中的Android Tools导出向导
 - en: 'In a terminal window at the root of your project, type the following commands:'
+  id: totrans-229
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在项目根目录下的终端窗口中，输入以下命令：
 - en: '**For Ant**: `ant release`'
+  id: totrans-230
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '**对于Ant**：`ant release`'
 - en: '**For Gradle**: `gradle assembleRelease`'
+  id: totrans-231
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '**对于Gradle**：`gradle assembleRelease`'
 - en: How it works...
+  id: totrans-232
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它的工作原理...
 - en: When you build an application in release mode, the build system will check the
     `proguard.config` property when it is uncommented and use ProGuard to process
     the application's bytecode before packaging it into the application (`.apk`).
+  id: totrans-233
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你以发布模式构建应用程序时，构建系统会在取消注释`proguard.config`属性时检查它，并在打包应用程序（`.apk`）之前使用ProGuard处理应用程序的字节码。
 - en: When ProGuard is processing bytecode, the `assumeNoeffects` attribute allows
     it to completely remove these lines of code—in this case, all of the relevant
     methods from `android.util.Log`. Using the optimize configuration and log wrapper,
     we let ProGuard safely identify all of the calls to the various `android.util.Log`
     methods. An added benefit of enabling Optimize is that optimizing the code enhances
     the obfuscation factor, making it even harder to read.
+  id: totrans-234
   prefs: []
   type: TYPE_NORMAL
+  zh: 当ProGuard处理字节码时，`assumeNoeffects`属性允许它完全删除这些代码行——在这种情况下，所有相关的`android.util.Log`方法。使用优化配置和日志包装器，我们让ProGuard安全地识别所有对各种`android.util.Log`方法的调用。启用优化的一个额外好处是，优化代码可以提高混淆因子，使其更难以阅读。
 - en: There's more...
+  id: totrans-235
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: Let's take a closer look at some of the outputs from ProGuard and the limitations.
+  id: totrans-236
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们更仔细地看看ProGuard的一些输出和限制。
 - en: ProGuard output
+  id: totrans-237
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: ProGuard输出
 - en: 'These are the output files from applying ProGuard to Android `.apk`:'
+  id: totrans-238
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些是应用ProGuard到Android `.apk`后的输出文件：
 - en: '`mapping.txt`: As the name suggests, this contains the mappings between the
     obfuscated class, field names, and original names, and is essential to use the
     companion tool **ReTrace** to deobfuscate stack traces/bug reports produced by
     the obfuscated apps'
+  id: totrans-239
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`mapping.txt`：顾名思义，这包含了混淆后的类、字段名和原始名称之间的映射关系，这对于使用伴随工具**ReTrace**去混淆由混淆应用程序产生的堆栈跟踪/错误报告至关重要'
 - en: '`Seeds.txt`: This lists the classes and members that are not obfuscated'
+  id: totrans-240
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Seeds.txt`：这列出了没有被混淆的类和成员'
 - en: '`Usage.txt`: This lists the code that was stripped from the `.apk` file'
+  id: totrans-241
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Usage.txt`：这列出了从`.apk`文件中删除的代码'
 - en: '`Dump.txt`: This describes the internal structure of all of the class files
     in the `.apk` file'
+  id: totrans-242
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Dump.txt`：这描述了`.apk`文件中所有类文件的内部结构'
 - en: Tip
+  id: totrans-243
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: It's also worth noting that the output files for each build are overwritten
     with ProGuard. It's essential to save a copy of the `mappings.txt` file for every
     application release; otherwise, there is no way to convert stack traces.
+  id: totrans-244
   prefs: []
   type: TYPE_NORMAL
+  zh: 还值得注意的是，每次构建的输出文件都会被ProGuard覆盖。保存每个应用程序版本的`mappings.txt`文件的副本至关重要；否则，将无法转换堆栈跟踪。
 - en: Limitations
+  id: totrans-245
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 限制
 - en: Obfuscating an application with ProGuard increases the time and skill level
     needed to reverse engineer, understand, and exploit an application. However, reversing
     is still possible; so, it certainly should not be the only piece of securing an
     application, but rather a part of the overall security approach.
+  id: totrans-246
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用ProGuard混淆应用程序增加了逆向工程、理解和利用应用程序所需的时间和技能水平。然而，逆向仍然是可能的；因此，这绝不应该成为保护应用程序的唯一手段，而应该是整体安全策略的一部分。
 - en: See also
+  id: totrans-247
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Advanced code obfuscation with DexGuard* recipe, which talks about ProGuard's
     sibling DexGuard for deeper Android-specific obfuscation
+  id: totrans-248
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*使用DexGuard进行高级代码混淆*的技巧，其中讨论了ProGuard的姊妹产品DexGuard，用于更深入的Android特定混淆'
 - en: The *ProGuard* tool's web page on Android Developers site at [http://developer.android.com/tools/help/proguard.html](http://developer.android.com/tools/help/proguard.html)
+  id: totrans-249
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[Android Developers网站](http://developer.android.com/tools/help/proguard.html)上的*ProGuard*工具网页
 - en: The ProGuard official site at [http://proguard.sourceforge.net/index.htm](http://proguard.sourceforge.net/index.htm)
+  id: totrans-250
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: ProGuard的官方网站在[这里](http://proguard.sourceforge.net/index.htm)
 - en: The ProGuard example configurations at [http://proguard.sourceforge.net/index.html#manual/examples.html](http://proguard.sourceforge.net/index.html#manual/examples.html)
+  id: totrans-251
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在[这里](http://proguard.sourceforge.net/index.html#manual/examples.html)的ProGuard示例配置
 - en: Advanced code obfuscation with DexGuard
+  id: totrans-252
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用DexGuard进行高级代码混淆
 - en: DexGuard is a commercial optimizer and obfuscator tool written by *Eric Lafortune*
     (who developed ProGuard). It is used in the place of ProGuard. Rather than targeting
     Java, DexGuard is specialized for Android resources and Dalvik bytecode. As with
     ProGuard, one of the key advantages for developers is that source code remains
     maintainable and testable, while the compiled output is both optimized and hardened.
+  id: totrans-253
   prefs: []
   type: TYPE_NORMAL
+  zh: DexGuard是一个商业优化和混淆工具，由*Eric Lafortune*（ProGuard的开发者）编写。它用于替代ProGuard。与针对Java的ProGuard不同，DexGuard专门针对Android资源和Dalvik字节码。对于开发者来说，一个关键优势是源代码保持可维护和可测试，而编译后的输出既优化又加固。
 - en: 'In general terms, it is more secure to use DexGuard, given that it is optimized
     for Android and provides additional security features. In this recipe, we are
     going to implement two of those features, API hiding and string encryption, on
     the previous recipe''s signature verification check:'
+  id: totrans-254
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常来说，使用DexGuard更为安全，因为它针对Android进行了优化，并提供额外的安全功能。在本教程中，我们将基于上一个教程的签名验证检查，实现其中的两个功能：API隐藏和字符串加密。
 - en: '**API hiding**: This uses reflection to disguise the calls to sensitive APIs
     and code. It is ideal for hiding the key areas attackers will look to compromise.
     For example, the license check detection will be targeted by software pirates,
     so it''s an area to focus on hardening effort. When decompiled, reflection-based
     calls are a lot more difficult to decipher.'
+  id: totrans-255
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**API隐藏**：这使用反射来伪装对敏感API和代码的调用。它非常适合隐藏攻击者想要攻击的关键区域。例如，许可证检查检测将是软件盗版者的目标，因此这是一个需要加强防护的重点区域。当被反编译时，基于反射的调用要难以解读得多。'
 - en: '**String encryption**: This encrypts strings within your source code to hide
     them from reverse engineers. This is particularly useful for API keys and other
     constants that are defined in your code.'
+  id: totrans-256
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**字符串加密**：这会对源代码中的字符串进行加密，防止被逆向工程师查看。这对于隐藏API密钥和其他在代码中定义的常量特别有用。'
 - en: We use API hiding to convert specific method calls into reflection-based calls.
     This is particularly useful for sensitive methods that we want to hide from attackers,
     in this case, the verify signature method. The reflection call is made up of class
@@ -1289,19 +1831,27 @@
     complementing **string-encryption** feature to encrypt those reflection strings.
     This provides a robust way of protecting sensitive areas of the applications,
     for example, tamper detection, license checking, and encryption/decryption.
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用API隐藏将特定的方法调用转换为基于反射的调用。这对于我们想要从攻击者那里隐藏的敏感方法特别有用，在本例中，就是验证签名方法。反射调用由作为字符串存储的类和方法签名组成。我们可以通过使用补充的**字符串加密**功能来加密这些反射字符串，进一步强化它。这为保护应用程序的敏感区域提供了一种强大的方法，例如篡改检测、许可证检查以及加密/解密。
 - en: Note
+  id: totrans-258
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: DexGuard requires a developer license, which is available at [http://www.saikoa.com/dexguard](http://www.saikoa.com/dexguard).
+  id: totrans-259
   prefs: []
   type: TYPE_NORMAL
+  zh: DexGuard需要开发者许可证，可在[http://www.saikoa.com/dexguard](http://www.saikoa.com/dexguard)获取。
 - en: Getting ready
+  id: totrans-260
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Assume Android SDK Tools (Version 22\. or higher) and DexGuard have been downloaded
     and extracted to an accessible directory. The examples will use /`Users/user1/dev/lib/DexGuard/`
     and are based on DexGuard Version 5.3\. Here, we''ll cover installing DexGuard
@@ -1309,203 +1859,302 @@
     installed, your application will benefit from an increased security level over
     ProGuard. However, we''re going to enable some customized configuration to protect
     the sensitive areas of the application:'
+  id: totrans-261
   prefs: []
   type: TYPE_NORMAL
+  zh: 假设Android SDK Tools（版本22或更高）和DexGuard已被下载并解压到可访问的目录。示例将使用`/Users/user1/dev/lib/DexGuard/`目录，基于DexGuard版本5.3。这里，我们将介绍如何在Eclipse中安装DexGuard，并将其集成到Ant和Gradle构建系统中。安装后，应用程序将比ProGuard具有更高的安全级别。但是，我们将启用一些自定义配置来保护应用程序的敏感区域：
 - en: Installing the DexGuard Eclipse plugin
+  id: totrans-262
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 安装DexGuard Eclipse插件
 - en: Copy the plugin JAR file (`com.saikoa.dexguard.eclipse.adt_22.0.0.v5_3_14.jar`)
     from DexGuard's `/eclipse` directory to the `/dropins` directory of your Eclipse
     installation.
+  id: totrans-263
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从DexGuard的`/eclipse`目录复制插件JAR文件（`com.saikoa.dexguard.eclipse.adt_22.0.0.v5_3_14.jar`）到Eclipse安装目录的`/dropins`目录。
 - en: When you start/restart Eclipse, the DexGuard plugin will be automatically installed.
+  id: totrans-264
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动/重启Eclipse时，DexGuard插件将自动安装。
 - en: 'If all has been successful, when you right-click on an Android project, you
     should notice a new option in the Android tools menu:'
+  id: totrans-265
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果一切顺利，当你在Android项目上右键点击时，在Android工具菜单中应该会注意到一个新的选项：
 - en: '**Export Optimize and Obfuscate Application package (DexGuard)**'
+  id: totrans-266
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '**导出优化和混淆应用程序包 (DexGuard)**'
 - en: Your project will now be compiled and built in to an `.apk` file as usual; however,
     behind the scenes, DexGuard will be used to optimize and obfuscate the application.
+  id: totrans-267
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你的项目现在将像往常一样编译并构建成一个 `.apk` 文件；然而，在幕后，DexGuard 将被用来优化和混淆应用程序。
 - en: Enabling DexGuard for the Ant build system
+  id: totrans-268
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 为 Ant 构建系统启用 DexGuard
 - en: Enabling Ant is simple. Specify the DexGuard directory in the `local.properties`
     configuration file in your Android project.
+  id: totrans-269
   prefs: []
   type: TYPE_NORMAL
+  zh: 启用 Ant 很简单。在你的 Android 项目的 `local.properties` 配置文件中指定 DexGuard 目录。
 - en: 'If you don''t have a `local.properties` file, create one. To do this, add the
     following line:'
+  id: totrans-270
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果你没有 `local.properties` 文件，创建一个。为此，添加以下行：
 - en: '[PRE38]'
+  id: totrans-271
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: Copy `Custom_rules.xml` from the DexGuard directory `ant` to the root of your
     Android project.
+  id: totrans-272
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从 DexGuard 目录 `ant` 复制 `Custom_rules.xml` 到你的 Android 项目的根目录。
 - en: Enabling DexGuard for the Gradle build system
+  id: totrans-273
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 为 Gradle 构建系统启用 DexGuard
 - en: 'To enable DexGuard for the Gradle build system, modify the `build.gradle` file
     of your project:'
+  id: totrans-274
   prefs: []
   type: TYPE_NORMAL
+  zh: 要为 Gradle 构建系统启用 DexGuard，请修改项目的 `build.gradle` 文件：
 - en: '[PRE39]'
+  id: totrans-275
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: How to do it...
+  id: totrans-276
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Once set up, we can enable and configure API hiding and string encryption:'
+  id: totrans-277
   prefs: []
   type: TYPE_NORMAL
+  zh: 设置完成后，我们可以启用和配置 API 隐藏和字符串加密：
 - en: In the root directory of your Android project, create a new file called `dexguard-project.txt`.
+  id: totrans-278
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在你的 Android 项目的根目录中，创建一个名为 `dexguard-project.txt` 的新文件。
 - en: Configure DexGuard to encrypt sensitive strings. In this example, we're using
     a common pattern for including immutable constants in an interface and the certificate
     hash used in the previous recipe, as these constants could easily be read after
     decompilation even when obfuscated with ProGuard.
+  id: totrans-279
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 配置 DexGuard 加密敏感字符串。在这个例子中，我们使用了一个常见的模式来在接口中包含不可变常量，并使用上一食谱中使用的证书哈希，因为即使使用 ProGuard
+    混淆，这些常量在反编译后也很容易被读取。
 - en: 'Encrypt a specific string in the `Constants` interface:'
+  id: totrans-280
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `Constants` 接口中加密特定字符串：
 - en: '[PRE40]'
+  id: totrans-281
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'Alternatively, you can encrypt all of the strings in an interface or class.
     Here''s an example of encrypting all strings defined in `MainActivity.java`:'
+  id: totrans-282
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 另外，你还可以加密一个接口或类中的所有字符串。以下是加密 `MainActivity.java` 中定义的所有字符串的示例：
 - en: '[PRE41]'
+  id: totrans-283
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'In an effort to respond to the limitations noted in the *Application signature
     verification (anti-tamper)* recipe, we will demonstrate a related method, in addition
     to the fact that hiding the method calls to the `verifyAppSignature` method make
     it very difficult for an attacker to figure out where the tamper detection is
     taking place:'
+  id: totrans-284
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了响应在 *应用程序签名验证（防篡改）* 食谱中提到的限制，我们将演示一个相关的方法，除了隐藏对 `verifyAppSignature` 方法的调用使攻击者很难弄清楚篡改检测发生在哪里这一事实：
 - en: '[PRE42]'
+  id: totrans-285
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'The final step is to build/export in release mode to ensure the DexGuard protection
     is applied to the resulting `.apk` file:'
+  id: totrans-286
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后一步是以发布模式构建/导出，以确保将 DexGuard 保护应用于生成的 `.apk` 文件：
 - en: '**Eclipse**: Right-click on your project and then select **Android Tools**
     | **Export Optimized and Obfuscated Application Package … (DexGuard)**'
+  id: totrans-287
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Eclipse**: 在项目上右键点击，然后选择 **Android Tools** | **导出优化和混淆的应用程序包… (DexGuard)**'
 - en: '**Ant**: Run the `ant release` command in the terminal window in the project
     root'
+  id: totrans-288
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Ant**: 在项目根目录的终端窗口中运行 `ant release` 命令'
 - en: '**Gradle**: Run the `gradle releaseCompile` command in the terminal window
     in the project root'
+  id: totrans-289
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Gradle**: 在项目根目录的终端窗口中运行 `gradle releaseCompile` 命令'
 - en: There's more...
+  id: totrans-290
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Here''s the head-to-head comparison with ProGuard:'
+  id: totrans-291
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是与 ProGuard 的正面比较：
 - en: '|   | ProGuard | DexGuard |'
+  id: totrans-292
   prefs: []
   type: TYPE_TB
+  zh: '|   | ProGuard | DexGuard |'
 - en: '| --- | --- | --- |'
+  id: totrans-293
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- | --- |'
 - en: '| Shrinking | X | X |'
+  id: totrans-294
   prefs: []
   type: TYPE_TB
+  zh: '| 缩减 | X | X |'
 - en: '| Optimization | X | X |'
+  id: totrans-295
   prefs: []
   type: TYPE_TB
+  zh: '| 优化 | X | X |'
 - en: '| Name obfuscation | X | X |'
+  id: totrans-296
   prefs: []
   type: TYPE_TB
+  zh: '| 名称混淆 | X | X |'
 - en: '| String encryption |   | X |'
+  id: totrans-297
   prefs: []
   type: TYPE_TB
+  zh: '| 字符串加密 |   | X |'
 - en: '| Class encryption |   | X |'
+  id: totrans-298
   prefs: []
   type: TYPE_TB
+  zh: '| 类加密 |   | X |'
 - en: '| Reflection |   | X |'
+  id: totrans-299
   prefs: []
   type: TYPE_TB
+  zh: '| 反射 |   | X |'
 - en: '| Asset encryption |   | X |'
+  id: totrans-300
   prefs: []
   type: TYPE_TB
+  zh: '| 资产加密 |   | X |'
 - en: '| Resource XML obfuscation |   | X |'
+  id: totrans-301
   prefs: []
   type: TYPE_TB
+  zh: '| 资源 XML 混淆 |   | X |'
 - en: '| Conversion to Dalvik |   | X |'
+  id: totrans-302
   prefs: []
   type: TYPE_TB
+  zh: '| 转换为 Dalvik |   | X |'
 - en: '| Packaging |   | X |'
+  id: totrans-303
   prefs: []
   type: TYPE_TB
+  zh: '| 打包 |   | X |'
 - en: '| Signing |   | X |'
+  id: totrans-304
   prefs: []
   type: TYPE_TB
+  zh: '| 签名 |   | X |'
 - en: '| Tamper detection |   | X |'
+  id: totrans-305
   prefs: []
   type: TYPE_TB
+  zh: '| 篡改检测 |   | X |'
 - en: Tamper detection is a longtime favorite, which uses a utility library and works
     on some of the same principles as the other recipes in this chapter. It is favorable
     because it is very easy to implement, as it is just one line of code.
+  id: totrans-306
   prefs: []
   type: TYPE_NORMAL
+  zh: 篡改检测是一个长期以来受到喜爱的方法，它使用一个实用程序库，并基于本章中其他食谱的相同原则工作。它之所以受到青睐，是因为它非常容易实现，因为它只是一行代码。
 - en: Upgrading to DexGuard from ProGuard is seamless, as any custom configurations
     defined for ProGuard are fully compatible. Another benefit of this compatibility
     is the existing community of ProGuard support and expertise.
+  id: totrans-307
   prefs: []
   type: TYPE_NORMAL
+  zh: 从ProGuard升级到DexGuard是无缝的，因为为ProGuard定义的任何自定义配置都是完全兼容的。这种兼容性的另一个好处是现有的ProGuard支持和专业知识社区。
 - en: See also
+  id: totrans-308
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The Official DexGuard website at [http://www.saikoa.com/dexguard](http://www.saikoa.com/dexguard)
+  id: totrans-309
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 官方DexGuard网站位于[http://www.saikoa.com/dexguard](http://www.saikoa.com/dexguard)

@@ -1,38 +1,56 @@
 - en: Chapter 6. Reverse Engineering Applications
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第六章. 逆向工程应用程序
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Compiling from Java to DEX
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 从Java编译到DEX
 - en: Decompiling DEX files
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 反编译DEX文件
 - en: Interpreting the Dalvik bytecode
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 解释Dalvik字节码
 - en: Decompiling DEX to Java
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 从DEX反编译到Java
 - en: Decompiling the application's native libraries
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 反编译应用程序的本地库
 - en: Debugging the Android processes using the GDB server
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用GDB服务器调试Android进程
 - en: Introduction
+  id: totrans-8
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: The previous chapter discussed the flaws in the applications; they can be exploited
     and discovered without the need to know exactly how they have been developed.
     Though there were detailed explanations on some common source code that caused
@@ -42,8 +60,10 @@
     of the actual details surrounding its behavior. The reverse engineering discussed
     in this chapter aims to uncover every single detail of an application's inner
     workings in order to exploit it.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 前一章讨论了应用程序中的缺陷；它们可以在不需要确切了解其开发方式的情况下被利用和发现。尽管有一些关于导致这一具体问题的常见源代码的详细解释，但我们不需要阅读源代码就知道SQL注入是可能的。在很大程度上，我们向成功利用迈出的第一步是从一个对应用程序行为实际细节一无所知的背景下来分析应用程序的行为。本章讨论的逆向工程旨在揭示应用程序内部工作的每一个细节，以便利用它。
 - en: Reverse engineering, when applied to computer software, is the process of learning
     how something works and developing ways to make use of, or abuse, this information.
     For example, reading the source code of a kernel driver may lead to finding a
@@ -53,8 +73,10 @@
     specialist and is at the heart of all true development exploits. When exploits
     and vulnerabilities are developed somewhere in the chain of events that lead to
     successful exploitation, reverse engineering has occurred.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 当逆向工程应用于计算机软件时，它是了解某物如何工作并开发利用或滥用这些信息的方法的过程。例如，阅读内核驱动程序的源代码可能会导致发现潜在的记忆体破坏缺陷，如缓冲区的边界检查不正确。了解这一点可能允许你开发一个利用，鉴于这种漏洞存在的背景。逆向工程是任何安全专家最基本的技术，也是所有真正开发利用的核心。当利用和漏洞在导致成功利用的事件链中的某个地方被开发时，逆向工程就已经发生了。
 - en: Android applications are not different from other computer software types, and
     thus, they can be reverse engineered, too. In order to reverse engineer an application,
     one needs to understand how they are built, what goes where, and why. Not having
@@ -63,15 +85,21 @@
     discusses a few recipes that you can use for extracting information about the
     inner workings of an application, and discusses some novel tricks that malware
     developers and security auditors use to abuse and reverse engineer applications.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓应用程序与其他计算机软件类型并无不同，因此它们同样可以被逆向工程。为了逆向一个应用程序，需要了解其构建方式、各个部分的作用及其原因。缺乏这些信息会导致无尽的、不眠之夜的模糊测试和暴力破解，而在大多数情况下，最终会以挫败告终。本章讨论了一些你可以用于提取应用程序内部工作信息的技巧，并讨论了一些恶意软件开发者和安全审计师用于滥用和逆向应用程序的新奇技巧。
 - en: Before we get cooking with the recipes, there's just one question that begs
     to be asked; why would you reverse engineer an Android application?
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们开始使用这些技巧之前，有一个问题需要被提出：为什么你要逆向工程一个安卓应用程序？
 - en: 'Here are a few ways to answer that:'
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是几个回答这个问题的方法：
 - en: '**To read the source code**: Often, many vulnerabilities stay hidden from attackers,
     simply because they don''t manifest themselves during the "black-box" assessment
     of an application. This does not mean they are not vulnerable to exploitation;
@@ -81,17 +109,21 @@
     than a pure black-box analysis. Reading the source code is still the only concrete
     way to understand an application; you cannot trust anything but the source code;
     in other words, documentation is a lie until the source code proves otherwise!'
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**阅读源代码**：通常，许多漏洞对攻击者保持隐藏，仅仅因为它们在应用程序的“黑盒”评估期间没有表现出来。这并不意味着它们不容易受到攻击；引用一句话，“没有证据并不意味着证据不存在！”阅读应用程序的源代码是了解其弱点的最有效方式，而且往往比纯黑盒分析能发现更多的漏洞。阅读源代码仍然是理解应用程序的唯一具体方式；除了源代码，你不能信任任何东西；换句话说，文档在源代码证明之前都是谎言！'
 - en: '**To leak information**: Some vulnerabilities in applications don''t stem directly
     from the behavior of the code but from the kind of information stored in the application,
     for example, static private keys and passwords, e-mail addresses, sign-on tokens,
     URIs, and other sensitive content. Cracking open an application grants you access
     to all of its secrets.'
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**泄露信息**：应用程序中的一些漏洞并不直接来自代码的行为，而是来自应用程序存储的信息类型，例如静态私钥和密码、电子邮件地址、登录令牌、URI以及其他敏感内容。破解应用程序可以让你访问其所有秘密。'
 - en: '**To analyze defense mechanisms**: Often, the common vulnerabilities in applications
     are protected in the most ridiculous ways. Though mitigating common attack paths,
     whether or not an application is protected from certain attacks depends purely
@@ -103,154 +135,222 @@
     of source code from these may teach you how developers create defenses against
     authentication brute-force attacks, credential sniffing attacks, and other login
     app-specific defenses.'
+  id: totrans-16
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**分析防御机制**：通常，应用程序中常见的漏洞以最荒谬的方式进行保护。尽管缓解了常见的攻击路径，但应用程序是否能够抵御某些攻击完全取决于其源代码和配置。通常，如果没有源代码和内部配置，可能极其困难，有时甚至不可能，揭示它是如何自我保护的。阅读同一类别的大量应用程序的源代码，可以让你深入了解保护应用程序的最佳和最差方法，例如登录应用。阅读这些应用的许多源代码可以教你开发者如何创建针对认证暴力攻击、凭证嗅探攻击以及其他登录应用特定防御的防御措施。'
 - en: '**To analyze attack techniques**: You may be interested in finding out which
     application and system level exploits the latest and greatest Android malware.
     The only way to truly find this out, and put yourself on the cutting edge of Android
     security research, is to reverse engineer Android applications.'
+  id: totrans-17
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**分析攻击技术**：你可能对找出最新的Android恶意软件使用了哪些应用程序和系统级别的漏洞感兴趣。真正了解这一点，并将自己置于Android安全研究前沿的唯一方式，就是逆向工程Android应用程序。'
 - en: With these goals in mind, let's get going with the recipes.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 带着这些目标，让我们开始着手食谱。
 - en: Compiling from Java to DEX
+  id: totrans-19
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 从Java编译到DEX
 - en: The recipe following this one breaks down the DEX file format; but before delving
     into the DEX file, it would be useful to first get to know the process of interpreting/compiling
     a Java program into a DEX program. One of the key reasons for demonstrating compilation
     from Java to DEX is because the file used in the example here will be used to
     explain the DEX file format in the next recipe.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一份食谱将分解DEX文件格式；但在深入了解DEX文件之前，先了解将Java程序解释/编译为DEX程序的过程会很有用。演示从Java到DEX的编译的关键原因之一是因为本例中使用的文件将在下一份食谱中用来解释DEX文件格式。
 - en: Getting ready
+  id: totrans-21
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Before we get going, there are a couple of things you will need:'
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始之前，有几样东西你需要准备：
 - en: '**Java Development Kit**: We need this to be able to compile Java code into
     the class files'
+  id: totrans-23
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Java开发工具包**：我们需要它来编译Java代码到class文件'
 - en: '**Android SDK**: We need some of the tools in this package to be able to transform
     Java class files into DEX files'
+  id: totrans-24
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Android SDK**：我们需要这个软件包中的某些工具，以便能够将Java class文件转换为DEX文件'
 - en: '**Text editor**: We need a text editor so that we can write a sample Java program
     to convert to a DEX program'
+  id: totrans-25
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**文本编辑器**：我们需要一个文本编辑器，以便我们可以编写一个示例Java程序以转换成DEX程序'
 - en: Once you've got all of these things, we can begin preparing a sample DEX file.
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 准备好所有这些后，我们可以开始准备一个DEX文件的样本。
 - en: How to do it...
+  id: totrans-27
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To compile a Java program into a DEX program, you will need to do the following:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 要将Java程序编译成DEX程序，你需要执行以下操作：
 - en: 'Open your text editor and create a file using the following code:'
+  id: totrans-29
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开你的文本编辑器，使用以下代码创建一个文件：
 - en: '[PRE0]'
+  id: totrans-30
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Save the previous file as `Example.java` and then compile the code by typing
     the following into your terminal or command prompt:'
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将前一个文件保存为`Example.java`，然后通过在终端或命令提示符中输入以下内容来编译代码：
 - en: '[PRE1]'
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'If you''ve got your `CLASS` file ready, you can now whip out a tool called
     `dx`, found under:'
+  id: totrans-33
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果你已经准备好了`CLASS`文件，现在可以拿出一个名为`dx`的工具，位于以下路径：
 - en: '[PRE2]'
+  id: totrans-34
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'If you''ve got Version 4.4 of the SDK, you can find it under:'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果你拥有SDK的4.4版本，可以在以下路径找到它：
 - en: '[PRE3]'
+  id: totrans-36
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: '![How to do it...](img/00118.jpeg)'
+  id: totrans-37
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00118.jpeg)'
 - en: 'To prepare a DEX file, you need to execute the following command:'
+  id: totrans-38
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 要准备DEX文件，你需要执行以下命令：
 - en: '[PRE4]'
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: '![How to do it...](img/00119.jpeg)'
+  id: totrans-40
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00119.jpeg)'
 - en: Once this is done, you should have a file called `Example.dex` in your current
     directory; this is the DEX version of `Example.class`.
+  id: totrans-41
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 完成这些后，你应在当前目录中拥有一个名为`Example.dex`的文件；这是`Example.class`的DEX版本。
 - en: How it works...
+  id: totrans-42
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: In step 1, we did what Java developers do every day and what describes Java
     objects; our object was called `Example`.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 在第一步中，我们做了Java开发人员每天都会做的事情，描述了Java对象；我们的对象名为`Example`。
 - en: In step 2, we compiled `Example.java` into a class file. What happens here is
     that the Java compiler grabs the nice semantic code we've written and parses it
     into a bunch of stack-based instructions for the Java Virtual Machine.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 在第二步中，我们将`Example.java`编译成了类文件。这里发生的情况是，Java编译器获取我们编写的漂亮的语义代码并将其解析成一系列基于栈的Java虚拟机指令。
 - en: 'In step 3, we took the `CLASS` file, with its Java metadata and stack-based
     instructions, and prepared a collection of resources, data structures, and register-based
     instructions that the Dalvik VM understands as a DEX file. Here''s a breakdown
     of the `dx` commands we used:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 在第三步中，我们取`CLASS`文件，以及它的Java元数据和基于栈的指令，准备了一组资源、数据结构和Dalvik虚拟机能理解的基于寄存器的指令集合。以下是使用的`dx`命令的分解说明：
 - en: '`-dex`: This command tells `dx` that you''d like to create a DEX file'
+  id: totrans-46
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-dex`：这个命令告诉`dx`你想创建一个DEX文件'
 - en: '`-output=Example.dex`: This directive lets `dx` know that we want the output
     of the proceedings to go into a file named `Example.dex`'
+  id: totrans-47
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`-output=Example.dex`：这个指令让`dx`知道我们希望将输出结果放入名为`Example.dex`的文件中。'
 - en: '`Example.class`: This is the input file, namely, the `class` file we compiled
     in step 2'
+  id: totrans-48
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Example.class`：这是输入文件，即我们在第二步中编译的`class`文件'
 - en: Decompiling DEX files
+  id: totrans-49
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 反编译DEX文件
 - en: DEX files, or Dalvik Executable files, are the Android equivalent of Java's
     `CLASS` files. They include the compiled format of the Java code that defines
     an Android application's behavior, and as an Android security specialist to be,
@@ -269,96 +369,145 @@
     how each field in the DEX file is used and interpreted. It then moves on to discuss
     how to decompile a DEX file back into the Java source code for easy reading and
     reverse engineering.
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: DEX文件，或称Dalvik可执行文件，是Java中`CLASS`文件在Android平台上的等价物。它们包含了定义Android应用程序行为的Java代码的编译格式。作为即将成为的Android安全专家，你自然会感兴趣了解这些文件是如何工作的以及它们究竟有什么用途。对DEX文件进行反编译是许多应用程序进行安全评估的一个重要部分；它们提供了关于Android应用程序行为的大量信息，并且常常能揭示从源代码视角无法获得的关于应用程序开发的信息。对DEX文件格式有一个良好的理解，并知道如何解释它，可能会导致发现新的漏洞，或者针对Android平台和Dalvik虚拟机的攻击利用的开发与改进。恶意软件可能很快就会开始利用DEX文件解释的方式来隐藏与其行为相关的细节。而只有那些真正了解DEX文件如何工作的少数有识之士，才能掌握新的Android恶意软件混淆技术，并拥有挫败它们所需的技能。本指南包括对DEX文件格式的详细分解，描述了DEX文件中每个字段的使用和解释方法。然后，它继续讨论如何将DEX文件反编译回易于阅读和逆向工程的Java源代码。
 - en: Understanding the DEX file format
+  id: totrans-51
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 理解DEX文件格式
 - en: This recipe is dedicated to breaking down and describing each important section
     of the DEX file. It walks through each field, and works straight from the Dalvik
     source code used to interpret the DEX files.
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 本指南专门用于分解和描述DEX文件每个重要部分。它逐个字段进行讲解，并直接基于用于解释DEX文件的Dalvik源代码进行分析。
 - en: 'The next few paragraphs provide information about where the different sections
     of the DEX file occur, such as where to find references to printable strings and
     where the actual DEX code for each compiled class are to be found. DEX files have
     a fairly simple and easy-to-understand format. The structure of the DEX files
     is as follows:'
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来的几段提供了关于DEX文件不同部分出现位置的信息，例如在哪里可以找到对可打印字符串的引用，以及每个编译类的实际DEX代码的位置。DEX文件有一个相当简单且易于理解的格式。DEX文件的结构如下：
 - en: '[PRE5]'
+  id: totrans-54
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Note
+  id: totrans-55
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The previous code is available at [https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h).
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 上述代码可以在[https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h)找到。
 - en: The DEX file header
+  id: totrans-57
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: DEX文件头
 - en: 'The very first section of a DEX file is called the the DEX file header. The
     following is the definition of the DEX file header according to `libdex` in the
     Dalvik VM:'
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: DEX文件的第一部分称为DEX文件头。以下是根据Dalvik虚拟机中的`libdex`对DEX文件头的定义：
 - en: '[PRE6]'
+  id: totrans-59
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'The data types `u1` and `u4` are merely aliases for unsigned integer types.
     Here are the type definitions in the `Common.h` header file of the Dalvik VM itself:'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 数据类型`u1`和`u4`只是无符号整数类型的别名。以下是Dalvik虚拟机本身的`Common.h`头文件中的类型定义：
 - en: '[PRE7]'
+  id: totrans-61
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Note
+  id: totrans-62
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The previous code is available at [https://github.com/android/platform_dalvik/blob/master/vm/Common.h](https://github.com/android/platform_dalvik/blob/master/vm/Common.h).
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 上述代码可以在[https://github.com/android/platform_dalvik/blob/master/vm/Common.h](https://github.com/android/platform_dalvik/blob/master/vm/Common.h)找到。
 - en: So, that gets the preliminaries out of the way. You now have a basic idea of
     what a DEX file looks like, and a basic grasp of where everything goes. The next
     few paragraphs break down exactly what each of the sections are for and how the
     Dalvik VM makes use of them.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样，我们就可以把预备工作做好。你现在对DEX文件的外观有了基本的了解，也对每个部分的位置有了一个基本的掌握。接下来的几段将详细解释每个部分的作用以及Dalvik虚拟机是如何使用它们的。
 - en: 'To start off, the first field in a DEX file is defined as follows:'
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，DEX文件中的第一个字段定义如下：
 - en: '[PRE8]'
+  id: totrans-66
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: '`magic[8]` holds a "marker", commonly referred to as a magic number, which
     holds a collection of characters unique to the DEX files. The magic number for
     the DEX files is `dex\n035`, or in hexadecimals, `64 65 78 0a 30 33 35 00`.'
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: '`magic[8]`保存一个“标记”，通常称为魔数，它保存了一组DEX文件独有的字符。DEX文件的魔数是`dex\n035`，或者用十六进制表示，`64
+    65 78 0a 30 33 35 00`。'
 - en: 'Here''s a screenshot of `classes.dex` showing the magic number in hexadecimals:'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是`classes.dex`的截图，显示了魔数以十六进制表示：
 - en: '![The DEX file header](img/00120.jpeg)'
+  id: totrans-69
   prefs: []
   type: TYPE_IMG
+  zh: '![DEX文件头](img/00120.jpeg)'
 - en: 'The next field is defined as follows:'
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个字段定义如下：
 - en: '[PRE9]'
+  id: totrans-71
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'The following screenshot shows the Adler32 checksum as it would appear in the
     DEX file:'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的截图显示了DEX文件中Adler32校验和的样子：
 - en: '![The DEX file header](img/00121.jpeg)'
+  id: totrans-73
   prefs: []
   type: TYPE_IMG
+  zh: '![DEX文件头](img/00121.jpeg)'
 - en: This 4-byte field is a checksum of the entire header. A checksum is the result
     of a collection of **exclusive ORs** (**XORs** ) and addition operations performed
     on the bits that make up the header. It is checked to make sure no corruption
@@ -367,79 +516,117 @@
     how the rest of the DEX file is interpreted and acts as a roadmap for the rest
     of interpretation. Due to this, Dalvik uses the `DexHeader` file to locate the
     rest of the components of the DEX file.
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个4字节字段是整个头的校验和。校验和是对组成头的位执行一系列**异或（**XORs**）和加法操作的结果。它被检查以确保`DexHeader`文件内容没有损坏或错误更改。确保这个头没有被破坏非常重要，因为它决定了如何解释DEX文件的其他部分，并作为其余解释的路线图。因此，Dalvik使用`DexHeader`文件来定位DEX文件的其他组件。
 - en: 'The next field is a 21-byte **Secure Hashing Algorithm** (**SHA**) signature,
     defined as follows:'
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个字段是一个21字节的**安全散列算法**（SHA）签名，定义如下：
 - en: '[PRE10]'
+  id: totrans-76
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'The following screenshot shows the SHA digest as it would appear in the DEX
     file:'
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的截图显示了SHA摘要如何在DEX文件中出现：
 - en: '![The DEX file header](img/00122.jpeg)'
+  id: totrans-78
   prefs: []
   type: TYPE_IMG
+  zh: '![DEX文件头](img/00122.jpeg)'
 - en: '`kSHA1DigestLen` is defined as `20`, if you haven''t already guessed. This
     is because the block length of SHA1 is standardized as `20`. This digest, according
     to a small comment in the Dalvik code, is used to uniquely identify the DEX file
     and is computed in the section of the DEX file after the signature. The section
     of the DEX file on which this SHA digest is computed is where all the address
     offsets and other size parameters are specified and what they refer to.'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: '`kSHA1DigestLen`定义为`20`，如果你还没猜到的话。这是因为SHA1的块长度被标准化为`20`。根据Dalvik代码中的一小段注释，这个摘要用于唯一标识DEX文件，并在签名后的DEX文件部分计算。计算SHA摘要的DEX文件部分是指定所有地址偏移和其他大小参数的地方，以及它们所引用的内容。'
 - en: 'Following the SHA digest field is the `fileSize` field, which is defined as
     follows:'
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: SHA摘要字段之后是`fileSize`字段，定义如下：
 - en: '[PRE11]'
+  id: totrans-81
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'The following screenshot shows the `fileSize` field as it would appear in the
     DEX file:'
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的截图显示了`fileSize`字段在DEX文件中的样子：
 - en: '![The DEX file header](img/00123.jpeg)'
+  id: totrans-83
   prefs: []
   type: TYPE_IMG
+  zh: '![DEX文件头](img/00123.jpeg)'
 - en: 'The `fileSize` field is a 4-byte field which holds the length of the entire
     DEX file. This field is used to help calculate offsets and locate certain sections
     easily. It also helps to uniquely identify the DEX file because it forms part
     of the section of the DEX file that is fed into the secure hashing operation:'
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: '`fileSize`字段是一个4字节字段，保存整个DEX文件的长度。这个字段用于帮助计算偏移量，轻松定位某些部分。它还帮助唯一标识DEX文件，因为它构成了DEX文件的一部分，这部分被送入安全散列操作：'
 - en: '[PRE12]'
+  id: totrans-85
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'The following screenshot shows the `headerSize` field as it would appear in
     the DEX file:'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的截图显示了`headerSize`字段在DEX文件中的样子：
 - en: '![The DEX file header](img/00124.jpeg)'
+  id: totrans-87
   prefs: []
   type: TYPE_IMG
+  zh: '![DEX文件头](img/00124.jpeg)'
 - en: '`headerSize` holds the length of the entire `DexHeader` structure in bytes
     and as the comment suggests, it''s used to help calculate its position in the
     file that marks the start of the next section.'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: '`headerSize`保存整个`DexHeader`结构的大小（以字节为单位），正如注释所提示，它用于帮助计算文件中下一个部分开始的位置。'
 - en: 'The following field in the DEX file is the endianness tag, which is defined
     as follows:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: DEX文件中的下一个字段是字节序标签，定义如下：
 - en: '[PRE13]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'The following screenshot shows the `endianTag` field of a sample `classes.dex`
     file:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的截图显示了示例`classes.dex`文件的`endianTag`字段：
 - en: '![The DEX file header](img/00125.jpeg)'
+  id: totrans-92
   prefs: []
   type: TYPE_IMG
+  zh: '![DEX文件头](img/00125.jpeg)'
 - en: The `endianTag` field holds a static value that is the same across all DEX files.
     The value of this field, `12345678`, is used to make sure the file is being interpreted
     with the right "endianness" or bit order. Some architectures prefer their most
@@ -447,41 +634,64 @@
     to as the endianness of an architecture. This field helps identify which one the
     architecture uses, by allowing the Dalvik VM to read the value and check which
     order the numbers in the field appear in.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: '`endianTag`字段保存一个在所有DEX文件中相同的静态值。此字段的值`12345678`用于确保文件以正确的“字节序”或位顺序进行解释。一些架构更喜欢将最有效位向左，而另一些则喜欢向右；这称为架构的字节序。此字段通过允许Dalvik
+    VM读取值并检查字段中数字出现的顺序，帮助确定架构使用的是哪一个。'
 - en: 'The `linkSize` and `linkOff` fields are next; they are used when multiple class
     files are compiled into one DEX File:'
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来的`linkSize`和`linkOff`字段；当多个类文件编译成一个DEX文件时使用它们：
 - en: '[PRE14]'
+  id: totrans-95
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'The map section offset is next and is defined as follows:'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一部分是映射部分偏移量，定义如下：
 - en: '[PRE15]'
+  id: totrans-97
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'The next field, `stringIdsSize`, is defined as follows:'
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个字段`stringIdsSize`定义如下：
 - en: '[PRE16]'
+  id: totrans-99
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: '![The DEX file header](img/00126.jpeg)'
+  id: totrans-100
   prefs: []
   type: TYPE_IMG
+  zh: '![DEX文件头](img/00126.jpeg)'
 - en: The `stringIdsSize` field holds the size of the `StringIds` section and is used
     in the same style as the other size fields to help calculate the starting position
     of the `StringIds` section, with respect to the start of the DEX file.
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: '`stringIdsSize`字段保存了`StringIds`部分的大小，其使用方式与其他大小字段相同，有助于计算`StringIds`部分相对于DEX文件开头的起始位置。'
 - en: 'The next field, `stringIdsOff`, is defined as follows:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个字段`stringIdsOff`定义如下：
 - en: '[PRE17]'
+  id: totrans-103
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'This field holds the offset in bytes to the actual `stringIds` section. It
     helps the Dalvik compiler and the virtual machine to jump into this section without
     doing any rigorous computation or having to re-read the file over and over again
@@ -494,139 +704,204 @@
     would come down to either re-reading the file multiple times or doing a few simple
     additions and subtractions on a relative starting address. Here are the definitions
     for the size and offset fields:'
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: '此字段保存到实际`stringIds`部分的字节偏移量。它帮助Dalvik编译器和虚拟机跳转至此部分，而无需进行任何严格计算或反复读取文件以找到`stringIds`部分。在`StringIdsOff`字段之后是类型、原型、方法、类和数据ID部分的相同偏移量和大小字段——这些属性具有与`stringIds`和`stringIdsOff`字段完全相同的大小和偏移字段。这些字段的目的与`stringIdsOff`和`stringIdsSize`字段相同，除了它们旨在为访问相关部分提供高效和简单的机制。如前所述，这意味着它将归结为要么多次重新读取文件，要么对相对起始地址进行一些简单的加法和减法。以下是大小和偏移字段定义： '
 - en: '[PRE18]'
+  id: totrans-105
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: All of these size and offset fields hold values that are to be interpreted as,
     or hold values that need to form a part of, the computation on addresses that
     defer positions inside a DEX file. This is the primary reason why all of them
     have the same type definition, namely, an unsigned 4-byte integer field.
+  id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有这些大小和偏移字段保存的值都是要解释为，或包含需要形成DEX文件内部位置计算的一部分的值。这是它们都具有相同类型定义的主要原因，即无符号4字节整数字段。
 - en: The StringIds section
+  id: totrans-107
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: StringIds部分
 - en: 'The `StringIds` section is purely composed out of a collection of addresses—or
     identification numbers with respect to the Dalvik nomenclature—relative to the
     start of the DEX file to be used for finding the starting positions of the actual
     static strings defined in the `Data` section. According to `libdex` in the Dalvik
     VM, the fields in the `StringIds` section are defined as follows:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: '`StringIds`部分完全由一系列地址组成——相对于Dalvik命名法的识别号——相对于DEX文件开头的位置，用于查找在`Data`部分定义的实际静态字符串的起始位置。根据Dalvik
+    VM中的`libdex`，`StringIds`部分中的字段定义如下：'
 - en: '[PRE19]'
+  id: totrans-109
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'All of these definitions say that every string ID is simply an unsigned 4-byte
     field, which is no surprise since they are all offset values like those found
     in the `DexHeader` section. Here''s a screenshot of the `StringIds` section from
     a sample `classes.dex` file:'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有这些定义都表明，每个字符串ID只是一个无符号的4字节字段，这并不奇怪，因为它们都是像`DexHeader`部分中找到的偏移值。以下是从一个示例`classes.dex`文件中的`StringIds`部分的截图：
 - en: '![The StringIds section](img/00127.jpeg)'
+  id: totrans-111
   prefs: []
   type: TYPE_IMG
+  zh: '![StringIds段](img/00127.jpeg)'
 - en: 'In the preceding screenshot, the values that are highlighted are the addresses
     previously referred to, or values from the `StringIDs` section. If you were to
     grab one of the values, read them with the correct endianness, and skip down the
     DEX file to the section with the offset of this value, you would end up in a section
     that looks like the following screenshot:'
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的截图中，突出显示的值是之前提到过的地址，或来自`StringIDs`段的值。如果你取其中一个值，用正确的字节序读取它们，并跳到DEX文件中这个值的偏移所在的段，你最终会进入一个看起来像下面截图的段：
 - en: '![The StringIds section](img/00128.jpeg)'
+  id: totrans-113
   prefs: []
   type: TYPE_IMG
+  zh: '![StringIds段](img/00128.jpeg)'
 - en: 'As you can see, the sampled value that reads `00 00 01 8a`, because of the
     endianness of the file format, actually points to a string in the DEX file. The
     following screenshot shows us what''s at offset `0x018a` in the DEX file:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，读取`00 00 01 8a`的样本值，由于文件格式的字节序，实际上指向了DEX文件中的字符串。以下截图显示了DEX文件中偏移`0x018a`位置的内容：
 - en: '![The StringIds section](img/00129.jpeg)'
+  id: totrans-115
   prefs: []
   type: TYPE_IMG
+  zh: '![StringIds段](img/00129.jpeg)'
 - en: As you can see, location `0x018a` contains the value `3c 69 6e 69 74 3e 00`,
     which is actually the hexadecimal equivalent of `<init>`.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，位置`0x018a`包含的值`3c 69 6e 69 74 3e 00`实际上是`<init>`的十六进制等价。
 - en: 'This is basically the same process the compilers, decompilers, and the Dalvik
     VM go through when they look up string values. Here''s an extract of the code
     from `libdex` that does just that:'
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 这基本上是编译器、反编译器和Dalvik VM在查找字符串值时所经历的过程。以下是来自`libdex`的代码提取，它正是这样做的：
 - en: '[PRE20]'
+  id: totrans-118
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: Note
+  id: totrans-119
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: '[PRE21]'
+  id: totrans-120
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: '[PRE22]'
+  id: totrans-121
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: Note
+  id: totrans-122
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The preceding code is available at [https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.cpp](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.cpp)
     (lines 269-274).
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 前面的代码可以在[https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.cpp](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.cpp)（第269-274行）找到。
 - en: The character array dereferenced by the pointer called `data` is the actual
     content of the DEX file. The preceding code snippets should demonstrate quite
     effectively how each of the `DexHeader` fields are used to find different positions
     in the DEX file; certain parts of the code are highlighted to show this.
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过名为`data`的指针解引用的字符数组是DEX文件的实际内容。前面的代码片段应该有效地展示了如何使用`DexHeader`字段找到DEX文件中的不同位置；代码中某些部分被突出显示以展示这一点。
 - en: The TypeIds section
+  id: totrans-125
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: '`TypeIds`段'
 - en: 'Next is the `TypeIds` section. This section holds information about how to
     find the string labels for each type. Before we get into how this works, let''s
     look at how `TypeIds` are defined:'
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来是`TypeIds`段。这个段包含了关于如何找到每种类型的字符串标签的信息。在我们了解这是如何工作的之前，让我们先看看`TypeIds`是如何定义的：
 - en: '[PRE23]'
+  id: totrans-127
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: Note
+  id: totrans-128
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The preceding code is available at [https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h)
     (lines 270-272).
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 前面的代码可以在[https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h)（第270-272行）找到。
 - en: 'As described by the comment, this value holds an ID, or rather, an index of
     something in the `StringIds` section, which is the string label of the type being
     described. Here''s an example that takes a sample value—the first one defined—from
     the `TypeIds` section:'
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 如注释所述，这个值持有一个ID，或者更确切地说，是`StringIds`段中某物的索引，这是被描述类型的字符串标签。以下是一个从`TypeIds`段中定义的第一个值——示例值的例子：
 - en: '![The TypeIds section](img/00130.jpeg)'
+  id: totrans-131
   prefs: []
   type: TYPE_IMG
+  zh: '![TypeIds段](img/00130.jpeg)'
 - en: 'The value, as before, is read as `03`. As done earlier, we need to respect
     the file''s endianness, which is an index to a value in the `StringIds` section,
     specifically, the fourth defined string ID in the `StringIds` section. It is as
     follows:'
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 像之前一样，这个值被读取为`03`。像之前一样，我们需要考虑文件的字节序，这是`StringIds`段中一个值的索引，具体来说，是`StringIds`段中第四个定义的字符串ID。如下所示：
 - en: '![The TypeIds section](img/00131.jpeg)'
+  id: totrans-133
   prefs: []
   type: TYPE_IMG
+  zh: '![TypeIds段](img/00131.jpeg)'
 - en: 'The fourth defined value is `0x01af`, which in turn dereferences this offset
     in the data section:'
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 第四个定义的值是`0x01af`，它进而对该值在数据段中的偏移进行解引用：
 - en: '![The TypeIds section](img/00132.jpeg)'
+  id: totrans-135
   prefs: []
   type: TYPE_IMG
+  zh: '![TypeIds段](img/00132.jpeg)'
 - en: In the previous screenshot, we can see the value `LExample`, which may seem
     a little strange since we clearly defined our class as `Example`. What does `L`
     mean? Well, this string is actually a description of the type as per the Dalvik
@@ -638,20 +913,28 @@
     lookup and build types, they follow the same basic procedure. Now that we understand
     how this section works, we can move on to the next section, namely, the `ProtoIds`
     section.
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一个截图中，我们可以看到值`LExample`，这可能会让人有点困惑，因为我们明确将我们的类定义为`Example`。`L`是什么意思？这个字符串实际上是按照Dalvik类型描述语言对类型的描述，这与Java的方法、类型和类签名非常相似。实际上，它的工作方式完全一样。关于Dalvik的类型、方法和其他描述或签名的完整分解可以在[http://source.android.com/devices/tech/dalvik/dex-format.html](http://source.android.com/devices/tech/dalvik/dex-format.html)找到。在我们的例子中，类名前的`L`值表示`Example`是一个类或对象的描述名称。当Dalvik编译器和虚拟机查找和构建类型时，它们遵循相同的基本过程。现在我们理解了这一部分是如何工作的，我们可以继续下一部分，即`ProtoIds`部分。
 - en: The ProtoIds section
+  id: totrans-137
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: ProtoIds部分
 - en: 'The `ProtoIds` section holds a collection of prototype IDs that are used to
     describe methods; they contain information about the return types and parameters
     for each method. The following is the command that you see in the `libdex` files:'
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ProtoIds`部分保存了一组原型ID，用于描述方法；它们包含有关每个方法的返回类型和参数的信息。以下是你在`libdex`文件中看到的命令：'
 - en: '[PRE24]'
+  id: totrans-139
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'The structure is pretty easy to understand. The unsigned 4-byte field called
     `shortyIdx` holds an index to a string ID defined in the `StringIds` section that
     gives a short description of the prototype; this description works almost the
@@ -661,31 +944,45 @@
     of the list of parameters for the method. Here''s a sample `ProtoIds` section
     from `Example.dex`. This is what the `ProtoIds` section looks like in our example
     DEX file:'
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 结构非常容易理解。名为`shortyIdx`的无符号4字节字段保存了一个字符串ID的索引，该字符串ID在`StringIds`部分中定义，用于给出原型的简短描述；这个描述几乎与Dalvik中的类型描述一样工作。如果你还没猜到，`returnTypeIdx`保存了一个索引，该索引解引用了`TypeIds`部分中的一个值。这是返回类型的描述。最后，`parametersOff`保存了方法参数列表的地址偏移量。以下是从`Example.dex`中的`ProtoIds`部分的示例。这是我们示例DEX文件中`ProtoIds`部分的样子：
 - en: '![The ProtoIds section](img/00133.jpeg)'
+  id: totrans-141
   prefs: []
   type: TYPE_IMG
+  zh: '![ProtoIds部分](img/00133.jpeg)'
 - en: The FieldIds section
+  id: totrans-142
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: FieldIds部分
 - en: 'The `FieldIds` section, much like the others, is composed of a collection of
     fields that reference `StringIds` and `TypeIds`, but is specifically targeted
     at describing the fields in a class. Here''s the official definition of a DEX
     file''s `FieldIds` from `libdex`:'
+  id: totrans-143
   prefs: []
   type: TYPE_NORMAL
+  zh: '`FieldIds`部分与其他部分类似，由一组引用`StringIds`和`TypeIds`的字段组成，但专门用于描述类中的字段。以下是来自`libdex`的DEX文件`FieldIds`的官方定义：'
 - en: '[PRE25]'
+  id: totrans-144
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: Note
+  id: totrans-145
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The preceding code is available at [https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h#L277](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h#L277).
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 上述代码可以在[https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h#L277](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h#L277)找到。
 - en: 'We can see three fields that make up the description of a type here, namely,
     the class it belongs to (identified by the class ID in the `classIdx` field),
     the type of the field (`string`, `int`, `bool`, and so on, detailed in the `TypeId`
@@ -694,99 +991,147 @@
     earlier. This value is, as with all of the string values, stored in the data section
     and dereferenced from the `StringIds` section with the value stored in `nameIdx`.
     Here''s a screenshot of our `FieldIds` section:'
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在这里可以看到三个字段构成了类型的描述，分别是它所属的类（由`classIdx`字段中的类ID标识）、字段的类型（如`string`、`int`、`bool`等，详细在`TypeId`中，并通过`typeIdx`变量中保存的值进行解引用），以及类型的名称，即我们之前讨论过的规范中的定义。这个值，与所有字符串值一样，存储在数据部分，并通过`StringIds`部分中存储在`nameIdx`中的值进行解引用。以下是我们`FieldIds`部分的截图：
 - en: '![The FieldIds section](img/00134.jpeg)'
+  id: totrans-148
   prefs: []
   type: TYPE_IMG
+  zh: '![字段ID部分](img/00134.jpeg)'
 - en: Let's move on to the next section, that is, the `MethodIds` section.
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们继续下一部分，即`MethodIds`部分。
 - en: The MethodIds section
+  id: totrans-150
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 方法ID部分
 - en: 'The fields for each method ID are defined as follows:'
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个方法ID的字段定义如下：
 - en: '[PRE26]'
+  id: totrans-152
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: Note
+  id: totrans-153
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The preceding code is available at [https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h#L286](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h#L286).
+  id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: 上述代码可以在[https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h#L286](https://github.com/android/platform_dalvik/blob/master/libdex/DexFile.h#L286)找到。
 - en: 'The class to which the method belongs is dereferenced by the value stored in
     the `classIdx` field. This works exactly in the same way as the `TypeIds` section.
     Also, each method has a prototype reference attached to it. This is stored in
     the `protoIdx` variable. And lastly, the `nameIdx` variable stores a reference
     to the characters that make up the definition of the method. Here''s an example
     definition of a method from our `Example.dex` file:'
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 方法所属的类通过`classIdx`字段中存储的值来解除引用。这完全与`TypeIds`部分的方式相同。此外，每个方法都有一个原型引用与之关联。这保存在`protoIdx`变量中。最后，`nameIdx`变量存储了对构成方法定义的字符的引用。以下是我们`Example.dex`文件中方法定义的一个示例：
 - en: '[PRE27]'
+  id: totrans-156
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'The best way to understand the previous definition is to read it from right
     to left. Breaking the definition down, it reads as follows:'
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 理解上述定义的最佳方式是从右向左阅读。分解这个定义，它读作如下：
 - en: '`V`: This indicates a void type, which is the return type of the method.'
+  id: totrans-158
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`V`: 这表示void类型，即方法的返回类型。'
 - en: '`()`: This denotes which type specification for the method parameters will
     follow.'
+  id: totrans-159
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`()`: 这表示接下来将指定方法参数的类型规范。'
 - en: '`java/lang/String;`: This is the identifier for the `String` class. Here, the
     first and only argument is a string.'
+  id: totrans-160
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`java/lang/String;`: 这是`String`类的标识符。这里，第一个也是唯一的参数是一个字符串。'
 - en: '`L`: This indicates that the type following this character is a class.'
+  id: totrans-161
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`L`: 这表明紧跟此字符的类型是一个类。'
 - en: '`[`: This indicates that the type following this character is an array of the
     specified type.'
+  id: totrans-162
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`[`: 这表明紧跟此字符的类型是指定类型的数组。'
 - en: So,putting this information together, the method returns a void and accepts
     an array of objects from the `String` class.
+  id: totrans-163
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，将这些信息综合起来，该方法返回void，并接受来自`String`类的对象数组。
 - en: 'Here''s a screenshot of the `MethodIds` section from our example:'
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是我们的示例中`MethodIds`部分的屏幕截图：
 - en: '![The MethodIds section](img/00135.jpeg)'
+  id: totrans-165
   prefs: []
   type: TYPE_IMG
+  zh: '![方法ID部分](img/00135.jpeg)'
 - en: The ClassDefs section
+  id: totrans-166
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 类定义部分
 - en: 'The `ClassDefs` section is defined as follows:'
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ClassDefs`部分定义如下：'
 - en: '[PRE28]'
+  id: totrans-168
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'These fields are pretty straightforward to understand, starting with the `classIdx`
     field, which, as the comment suggests, holds an index in the `TypeIds` section
     indicating the type of file. The `AccessFlags` field holds a number indicating
     how other objects are to access this class and also describes some of its purpose.
     Here''s how the flags are defined:'
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些字段相当容易理解，从`classIdx`字段开始，正如注释所暗示的，它在`TypeIds`部分中保存一个索引，表示文件类型。`AccessFlags`字段保存一个数字，表示其他对象如何访问此类，并描述了其某些用途。以下是标志定义的方式：
 - en: '[PRE29]'
+  id: totrans-170
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'The `superClassIDx` field also holds an index to a type in the `TypeIds` section
     and is used to describe the type of the super class. The `SourceFileIDx` field
     points into the `StringIds` section and allows the Dalvik to look up the actual
@@ -795,145 +1140,215 @@
     describes some more very important properties of the class, namely, where the
     code is found and how much code there is. The `classDataOff` field points to an
     offset holding one of these structures:'
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: '`superClassIDx`字段还包含一个指向`TypeIds`部分中类型的索引，用于描述超类的类型。`SourceFileIDx`字段指向`StringIds`部分，并允许Dalvik查找此类实际源代码的位置。对于`classDef`结构来说，另一个重要的字段是`classdataOff`，它指向Dalvik文件内部的一个偏移量，描述了类的更多重要属性，即代码的位置以及代码量。`classDataOff`字段指向包含以下结构的偏移量：'
 - en: '[PRE30]'
+  id: totrans-172
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'The `DexClassDataHeader` file holds some metadata about the class, namely,
     the size of the static fields, instance fields, the direct methods, and the virtual
     methods. Dalvik uses this information to calculate important parameters that determine
     the size of the memory each method has access to, and also forms part of the information
     needed to check the bytecode. An interesting group of fields here is `DexMethod`
     , which is defined as follows:'
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: '`DexClassDataHeader`文件包含有关类的元数据，即静态字段、实例字段、直接方法和虚拟方法的大小。Dalvik使用这些信息来计算每个方法可以访问的内存大小的重要参数，并且这也是检查字节码所需信息的一部分。这里一个有趣的字段组是`DexMethod`，定义如下：'
 - en: '[PRE31]'
+  id: totrans-174
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: This group holds the actual references to the code that makes up the classes.
     The code offsets are saved in the `codeOff` field; the `methodId` and `accessFlags`
     fields also form part of the structure along with this.
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个组包含了指向组成类的实际代码的引用。代码偏移量保存在`codeOff`字段中；`methodId`和`accessFlags`字段也是结构的一部分。
 - en: Now that we've discussed how most things fit together in an average DEX file,
     we can move on to decompiling them with some automated tools.
+  id: totrans-176
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们已经讨论了在普通DEX文件中大多数事物是如何结合在一起的，我们可以继续使用一些自动化工具来进行反编译。
 - en: Getting ready
+  id: totrans-177
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: You need to make sure you have a couple of tools set up before we begin with
     the decompilation, namely, the Android SDK.
+  id: totrans-178
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始反编译之前，你需要确保已经安装了几种工具，即安卓SDK。
 - en: How to do it…
+  id: totrans-179
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'Now that you understand the DEX file format and structure, you can decompile
     it using the `dexdump` utility by following the ensuing steps:'
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在你已经理解了DEX文件的格式和结构，你可以按照以下步骤使用`dexdump`工具进行反编译。
 - en: 'The Android SDK includes a tool called `dexdump` and it''s saved under the
     `sdk/build-tools/android-[version]/dexdump` folder of the SDK. To decompile a
     DEX file, all you need to do is pass it as an argument to `dexdump`. Here''s how
     you do that:'
+  id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓SDK包含一个名为`dexdump`的工具，它位于SDK的`sdk/build-tools/android-[version]/dexdump`文件夹下。要反编译DEX文件，只需将其作为参数传递给`dexdump`。以下是操作方法：
 - en: '[PRE32]'
+  id: totrans-182
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'Here, `[SDK-path]` would be the path to your SDK, and `classes.dex` would be
     the DEX file you want to parse. For our example, you would execute the following
     command to the file we compiled into Java code in one of the previous sections:'
+  id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，`[SDK-path]`指的是你的SDK路径，而`classes.dex`是你想要解析的DEX文件。对于我们之前的示例，你可以执行以下命令来编译我们在之前章节中的Java代码文件：
 - en: '[PRE33]'
+  id: totrans-184
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'The output for our example, would look as follows:'
+  id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们示例的输出如下所示：
 - en: '![How to do it…](img/00136.jpeg)'
+  id: totrans-186
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作…](img/00136.jpeg)'
 - en: There's more...
+  id: totrans-187
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多内容...
 - en: 'The Android SDK has another tool called `dx` that is capable of breaking down
     the DEX file in a way more native to the DEX file format. You''ll see why soon
     enough:'
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓SDK还有一个名为`dx`的工具，能够以更接近DEX文件格式的方式分解DEX文件。你很快就会明白为什么：
 - en: '![There''s more...](img/00137.jpeg)'
+  id: totrans-189
   prefs: []
   type: TYPE_IMG
+  zh: '![还有更多...](img/00137.jpeg)'
 - en: 'Unfortunately, `dx` only operates on the `CLASS` files and works by compiling
     them into DEX files and then performing the specified operations. So, if you have
     a `CLASS` file you''d like to work on, you can execute the following command to
     see the semantic structure and contents of the corresponding DEX file:'
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 不幸的是，`dx`只针对`CLASS`文件进行操作，通过将它们编译成DEX文件然后执行指定操作。因此，如果你有一个想要操作的`CLASS`文件，你可以执行以下命令来查看相应DEX文件的内容和语义结构：
 - en: '[PRE34]'
+  id: totrans-191
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: '`dx` can be found under the `sdk/build-tools/android-[version]/` path of the
     Android SDK package:'
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: '`dx`可以在Android SDK包的`sdk/build-tools/android-[version]/`路径下找到：'
 - en: '![There''s more...](img/00138.jpeg)'
+  id: totrans-193
   prefs: []
   type: TYPE_IMG
+  zh: '![还有更多...](img/00138.jpeg)'
 - en: 'For our example, namely, `Example.class`, the output would look as follows:'
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于我们的示例，即`Example.class`，输出将如下所示：
 - en: '[PRE35]'
+  id: totrans-195
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: The column to the left of the output details the file offsets and their contents
     in hexadecimal. The column to the right holds the semantic value and a breakdown
     of how each offset and value are interpreted.
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 输出左侧的列以十六进制详细列出了文件偏移量及其内容。右侧的列则包含了语义值以及每个偏移量和值的解释。
 - en: Please note that some of the output has been omitted for the sake of brevity;
     only the section containing everything from the `DexHeader` file has been included.
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，为了简洁起见，部分输出已被省略；只包含了包含`DexHeader`文件在内的部分。
 - en: See also
+  id: totrans-198
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Dex File Format – RetroDev* webpage at [http://www.retrodev.com/android/dexformat.html](http://www.retrodev.com/android/dexformat.html)
+  id: totrans-199
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*DEX文件格式 - RetroDev*网页：[http://www.retrodev.com/android/dexformat.html](http://www.retrodev.com/android/dexformat.html)'
 - en: The *Smali Decompiler – Google Code* webpage at [https://code.google.com/p/smali/](https://code.google.com/p/smali/)
+  id: totrans-200
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 访问 [*Smali Decompiler – Google Code* 网页](https://code.google.com/p/smali/)
 - en: '*Decompiling Android* by *Godfrey Nolan*, Apress'
+  id: totrans-201
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*Godfrey Nolan* 编著的《*Decompiling Android*》，Apress 出版'
 - en: The *Practicing Safe Dex* document at [http://www.strazzere.com/papers/DexEducation-PracticingSafeDex.pdf](http://www.strazzere.com/papers/DexEducation-PracticingSafeDex.pdf)
+  id: totrans-202
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 阅读 [*Practicing Safe Dex* 文档](http://www.strazzere.com/papers/DexEducation-PracticingSafeDex.pdf)
 - en: The Android Dalvik Kernel Source Code Repository webpage at [https://github.com/android/platform_dalvik/tree/master/libdex](https://github.com/android/platform_dalvik/tree/master/libdex)
+  id: totrans-203
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 访问 [Android Dalvik 内核源代码仓库网页](https://github.com/android/platform_dalvik/tree/master/libdex)
 - en: The *Dalvik Executable Format – Android Open Source Project* document at [http://source.android.com/devices/tech/dalvik/dex-format.html](http://source.android.com/devices/tech/dalvik/dex-format.html)
+  id: totrans-204
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 阅读 [*Dalvik 可执行格式 – Android 开放源代码项目* 文档](http://source.android.com/devices/tech/dalvik/dex-format.html)
 - en: Interpreting the Dalvik bytecode
+  id: totrans-205
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 解释 Dalvik 字节码
 - en: You may know by now that the Dalvik VM is slightly different in structure and
     operation as compared to the Java VM; its file and instruction formats are different.
     The Java VM is stack-based, meaning bytecode (the code format is named this way
@@ -944,25 +1359,36 @@
     calls to another method. For more details on the design and general caveats of
     the Dalvik code format, refer to the entry named *General Design—Bytecode for
     the Dalvik VM, Android Open Source project* in the *See also* section.
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能已经了解到，Dalvik VM 在结构和操作上与 Java VM 略有不同；其文件和指令格式也有所区别。Java VM 是基于栈的，这意味着字节码（之所以这样命名，是因为每条指令都是一个字节长）通过在栈上推入和弹出指令来工作。Dalvik
+    字节码被设计成类似于 x86 指令集；它还使用了一种类似 C 语言风格的调用约定。你很快就会看到每种调用方法是如何在调用另一个方法之前负责设置参数的。有关
+    Dalvik 代码格式的设计和一般注意事项的更多详细信息，请参阅*另请参阅*部分中名为 *General Design—Bytecode for the Dalvik
+    VM, Android Open Source project* 的条目。
 - en: Interpreting bytecode means actually being able to understand how the instruction
     format works. This section is dedicated to provide you with the references and
     tools you need to understand the Dalvik bytecode. Let's dig into the bytecode
     format and find out how it works and what it all means.
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 解释字节码意味着实际上能够理解指令格式是如何工作的。这一节旨在为你提供理解 Dalvik 字节码所需的参考和工具。让我们深入研究字节码格式，了解其工作原理以及所有这些都意味着什么。
 - en: Understanding the Dalvik bytecode
+  id: totrans-208
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 理解 Dalvik 字节码
 - en: Before jumping into bytecode specifics, it's important to establish some context.
     We need to understand a little about how a bytecode is executed. This will help
     you understand the attributes of the Dalvik bytecode and determine the difference
     between knowing what a piece bytecode is and what a piece of bytecode means in
     a given context of execution, which is a very valuable skill.
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 在深入字节码的具体内容之前，了解一些背景知识是很重要的。我们需要了解字节码是如何执行的。这将帮助你理解 Dalvik 字节码的属性，并确定在给定执行上下文中，了解一个字节码是什么与它意味着什么之间的区别，这是一项非常有价值的技能。
 - en: The Dalvik machine executes methods one-by-one, branching between methods where
     necessary, for instance, when one method invokes another. Each method can then
     be thought of as an independent instance of the Dalvik VM's execution. Each of
@@ -977,37 +1403,53 @@
     called **registers**, which are used to perform operations such as adding, multiplying,
     and moving values around, which may sometimes mean passing arguments to other
     methods, such as object constructors.
+  id: totrans-210
   prefs: []
   type: TYPE_NORMAL
+  zh: Dalvik 虚拟机逐个执行方法，必要时在方法间进行分支跳转，例如当一个方法调用另一个方法时。每个方法可以被视为 Dalvik VM 执行的独立实例。每个方法都有一个私有的内存空间，称为**栈帧**，它包含足够的空间以容纳执行该方法所需的数据。每个栈帧还包含对
+    DEX 文件的引用；自然地，方法需要这个引用以便引用 TypeIds 和对象定义。它还持有一个程序计数器实例的引用，这是一个控制执行流程的寄存器，可用于跳转到其他执行流程。例如，在执行
+    "if" 语句时，根据比较结果，方法可能需要在不同的代码部分之间跳转。栈帧还包含称为**寄存器**的区域，这些寄存器用于执行诸如加、乘、移动值等操作，有时这也意味着将参数传递给其他方法，如对象构造函数。
 - en: A bytecode consists of a collection of operators and operands, with each operator
     performing a specific action on the operands supplied to it. Some of the operators
     also summarize complex operations, such as invoking methods. The simple and atomic
     nature of these operators is the reason they are so robust, easy to read and understand,
     and supportive of a complex high-level language such as Java.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 字节码由一系列操作符和操作数组成，每个操作符对其提供的操作数执行特定操作。一些操作符还概括了复杂的操作，如调用方法。这些操作符的简单和原子性是它们如此健壮、易于阅读和理解，并支持像
+    Java 这样复杂的高级语言的原因。
 - en: 'An important thing to note about Dalvik, as with all intermediate code representations,
     is the order of the operands for the Dalvik bytecode. The destination of the operation
     always appears before the source for the relevant operators, for instance, take
     an operation such as the following:'
+  id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 关于 Dalvik 需要注意的一个重要事项，与所有中间代码表示一样，是 Dalvik 字节码的操作数的顺序。对于相关操作，操作的目标总是出现在源操作数之前。例如，以下操作的顺序：
 - en: '[PRE36]'
+  id: totrans-213
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: This means that the contents of register B will be placed in register A. A popular
     jargon for this order is "Destination-then-Source"; this means the destination
     of the result of the operation appears first, followed by the operand that specifies
     the source.
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 这意味着寄存器 B 的内容将被放置在寄存器 A 中。这种顺序的流行术语是"目标-然后-源"；这意味着操作结果的 目标首先出现，然后是指定源的 操作数。
 - en: Operands can be registers, of which each method, an instance of independent
     execution, has a collection of registers. Operands may also be literal values
     (signed/unsigned integers of a specified size) or instances of a given type. For
     non-primitive types such as strings, the bytecode dereferences a type defined
     in the `TypeIds` section.
+  id: totrans-215
   prefs: []
   type: TYPE_NORMAL
+  zh: 操作数可以是寄存器，每个方法（独立执行的实例）都有一组寄存器。操作数还可以是字面值（指定大小的有符号/无符号整数）或给定类型的实例。对于如字符串这样的非原始类型，字节码会引用在
+    `TypeIds` 部分定义的类型。
 - en: There are a number of instruction formats that dictate how many registers and
     number of type instances can be used as arguments for given opcodes. You can find
     these specifics at [http://source.android.com/devices/tech/dalvik/instruction-formats.html](http://source.android.com/devices/tech/dalvik/instruction-formats.html).
@@ -1015,212 +1457,306 @@
     in the Dalvik instruction set and its specifics is merely an implementation of
     one of the opcode formats. Try to understand the format IDs because they make
     for very useful short-hand while reading the instruction formats.
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 有多种指令格式决定了给定操作码可以使用多少寄存器和类型实例作为参数。你可以在[http://source.android.com/devices/tech/dalvik/instruction-formats.html](http://source.android.com/devices/tech/dalvik/instruction-formats.html)找到这些详细信息。阅读这些定义是非常值得的，因为Dalvik指令集中的每个操作码及其详细信息仅是操作码格式的一种实现。尝试理解格式ID，因为它们在阅读指令格式时非常有用。
 - en: After covering some of the basics, and trusting that you've at least skimmed
     the opcodes and opcode formats, we can move on to dumping some bytecode in a way
     that makes it semantic to read.
+  id: totrans-217
   prefs: []
   type: TYPE_NORMAL
+  zh: 在了解了基础知识之后，相信你已经至少浏览了操作码和操作码格式，我们可以继续以使字节码具有语义性的方式来转储它。
 - en: Getting ready
+  id: totrans-218
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Before we start, you will need the Smali decompiler, which is called baksmali.
     As an added convenience, we will now go over how to set up your path variable
     so that you can use the baksmali scripts and a JAR file from anywhere on your
     machine without referencing it canonically every single time. Here''s how you
     set it up:'
+  id: totrans-219
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始之前，你需要一个名为baksmali的Smali反编译器。为了方便起见，我们将介绍如何设置你的路径变量，以便你可以从计算机的任何位置使用baksmali脚本和JAR文件，而无需每次都明确引用它。以下是设置方法：
 - en: Grab a copy of the baksmali JAR file at [https://code.google.com/p/smali/downloads/list](https://code.google.com/p/smali/downloads/list),
     or from the newer repository at [https://bitbucket.org/JesusFreke/smali/download](https://bitbucket.org/JesusFreke/smali/download).
     Look specifically for the `baksmali[version].jar` file—where `[version]` is the
     latest available version.
+  id: totrans-220
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在[https://code.google.com/p/smali/downloads/list](https://code.google.com/p/smali/downloads/list)，或新仓库[https://bitbucket.org/JesusFreke/smali/download](https://bitbucket.org/JesusFreke/smali/download)获取baksmali
+    JAR文件的副本。特别寻找`baksmali[version].jar`文件——其中`[version]`是最新可用的版本。
 - en: Save it in some conveniently-named directory, because to have the two files
     you need to download will need to be in the same directory makes things a whole
     lot easier.
+  id: totrans-221
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将其保存在一个方便命名的目录中，因为需要下载的两个文件在同一个目录中会让事情简单得多。
 - en: Download the baksmali wrapper script; it allows you to avoid invoking the `java
     –jar` command explicitly every time you need to run the baksmali JAR. You can
     grab a copy of the script at [https://code.google.com/p/smali/downloads/list](https://code.google.com/p/smali/downloads/list),
     or from the newer repository at [https://bitbucket.org/JesusFreke/smali/downloads](https://bitbucket.org/JesusFreke/smali/downloads).
     Save it in the same directory as the baksmali JAR file. This step does not apply
     to Windows users, since it's a bash script file.
+  id: totrans-222
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下载baksmali包装脚本；它允许你避免每次需要运行baksmali JAR时都显式调用`java –jar`命令。你可以在[https://code.google.com/p/smali/downloads/list](https://code.google.com/p/smali/downloads/list)或新仓库[https://bitbucket.org/JesusFreke/smali/downloads](https://bitbucket.org/JesusFreke/smali/downloads)获取该脚本的副本。将其保存在与baksmali
+    JAR文件相同的目录下。此步骤不适用于Windows用户，因为这是一个bash脚本文件。
 - en: 'Change the name of the baksmali jar file to `baksmali.jar`, omitting the version
     number so that the wrapper script you''ve downloaded in step 2 will be able to
     find it. You can change the name using the following command on a Linux or Unix
     machine:'
+  id: totrans-223
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将baksmali jar文件的名称更改为`baksmali.jar`，省略版本号，以便你在步骤2中下载的包装脚本能够找到它。你可以在Linux或Unix机器上使用以下命令来更改名称：
 - en: '[PRE37]'
+  id: totrans-224
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: You can also do this using whatever window manager your operating system uses;
     as long as you change the name to `baksmali.jar`, you're doing it right!
+  id: totrans-225
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你也可以使用你的操作系统使用的任何窗口管理器；只要将名称更改为`baksmali.jar`，你就是正确操作的！
 - en: 'You then need to make sure that the baksmali script is executable. You can
     do this by issuing it the following command if you''re using a Unix or Linux operating
     system:'
+  id: totrans-226
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，你需要确保baksmali脚本可执行。如果你使用的是Unix或Linux操作系统，可以通过以下命令来设置：
 - en: '[PRE38]'
+  id: totrans-227
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: Add, the current folder to your default `PATH` variable.
+  id: totrans-228
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将当前文件夹添加到你的默认`PATH`变量中。
 - en: And you're all done! You can now decompile the DEX files! See the following
     section to find out how.
+  id: totrans-229
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 完成这些后，你可以反编译DEX文件了！查看下一节了解如何操作。
 - en: How to do it...
+  id: totrans-230
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: So, you've got baksmali all downloaded and set up, and you'd like to decompile
     some DEX files into the nice semantic syntax of smali; here's how you do that.
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，你已经下载并设置好了baksmali，想要将一些DEX文件反编译成语义丰富的smali语法；以下是操作方法。
 - en: 'Execute the following command from your terminal or command prompt:'
+  id: totrans-232
   prefs: []
   type: TYPE_NORMAL
+  zh: 从你的终端或命令提示符执行以下命令：
 - en: '[PRE39]'
+  id: totrans-233
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: '![How to do it...](img/00139.jpeg)'
+  id: totrans-234
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00139.jpeg)'
 - en: 'This command will output the contents for the DEX file as though it''s an inflated
     JAR file, but instead of class files, all of the source files will be `.smali`
     files containing a slight translation or dialect of the semantic Dalvik bytecode
     called smali:'
+  id: totrans-235
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个命令将输出DEX文件的内容，就像是一个被解压的JAR文件，但所有的源文件都是`.smali`文件，包含了一种名为smali的语义Dalvik字节码的轻微翻译或方言：
 - en: '![How to do it...](img/00140.jpeg)'
+  id: totrans-236
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00140.jpeg)'
 - en: 'Let''s take a look at the smali file generated by baksmali and walk through
     what each bytecode instruction means. The code is as follows:'
+  id: totrans-237
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看一下由baksmali生成的smali文件，并了解每条字节码指令的含义。代码如下：
 - en: '[PRE40]'
+  id: totrans-238
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'Please note that because baksmali, the Android Dalvik VM, and the Java language
     are constantly being improved, you may see slightly different results to the previous
     code sample. Don''t panic if you do; the preceding sample code is intended to
     merely be an example for you to learn from. You will still be able to apply the
     information in this chapter to the code your baksmali generates, whose first few
     lines are as follows:'
+  id: totrans-239
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，由于baksmali、Android的Dalvik虚拟机以及Java语言在持续改进，你可能会看到与之前代码示例略有不同的结果。如果你遇到了这种情况，不要慌张；之前的示例代码仅用于供你学习参考。你仍然可以将本章的信息应用到baksmali生成的代码中，其前几行如下所示：
 - en: '[PRE41]'
+  id: totrans-240
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'These are merely some metadata on the actual class being decompiled; they mention
     the class name, the source file, and the super class (the class that this method
     inherits from). You may notice from the code of `Example.java` that we never explicitly
     inherit from another class, though when decompiled, `Example.java` seems to have
     a parent: how is this possible? Well, because all Java classes inherit from `java.lang.Object`
     implicitly.'
+  id: totrans-241
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些只是关于实际被反编译的类的元数据；它们提到了类名、源文件和超类（这个方法继承的类）。你可能从`Example.java`的代码中注意到，我们从未显式地从另一个类继承，尽管在反编译时，`Example.java`似乎有一个父类：这是如何可能的？因为所有Java类都隐式地从`java.lang.Object`继承。
 - en: 'Moving on, the next bunch of lines are a little more interesting. They are
     the smali code for the constructor of `Example.java`:'
+  id: totrans-242
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，下一组行更有趣。它们是`Example.java`构造函数的smali代码：
 - en: '[PRE42]'
+  id: totrans-243
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: The first line, `.method public constructor <init>()V`, is a declaration of
     the method to follow. It says that the method called `init` returns a void type
     and has public access flags.
+  id: totrans-244
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一行，`.method public constructor <init>()V`，是接下来要声明的方法。它表示名为`init`的方法返回void类型，并且具有public访问标志。
 - en: 'The next line that contains the piece of code, namely:'
+  id: totrans-245
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来包含代码的那一行，即：
 - en: '[PRE43]'
+  id: totrans-246
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'Says that this method only makes use of one register. The method will know
     this because the number of registers it needs are decided before it is run. I''ll
     shortly mention the one register it needs. Following this is a line that looks
     like the following code:'
+  id: totrans-247
   prefs: []
   type: TYPE_NORMAL
+  zh: 这表示该方法只使用了一个寄存器。方法在运行前会知道需要多少个寄存器。我稍后会提到它需要的那个寄存器。接下来是一行看起来像以下代码的行：
 - en: '[PRE44]'
+  id: totrans-248
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'This declares that the method `prologue` follows, which is something every
     Java method has. It makes sure to call the inherited forms of the method, if there
     are any. This explains why the next line, containing the following code, seems
     to invoke another method called `init`:'
+  id: totrans-249
   prefs: []
   type: TYPE_NORMAL
+  zh: 这声明了接下来的方法是`prologue`，这是每个Java方法都有的。它确保调用继承形式的方法（如果有）。这解释了为什么下一行，包含以下代码，似乎调用了另一个名为`init`的方法：
 - en: '[PRE45]'
+  id: totrans-250
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'But this time it dereferences it from the `java.lang.Object` class. The `invoke-direct`
     method here accepts two arguments: the `p0` register and a reference to the method
     that needs to be called here. This is indicated by the `Ljava/lang/Object;-><init>()V`
     label. The description of the `invoke-direct` opcode is stated as follows:'
+  id: totrans-251
   prefs: []
   type: TYPE_NORMAL
+  zh: 但这次它从`java.lang.Object`类中取消引用。这里的`invoke-direct`方法接受两个参数：`p0`寄存器和需要调用的方法的引用。这由`Ljava/lang/Object;-><init>()V`标签指示。`invoke-direct`操作码的描述如下：
 - en: '"`invoke-direct` is used to invoke a non-static direct method (an instance
     method that is non-overridable by nature and is either a `private` instance method
     or a constructor)."'
+  id: totrans-252
   prefs: []
   type: TYPE_NORMAL
+  zh: '"`invoke-direct`用于调用一个非静态的直接方法（一个本质上不可覆盖的实例方法，要么是一个`private`实例方法，要么是一个构造函数）。"'
 - en: Note
+  id: totrans-253
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: An extract is available at [http://source.android.com/devices/tech/dalvik/dalvik-bytecode.html](http://source.android.com/devices/tech/dalvik/dalvik-bytecode.html).
+  id: totrans-254
   prefs: []
   type: TYPE_NORMAL
+  zh: 有关摘录可以在 [http://source.android.com/devices/tech/dalvik/dalvik-bytecode.html](http://source.android.com/devices/tech/dalvik/dalvik-bytecode.html)
+    找到。
 - en: So in summary, all it's doing is calling a non-static direct method that is
     the constructor of the `java.lang.Object` class.
+  id: totrans-255
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此总结一下，它所做的就是调用 `java.lang.Object` 类的构造函数，这是一个非静态直接方法。
 - en: 'Let''s move on to the next line of the smali code:'
+  id: totrans-256
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们继续看 smali 代码的下一行：
 - en: '[PRE46]'
+  id: totrans-257
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: It does exactly what it seems to, and that is, return a `void` type and exit
     the current method to return the flow of execution to whichever method invoked
     it.
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: 它所做的正如它看起来那样，即返回一个 `void` 类型并退出当前方法，将执行流程返回到调用它的方法。
 - en: The definition of this opcode as per the official website is "Return from a
     void method."
+  id: totrans-259
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据官方网站的定义，这个操作码是“从一个 void 方法返回”。
 - en: Nothing really complex about that. The next line, as with other lines beginning
     with the period (".") character, is a piece of metadata, or a footnote added by
     the smali decompiler, to help add some semantic information about the code. The
     `.end` method line marks the end of this method.
+  id: totrans-260
   prefs: []
   type: TYPE_NORMAL
+  zh: 这并没有什么复杂的。接下来以句点（"."）开头的行，像其他行一样，是一段元数据，或者是由 smali 反编译器添加的脚注，以帮助添加关于代码的一些语义信息。`.end`
+    方法行标记了此方法的结束。
 - en: 'The code for the main method follows. Here, you will see some code forms that
     will appear over and over again, namely, the code generated when arguments are
     passed to the methods and when they are invoked. Since Java is object-oriented,
@@ -1229,79 +1765,120 @@
     idea would be to learn to identify when this is happening by decompiling some
     Java code that does this to the smali code. The code for the main method is as
     follows:'
+  id: totrans-261
   prefs: []
   type: TYPE_NORMAL
+  zh: 主方法的代码如下。在这里，你会看到一些将反复出现的代码形式，即当参数传递给方法时以及调用它们时生成的代码。由于 Java 是面向对象的，当你调用另一个对象的方法时，你做的很多事情就是传递参数和从一种对象类型转换为另一种。因此，一个好主意是学习如何通过将执行这些操作的
+    Java 代码反编译为 smali 代码来识别这种情况。主方法的代码如下：
 - en: '[PRE47]'
+  id: totrans-262
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'According to the first line `.method public static main([Ljava/lang/String;)V`,
     the method accepts an array of the type `java.lang.String` and returns a void,
     indicated by the following:'
+  id: totrans-263
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据第一行 `.method public static main([Ljava/lang/String;)V`，该方法接受 `java.lang.String`
+    类型的数组并返回 void，如下所示：
 - en: '[PRE48]'
+  id: totrans-264
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: Proceeding to the method name, it also says that the main method is static and
     has public access flags.
+  id: totrans-265
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来看方法名称，它还指出主方法是静态的，并且具有 public 访问标志。
 - en: 'After the method header, we see the following piece of code, which shows that
     an `sget-object` operation is being formed:'
+  id: totrans-266
   prefs: []
   type: TYPE_NORMAL
+  zh: 在方法头之后，我们看到以下代码片段，它表明正在形成 `sget-object` 操作：
 - en: '[PRE49]'
+  id: totrans-267
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: The description of this opcode as per the official website is "Perform the identified
     object static field operation with the identified static field, loading or storing
     into the value register."
+  id: totrans-268
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据官方网站的描述，这个操作码是“使用指定的静态字段执行标识的对象静态字段操作，在值寄存器中进行加载或存储”。
 - en: 'According to the official documentation, the `sget-object` operation accepts
     two arguments:'
+  id: totrans-269
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据官方文档，`sget-object` 操作接受两个参数：
 - en: A register that Dalvik will use to store the result of the operation
+  id: totrans-270
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Dalvik 将使用一个寄存器来存储操作结果
 - en: An object reference to store in the mentioned register
+  id: totrans-271
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 用于存储在所述寄存器中的对象引用
 - en: 'So, what this really does is fetch an instance of an object and store it in
     a register. Here, this register is the first register called `v0`. The next line
     looks as follows:'
+  id: totrans-272
   prefs: []
   type: TYPE_NORMAL
+  zh: 这实际上是在获取一个对象实例并将其存储在寄存器中。在这里，这个寄存器是第一个名为 `v0` 的寄存器。下一行如下所示：
 - en: '[PRE50]'
+  id: totrans-273
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: The previous code shows the `const-string` instruction in action. What it does
     is fetch a string and save it in the register indicated by the first argument.
     This register is the second register in the main method's frame called `v1`. The
     definition of the `const-string` opcode as per the official website is "Move a
     reference to the string specified by the given index into the specified register."
+  id: totrans-274
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前的代码展示了 `const-string` 指令的作用。它的作用是获取一个字符串并将其保存在由第一个参数指示的寄存器中。这个寄存器是主方法框架中的第二个寄存器，名为
+    `v1`。根据官方网站，`const-string` 操作码的定义是“将指定索引的字符串引用移动到指定寄存器中”。
 - en: If it's not obvious enough, the string being fetched here is "Hello World\n".
+  id: totrans-275
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果这里不明显，那么正在获取的字符串是 "Hello World\n"。
 - en: 'Moving on, the next line is also part of the `const` opcode family and is being
     used here to move a `0` value into the third register named `v2`:'
+  id: totrans-276
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，下一行也是`const`操作码家族的一部分，在这里被用来将`0`值移入名为`v2`的第三个寄存器：
 - en: '[PRE51]'
+  id: totrans-277
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'This may seem a little random, but in the next line you''ll see why it needs
     the `0` value in the `v2` register. The code for the next line is as follows:'
+  id: totrans-278
   prefs: []
   type: TYPE_NORMAL
+  zh: 这看起来可能有些随意，但下一行你会明白为什么它需要在`v2`寄存器中有一个`0`值。下一行的代码如下：
 - en: '[PRE52]'
+  id: totrans-279
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: What the new array does is construct an array of a given type and size and save
     it in the first register from the left. Here this register is `v2`, so after this
     opcode has been executed, `v2` will hold an array of type `java.lang.Object` which
@@ -1310,27 +1887,39 @@
     to `v2` before the execution of this opcode, clear. The definition of this opcode,
     as per the official website is "Construct a new array of the indicated type and
     size. The type must be an array type."
+  id: totrans-280
   prefs: []
   type: TYPE_NORMAL
+  zh: 新数组的操作是构建一个给定类型和大小的数组，并将其保存在最左边的第一个寄存器中。在这里这个寄存器是`v2`，所以执行完这个操作码后，`v2`将保存一个类型为`java.lang.Object`且大小为`0`的数组；这是操作码第二个参数中`v2`寄存器的值。这也使得在执行此操作码之前将`0`值移入`v2`的操作变得清晰。根据官方网站的定义，这个操作码是“构建一个指定类型和大小的新的数组。类型必须是数组类型。”
 - en: 'The next line contains a very common opcode; make sure you know how this family
     of opcodes works because you''re going to see a lot of it. Moving on, the next
     line is as follows:'
+  id: totrans-281
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一行包含一个非常常见的操作码；确保你了解这个操作码家族的工作原理，因为你将会经常看到它。继续，下一行如下：
 - en: '[PRE53]'
+  id: totrans-282
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: The definition of the `invoke-virtual` opcode as per the official website is
     "`invoke-virtual` is used to invoke a normal virtual method (a method that is
     not `private`, `static`, or `final`, and is also not a constructor)."
+  id: totrans-283
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据官方网站的定义，`invoke-virtual`操作码是“用于调用一个普通的虚拟方法（一个不是`private`、`static`或`final`的方法，也不是构造函数）。”
 - en: 'The arguments for the `invoke-virtual` method work as follows:'
+  id: totrans-284
   prefs: []
   type: TYPE_NORMAL
+  zh: '`invoke-virtual`方法的参数如下工作：'
 - en: '[PRE54]'
+  id: totrans-285
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: Where `vC`, `vD`, `vE`, `vF`, and `vG` are the argument registers used to pass
     arguments to the method being invoked, which is dereferenced by the last argument
     `meth@BBBB`. This means it accepts a 16-bit method reference since each `B` field
@@ -1338,36 +1927,51 @@
     our code for `Example.smali` is it invokes a method called `java.io.PrintStream.printf`,
     which accepts an array of the type `java.lang.Object` and a `java.lang.String`
     object and returns an object of the type `java.io.PrintStream`.
+  id: totrans-286
   prefs: []
   type: TYPE_NORMAL
+  zh: 其中`vC`、`vD`、`vE`、`vF`和`vG`是用于传递参数给被调用方法的参数寄存器，由最后一个参数`meth@BBBB`进行解引用。这意味着它接受一个16位的
+    方法引用，因为每个`B`字段表示一个4位的字段。总之，这个操作码在我们的`Example.smali`代码中所做的是调用一个名为`java.io.PrintStream.printf`的方法，该方法接受一个类型为`java.lang.Object`的数组和一个`java.lang.String`对象，并返回一个类型为`java.io.PrintStream`的对象。
 - en: And that's it! You've just interpreted some smali code. It takes a bit of practice
     to get used to reading smali code. If you'd like to know more, check out the references
     in the *See also* section.
+  id: totrans-287
   prefs: []
   type: TYPE_NORMAL
+  zh: 就这样！你刚刚解读了一些smali代码。要习惯阅读smali代码需要一些练习。如果你想了解更多，请查看*另请参阅*部分中的参考资料。
 - en: See also
+  id: totrans-288
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *General Design—Bytecode for the Dalvik VM* Android Open Source Project
     at [http://source.android.com/devices/tech/dalvik/dalvik-bytecode.html](http://source.android.com/devices/tech/dalvik/dalvik-bytecode.html)
+  id: totrans-289
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*通用设计——Dalvik VM的字节码*，请访问[Android开源项目](http://source.android.com/devices/tech/dalvik/dalvik-bytecode.html)'
 - en: The *Introduction and Overview—Dalvik Instruction Formats* Android Open Source
     Project at [http://source.android.com/devices/tech/dalvik/instruction-formats.html](http://source.android.com/devices/tech/dalvik/instruction-formats.html)
+  id: totrans-290
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*介绍与概览——Dalvik指令格式*，请访问[Android开源项目](http://source.android.com/devices/tech/dalvik/instruction-formats.html)'
 - en: The *Analysis of Dalvik Virtual Machine and Class Path Library* document at
     [http://imsciences.edu.pk/serg/wp-content/uploads/2009/07/Analysis-of-Dalvik-VM.pdf](http://imsciences.edu.pk/serg/wp-content/uploads/2009/07/Analysis-of-Dalvik-VM.pdf)
+  id: totrans-291
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*Dalvik虚拟机及Class Path库分析*文档，请访问[这里](http://imsciences.edu.pk/serg/wp-content/uploads/2009/07/Analysis-of-Dalvik-VM.pdf)'
 - en: Decompiling DEX to Java
+  id: totrans-292
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 将DEX反编译为Java
 - en: The DEX code, as we know, is compiled from Java, which is a pretty semantic,
     easy-to-read language, and I'm sure some of you are wondering by now whether it's
     possible to decompile the DEX code back into Java? Well, the good news is that
@@ -1378,71 +1982,89 @@
     DEX opcode variants, so if you're hoping that this recipe means you can call yourself
     an Android reverse engineer even though you are unable to read the DEX code, you
     are mistaken!
+  id: totrans-293
   prefs: []
   type: TYPE_NORMAL
 - en: With that said, most DEX code in Android applications are pretty stock standard,
     and decompilers, such as the one we are about to use, can handle an average DEX
     file.
+  id: totrans-294
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-295
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: Before we start, you will need to grab a few tools from the Internet.
+  id: totrans-296
   prefs: []
   type: TYPE_NORMAL
 - en: '**Dex2Jar**: This is a tool that grabs the DEX files from the APK files and
     outputs a JAR containing the corresponding class files; you can get this at [http://code.google.com/p/dex2jar/](http://code.google.com/p/dex2jar/).
     Visit this URL and download the version appropriate for your operating system.'
+  id: totrans-297
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '**JD-GUI**: This is a Java class file decompiler; you can get this at [http://jd.benow.ca/](http://jd.benow.ca/).
     It has support for Linux, Mac, and Windows.'
+  id: totrans-298
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: How to do it...
+  id: totrans-299
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'To decompile a sample DEX file into some Java code, you will need to perform
     the following steps:'
+  id: totrans-300
   prefs: []
   type: TYPE_NORMAL
 - en: 'Let''s assume we are starting from either an APK or DEX file. In that case,
     you would start out by interpreting the DEX files into the Java `CLASS` files.
     Here''s how you do that with `Dex2jar`:'
+  id: totrans-301
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE55]'
+  id: totrans-302
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'Or for our running example, you would execute the following statement:'
+  id: totrans-303
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE56]'
+  id: totrans-304
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: 'The output should look something like the following screenshot:'
+  id: totrans-305
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00141.jpeg)'
+  id: totrans-306
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'If you''ve executed this correctly, you should have a file called `Example_dex2jar.jar`
     in your working or current directory:'
+  id: totrans-307
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00142.jpeg)'
+  id: totrans-308
   prefs:
   - PREF_IND
   type: TYPE_IMG
@@ -1451,43 +2073,53 @@
     all you need to do is execute the `JD-GUI` executable that comes with the `JD-GUI`
     tool. Here''s how you do it from Linux; execute the following command from your
     terminal:'
+  id: totrans-309
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE57]'
+  id: totrans-310
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: 'It should spawn a window that looks like the following screenshot:'
+  id: totrans-311
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00143.jpeg)'
+  id: totrans-312
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: Once this window shows up, you can open a class file by clicking on the folder
     icon; the following file selection dialog box should show up:![How to do it...](img/00144.jpeg)
+  id: totrans-313
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'Once this dialog box is open, you should navigate to the path with the `Example.class`
     file we parsed from the `Example.dex` file. If you manage to find it, `JD-GUI`
     will display the code as follows:'
+  id: totrans-314
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00145.jpeg)'
+  id: totrans-315
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: You can use `JD-GUI` to save the source files; all you need to do is click on
     the **File** menu on the toolbar, select **Save All Sources**, and then provide
     a directory to save it in:![How to do it...](img/00146.jpeg)
+  id: totrans-316
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Decompiling the application's native libraries
+  id: totrans-317
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -1496,21 +2128,26 @@
     them is as simple as finding a decompiler like the "ever-popular" `objdump` decompiler
     for Linux that accommodates ARM binaries, and, as it turns out, this problem has
     been solved for us by the Android NDK.
+  id: totrans-318
   prefs: []
   type: TYPE_NORMAL
 - en: Before we get into the details of this process, you need to make sure you have
     the right tools.
+  id: totrans-319
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-320
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: Getting ready for this recipe is as easy as making sure you have a fresh copy
     of the Android NDK package; you can grab a copy at [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html).
+  id: totrans-321
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it...
+  id: totrans-322
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -1518,24 +2155,31 @@
     with the Android NDK toolchain known as `objdump`; it has been prebuilt to include
     all of the plugins that allow `objdump` to interpret the endianness and code structures
     specific to the ARM binaries.
+  id: totrans-323
   prefs: []
   type: TYPE_NORMAL
 - en: 'To decompile an Android native library, you need to execute the following command
     from your terminal or command prompt:'
+  id: totrans-324
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE58]'
+  id: totrans-325
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: 'Here''s an example:'
+  id: totrans-326
   prefs: []
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00147.jpeg)'
+  id: totrans-327
   prefs: []
   type: TYPE_IMG
 - en: Where `arm-linux-androideabi-objdump` is located under the `toolchains/arm-linux-androideabi-[version]/prebuilt/[arch]/bin/`
     folder of the Android NDK, where `[arch]` would be the architecture or build version
     relevant to your machine. I'm using a Linux x86_64 machine in this example.
+  id: totrans-328
   prefs: []
   type: TYPE_NORMAL
 - en: To make use of the information in the output of `objdump`, you need to understand
@@ -1543,35 +2187,43 @@
     ELF format. I've included some good references to follow up in the *See also*
     section, including a link to an Android application called Sieve, which is used
     to demonstrate some of the commands used in this recipe.
+  id: totrans-329
   prefs: []
   type: TYPE_NORMAL
 - en: See also
+  id: totrans-330
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: The *ELF for the ARM Architecture* document at [http://infocenter.arm.com/help/topic/com.arm.doc.ihi0044e/IHI0044E_aaelf.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.ihi0044e/IHI0044E_aaelf.pdf)
+  id: totrans-331
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *ARM7TDMI Technical Reference Manual* document at [http://www.atmel.com/Images/DDI0029G_7TDMI_R3_trm.pdf](http://www.atmel.com/Images/DDI0029G_7TDMI_R3_trm.pdf)
+  id: totrans-332
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *ARM Processor Architecture* webpage at [http://www.arm.com/products/processors/instruction-set-architectures/index.php](http://www.arm.com/products/processors/instruction-set-architectures/index.php)
+  id: totrans-333
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Tool Interface Standard (TIS) Executable and Linking Format (ELF) Specification
     Version 1.2* document available at [http://refspecs.linuxbase.org/elf/elf.pdf](http://refspecs.linuxbase.org/elf/elf.pdf)
+  id: totrans-334
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Sieve* – A password manager app, showcasing some common Android vulnerabilities
     at [https://www.mwrinfosecurity.com/system/assets/380/original/sieve.apk](https://www.mwrinfosecurity.com/system/assets/380/original/sieve.apk)'
+  id: totrans-335
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Debugging the Android processes using the GDB server
+  id: totrans-336
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -1581,29 +2233,36 @@
     engineer no matter what platform you're focused on; this, of course, includes
     Android. The following recipe shows you how to debug a process running on an Android
     device using GDB.
+  id: totrans-337
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-338
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'In order to pull off this recipe, you''ll need to grab the following:'
+  id: totrans-339
   prefs: []
   type: TYPE_NORMAL
 - en: The Android NDK package available at [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)
+  id: totrans-340
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The Android SDK package
+  id: totrans-341
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: How to do it...
+  id: totrans-342
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'To debug a live Android process using `gdbserver`, you will need to perform
     the following steps:'
+  id: totrans-343
   prefs: []
   type: TYPE_NORMAL
 - en: 'The first step is to make sure that you either have a rooted Android device
@@ -1614,43 +2273,55 @@
     "Chapter 2. Engaging with Application Security"), *Engaging with Application Security*.
     If you''re already aware of how to create an emulated Android device, you can
     launch it using the following command:'
+  id: totrans-344
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE59]'
+  id: totrans-345
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: '![How to do it...](img/00148.jpeg)'
+  id: totrans-346
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'Once the emulator or target device is up and running, you should access the
     device using an ADB shell. You can do this by executing the following command:'
+  id: totrans-347
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE60]'
+  id: totrans-348
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: You also need to make sure that you have root permissions. Emulators grant root
     permissions by default, though, if you're doing this on an actual device, you
     may need to execute the `su` substitute user command first.
+  id: totrans-349
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'You then need to mount the system directory as read-write so that we can pop
     a copy of `gdbserver` into it. Here''s how you remount the directory, while in
     your adb shell, execute the following command:'
+  id: totrans-350
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE61]'
+  id: totrans-351
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: '![How to do it...](img/00149.jpeg)'
+  id: totrans-352
   prefs:
   - PREF_IND
   type: TYPE_IMG
@@ -1658,31 +2329,40 @@
     we are interested in the `/system` directory. Take note of the `/dev/` path printed
     in the line mentioning `/system`. In the previous example, the device called `/dev/block/mtdblock0`
     is mounted at `/system`.
+  id: totrans-353
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'Remount the directory using the following command:'
+  id: totrans-354
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE62]'
+  id: totrans-355
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: '![How to do it...](img/00150.jpeg)'
+  id: totrans-356
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'You''re now ready to pop a copy of the `gdbserver` into the device. Here''s
     how you do this from your non-Android machine:'
+  id: totrans-357
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE63]'
+  id: totrans-358
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: '![How to do it...](img/00151.jpeg)'
+  id: totrans-359
   prefs:
   - PREF_IND
   type: TYPE_IMG
@@ -1690,109 +2370,137 @@
     to a running process; but before you can do that, you''ll need to grab a sample
     **Process ID** (**PID**). You can do that by launching the `ps` command on the
     target device in the following manner:'
+  id: totrans-360
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE64]'
+  id: totrans-361
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'The `ps` command will list a summary of information of the current running
     processes; we are interested in the PID of one of the current running processes.
     Here''s an example of the `ps` command output from the emulator we are running:'
+  id: totrans-362
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00152.jpeg)'
+  id: totrans-363
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'In the preceding screenshot, you can see that the second column is titled `PID`;
     this is the information you''re looking for. The calendar, which was used as an
     example here, has a PID of `766`:'
+  id: totrans-364
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00153.jpeg)'
+  id: totrans-365
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'Once you have a valid PID, you can use `gdbserver` to attach to it by executing
     the following command:'
+  id: totrans-366
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE65]'
+  id: totrans-367
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: 'Where `[tcp-port number]` is the number of a TCP port you''d like to allow
     connections from, and PID is, of course, the PID number you grabbed in the previous
     step. If this is done correctly, `gdbserver` should produce the following output:'
+  id: totrans-368
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00154.jpeg)'
+  id: totrans-369
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'Once `gdbserver` is up and running, you need to ensure that you forward the
     TCP port number from the target Android device so that you can connect to it from
     your machine. You can do this by executing the following command:'
+  id: totrans-370
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE66]'
+  id: totrans-371
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: 'Here''s the `adb` port forward from the example:'
+  id: totrans-372
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00155.jpeg)'
+  id: totrans-373
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'You should then launch the prebuild `gdb`, which is found under the path `android-ndk-r8e/toolchains/arm-linux-androideabi-[version]/prebuilt/linux-x86_64/bin/`,
     on your Linux machine. You launch it by running the following command once inside
     the aforementioned NDK path:'
+  id: totrans-374
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE67]'
+  id: totrans-375
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: 'Here''s a screenshot of how it''s being launched:'
+  id: totrans-376
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00156.jpeg)'
+  id: totrans-377
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'Once `gdb` is up and running, you should try to connect it to the `gdb` instance
     running the target device by issuing the following command from within the `gdb`
     command prompt:'
+  id: totrans-378
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE68]'
+  id: totrans-379
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: 'Where `[PID]` is the local TCP port number you forwarded using `adb` in step
     8\. Here''s a screenshot of this:'
+  id: totrans-380
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00157.jpeg)'
+  id: totrans-381
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: And that's it! You have an interaction with the memory segments and registers
     of the processes running on the Android device!
+  id: totrans-382
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
