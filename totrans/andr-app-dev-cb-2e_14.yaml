@@ -1,822 +1,1210 @@
 - en: Chapter 14. Getting your app ready for the Play Store
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第14章. 为Play商店准备你的应用
 - en: 'In this chapter, we will cover the following topics:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下主题：
 - en: The new Android 6.0 Run-Time permission model
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 新的Android 6.0运行时权限模型
 - en: How to schedule an alarm
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如何安排闹钟
 - en: Receive notification of device boot
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 接收设备启动通知
 - en: Using AsyncTask for background work
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用AsyncTask进行后台工作
 - en: Adding speech recognition to your app
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 将语音识别添加到你的应用
 - en: Push Notification using Google Cloud Messaging
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用Google云消息推送通知
 - en: How to add Google sign-in to your app
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如何将谷歌登录添加到你的应用
 - en: Introduction
+  id: totrans-9
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: As we approach the end of this book, it's time to add the finishing touches
     to your application before releasing it to the Play Store. The recipes in this
     chapter cover the topics that can make a difference between users keeping your
     app or removing it.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们接近这本书的结尾时，是时候在发布到Play商店之前为你的应用添加最后的润色了。本章的食谱涵盖了可能决定用户保留还是卸载你的应用的主题。
 - en: Our first recipe, *The new Android 6.0 Run-Time permission model*, is certainly
     an important topic, possibly being the primary reason Android went from version
     5.x to version 6! Changes to the Android permission model have been requested
     for some time, so this new model is a welcome change, at least for users.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们的第一部分，*新的Android 6.0运行时权限模型*，无疑是一个重要的话题，可能是Android从版本5.x升级到版本6的主要原因！对Android权限模型的更改已经被请求了一段时间，所以这个新模型是一个受欢迎的改变，至少对用户来说是这样。
 - en: Next, we'll take a look at using alarms in Android. One of the primary benefits
     of alarms is that the OS is responsible for maintaining the alarm, even when your
     application is not running. Since alarms do not persist after rebooting the device,
     we'll also look at how to detect a device reboot so you can recreate your alarms
     in *Receive notification of device boot*.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们将看看在Android中使用闹钟。闹钟的主要优点之一是操作系统负责维护闹钟，即使你的应用没有运行。由于闹钟在设备重启后不会保留，我们还将看看如何在*接收设备启动通知*中检测设备重启，以便你可以重新创建你的闹钟。
 - en: Almost any serious Android application will need a way to perform potentially
     blocking tasks off the main thread. Otherwise, your app runs the risk of being
     perceived as sluggish, or worse, completely nonresponsive. `AsyncTask` was designed
     to make it easier to create a background worker task as we'll demonstrate in the
     *Using the AsyncTask for background work* recipe.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 几乎任何严肃的Android应用都需要一种方法在主线程之外执行可能阻塞的任务。否则，你的应用可能会被视为反应迟钝，或者更糟，完全无响应。`AsyncTask`旨在使创建后台工作线程更容易，我们将在*使用AsyncTask进行后台工作*这一部分中演示。
 - en: If you want your app to benefit from hands-free typing or voice recognition,
     take a look at the *Adding Speech Recognition to your app* recipe in which we'll
     explore the Google Speech API.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你希望你的应用能够从免提输入或语音识别中受益，请查看一下*将语音识别添加到你的应用*这一部分，我们将探讨谷歌语音API。
 - en: Possibly one of the most interesting features for communicating with your users
     is Push Notification or **Google Cloud Messaging** (**GCM**) as Google calls it.
     The *Push Notification using Google Cloud Messaging* recipe will walk you through
     the adding of GCM to your application as well as explain the bigger picture.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 与你的用户沟通的最有趣的功能之一可能是推送通知或谷歌所谓的**Google Cloud Messaging** (**GCM**)。*使用Google云消息推送通知*这一部分将指导你将GCM添加到你的应用程序，并解释更大的图景。
 - en: Finally, we'll end the chapter with a recipe showing how to make your app more
     comfortable and encourage users to log in with the *How to add Google Sign-In
     to your app* recipe
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们将在*如何将谷歌登录添加到你的应用*这一部分结束本章，展示如何让你的应用更加舒适并鼓励用户登录。
 - en: The new Android 6.0 Run-Time permission model
+  id: totrans-17
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 新的Android 6.0运行时权限模型
 - en: The old security model was a sore point for many in Android. It's common to
     see reviews commenting on the permissions an app requires. Sometimes, permissions
     were out of the line (like a Flashlight app requiring internet permission), but
     other times, the developer had good reasons to request certain permissions. The
     main problem was that it was an all-or-nothing prospect.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 旧的安全模型是Android中许多人的痛点。评论中经常看到对应用所需权限的评论是很常见的。有时，权限是过分的（比如一个手电筒应用需要网络权限），但其他时候，开发者请求某些权限是有充分理由的。主要问题是这是一个全有或全无的前景。
 - en: This finally changed with the Android 6 Marshmallow (API 23) release. The new
     permission model still declares permissions in the manifest as before, but users
     have the option of selectively accepting or denying each permission. Users can
     even revoke a previously granted permission.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 这最终在 Android 6 Marshmallow（API 23）版本中得到了改变。新的权限模型仍然像以前一样在清单中声明权限，但用户可以选择性地接受或拒绝每个权限。用户甚至可以撤销之前授予的权限。
 - en: Although this is a welcome change for many; however, for a developer, it has
     the potential to break the code that was working before. We've talked about this
     permission change in the previous recipes, as it has far reaching implications.
     This recipe will put it all together to serve as a single point of reference when
     implementing this change in your own apps.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管这对于许多人是受欢迎的改变；然而，对于开发者来说，这可能会破坏之前正常工作的代码。我们之前讨论过这个权限变化，因为它具有深远的影响。这个菜谱将汇总所有信息，以便在您自己的应用中实施此更改时作为单一参考点。
 - en: One important point to remember is that this change only affects users of Android
     6.0 (API 23) and above.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 需要记住的一个重要点是，这个变化只影响 Android 6.0（API 23）及以上版本的用户。
 - en: Getting ready
+  id: totrans-22
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Create a new project in Android Studio and call it `RuntimePermission`. Use
     the default **Phone & Tablet** option and select **Empty Activity** when prompted
     for **Activity Type**.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Android Studio 中创建一个新项目，并将其命名为 `RuntimePermission`。对于 **Activity 类型**，使用默认的
+    **Phone & Tablet** 选项并选择 **Empty Activity**。
 - en: The sample source code sets the minimum API to 23, but this is not required.
     If your `compileSdkVersion` is API 23 or above, the compiler will flag your code
     for the new security model.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例源代码将最低 API 设置为 23，但这并不是必须的。如果您的 `compileSdkVersion` 是 API 23 或以上，编译器将针对新的安全模型标记您的代码。
 - en: How to do it...
+  id: totrans-25
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'We need to start by adding our required permission to the manifest, then we''ll
     add a button to call our check permission code. Open the Android Manifest and
     follow these steps:'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要先在清单中添加我们所需的权限，然后我们将添加一个按钮来调用我们的检查权限代码。打开 Android 清单并按照以下步骤操作：
 - en: 'Add the following permission:'
+  id: totrans-27
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下权限：
 - en: '[PRE0]'
+  id: totrans-28
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Open `activity_main.xml` and replace the existing `TextView` with this button:'
+  id: totrans-29
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开 `activity_main.xml` 并用此按钮替换现有的 `TextView`：
 - en: '[PRE1]'
+  id: totrans-30
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Open `MainActivity.java` and add the following constant to the class:'
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开 `MainActivity.java` 并向类中添加以下常量：
 - en: '[PRE2]'
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Add this method for permission check:'
+  id: totrans-33
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加此方法来检查权限：
 - en: '[PRE3]'
+  id: totrans-34
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Add this method to show the explanation dialog:'
+  id: totrans-35
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加此方法以显示解释对话框：
 - en: '[PRE4]'
+  id: totrans-36
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Add this method to request the permission:'
+  id: totrans-37
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加此方法来请求权限：
 - en: '[PRE5]'
+  id: totrans-38
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Add the method for button click:'
+  id: totrans-39
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加按钮点击的方法：
 - en: '[PRE6]'
+  id: totrans-40
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Override `onRequestPermissionsResult()` as follows:'
+  id: totrans-41
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如下重写 `onRequestPermissionsResult()`：
 - en: '[PRE7]'
+  id: totrans-42
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Now, you're ready to run the application on a device or emulator.
+  id: totrans-43
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，你可以在设备或模拟器上运行应用程序了。
 - en: How it works...
+  id: totrans-44
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: 'Using the new runtime permission model involves the following:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用新的运行时权限模型涉及以下内容：
 - en: Check to see whether you have the desired permissions.
+  id: totrans-46
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 检查你是否拥有所需的权限。
 - en: If not, check whether we should display the rationale (meaning, the request
     was previously denied).
+  id: totrans-47
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果没有，检查我们是否应该显示理由（意味着，之前的请求被拒绝了）。
 - en: Request the permission; only the OS can display the permission request.
+  id: totrans-48
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 请求权限；只有操作系统可以显示权限请求。
 - en: Handle the request response.
+  id: totrans-49
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 处理请求响应。
 - en: 'Here are the corresponding methods:'
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是相应的方法：
 - en: '`ContextCompat.checkSelfPermission`'
+  id: totrans-51
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ContextCompat.checkSelfPermission`'
 - en: '`ActivityCompat.requestPermissions`'
+  id: totrans-52
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ActivityCompat.requestPermissions`'
 - en: '`ActivityCompat.shouldShowRequestPermissionRationale`'
+  id: totrans-53
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ActivityCompat.shouldShowRequestPermissionRationale`'
 - en: '`onRequestPermissionsResult`'
+  id: totrans-54
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onRequestPermissionsResult`'
 - en: Note
+  id: totrans-55
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Even though you are requesting permissions at runtime, the desired permission
     must be listed in the Android Manifest. If the permission is not specified, the
     OS will automatically deny the request.
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 尽管你在运行时请求权限，但所需的权限必须在 Android 清单中列出。如果未指定权限，操作系统将自动拒绝请求。
 - en: There's more...
+  id: totrans-57
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'You can grant/revoke permissions through the ADB with the following:'
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以通过 ADB 使用以下命令来授权/撤销权限：
 - en: '[PRE8]'
+  id: totrans-59
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Here''s an example to grant the SEND_SMS permission for our test app:'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个示例，为我们的测试应用授予 SEND_SMS 权限：
 - en: '[PRE9]'
+  id: totrans-61
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: See also
+  id: totrans-62
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '**Developer Docs: System Permissions** at [https://developer.android.com/guide/topics/security/permissions.html](https://developer.android.com/guide/topics/security/permissions.html)'
+  id: totrans-63
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**开发者文档：系统权限** 在 [https://developer.android.com/guide/topics/security/permissions.html](https://developer.android.com/guide/topics/security/permissions.html)'
 - en: How to schedule an alarm
+  id: totrans-64
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 如何计划一个闹钟
 - en: 'Android provides `AlarmManager` to create and schedule alarms. Alarms offer
     the following features:'
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 提供了 `AlarmManager` 来创建和计划闹钟。闹钟提供以下功能：
 - en: Schedule alarms for a set time or interval
+  id: totrans-66
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 计划在设定的时间或间隔触发报警
 - en: Maintained by the OS, not your application, so alarms are triggered even if
     your application is not running, or the device is asleep
+  id: totrans-67
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 由操作系统维护，而不是您的应用程序，因此即使您的应用程序没有运行，或者设备在休眠，也会触发报警
 - en: Can be used to trigger periodic tasks (such as an hourly news update), even
     if your application is not running
+  id: totrans-68
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 可用于触发周期性任务（例如每小时新闻更新），即使应用程序没有运行
 - en: Your app does not use resources (such as timers or background services), since
     the OS manages the scheduling
+  id: totrans-69
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 您的应用程序不使用资源（如计时器或后台服务），因为操作系统管理调度
 - en: Alarms are not the best solution if you need a simple delay while your application
     is running, for example, a short delay for a UI event. For short delays, it's
     easier and more efficient to use a Handler, as we've done in several previous
     recipes.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果您在应用程序运行时只需要一个简单的延迟，例如，一个 UI 事件的短暂延迟，报警并不是最佳解决方案。对于短暂延迟，使用处理程序更容易、更高效，正如我们在之前的几个食谱中所做的那样。
 - en: 'When using alarms, keep these best practices in mind:'
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用报警时，请记住以下最佳实践：
 - en: Use as infrequent alarm timing as possible
+  id: totrans-72
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 尽可能使用不频繁的报警时间
 - en: Avoid waking up the device
+  id: totrans-73
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 避免唤醒设备
 - en: Use as imprecise timing as possible—the more precise the timing, the more resources
     required
+  id: totrans-74
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 尽可能使用不精确的时间——时间越精确，所需的资源越多
 - en: Avoid setting alarm times based on clock time (such as 12:00); add random adjustments
     if possible to avoid congestion on servers (especially important when checking
     for new content, such as weather or news)
+  id: totrans-75
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 避免基于时钟时间设置报警（例如 12:00）；如果可能，添加随机调整以避免服务器拥堵（尤其是在检查新内容，如天气或新闻时尤为重要）
 - en: 'Alarms have three properties, as follows:'
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 报警有三个属性，如下所示：
 - en: Alarm type (see in the following list)
+  id: totrans-77
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 报警类型（见以下列表）
 - en: Trigger time (if the time has already passed, the alarm is triggered immediately)
+  id: totrans-78
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 触发时间（如果时间已经过去，则立即触发报警）
 - en: Pending Intent
+  id: totrans-79
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 待定意图
 - en: 'A repeating alarm has the same three properties, plus an Interval:'
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 重复报警具有相同的三个属性，以及一个间隔：
 - en: Alarm type (see in the following list)
+  id: totrans-81
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 报警类型（见以下列表）
 - en: Trigger time (if the time has already passed, it triggers immediately)
+  id: totrans-82
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 触发时间（如果时间已经过去，则立即触发）
 - en: Interval
+  id: totrans-83
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 间隔
 - en: Pending Intent
+  id: totrans-84
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 待定意图
 - en: 'There are four alarm types:'
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 有四种报警类型：
 - en: '`RTC` (**Real Time Clock**): This is based on the wall clock time. This does
     not wake the device.'
+  id: totrans-86
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`RTC`（**实时时钟**）：这是基于墙钟时间。它不会唤醒设备。'
 - en: '`RTC_WAKEUP`: This is based on the wall clock time. This wakes the device if
     it is sleeping.'
+  id: totrans-87
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`RTC_WAKEUP`：这是基于墙钟时间。如果设备在休眠，它会唤醒设备。'
 - en: '`ELAPSED_REALTIME`: This is based on the time elapsed since the device boot.
     This does not wake the device.'
+  id: totrans-88
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ELAPSED_REALTIME`：这是基于设备自启动以来的时间。它不会唤醒设备。'
 - en: '`ELAPSED_REALTIME_WAKEUP`: This is based on the time elapsed since the device
     boot. This wakes the device if it is sleeping.'
+  id: totrans-89
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ELAPSED_REALTIME_WAKEUP`：这是基于设备自启动以来的时间。如果设备在休眠，它会唤醒设备。'
 - en: Elapsed Real Time is better for time interval alarms—such as every 30 minutes.
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: Elapsed Real Time 更适合时间间隔报警——例如每 30 分钟。
 - en: Tip
+  id: totrans-91
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Alarms do not persist after device reboots. All alarms are cancelled when a
     device shuts down, so it is your app's responsibility to reset the alarms on device
     boot. (See *Receive notification of device boot* for more information.)
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 设备重启后，报警不会保留。设备关闭时，所有报警都会被取消，因此，在设备启动时重置报警是您应用程序的责任。（更多信息请参见*接收设备启动通知*。）
 - en: The following recipe will demonstrate how to create alarms with `AlarmManager`.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下食谱将演示如何使用 `AlarmManager` 创建报警。
 - en: Getting ready
+  id: totrans-94
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'Create a new project in Android Studio and call it: `Alarms`. Use the default
     **Phone & Tablet** option and select **Empty Activity** when prompted for **Activity
     Type**.'
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Android Studio 中创建一个新项目，并将其命名为：`Alarms`。选择默认的**手机和平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: How to do it...
+  id: totrans-96
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Setting an alarm requires a Pending Intent, which Android sends when the alarm
     is triggered. Therefore, we need to set up a Broadcast Receiving to capture the
     alarm intent. Our UI will consist of just a simple button to set the alarm. To
     start, open the Android Manifest and follow these steps:'
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 设置报警需要一个待定意图，当触发报警时，Android 会发送该意图。因此，我们需要设置一个广播接收器来捕获报警意图。我们的用户界面将仅包含一个简单按钮来设置报警。首先，打开
+    Android 清单文件并按照以下步骤操作：
 - en: 'Add the following `<receiver>` to the `<application>` element at the same level
     as the existing `<activity>` element:'
+  id: totrans-98
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在与现有 `<activity>` 元素同一级别的 `<application>` 元素中添加以下 `<receiver>`：
 - en: '[PRE10]'
+  id: totrans-99
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Open `activity_main.xml` and replace the existing TextView with the following
     button:'
+  id: totrans-100
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开 `activity_main.xml` 文件，将现有的 TextView 替换为以下按钮：
 - en: '[PRE11]'
+  id: totrans-101
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Create a new Java class called `AlarmBroadcastReceiver` using the following
     code:'
+  id: totrans-102
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下代码创建一个名为 `AlarmBroadcastReceiver` 的新 Java 类：
 - en: '[PRE12]'
+  id: totrans-103
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Open `ActivityMain.java` and add the method for the button click:'
+  id: totrans-104
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开 `ActivityMain.java` 并添加按钮点击的方法：
 - en: '[PRE13]'
+  id: totrans-105
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: You're ready to run the application on a device or emulator.
+  id: totrans-106
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你已经准备好在设备或模拟器上运行应用程序。
 - en: How it works...
+  id: totrans-107
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: 'Creating the alarm is done with this line of code:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建闹钟是通过以下这行代码完成的：
 - en: '[PRE14]'
+  id: totrans-109
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Here''s the method signature:'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是方法的签名：
 - en: '[PRE15]'
+  id: totrans-111
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: Note
+  id: totrans-112
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Prior to Android 4.4 KitKat (API 19), this was the method to request an exact
     time. Android 4.4 and later will consider this as an inexact time for efficiency,
     but will not deliver the intent prior to the requested time. (See `setExact()`
     as follows if you need an exact time.)
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Android 4.4 KitKat（API 19）之前，这是请求确切时间的方法。从 Android 4.4 开始，出于效率考虑，这被视为一个非确切时间，但不会在请求的时间之前传递意图。（如果你需要确切时间，请参考下面的
+    `setExact()` 方法。）
 - en: 'To set the alarm, we create a Pending Intent with our previously defined alarm
     action:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了设置闹钟，我们创建了一个带有之前定义的闹钟动作的待定意图：
 - en: '[PRE16]'
+  id: totrans-115
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: (This is an arbitrary string and could be anything we want, but it needs to
     be unique, so we prepend our package name.) We check for this action in the Broadcast
     Receiver's `onReceive()` callback.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: （这是一个任意字符串，可以是任何我们想要的内容，但它需要是唯一的，因此我们在前面加上我们的包名。）我们在广播接收器的 `onReceive()` 回调中检查这个动作。
 - en: There's more...
+  id: totrans-117
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: If you click the **Set Alarm** button and wait for thirty minutes, you will
     see the Toast when the alarm triggers. If you are too impatient to wait and click
     the **Set Alarm** button again before the first alarm is triggered, you wouldn't
     get two alarms. Instead, the OS will replace the first alarm with the new alarm,
     since they both use the same Pending Intent. (If you need multiple alarms, you
     need to create different Pending Intents, such as using different Actions.)
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你点击 **设置闹钟** 按钮，等待三十分钟，当闹钟触发时你会看到 Toast。如果你在第一个闹钟触发之前就迫不及待地再次点击 **设置闹钟** 按钮，你不会得到两个闹钟。相反，操作系统将用新的闹钟替换第一个闹钟，因为它们都使用相同的待定意图。（如果你需要多个闹钟，你需要创建不同的待定意图，比如使用不同的动作。）
 - en: Cancel the alarm
+  id: totrans-119
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 取消闹钟
 - en: 'If you want to cancel the alarm, call the `cancel()` method by passing the
     same Pending Intent you have used to create the alarm. If we continue with our
     recipe, this is how it would look:'
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想要取消闹钟，通过传递用于创建闹钟的相同待定意图来调用 `cancel()` 方法。如果我们继续按照我们的指南操作，这将是这样子的：
 - en: '[PRE17]'
+  id: totrans-121
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: Repeating alarm
+  id: totrans-122
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 重复闹钟
 - en: 'If you want to create a repeating alarm, use the `setRepeating()` method. The
     Signature is similar to the `set()` method, but with an interval. This is shown
     as follows:'
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想创建一个重复的闹钟，请使用 `setRepeating()` 方法。它的签名与 `set()` 方法类似，但包含一个间隔。如下所示：
 - en: '[PRE18]'
+  id: totrans-124
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'For the Interval, you can specify the interval time in milliseconds or use
     one of the predefined `AlarmManager` constants:'
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于间隔，你可以以毫秒为单位指定间隔时间，或者使用 `AlarmManager` 的预定义常量之一：
 - en: '`INTERVAL_DAY`'
+  id: totrans-126
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`INTERVAL_DAY`'
 - en: '`INTERVAL_FIFTEEN_MINUTES`'
+  id: totrans-127
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`INTERVAL_FIFTEEN_MINUTES`'
 - en: '`INTERVAL_HALF_DAY`'
+  id: totrans-128
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`INTERVAL_HALF_DAY`'
 - en: '`INTERVAL_HALF_HOUR`'
+  id: totrans-129
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`INTERVAL_HALF_HOUR`'
 - en: '`INTERVAL_HOUR`'
+  id: totrans-130
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`INTERVAL_HOUR`'
 - en: See also
+  id: totrans-131
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '**Developer Docs: AlarmManager** at [https://developer.android.com/reference/android/app/AlarmManager.html](https://developer.android.com/reference/android/app/AlarmManager.html)'
+  id: totrans-132
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**开发者文档：AlarmManager** 在 [https://developer.android.com/reference/android/app/AlarmManager.html](https://developer.android.com/reference/android/app/AlarmManager.html)'
 - en: Receive notification of device boot
+  id: totrans-133
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 接收设备启动通知
 - en: Android sends out many intents during its lifetime. One of the first intents
     sent is `ACTION_BOOT_COMPLETED`. If your application needs to know when the device
     boots, you need to capture this intent.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓在其生命周期中发送许多意图。最早发送的意图之一是 `ACTION_BOOT_COMPLETED`。如果你的应用程序需要知道设备何时启动，你需要捕获这个意图。
 - en: This recipe will walk you through the steps required to be notified when the
     device boots.
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 本指南将引导你完成在设备启动时接收通知所需的步骤。
 - en: Getting ready
+  id: totrans-136
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Create a new project in Android Studio and call it `DeviceBoot`. Use the default
     **Phone & Tablet** option and select **Empty Activity** when prompted for **Activity
     Type**.
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Android Studio 中创建一个新项目，并将其命名为 `DeviceBoot`。在选择 **Activity Type** 时，使用默认的**Phone
+    & Tablet**选项并选择**Empty Activity**。
 - en: How to do it...
+  id: totrans-138
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To start, open the Android Manifest and follow these steps:'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，打开 Android Manifest 文件并按照以下步骤操作：
 - en: 'Add the following permission:'
+  id: totrans-140
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下权限：
 - en: '[PRE19]'
+  id: totrans-141
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Add the following `<receiver>` to the `<application>` element, at the same
     level as the existing `<activity>` element:'
+  id: totrans-142
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `<application>` 元素中添加以下 `<receiver>`，与现有的 `<activity>` 元素同一级别：
 - en: '[PRE20]'
+  id: totrans-143
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'Create a new Java class called `BootBroadcastReceiver` using the following
     code:'
+  id: totrans-144
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下代码创建一个名为 `BootBroadcastReceiver` 的新 Java 类：
 - en: '[PRE21]'
+  id: totrans-145
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: Reboot the device to see the Toast.
+  id: totrans-146
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 重启设备以查看提示消息。
 - en: How it works...
+  id: totrans-147
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: When the device boots, Android will send the `BOOT_COMPLETED` intent. As long
     as our application has the permission to receive the intent, we will receive notifications
     in our Broadcast Receiver.
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 当设备启动时，Android会发送`BOOT_COMPLETED`意图。只要我们的应用程序有接收意图的权限，我们就会在广播接收器中收到通知。
 - en: 'There are three aspects to make this work:'
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 要实现这一功能，需要考虑以下三个方面：
 - en: A permission for `RECEIVE_BOOT_COMPLETED`
+  id: totrans-150
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`RECEIVE_BOOT_COMPLETED`的权限'
 - en: Adding `BOOT_COMPLETED` to the receiver intent filter
+  id: totrans-151
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 将`BOOT_COMPLETED`添加到接收意图过滤器中
 - en: Checking for the `BOOT_COMPLETED` action in the Broadcast Receiver
+  id: totrans-152
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在广播接收器中检查`BOOT_COMPLETED`动作
 - en: Obviously, you'll want to replace the Toast message with your own code, such
     as for recreating any alarms you might need.
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: 显然，你希望用你自己的代码替换提示消息，比如重新创建你可能需要的任何闹钟。
 - en: There's more...
+  id: totrans-154
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'If you followed the previous recipe, then you already have a Broadcast Receiver.
     You don''t need a separate `BroadcastReceiver` for each action, just check for
     each action as needed. Here''s an example if we need to handle another action:'
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你按照前面的步骤操作，那么你已经有一个广播接收器了。不需要为每个动作分别创建`BroadcastReceiver`，只需根据需要检查每个动作即可。以下是如果我们需要处理另一个动作的示例：
 - en: '[PRE22]'
+  id: totrans-156
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: See also
+  id: totrans-157
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '**Developer Docs: Intent** at [https://developer.android.com/reference/android/content/Intent.html](https://developer.android.com/reference/android/content/Intent.html)'
+  id: totrans-158
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**开发者文档：意图**在[https://developer.android.com/reference/android/content/Intent.html](https://developer.android.com/reference/android/content/Intent.html)'
 - en: Using the AsyncTask for background work
+  id: totrans-159
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用AsyncTask进行后台工作
 - en: Throughout this book, we have mentioned the importance of not blocking the main
     thread. Performing long running operations on the main thread can cause your application
     to appear sluggish, or worse, hang. If your application doesn't respond within
     about 5 seconds, the system will likely display the **Application Not Responding**
     (**ANR**) dialog with the option to terminate your app. (This is something you
     will want to avoid as it's a good way to get your app uninstalled.)
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 在整本书中，我们提到了不要阻塞主线程的重要性。在主线程上执行长时间运行的操作可能会导致你的应用程序看起来反应迟钝，甚至挂起。如果你的应用程序在约5秒内没有响应，系统可能会显示**应用程序无响应**（**ANR**）对话框，并给出终止你应用程序的选项。（这是你要避免的事情，因为这会导致你的应用程序被卸载。）
 - en: 'Android applications use a single thread model with two simple rules, as follows:'
+  id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: Android应用程序使用单线程模型，有两个简单的规则，如下：
 - en: Don't block the main thread
+  id: totrans-162
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 不要阻塞主线程
 - en: Perform all UI operations *on* the main thread
+  id: totrans-163
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 所有UI操作*都*应该在主线程上执行
 - en: When Android starts your application, it automatically creates the main (or
     UI) thread. This is the thread from which all UI operations must be called. The
     first rule is "Don't block the main thread". This means that you need to create
     a background, or a worker, thread for any long-running or potentially-blocking
     task. This is why all network based tasks should be performed off the main thread.
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 当Android启动你的应用程序时，它会自动创建主线程（或UI线程）。所有UI操作都必须从这条线程中调用。第一条规则是“不要阻塞主线程”。这意味着你需要为任何长时间运行或可能阻塞的任务创建一个后台线程或工作线程。这就是为什么所有基于网络的任务都应该在主线程之外执行。
 - en: 'Android offers the following options when working with background threads:'
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: Android在处理后台线程时提供以下选项：
 - en: '`Activity.runOnUiThread()`'
+  id: totrans-166
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Activity.runOnUiThread()`'
 - en: '`View.post()`'
+  id: totrans-167
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`View.post()`'
 - en: '`View.postDelayed()`'
+  id: totrans-168
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`View.postDelayed()`'
 - en: '`Handler`'
+  id: totrans-169
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Handler`'
 - en: '`AsyncTask`'
+  id: totrans-170
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`AsyncTask`'
 - en: This recipe will explore the `AsyncTask` class; since it was created previously,
     you wouldn't have to use the Handler or post methods directly.
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 本教程将探讨`AsyncTask`类；由于它之前已经创建过，你无需直接使用Handler或post方法。
 - en: Getting ready
+  id: totrans-172
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Create a new project in Android Studio and call it: `AsyncTask`. Use the default
     **Phone & Tablet** option and select **Empty Activity** when prompted for **Activity
     Type**.'
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，并将其命名为：`AsyncTask`。选择默认的**手机 & 平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: How to do it...
+  id: totrans-174
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'We only need a single button for this example. Open `activity_main.xml` and
     follow these steps:'
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个示例我们只需要一个按钮。打开`activity_main.xml`并按照以下步骤操作：
 - en: 'Replace the existing TextView with the following button:'
+  id: totrans-176
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下按钮替换现有的TextView：
 - en: '[PRE23]'
+  id: totrans-177
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'Open `MainActivity.java` and add the following global variable:'
+  id: totrans-178
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开`MainActivity.java`并添加以下全局变量：
 - en: '[PRE24]'
+  id: totrans-179
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'Add the `AsyncTask` class:'
+  id: totrans-180
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加`AsyncTask`类：
 - en: '[PRE25]'
+  id: totrans-181
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Add the following code to the `onCreate()` to initialize the button:'
+  id: totrans-182
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`onCreate()`中添加以下代码以初始化按钮：
 - en: '[PRE26]'
+  id: totrans-183
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Add the method for the button click:'
+  id: totrans-184
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加按钮点击的方法：
 - en: '[PRE27]'
+  id: totrans-185
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: You're ready to run the application on a device or emulator.
+  id: totrans-186
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你已经准备好在设备或模拟器上运行应用程序了。
 - en: How it works...
+  id: totrans-187
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的...
 - en: This is a very simple example of the `AsyncTask` just to get it working. Technically,
     only `doInBackground()` is required, but usually, you may want to receive notifications
     via `onPostExecute()` when it finishes.
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个非常简单的`AsyncTask`示例，只是为了让它工作。从技术上讲，只有`doInBackground()`是必需的，但通常，你可能希望在它完成时通过`onPostExecute()`接收通知。
 - en: The `AsyncTask` works by creating a worker thread for the `doInBackground()`
     method, then responds back on the UI thread in the `onPostExecute()` callback.
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AsyncTask`通过为`doInBackground()`方法创建一个工作线程来工作，然后在UI线程的`onPostExecute()`回调中响应。'
 - en: Notice how we have waited until `onPostExecute()` is called before we do any
     UI actions such as enabling the button. If we attempt to modify the UI in the
     worker thread, it would either not compile or throw a runtime exception. You should
     also note how we instantiated a new `CountingTask` object on each button click.
     This is because an `AsyncTask` can only execute once. Attempting to call execute
     again will also throw an exception.
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意我们是如何等到`onPostExecute()`被调用之后才进行任何UI操作，比如启用按钮。如果我们尝试在工作线程中修改UI，它要么无法编译，要么会抛出运行时异常。你还应该注意，我们是如何在每个按钮点击时实例化一个新的`CountingTask`对象。这是因为`AsyncTask`只能执行一次。尝试再次调用execute将会抛出异常。
 - en: There's more...
+  id: totrans-191
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: At its minimum, the `AsyncTask` can be very simple but it is still very flexible
     with more options available if you need them. When using an `AsyncTask` with an
     Activity, it's important to understand whether the Activity is destroyed and recreated
@@ -825,705 +1213,1042 @@
     activity (causing a `NullPointer` exception). For this reason, it's common to
     use the `AysncTask` with a Fragment (which is not destroyed on screen rotation),
     or use a Loader instead. (See the link for Loaders in the following section.)
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: '`AsyncTask`可以非常简单，但如果你需要，它仍然具有很多灵活性选项。当与Activity一起使用`AsyncTask`时，了解Activity是否被销毁和重新创建（如在屏幕方向改变时）或`AsyncTask`是否继续运行非常重要。这可能导致你的`AsyncTask`成为孤儿，并且可能对已销毁的活动做出响应（导致`NullPointer`异常）。因此，通常使用与Fragment一起的`AysncTask`（在屏幕旋转时不会销毁），或者使用Loader代替。（有关Loader的链接请参见下一节。）'
 - en: Parameter types
+  id: totrans-193
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 参数类型
 - en: 'For many people, the most confusing aspect of the `AsyncTask` is the parameters
     when creating their own class. If you look at our class declaration, there are
     three parameters for the `AsyncTask`; they are defined as follows:'
+  id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于许多人来说，创建自己的类时`AsyncTask`最令人困惑的方面是参数。如果你看我们的类声明，`AsyncTask`有三个参数；它们定义如下：
 - en: '[PRE28]'
+  id: totrans-195
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'The parameters are generic types and used as follows:'
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些参数是泛型类型，使用方法如下：
 - en: '**Params**: This is the parameter type to call `doInBackground()`'
+  id: totrans-197
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**参数**: 这是调用`doInBackground()`的参数类型。'
 - en: '**Progress**: This is the parameter type to post updates'
+  id: totrans-198
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**进度**: 这是发布更新的参数类型。'
 - en: '**Result**: This is the parameter type to post results'
+  id: totrans-199
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**结果**: 这是发布结果的参数类型。'
 - en: When you declare your own class, substitute the parameters with the variable
     type you need.
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你声明自己的类时，请将参数替换为你需要的变量类型。
 - en: 'Here''s the process flow for the `AsyncTask` and how the preceding parameters
     are used:'
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是`AsyncTask`的流程以及上述参数的使用方法：
 - en: '`onPreExecute()`: This is called before `doInBackground()` begins'
+  id: totrans-202
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onPreExecute()`: 这在`doInBackground()`开始之前被调用。'
 - en: '`doInBackground(Params)`: This executes in a background thread'
+  id: totrans-203
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`doInBackground(Params)`: 这在后台线程中执行。'
 - en: '`onProgressUpdate(Progress)`: This is called (on the UI thread) in response
     to the calling `publishProgress(Progress)` in the worker thread'
+  id: totrans-204
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onProgressUpdate(Progress)`: 这在UI线程中响应工作线程中的`publishProgress(Progress)`调用。'
 - en: '`onPostExecute(Result)`: This is called (on the UI thread) when the worker
     thread finishes'
+  id: totrans-205
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onPostExecute(Result)`: 当工作线程完成时，在UI线程中调用。'
 - en: Cancel the task
+  id: totrans-206
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 取消任务
 - en: 'To cancel the task, call the cancel method on the object as follows:'
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 要取消任务，请按照以下方式在对象上调用cancel方法：
 - en: '[PRE29]'
+  id: totrans-208
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: You will need to have the object instance to access the `cancel()` method. (We
     did not save the object in our previous example.) After setting `cancel(true)`,
     the calling `isCancelled()` in `doInBackground()` will return `true`, allowing
     you to exit a loop. If cancelled, `onCancelled()` will be called instead of `onPostExecute()`.
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 你需要拥有对象实例来访问`cancel()`方法。（在我们的上一个示例中，我们没有保存该对象。）在设置`cancel(true)`之后，在`doInBackground()`中调用`isCancelled()`将返回`true`，这样你就可以退出循环了。如果取消，将调用`onCancelled()`而不是`onPostExecute()`。
 - en: See also
+  id: totrans-210
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: Refer to the *Access data in the background using a Loader* recipe, in [Chapter
     6](ch06.html "Chapter 6. Working with Data"), *Working with Data*
+  id: totrans-211
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考[第6章](ch06.html "第6章 工作WithData")《*在后台使用Loader访问数据*》的菜谱，*处理数据*
 - en: '**Developer Docs: AsyncTask** at [http://developer.android.com/reference/android/os/AsyncTask.html](http://developer.android.com/reference/android/os/AsyncTask.html)'
+  id: totrans-212
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**开发者文档：AsyncTask**在[http://developer.android.com/reference/android/os/AsyncTask.html](http://developer.android.com/reference/android/os/AsyncTask.html)'
 - en: Adding speech recognition to your app
+  id: totrans-213
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在你的应用中添加语音识别
 - en: Android 2.2 (API 8) introduced speech recognition in Android, and it continues
     to improve with almost every new major Android release. This recipe will demonstrate
     how to add speech recognition to your app using the Google Speech service.
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 2.2（API 8）在Android中引入了语音识别功能，并且几乎在每一个新的主要Android版本发布时都会进行改进。本教程将演示如何使用谷歌语音服务在你的应用中添加语音识别功能。
 - en: Getting ready
+  id: totrans-215
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Create a new project in Android Studio and call it `SpeechRecognition`. Use
     the default **Phone & Tablet** option and select **Empty Activity** when prompted
     for **Activity Type**.
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，将其命名为`SpeechRecognition`。使用默认的**手机 & 平板**选项，在选择**活动类型**时选择**空活动**。
 - en: How to do it...
+  id: totrans-217
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'We''ll start by adding a Speak Now (or microphone) button to the layout, then
     we''ll add the necessary code to call the speech recognizer. Open `activity_main.xml`
     and follow these steps:'
+  id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们首先在布局中添加一个“立即说话”（或麦克风）按钮，然后添加必要的代码来调用语音识别器。打开`activity_main.xml`并按照以下步骤操作：
 - en: 'Replace the existing `TextView` with the following XML:'
+  id: totrans-219
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用以下XML替换现有的`TextView`：
 - en: '[PRE30]'
+  id: totrans-220
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Define the `REQUEST_SPEECH` constant:'
+  id: totrans-221
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 定义`REQUEST_SPEECH`常量：
 - en: '[PRE31]'
+  id: totrans-222
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Add the following code to the existing `onCreate()` callback:'
+  id: totrans-223
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在现有的`onCreate()`回调中添加以下代码：
 - en: '[PRE32]'
+  id: totrans-224
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'Add the button click method:'
+  id: totrans-225
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加按钮点击方法：
 - en: '[PRE33]'
+  id: totrans-226
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'Add the following code to override the `onActivityResult()` callback:'
+  id: totrans-227
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下代码以覆盖`onActivityResult()`回调：
 - en: '[PRE34]'
+  id: totrans-228
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: You're ready to run the application on a device or emulator.
+  id: totrans-229
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你已经准备好在设备或模拟器上运行应用程序。
 - en: How it works...
+  id: totrans-230
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: The work here is done by the Google Speech Recognizer included in Android. To
     make sure the service is available on the device, we call `PackageManager` in
     `onCreate()`. If at least one activity is registered to handle the `RecognizerIntent.ACTION_RECOGNIZE_SPEECH`
     intent, then we know it's available. If no activities are available, we display
     a Toast indicating speech recognition is not available and disable the mic button.
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里的工作由Android中包含的谷歌语音识别器完成。为了确保设备上可用该服务，我们在`onCreate()`中调用`PackageManager`。如果至少有一个活动注册以处理`RecognizerIntent.ACTION_RECOGNIZE_SPEECH`意图，那么我们知道它是可用的。如果没有活动可用，我们会显示一个提示语音识别不可用并禁用麦克风按钮的Toast。
 - en: The button click starts the recognition process by calling an intent created
     with `RecognizerIntent.ACTION_RECOGNIZE_SPEECH`.
+  id: totrans-232
   prefs: []
   type: TYPE_NORMAL
+  zh: 按钮点击通过调用使用`RecognizerIntent.ACTION_RECOGNIZE_SPEECH`创建的意图来启动识别过程。
 - en: 'The `EXTRA_LANGUAGE_MODEL` parameter is required and has the following two
     choices:'
+  id: totrans-233
   prefs: []
   type: TYPE_NORMAL
+  zh: '`EXTRA_LANGUAGE_MODEL`参数是必需的，有以下两个选择：'
 - en: '`LANGUAGE_MODEL_FREE_FORM`'
+  id: totrans-234
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`LANGUAGE_MODEL_FREE_FORM`'
 - en: '`LANGUAGE_MODEL_WEB_SEARCH`'
+  id: totrans-235
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`LANGUAGE_MODEL_WEB_SEARCH`'
 - en: We get the result back in the `onActivityResult()` callback. If we get back
     `RESULT_OK`, then we should have a list of words recognized, which we can retrieve
     using `getStringArrayListExtra()`. The array list will be ordered starting with
     the highest recognition confidence.
+  id: totrans-236
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在`onActivityResult()`回调中获取结果。如果我们得到`RESULT_OK`，那么我们应该有一个已识别单词的列表，可以使用`getStringArrayListExtra()`检索该列表。该数组列表将按识别信心最高开始排序。
 - en: 'If you want to retrieve the confidence rating, retrieve the float array using
     `EXTRA_CONFIDENCE_SCORES`. Here''s an example:'
+  id: totrans-237
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想要获取信心评分，可以使用`EXTRA_CONFIDENCE_SCORES`检索浮点数组。下面是一个例子：
 - en: '[PRE35]'
+  id: totrans-238
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: The confidence rating is optional and may not be present. A score of 1.0 indicates
     highest confidence, while 0.0 indicates lowest confidence.
+  id: totrans-239
   prefs: []
   type: TYPE_NORMAL
+  zh: 信心评分是可选的，可能不会出现。分数为1.0表示最高信心，而0.0表示最低信心。
 - en: There's more...
+  id: totrans-240
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'Using the intent is a quick and easy way to get speech recognition; however,
     if you would prefer not to use the default Google activity, you can call the `SpeechRecognizer`
     class directly. Here''s an example of how to instantiate the class:'
+  id: totrans-241
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用意图是获取语音识别的快速简便方法；然而，如果你不想使用默认的谷歌活动，可以直接调用`SpeechRecognizer`类。以下是实例化该类的一个例子：
 - en: '[PRE36]'
+  id: totrans-242
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: You will need to add the `RECORD_AUDIO` permission and implement the `RecognitionListener`
     class to handle the speech events. (See the following links for more information.)
+  id: totrans-243
   prefs: []
   type: TYPE_NORMAL
+  zh: 你需要添加`RECORD_AUDIO`权限并实现`RecognitionListener`类来处理语音事件。（更多信息请参见以下链接。）
 - en: See also
+  id: totrans-244
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '**Developer Docs: RecognizerIntent** at [http://developer.android.com/reference/android/speech/RecognizerIntent.html](http://developer.android.com/reference/android/speech/RecognizerIntent.html)'
+  id: totrans-245
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**开发者文档：RecognizerIntent** 在 [http://developer.android.com/reference/android/speech/RecognizerIntent.html](http://developer.android.com/reference/android/speech/RecognizerIntent.html)'
 - en: '**Developer Docs: SpeechRecognizer** at [http://developer.android.com/reference/android/speech/SpeechRecognizer.html](http://developer.android.com/reference/android/speech/SpeechRecognizer.html)'
+  id: totrans-246
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**开发者文档：SpeechRecognizer** 在 [http://developer.android.com/reference/android/speech/SpeechRecognizer.html](http://developer.android.com/reference/android/speech/SpeechRecognizer.html)'
 - en: '**Developer Docs: RecognitionListener** at [http://developer.android.com/reference/android/speech/RecognitionListener.html](http://developer.android.com/reference/android/speech/RecognitionListener.html)'
+  id: totrans-247
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**开发者文档：RecognitionListener** 在 [http://developer.android.com/reference/android/speech/RecognitionListener.html](http://developer.android.com/reference/android/speech/RecognitionListener.html)'
 - en: Push Notification using GCM
+  id: totrans-248
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用GCM的推送通知
 - en: 'GCM, Google''s version of Push Notification, allows your application to receive
     messages. The idea is similar to SMS messages, but much more flexible. There are
     three components to GCM:'
+  id: totrans-249
   prefs: []
   type: TYPE_NORMAL
+  zh: GCM，谷歌版的推送通知，可以让你的应用程序接收消息。这个想法与短信类似，但更加灵活。GCM有三个组成部分：
 - en: Your server (this is where you initiate the message)
+  id: totrans-250
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 你的服务器（这是你发起消息的地方）
 - en: Google's GCM server
+  id: totrans-251
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 谷歌的GCM服务器
 - en: Android device (although GCM is also available on other platforms)
+  id: totrans-252
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 安卓设备（尽管GCM也适用于其他平台）
 - en: When the user starts your application, your code needs to connect to the GCM
     server and obtain a device token, then send that token to your server. Your server
     is responsible for initiating the message and passing it to the GCM server. Your
     server needs to track the device tokens that have to be sent when initiating the
     message. (Your server tells the GCM server which device tokens needs to be sent.)
+  id: totrans-253
   prefs: []
   type: TYPE_NORMAL
+  zh: 当用户启动你的应用程序时，你的代码需要连接到GCM服务器并获取一个设备令牌，然后将该令牌发送到你的服务器。你的服务器负责发起消息并将其传递给GCM服务器。你的服务器需要跟踪在发起消息时需要发送的设备令牌。（你的服务器告诉GCM服务器需要发送哪些设备令牌。）
 - en: You can implement your own server or choose to use one of many services available.
     The next chapter, *Backend Service Options*, will look at several BaaS options,
     many of which also offer Push Notification. (The *Simple Testing Option* section
     offers an option to verify that your code is working.)
+  id: totrans-254
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以实施自己的服务器，或者选择使用许多可用的服务之一。下一章，*后端服务选项*，将查看几个BaaS选项，其中许多也提供推送通知。（*简单测试选项*部分提供了一个选项来验证你的代码是否正常工作。）
 - en: This recipe will walk you through the steps to add GCM using the current (Version
     8.3) Google Services library. Before getting to the steps, it's worth noting that
     GCM is supported all the way back to API 8, as long as the user has a Google account.
     A Google account is not required after Android 4.0.4.
+  id: totrans-255
   prefs: []
   type: TYPE_NORMAL
+  zh: 本指南将带你通过使用当前（版本8.3）的谷歌服务库添加GCM的步骤。在开始步骤之前，值得注意的是GCM支持回溯到API 8，只要用户有谷歌账户即可。在安卓4.0.4之后，不再需要谷歌账户。
 - en: Getting ready
+  id: totrans-256
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Create a new project in Android Studio and call it `GCM`. Use the default **Phone
     & Tablet** option and select **Empty Activity** when prompted for **Activity Type**.
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Studio中创建一个新项目，并将其命名为`GCM`。使用默认的**手机和平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: 'GCM uses the Google Services plugin, which requires a Google Services configuration
     file available from the Google Developer Console. To create the configuration
     file, you will need the following information:'
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: GCM使用谷歌服务插件，该插件需要从谷歌开发者控制台获取谷歌服务配置文件。要创建配置文件，你需要以下信息：
 - en: Your application package name
+  id: totrans-259
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 你的应用程序包名
 - en: 'When you have the information, log in to this Google link and follow the wizard
     to enable GCM for your app: [https://developers.google.com/mobile/add](https://developers.google.com/mobile/add)'
+  id: totrans-260
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 拿到信息后，登录这个谷歌链接并按照向导为你的应用启用GCM：[https://developers.google.com/mobile/add](https://developers.google.com/mobile/add)
 - en: Note
+  id: totrans-261
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: If you download the source files, you will need to create a new package name
     when following the preceding steps, as the existing package name has already been
     registered.
+  id: totrans-262
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你下载了源文件，按照前面的步骤操作时，你需要创建一个新的包名，因为现有的包名已经被注册了。
 - en: How to do it...
+  id: totrans-263
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'After completing the preceding Getting Ready section, follow these steps:'
+  id: totrans-264
   prefs: []
   type: TYPE_NORMAL
+  zh: 完成前面的准备工作后，按照以下步骤操作：
 - en: Copy the `google-services.json` file, which you downloaded in the *Getting Ready*
     section, to your app folder (<project folder>\`GCM\app`).
+  id: totrans-265
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将你在*准备工作*部分下载的`google-services.json`文件复制到你的应用文件夹（<项目文件夹>\`GCM\app`）。
 - en: 'Open the project Gradle build file: `build.gradle (Project: GCM)`, and add
     the following to the `buildscript dependencies` sections:'
+  id: totrans-266
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '打开项目Gradle构建文件：`build.gradle (Project: GCM)`，并向`buildscript dependencies`部分添加以下内容：'
 - en: '[PRE37]'
+  id: totrans-267
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'Open the app module Gradle build file: `build.gradle (Module: app)`, and add
     the following statement to the beginning of the file (above the `android` section):'
+  id: totrans-268
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '打开app模块的Gradle构建文件：`build.gradle (Module: app)`，并在文件开头（`android`部分之上）添加以下声明：'
 - en: '[PRE38]'
+  id: totrans-269
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'In the same module build file as step 3, add the following statement to the
     dependencies section:'
+  id: totrans-270
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在第3步的同一模块构建文件中，向依赖项部分添加以下声明：
 - en: '[PRE39]'
+  id: totrans-271
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: 'Open the Android Manifest and add the following permissions:'
+  id: totrans-272
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开Android Manifest文件，并添加以下权限：
 - en: '[PRE40]'
+  id: totrans-273
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'Within the `<application>` element, add the following `<receiver>` and `<service>`
     declarations (these should be at the same level as the `<activity>`):'
+  id: totrans-274
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`<application>`元素内，添加以下`<receiver>`和`<service>`声明（这些应该与`<activity>`在同一级别）：
 - en: '[PRE41]'
+  id: totrans-275
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'Create a new Java class called `GCMRegistrationService` that extends `IntentService`,
     as follows:'
+  id: totrans-276
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`GCMRegistrationService`的新Java类，它扩展了`IntentService`，如下所示：
 - en: '[PRE42]'
+  id: totrans-277
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'Create a new Java class called `GCMInstanceService` that extends `InstanceIDListenerService`,
     as follows:'
+  id: totrans-278
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`GCMInstanceService`的新Java类，它扩展了`InstanceIDListenerService`，如下所示：
 - en: '[PRE43]'
+  id: totrans-279
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'Create a new Java class called `GCMService` that extends `GcmListenerService,`
     as follows:'
+  id: totrans-280
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`GCMService`的新Java类，它扩展了`GcmListenerService,`如下所示：
 - en: '[PRE44]'
+  id: totrans-281
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'Add the following code to the existing `onCreate()` callback:'
+  id: totrans-282
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在现有的`onCreate()`回调中添加以下代码：
 - en: '[PRE45]'
+  id: totrans-283
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: You're ready to run the application on a device or emulator.
+  id: totrans-284
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 你现在可以在设备或模拟器上运行应用程序了。
 - en: How it works...
+  id: totrans-285
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: Most of the actual GCM code is encapsulated within the Google APIs, simplifying
     the implementation. We just have to set up the project to include Google Services,
     and give our app the required permissions.
+  id: totrans-286
   prefs: []
   type: TYPE_NORMAL
+  zh: 大部分实际的GCM代码被封装在Google API中，简化了实现。我们只需要设置项目以包含Google服务，并给我们的应用程序所需权限。
 - en: Note
+  id: totrans-287
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: '**Important**! When adding the permissions in Steps 5 and 6, replace the `<packageName>`
     placeholder with your application''s package name.'
+  id: totrans-288
   prefs: []
   type: TYPE_NORMAL
+  zh: '**重要**！在第5步和第6步添加权限时，请将`<packageName>`占位符替换为你的应用程序包名。'
 - en: 'The most complicated aspect of GCM is probably the multiple services required.
     Even though the code in each service is minimal, each service has a specific task.
     There are two main aspects of GCM:'
+  id: totrans-289
   prefs: []
   type: TYPE_NORMAL
+  zh: GCM最复杂的方面可能是需要多个服务。尽管每个服务中的代码都很少，但每个服务都有特定的任务。GCM主要有两个方面的内容：
 - en: Registering the app with the GCM server
+  id: totrans-290
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 将应用与GCM服务器注册
 - en: Receiving messages
+  id: totrans-291
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 接收消息
 - en: 'This is the code to register with the GCM server:'
+  id: totrans-292
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是向GCM服务器注册的代码：
 - en: '[PRE46]'
+  id: totrans-293
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: We don't call `getToken()` in the Activity, because it could block the UI thread.
     Instead, we call the `GCMRegistrationService`, which handles the call in a background
     thread. After you receive the device token, you need to send it to your server,
     as it is needed when initiating a message.
+  id: totrans-294
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们不在Activity中调用`getToken()`，因为它可能会阻塞UI线程。相反，我们调用`GCMRegistrationService`，它在后台线程中处理调用。在收到设备令牌后，你需要将其发送到你的服务器，因为初始化消息时需要它。
 - en: The process of receiving a GCM message is handled in `GCMService`, which extends
     `GcmListenerService`. Since the Google API already handles most of the work, all
     we have to do is respond to the `onMessageReceived()` callback.
+  id: totrans-295
   prefs: []
   type: TYPE_NORMAL
+  zh: 接收GCM消息的过程在`GCMService`中处理，它扩展了`GcmListenerService`。由于Google API已经处理了大部分工作，我们只需要响应`onMessageReceived()`回调。
 - en: There's more...
+  id: totrans-296
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: 'To make it easier to type, we left out an important Google Services API verification
     that should be included in any production application. Instead of calling `GCMRegistrationService`
     directly, as we did in `onCreate()` in the preceding section, first check whether
     the Google API Service is available. Here''s an example showing how to call the
     `isGooglePlayServicesAvailable()` method:'
+  id: totrans-297
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了便于输入，我们省略了一个重要的谷歌服务API验证，这个验证在生产应用中应当被包含。我们在前面的部分中的`onCreate()`直接调用了`GCMRegistrationService`，而不是首先检查Google
+    API服务是否可用。以下是一个如何调用`isGooglePlayServicesAvailable()`方法的示例：
 - en: '[PRE47]'
+  id: totrans-298
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'Then, change the `onCreate()` code to call this method first:'
+  id: totrans-299
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，更改`onCreate()`代码，首先调用这个方法：
 - en: '[PRE48]'
+  id: totrans-300
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: Simple testing option
+  id: totrans-301
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 简单的测试选项
 - en: To help to verify that your code is working correctly, a testing application
     was created and posted on Google Play. This app will run on both a physical device
     and an emulator. The Google Play listing also includes a link to download the
     source code and run the project directly, making it easier to enter the required
     fields.
+  id: totrans-302
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了帮助验证你的代码是否正确运行，创建了一个测试应用并发布在 Google Play 上。这个应用可以在实体设备和模拟器上运行。Google Play
+    列表还包含一个下载源代码并直接运行项目的链接，以便更容易输入所需字段。
 - en: Tip
+  id: totrans-303
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**GCM (Push Notification) Tester**: Refer to the following link for more information:'
+  id: totrans-304
   prefs: []
   type: TYPE_NORMAL
+  zh: '**GCM (推送通知) 测试器**：更多信息请参考以下链接：'
 - en: '[https://play.google.com/store/apps/details?id=com.eboyer.gcmtester](https://play.google.com/store/apps/details?id=com.eboyer.gcmtester)'
+  id: totrans-305
   prefs: []
   type: TYPE_NORMAL
+  zh: '[https://play.google.com/store/apps/details?id=com.eboyer.gcmtester](https://play.google.com/store/apps/details?id=com.eboyer.gcmtester)'
 - en: See also
+  id: totrans-306
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 参阅
 - en: Refer to the Google Cloud Messaging web page at [https://developers.google.com/android/reference/com/google/android/gms/gcm/GoogleCloudMessaging](https://developers.google.com/android/reference/com/google/android/gms/gcm/GoogleCloudMessaging)
+  id: totrans-307
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考 Google 云消息传递网页[https://developers.google.com/android/reference/com/google/android/gms/gcm/GoogleCloudMessaging](https://developers.google.com/android/reference/com/google/android/gms/gcm/GoogleCloudMessaging)
 - en: Refer to the About the GCM Connection server web page at [https://developers.google.com/cloud-messaging/server](https://developers.google.com/cloud-messaging/server)
+  id: totrans-308
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考关于 GCM 连接服务器网页的说明，网址为[https://developers.google.com/cloud-messaging/server](https://developers.google.com/cloud-messaging/server)
 - en: How to add Google sign-in to your app
+  id: totrans-309
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 如何在应用中添加 Google 登录
 - en: 'A Google sign-in allows your users to sign in to your application using their
     Google credentials. This recipe will walk you through the process of adding a
     Google sign-in to your application. Here''s a screenshot showing the Google sign-in
     button in the application that we''ll create in the recipe:'
+  id: totrans-310
   prefs: []
   type: TYPE_NORMAL
+  zh: Google 登录允许你的用户使用他们的 Google 凭据登录你的应用。本教程将指导你如何在应用中添加 Google 登录。以下是将在教程中创建的应用中显示的
+    Google 登录按钮的截图：
 - en: '![How to add Google sign-in to your app](img/B05057_14_1.jpg)'
+  id: totrans-311
   prefs: []
   type: TYPE_IMG
+  zh: '![如何在应用中添加 Google 登录](img/B05057_14_1.jpg)'
 - en: Getting ready
+  id: totrans-312
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Create a new project in Android Studio and call it `GoogleSignIn`. Use the default
     **Phone & Tablet** option and select **Empty Activity** when prompted for **Activity
     Type**.
+  id: totrans-313
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Android Studio 中创建一个新项目，命名为 `GoogleSignIn`。选择默认的**手机 & 平板**选项，并在提示**活动类型**时选择**空活动**。
 - en: 'The Google sign-in uses the Google Services plugin, which requires a Google
     Services Configuration file, which is available from the Google Developer Console.
     To create the configuration file, you will need the following information:'
+  id: totrans-314
   prefs: []
   type: TYPE_NORMAL
+  zh: Google 登录使用 Google 服务插件，该插件需要一个 Google 服务配置文件，你可以在 Google 开发者控制台获取。要创建配置文件，你需要以下信息：
 - en: Your application package name
+  id: totrans-315
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 您的应用程序包名
 - en: Your signing certificate's SHA-1 hash code (see the *Authenticating Your Client*
     link at the end of the recipe for more information)
+  id: totrans-316
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 你的签名证书的 SHA-1 哈希码（有关更多信息，请参阅教程末尾的*验证客户端*链接）
 - en: 'When you have the information, log in to this Google link and follow the wizard
     to enable sign-in:'
+  id: totrans-317
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你拥有这些信息后，登录此 Google 链接，并按照向导启用登录：
 - en: '[https://developers.google.com/mobile/add](https://developers.google.com/mobile/add)'
+  id: totrans-318
   prefs: []
   type: TYPE_NORMAL
+  zh: '[https://developers.google.com/mobile/add](https://developers.google.com/mobile/add)'
 - en: Note
+  id: totrans-319
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: If you are downloading the source files, you will need to create a new package
     name when following the preceding steps, as the existing package name has already
     been registered.
+  id: totrans-320
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你正在下载源文件，按照前面的步骤操作时，你需要创建一个新的包名，因为现有的包名已经被注册。
 - en: How to do it...
+  id: totrans-321
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'After completing the preceding *Getting Ready* section, follow these steps:'
+  id: totrans-322
   prefs: []
   type: TYPE_NORMAL
+  zh: 完成前面的*准备工作*部分后，请遵循以下步骤：
 - en: Copy the `google-services.json` file you downloaded in the *Getting Ready* section
     to your app folder (`<project folder>\GoogleSignIn\app`)
+  id: totrans-323
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将在*准备工作*部分下载的 `google-services.json` 文件复制到你的应用文件夹（`<项目文件夹>\GoogleSignIn\app`）
 - en: 'Open the project Gradle build file: `build.gradle (Project: GoogleSignIn)`,
     and add the following to the `buildscript dependencies` section:'
+  id: totrans-324
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开项目 Gradle 构建文件：`build.gradle (项目：GoogleSignIn)`，并在 `buildscript dependencies`
+    部分添加以下内容：
 - en: '[PRE49]'
+  id: totrans-325
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'Open the app module Gradle build file: `build.gradle (Module: app)`, and add
     the following statement to the beginning of the file (above the `android` section):'
+  id: totrans-326
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开应用模块 Gradle 构建文件：`build.gradle (模块：app)`，并在文件开头（`android` 部分之上）添加以下声明：
 - en: '[PRE50]'
+  id: totrans-327
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: 'In the same module build file as Step 3, add the following statement to the
     dependencies section:'
+  id: totrans-328
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在步骤 3 的同一模块构建文件中，将以下声明添加到依赖项部分：
 - en: '[PRE51]'
+  id: totrans-329
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: 'Open `activity_main.xml` and replace the existing `TextView` with the following
     XML:'
+  id: totrans-330
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开`activity_main.xml`，用以下 XML 替换现有的`TextView`：
 - en: '[PRE52]'
+  id: totrans-331
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'Open `MainActivity.java` and add the following global declarations:'
+  id: totrans-332
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开`MainActivity.java`并添加以下全局声明：
 - en: '[PRE53]'
+  id: totrans-333
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'Add the following `OnConnectionFailedListener`:'
+  id: totrans-334
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加以下`OnConnectionFailedListener`：
 - en: '[PRE54]'
+  id: totrans-335
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'Add the following code to the existing `onCreate()`:'
+  id: totrans-336
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在现有的`onCreate()`中添加以下代码：
 - en: '[PRE55]'
+  id: totrans-337
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'Create an override for the `onActivityResult()` callback as follows:'
+  id: totrans-338
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照以下步骤为`onActivityResult()`回调创建一个覆盖方法：
 - en: '[PRE56]'
+  id: totrans-339
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: You're ready to run the application on a device or emulator.
+  id: totrans-340
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在你可以将应用程序运行在设备或模拟器上了。
 - en: How it works...
+  id: totrans-341
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: Google has made it relatively simple to add a Google sign-in with their `GoogleApiClient`
     and `GoogleSignInOptions` APIs. First, we create a `GoogleSignInOptions` object
     with the builder. This is where we specify the sign-in options we want, such as
     requesting e-mail ID. Then, we pass it to the `GoogleApiClient` builder.
+  id: totrans-342
   prefs: []
   type: TYPE_NORMAL
+  zh: Google 使用他们的`GoogleApiClient`和`GoogleSignInOptions` API 相对简单地添加了 Google 登录。首先，我们使用构建器创建一个`GoogleSignInOptions`对象。在这里，我们指定所需的登录选项，例如请求电子邮件
+    ID。然后，我们将其传递给`GoogleApiClient`构建器。
 - en: 'When the user clicks on the Google sign-in button (created with the `com.google.android.gms.common.SignInButton`
     class), we send an Intent for `GoogleSignInApi` to the handle. We process the
     result in `onActivityResult()`. If the sign-in was successful, we can get the
     account details. In our example, we just get the e-mail, but additional information
     is available such as the following:'
+  id: totrans-343
   prefs: []
   type: TYPE_NORMAL
+  zh: 当用户点击使用`com.google.android.gms.common.SignInButton`类创建的 Google 登录按钮时，我们会向`GoogleSignInApi`发送一个
+    Intent。我们在`onActivityResult()`中处理结果。如果登录成功，我们可以获取账户详情。在我们的示例中，我们只获取电子邮件，但还有其他信息可用，例如：
 - en: '`getDisplayName()`: This is the display name'
+  id: totrans-344
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`getDisplayName()`: 这是显示名称'
 - en: '`getEmail(``)`: The e-mail address'
+  id: totrans-345
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`getEmail(``)`: 电子邮件地址'
 - en: '`getId()`: The unique ID for the Google account'
+  id: totrans-346
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`getId()`: Google 账户的唯一 ID'
 - en: '`getPhotoUrl()`: The display photo'
+  id: totrans-347
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`getPhotoUrl()`: 显示照片'
 - en: '`getIdToken()`: This is for the backend authentication'
+  id: totrans-348
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`getIdToken()`: 这是用于后端认证的'
 - en: See the *GoogleSignInAccount* link in the *See also* section for a complete
     list.
+  id: totrans-349
   prefs: []
   type: TYPE_NORMAL
+  zh: 在*另请参阅*部分查看*GoogleSignInAccount*链接以获取完整列表。
 - en: There's more...
+  id: totrans-350
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: If you want your application to be available to a wider audience, you'll want
     to think about localization.
+  id: totrans-351
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想让你的应用程序能够被更广泛的受众使用，你需要考虑本地化。
 - en: Localization resources
+  id: totrans-352
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 本地化资源
 - en: 'Google provides many localized strings in the SDK, located at this link: `<SDK
     install folder>/sdk/extras/google/google_play_services/libproject/google-play-services_lib/res/`.'
+  id: totrans-353
   prefs: []
   type: TYPE_NORMAL
+  zh: Google 在 SDK 中提供了许多本地化字符串，位于此链接：`<SDK 安装文件夹>/sdk/extras/google/google_play_services/libproject/google-play-services_lib/res/`。
 - en: See also
+  id: totrans-354
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: Refer to the web page talking about authenticating your client at [https://developers.google.com/android/guides/client-auth](https://developers.google.com/android/guides/client-auth)
+  id: totrans-355
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 请参考关于验证客户端的网页，网址为[https://developers.google.com/android/guides/client-auth](https://developers.google.com/android/guides/client-auth)
 - en: Visit GoogleSignInAccount at [https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInAccount](https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInAccount)
+  id: totrans-356
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 访问[https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInAccount](https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInAccount)了解
+    GoogleSignInAccount
