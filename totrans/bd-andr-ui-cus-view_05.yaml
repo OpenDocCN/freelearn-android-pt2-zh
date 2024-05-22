@@ -3,6 +3,7 @@
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引入3D自定义视图
 - en: In previous chapters, we've seen how to implement custom views using the Android
     2D graphics library. That would be our most common approach, but sometimes, we
     might need some more horsepower because of additional render particularities or
@@ -11,58 +12,70 @@
   id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，我们已经了解了如何使用安卓2D图形库实现自定义视图。这是我们最常用的方法，但在某些情况下，由于额外的渲染特性或自定义视图的需求，我们可能需要更多的性能。在这些情况下，我们可能会使用**嵌入式系统OpenGL**（**OpenGL
+    ES**），并在我们的视图中启用3D渲染操作。
 - en: 'In this chapter, we''ll see how to use OpenGL ES in our custom views and show
     a practical example of how we can build one. With more detail, we will cover the
     following topics:'
   id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将了解如何在自定义视图中使用OpenGL ES，并展示一个实际示例，说明我们如何构建一个。更详细地说，我们将涵盖以下主题：
 - en: Introduction to OpenGL ES
   id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: OpenGL ES简介
 - en: Drawing geometry
   id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 绘制几何体
 - en: Loading external geometry
   id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 加载外部几何体
 - en: Introduction to OpenGL ES
   id: totrans-6
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: OpenGL ES简介
 - en: Android supports OpenGL ES for 3D rendering. OpenGL ES is a subset of the desktop
     **OpenGL API** implementation. On its own, **Open Graphics Library** (**OpenGL**)
     is a very popular cross-platform API for rendering 2D and 3D graphics.
   id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓支持OpenGL ES进行3D渲染。OpenGL ES是桌面**OpenGL API**实现的一个子集。**开放图形库**（**OpenGL**）本身是一个非常流行的跨平台API，用于渲染2D和3D图形。
 - en: It is slightly more complex to use OpenGL ES to render our custom view than
     the standard Android canvas drawing primitives and, as we'll see during this chapter,
     it needs to be used with common sense and it won't always be the best approach.
   id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用OpenGL ES来渲染我们的自定义视图比标准的安卓画布绘制原语要稍微复杂一些，正如我们将在本章中看到的，它需要与常识一起使用，并不总是最佳方法。
 - en: 'For any additional information about OpenGL ES please refer to the official
     documentation from The Khronos Group:'
   id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 有关OpenGL ES的任何额外信息，请参考Khronos集团的官方文档：
 - en: '[https://www.khronos.org/opengles/](https://www.khronos.org/opengles/).'
   id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: '[Khronos集团的OpenGL ES官方文档](https://www.khronos.org/opengles/).'
 - en: Getting started with OpenGL ES in Android
   id: totrans-11
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在安卓中开始使用OpenGL ES
 - en: 'It''s very easy to create a 3D-enabled custom view. We can do it by simply
     extending `GLSurfaceView` instead of just extending from the `View` class. The
     complexity comes in the rendering part, but let''s go step by step. First, we''ll
@@ -70,6 +83,7 @@
   id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建一个支持3D的自定义视图非常简单。我们可以通过简单地扩展`GLSurfaceView`而不是仅从`View`类扩展来实现。复杂性在于渲染部分，但让我们一步一步来。首先，我们将创建一个名为`GLDrawer`的类并将其添加到我们的项目中：
 - en: '[PRE0]'
   id: totrans-13
   prefs: []
@@ -80,16 +94,19 @@
   id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 与我们之前的示例一样，我们使用`AttributeSet`创建了构造函数，因此我们可以从XML布局文件中充气并设置参数（如果需要的话）。
 - en: We might have the impression that OpenGL ES is only used in full screen games,
     but it can be used in non-full screen views and even inside `ViewGroups` or a
     `ScrollView`.
   id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可能会认为OpenGL ES只用于全屏游戏，但它也可以用于非全屏视图，甚至可以在`ViewGroups`或`ScrollView`内部使用。
 - en: 'To see how it behaves, let''s add it to the `layout` file between two `TextView`:'
   id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了观察其行为，让我们将其添加到两个`TextView`之间的`layout`文件中：
 - en: '[PRE1]'
   id: totrans-17
   prefs: []
@@ -104,6 +121,7 @@
   id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的`GLDrawer`类可以工作之前，我们需要进行一个额外的步骤。我们必须创建一个`GLSurfaceView.Renderer`对象来处理所有的渲染工作，并通过使用`setRenderer()`方法将其设置到视图中。当我们设置这个渲染器时，`GLSurfaceView`将额外创建一个新线程来管理视图的绘制周期。让我们在`GLDrawer`类文件的末尾添加一个`GLRenderer`类：
 - en: '[PRE2]'
   id: totrans-19
   prefs: []
@@ -119,6 +137,7 @@
   id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: '`glClearColor()`方法告诉OpenGL我们希望从屏幕上清除哪种颜色。我们设置了四个分量：红色、绿色、蓝色和alpha，以浮点格式表示，范围从`0`到`1`。`glClear()`是实际清除屏幕的方法。由于OpenGL还可以清除其他几个缓冲区，如果我们设置了`GL_COLOR_BUFFER_BIT`标志，它才会清除屏幕。现在我们已经介绍了一些OpenGL函数，让我们创建一个`GLRenderer`实例变量，并在类构造函数中初始化它：'
 - en: '[PRE3]'
   id: totrans-21
   prefs: []
@@ -129,6 +148,7 @@
   id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 实现一个`GLSurfaceView.Renderer`类时，我们必须重写以下三个方法或回调：
 - en: '`onSurfaceCreated()`: This method will be called every time Android needs to
     create an OpenGL context-for example, the very first time the rendered thread
     is created, or every time the OpenGL context is lost. Context might be lost whenever
@@ -138,33 +158,39 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onSurfaceCreated()`: 每当Android需要创建OpenGL上下文时，都会调用此方法——例如，在首次创建渲染线程时，或者每次OpenGL上下文丢失时。当应用程序进入后台时，上下文可能会丢失。这个回调是放置所有依赖于OpenGL上下文的初始化代码的理想方法。'
 - en: '`onSurfaceChanged()`:This method will be called when the view is resized. It''ll
     also be called the very first time the surface is created.'
   id: totrans-24
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onSurfaceChanged()`: 当视图大小发生变化时，将调用此方法。在第一次创建表面时也会被调用。'
 - en: '`onDrawFrame()`:This method is responsible for doing the actual drawing, and
     will be called every time the view needs to be drawn.'
   id: totrans-25
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`onDrawFrame()`: 此方法是负责实际绘制的内容，并且每次需要绘制视图时都会被调用。'
 - en: In our example, we've left the `onSurfaceCreated()` and `onSurfaceChanged()`
     methods empty as, at this moment, we're only focusing on drawing a solid background
     to check if we have everything working, and we don't need the view size yet.
   id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的示例中，我们留下了`onSurfaceCreated()`和`onSurfaceChanged()`方法为空，因为此时我们只关注绘制实心背景以检查是否一切正常工作，而且我们暂时还不需要视图的大小。
 - en: 'If we run this example, we''ll see both `TextView`s and our custom view with
     a red background:'
   id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们运行这个示例，我们将看到两个`TextView`和带有红色背景的自定义视图：
 - en: '![](img/55be06cb-b0bb-4248-9da3-cbbe3d4bbd7e.png)'
   id: totrans-28
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/55be06cb-b0bb-4248-9da3-cbbe3d4bbd7e.png)'
 - en: 'If we set a breakpoint or we print a log in our `onDrawFrame()` method, we''ll
     see that the view is continuously redrawn. This behavior is different from a normal
     view, as the renderer thread will be continuously calling the `onDrawFrame()`
@@ -174,12 +200,14 @@
   id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们在`onDrawFrame()`方法中设置断点或打印日志，我们将看到视图在不断地重绘。这种行为与普通视图不同，因为渲染线程会不断调用`onDrawFrame()`方法。通过调用设置渲染器对象后的`setRender()`方法，可以修改这种行为。如果我们在此之前调用它，应用程序将会崩溃。有两种渲染模式：
 - en: '`setRenderMode`(`RENDERMODE_CONTINUOUSLY`): This is the default behavior. The
     renderer will be continuously called to render the view.'
   id: totrans-30
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setRenderMode`(`RENDERMODE_CONTINUOUSLY`): 这是默认行为。渲染器将不断被调用以渲染视图。'
 - en: '`setRenderMode`(`RENDERMODE_WHEN_DIRTY`): This can be set to avoid the continuous
     redrawing of the view. Instead of calling invalidate, we have to call `requestRender`
     in order to request a new render of the view.'
@@ -187,11 +215,13 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setRenderMode`(`RENDERMODE_WHEN_DIRTY`): 可以设置此选项以避免视图的连续重绘。我们不需要调用invalidate，而必须调用`requestRender`来请求视图的新渲染。'
 - en: Drawing basic geometry
   id: totrans-32
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 绘制基本几何图形
 - en: 'We''ve got our view initialized and have drawn a solid red background. Let''s
     draw something more interesting. We''ll focus on OpenGL ES 2.0 in the following
     examples, as it''s been available since Android 2.2, or API level 8, and it''s
@@ -201,10 +231,14 @@
   id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经初始化了视图并绘制了一个实心的红色背景。接下来让我们绘制一些更有趣的内容。在以下示例中，我们将关注OpenGL ES 2.0，因为它自Android
+    2.2或API级别8起就已经可用，而且解释如何在OpenGL ES 1.1中实现它并没有太大意义。然而，如果你想了解更多，GitHub上有些将旧的NeHe
+    OpenGL ES教程移植到Android的项目：
 - en: '[https://github.com/nea/nehe-android-ports](https://github.com/nea/nehe-android-ports).'
   id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: '[https://github.com/nea/nehe-android-ports](https://github.com/nea/nehe-android-ports)。'
 - en: OpenGLES 1.1 and OpenGL ES 2.0 code are incompatible because the OpenGL ES 1.1
     code is based on a fixed-function pipeline, where you have to specify the geometry,
     lights, and so on, and OpenGL ES 2.0 is based on a programmable pipeline handled
@@ -212,12 +246,15 @@
   id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGLES 1.1和OpenGL ES 2.0的代码是不兼容的，因为OpenGL ES 1.1的代码基于固定功能管线，你需要指定几何体、灯光等，而OpenGL
+    ES 2.0基于可编程管线，由顶点和片段着色器处理。
 - en: 'First, as we require OpenGL ES 2.0, we should add a `uses-feature` configuration
     line in our manifest file so that Google Play will not show the application to
     those devices that are not compatible:'
   id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，由于我们需要OpenGL ES 2.0，应该在清单文件中添加一个`uses-feature`配置行，这样Google Play就不会将应用程序展示给不兼容的设备：
 - en: '[PRE4]'
   id: totrans-37
   prefs: []
@@ -228,6 +265,8 @@
   id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们使用OpenGL ES3.0的特定API，我们应该将要求更改为`android:glEsVersion="0x00030000"`，以便Google
+    Play相应地进行筛选。
 - en: 'Once we''ve done this step, we could start drawing some more shapes and geometry.
     But first, before setting the renderer, we should set the renderer context to
     `2` so it will create an OpenGL ES 2.0 context. We can easily do that by modifying
@@ -235,6 +274,7 @@
   id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 完成这一步后，我们可以开始绘制更多形状和几何体。但在设置渲染器之前，我们应该将渲染器上下文设置为`2`，以便创建一个OpenGL ES 2.0上下文。我们可以通过修改`GLDrawer`类的构造函数轻松实现这一点：
 - en: '[PRE5]'
   id: totrans-40
   prefs: []
@@ -247,11 +287,14 @@
   id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们一步一步来学习如何在屏幕上画一个矩形。如果你熟悉OpenGL ES 1.1但不熟悉OpenGL ES 2.0，你会发现这里需要多做一点工作，但最终，我们将从OpenGL
+    ES 2.0的额外灵活性和强大功能中受益。
 - en: 'We will start by defining an array with the coordinates of a rectangle, or
     a quad, centered on the position `0, 0, 0`:'
   id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从定义一个以位置`0, 0, 0`为中心的矩形或四边形的坐标数组开始：
 - en: '[PRE6]'
   id: totrans-43
   prefs: []
@@ -261,6 +304,7 @@
   id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们要画三角形，因此需要定义它们的顶点索引：
 - en: '[PRE7]'
   id: totrans-45
   prefs: []
@@ -272,20 +316,24 @@
   id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 要理解这些索引背后的逻辑，如何将它们映射到我们之前定义的顶点索引，以及如何使用两个三角形来绘制一个四边形，请看以下图表：
 - en: '![](img/553dbbb6-5901-4c39-9689-13577d604010.png)'
   id: totrans-47
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/553dbbb6-5901-4c39-9689-13577d604010.png)'
 - en: If we draw a triangle with the vertices `0`, `1`, and `2,` and another one with
     the vertices `0`, `2`, and `3`, we'll end up having a quad.
   id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们画一个顶点为`0`、`1`和`2`的三角形，再画一个顶点为`0`、`2`和`3`的三角形，最终我们会得到一个四边形。
 - en: 'When working with OpenGL ES, we''ll need to provide data using a `Buffer` or
     a subclass of a `Buffer`, so let''s convert those arrays into `Buffer`:'
   id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 在使用OpenGL ES时，我们需要使用`Buffer`或其子类来提供数据，因此让我们将这些数组转换为`Buffer`：
 - en: '[PRE8]'
   id: totrans-50
   prefs: []
@@ -300,6 +348,8 @@
   id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们需要为`Buffer`分配所需的空间。由于我们知道数组的大小，这会非常简单：只需将其乘以浮点数的大小（以字节为单位）。一个浮点数正好是四个字节，但我们也可以通过获取位数（使用`Float.SIZE`）并除以`8`来计算。在Java
+    8中，有一个名为`Float.BYTES`的新常量，它正好返回以字节为单位的大小。
 - en: We have to indicate that the `Buffer` in which we put the data will have the
     native byte order of the platform. We can do this by calling the `order()` method
     on the `Buffer` with `ByteOrder.nativeOrder()` as a parameter. Once we've done
@@ -309,12 +359,14 @@
   id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要指出，我们放入数据的`Buffer`将具有平台的本地字节序。我们可以通过在`Buffer`上调用`order()`方法，并以`ByteOrder.nativeOrder()`作为参数来实现这一点。完成这一步后，我们可以通过调用`Buffer.asFloatBuffer()`将其转换为浮点缓冲区，并设置数据。最后，我们将`Buffer`的位置重置为开始位置，即设置为`0`。
 - en: 'We have to do this process for the vertices as well as for the indexes. As
     indexes are stored as short integers, we need to take that into consideration
     when we convert the buffer, and when calculating the size:'
   id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们必须为顶点以及索引执行这个过程。由于索引作为短整数存储，我们在转换缓冲区以及计算大小时需要考虑这一点。
 - en: '[PRE9]'
   id: totrans-54
   prefs: []
@@ -326,6 +378,7 @@
   id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，OpenGL ES 2.0渲染管线由顶点和片段`shader`处理。让我们创建一个辅助方法来加载和编译`shader`代码：
 - en: '[PRE10]'
   id: totrans-56
   prefs: []
@@ -335,6 +388,7 @@
   id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用这个新方法，我们可以加载顶点和片段`shaders`：
 - en: '[PRE11]'
   id: totrans-58
   prefs: []
@@ -345,10 +399,12 @@
   id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 目前，让我们使用来自Android开发者OpenGL培训网站的默认`shaders`。
 - en: 'The `vertexShader` is as follows:'
   id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: '`vertexShader`如下所示：'
 - en: '[PRE12]'
   id: totrans-61
   prefs: []
@@ -358,6 +414,7 @@
   id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: '`fragmentShader`如下所示：'
 - en: '[PRE13]'
   id: totrans-63
   prefs: []
@@ -369,12 +426,14 @@
   id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的`vertexShader`中添加了矩阵乘法，因此我们可以通过更新`uMVPMatrix`来修改顶点的位置。让我们添加一个投影和一些变换，以便实现基本的渲染。
 - en: 'We shouldn''t forget about the `onSurfaceChanged()` callback; let''s use it
     to set our projection matrix and define the clipping planes of our camera, taking
     into account the width and height of the screen to keep its aspect ratio:'
   id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们不应该忘记`onSurfaceChanged()`回调；让我们使用它来设置我们的投影矩阵，并定义相机的裁剪平面，考虑到屏幕的宽度和高度以保持其长宽比：
 - en: '[PRE14]'
   id: totrans-66
   prefs: []
@@ -385,6 +444,7 @@
   id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们通过使用`Matrix.setLookAtM()`计算视图矩阵，并将其与我们刚刚在`mProjectionMatrix`上计算出的投影矩阵相乘：
 - en: '[PRE15]'
   id: totrans-68
   prefs: []
@@ -400,6 +460,8 @@
   id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的代码中，我们还看到了如何更新一个可以从`shader`中读取的变量。为此，我们首先需要获取统一变量的句柄。通过使用`GLES20.glGetUniformLocation(shaderProgram,
+    "uMVPMatrix")`我们可以得到`uMVPMatrix`统一变量的句柄，并在`GLES20.glUniformMatrix4fv`调用中使用这个句柄，我们可以将刚刚计算出的矩阵设置到它上面。如果我们检查`shader`的代码，可以看到我们定义了`uMVPMatrix`为统一变量：
 - en: '[PRE16]'
   id: totrans-70
   prefs: []
@@ -411,6 +473,7 @@
   id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们知道如何设置一个统一变量，那么对于颜色我们也做同样的处理。在片段`shader`中，我们将`vColor`也设置为统一变量，因此我们可以使用同样的方法来设置它：
 - en: '[PRE17]'
   id: totrans-72
   prefs: []
@@ -421,6 +484,7 @@
   id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用同样的机制，但将`glGetUniformLocation`更改为`glGetAttribLocation`，我们也可以设置顶点坐标：
 - en: '[PRE18]'
   id: totrans-74
   prefs: []
@@ -432,6 +496,7 @@
   id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经准备好将其绘制到屏幕上；我们只需要启用顶点属性数组，因为我们已经使用`glVertexAttribPointer()`调用和`glDrawElements()`只绘制启用的数组：
 - en: '[PRE19]'
   id: totrans-76
   prefs: []
@@ -445,34 +510,41 @@
   id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 在OpenGL上绘制几何体的方法有很多，但我们使用了指向之前创建的面索引缓冲区的`glDrawElements()`调用。这里我们使用了`GL_TRIANGLES`图元，但还有许多其他的OpenGL图元可以使用。更多信息请查看Khronos官方文档关于`glDrawElements()`的部分：
 - en: '[https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDrawElements.xhtml](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDrawElements.xhtml).'
   id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: '[https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDrawElements.xhtml](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDrawElements.xhtml)。'
 - en: Also, as good practice, and to restore the OpenGL machine state, we disable
     the vertex attribute array after drawing.
   id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，作为良好的实践，并在绘制后恢复OpenGL机器状态，我们禁用了顶点属性数组。
 - en: If we execute this code, we'll get the following-still not really useful, but
     it's a start!
   id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们执行这段代码，我们将得到以下结果——虽然还不是很有用，但这是一个开始！
 - en: '![](img/9d92fb4b-de8c-40a2-b36d-acf1bc25cb0e.png)'
   id: totrans-81
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/9d92fb4b-de8c-40a2-b36d-acf1bc25cb0e.png)'
 - en: Check the `Example23-GLSurfaceView` in the GitHub repository for the full example
     source code.
   id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 在GitHub仓库中查看`Example23-GLSurfaceView`以获取完整的示例源代码。
 - en: Drawing geometry
   id: totrans-83
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 绘制几何体
 - en: So far, we've seen how to set up our OpenGL renderer and draw some very basic
     geometry. But, as you can imagine, we can do a lot more with OpenGL. In this section
     we'll see how to do some more complex operations and how to load geometry defined
@@ -483,11 +555,13 @@
   id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们已经了解了如何设置OpenGL渲染器并绘制一些非常基础的几何图形。但是，正如你所想象的，我们可以利用OpenGL做更多的事情。在本节中，我们将了解如何进行一些更复杂的操作以及如何加载使用外部工具定义的几何图形。有时，使用代码定义几何图形可能很有用，但大多数时候，尤其是如果几何图形非常复杂，它将通过3D建模工具设计和创建。知道如何导入这些几何图形对我们项目肯定非常有帮助。
 - en: Adding volume
   id: totrans-85
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 添加体积
 - en: In our previous example, we've seen how to draw a quad with one single color,
     but what about if each vertex has a completely different color? The process will
     not be very different from what we've already done, but let's see how we can do
@@ -495,10 +569,12 @@
   id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一个例子中，我们已经了解了如何用单一颜色绘制四边形，但如果是每个顶点都有完全不同的颜色呢？这个过程与我们已经做的不会有很大不同，但让我们看看如何实现它。
 - en: 'First, let''s change the color array to hold the color of the four vertices:'
   id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，让我们改变颜色数组，使其包含四个顶点的颜色：
 - en: '[PRE20]'
   id: totrans-88
   prefs: []
@@ -509,6 +585,7 @@
   id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，在我们的`initBuffers()`方法中，我们来初始化一个额外的`Buffer`来存储颜色：
 - en: '[PRE21]'
   id: totrans-90
   prefs: []
@@ -520,6 +597,7 @@
   id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还必须更新我们的`shaders`以考虑颜色参数。首先，在我们的`vertexShader`中，我们必须创建一个新的属性，我们将其称为`aColor`，以保存每个顶点的颜色：
 - en: '[PRE22]'
   id: totrans-92
   prefs: []
@@ -531,6 +609,7 @@
   id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们定义一个可变的`vColor`变量，该变量将传递给`fragmentShader`，而`fragmentShader`将计算每个片段的值。让我们看看`fragmentShader`上的变化：
 - en: '[PRE23]'
   id: totrans-94
   prefs: []
@@ -541,11 +620,13 @@
   id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们唯一改变的是`vColor`的声明；它不再是统一变量，现在是一个`varying`变量。
 - en: 'Just like we did with the vertex and face indexes, we have to set the color
     data to the `shader`:'
   id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 就像我们对顶点和面索引所做的那样，我们必须将颜色数据设置到`shader`中：
 - en: '[PRE24]'
   id: totrans-97
   prefs: []
@@ -557,6 +638,7 @@
   id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 在绘制之前，我们必须启用和禁用顶点数组。如果颜色数组没有被启用，我们将得到一个黑色的正方形，因为`glDrawElements()`将无法获取颜色信息；
 - en: '[PRE25]'
   id: totrans-99
   prefs: []
@@ -567,10 +649,12 @@
   id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们运行这个例子，我们会看到与上一个例子相似的效果，但我们可以看到颜色是如何在顶点之间插值的：
 - en: '![](img/5c79b673-9efb-487a-a670-b7b80d2f4857.png)'
   id: totrans-101
   prefs: []
   type: TYPE_IMG
+  zh: '![图片](img/5c79b673-9efb-487a-a670-b7b80d2f4857.png)'
 - en: 'Now that we know how to interpolate colors, let''s add some depth into the
     geometry. Everything we''ve drawn so far is quite flat, so let''s convert the
     quad into a cube. It is very straightforward. Lets first define the vertices and
@@ -578,6 +662,7 @@
   id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然我们知道如何插值颜色，让我们在几何体中增加一些深度。到目前为止，我们所绘制的所有内容都非常平坦，所以让我们将四边形转换为立方体。这非常简单。首先定义顶点和新的面索引：
 - en: '[PRE26]'
   id: totrans-103
   prefs: []
@@ -588,11 +673,13 @@
   id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们复制了之前相同的四个顶点，但是位移了*Z*坐标，这将给立方体增加体积。
 - en: 'Now, we have to create the new face indexes. A cube has six faces, or quads,
     that can be reproduced with twelve triangles:'
   id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们必须创建新的面索引。立方体有六个面，或者说四边形，可以用十二个三角形来复制：
 - en: '[PRE27]'
   id: totrans-106
   prefs: []
@@ -602,6 +689,7 @@
   id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时为新的四个顶点添加新颜色：
 - en: '[PRE28]'
   id: totrans-108
   prefs: []
@@ -612,20 +700,24 @@
   id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们按原样执行这个例子，我们会得到一个类似以下截图的奇怪结果：
 - en: '![](img/760e6080-d9a9-432e-b521-453297d9451e.png)'
   id: totrans-110
   prefs: []
   type: TYPE_IMG
+  zh: '![图片](img/760e6080-d9a9-432e-b521-453297d9451e.png)'
 - en: Lets add a rotation transformation to the `mMVPMatrix` matrix to see what is
     going on.
   id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们给`mMVPMatrix`矩阵添加一个旋转变换，看看会发生什么。
 - en: 'We have to define a private variable to hold the rotation angle and apply the
     rotation to the `mMVPMatrix`:'
   id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们必须定义一个私有变量来保存旋转角度，并将旋转应用到`mMVPMatrix`中：
 - en: '[PRE29]'
   id: totrans-113
   prefs: []
@@ -637,10 +729,12 @@
   id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个例子中，为了观察正在发生的事情，我们将旋转应用到三个轴：*x*、*y*和*z*。我们还稍微将相机从上一个示例中的位置移开，因为如果我们不这样做，现在可能会有一些剪辑。
 - en: 'To define the amount we have to rotate by, we''ll use one of the Android timers:'
   id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了定义我们必须旋转的角度，我们将使用一个Android定时器：
 - en: '[PRE30]'
   id: totrans-116
   prefs: []
@@ -652,6 +746,7 @@
   id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在`startTime`变量上存储开始时间，在我们的`onDrawFrame()`方法中，我们根据自这一刻起经过的时间计算角度：
 - en: '[PRE31]'
   id: totrans-118
   prefs: []
@@ -664,10 +759,12 @@
   id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们只是将其乘以`0.02f`以限制旋转速度，否则它会太快。这样做，动画速度将不受渲染帧率或CPU速度的影响，在所有设备上都是相同的。现在，如果我们运行这段代码，我们将看到我们遇到的问题的来源：
 - en: '![](img/5e919ddd-cbb4-4b83-9e1b-75d836ef6a17.png)'
   id: totrans-120
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/5e919ddd-cbb4-4b83-9e1b-75d836ef6a17.png)'
 - en: 'The issue is that OpenGL is not checking the z coordinate of the pixel when
     drawing all the triangles, so there might be some superposition and overdrawing
     as we can easily see in the preceding screenshots. Luckily for us, this is very
@@ -676,6 +773,7 @@
   id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 问题在于，OpenGL在绘制所有三角形时没有检查像素的z坐标，因此可能会出现一些重叠和过度绘制，正如我们从前面的屏幕截图中轻易看到的那样。幸运的是，这个问题很容易解决。OpenGL有一个状态，我们可以用它来启用和禁用深度（z）测试：
 - en: '[PRE32]'
   id: totrans-122
   prefs: []
@@ -687,26 +785,31 @@
   id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 与上一个示例一样，在绘制之后，我们禁用我们启用的状态，以避免为任何其他绘图操作留下未知的OpenGL状态。如果我们运行这段代码，我们将看到差异：
 - en: '![](img/d984ccec-3892-428b-86df-98af92c587e0.png)'
   id: totrans-124
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/d984ccec-3892-428b-86df-98af92c587e0.png)'
 - en: Check the `Example24-GLDrawing` on the GitHub repository for the full example
     source code.
   id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 在GitHub仓库中查看`Example24-GLDrawing`以获取完整的示例源代码。
 - en: Adding textures
   id: totrans-126
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 添加纹理
 - en: Let's keep doing more interesting things! We've seen how to add a color per
     vertex, but let's see now what do we have to change if we want to add some textures
     to our 3D object.
   id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们继续做更有趣的事情！我们已经看到了如何为每个顶点添加颜色，但现在让我们看看如果我们想为3D对象添加一些纹理，我们需要做哪些改变。
 - en: 'First, let''s replace the color array with a texture coordinate array. We''ll
     map texture coordinate `0` to the start of our texture, in both axes, and `1`
     to the end of the texture, also in both axes. Using the geometry we had in our
@@ -714,6 +817,7 @@
   id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，让我们将颜色数组替换为纹理坐标数组。我们将纹理坐标`0`映射到纹理的起点，在两个轴上都是如此，将`1`映射到纹理的终点，在两个轴上也是如此。使用我们上一个示例中的几何图形，我们可以这样定义纹理坐标：
 - en: '[PRE33]'
   id: totrans-129
   prefs: []
@@ -724,6 +828,7 @@
   id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了加载这些纹理坐标，我们使用的流程与之前完全相同：
 - en: '[PRE34]'
   id: totrans-131
   prefs: []
@@ -733,6 +838,7 @@
   id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们也创建一个辅助方法来将资源加载到纹理中：
 - en: '[PRE35]'
   id: totrans-133
   prefs: []
@@ -748,6 +854,7 @@
   id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们必须考虑到纹理的两个维度都必须是2的幂。为了保持图像的原始大小并避免Android进行的任何缩放，我们必须将位图选项`inScaled`标志设置为`false`。在之前的代码中，我们生成了一个纹理ID来保存对我们纹理的引用，将其绑定为活动纹理，设置过滤和包裹的参数，并最终加载位图数据。完成这些操作后，我们可以回收临时位图，因为我们不再需要它。
 - en: 'As we did before, we have to update our `shaders` as well. In our `vertexShader,`
     we have to apply almost the same changes as we did before, adding an attribute
     where we can set the vertex texture coordinate and a `varying` variable to pass
@@ -755,6 +862,7 @@
   id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 如之前所做，我们也必须更新我们的`shaders`。在我们的`vertexShader`中，我们必须应用与之前几乎相同的更改，添加一个属性来设置顶点纹理坐标，以及一个`varying`变量传递给`fragmentShader`：
 - en: '[PRE36]'
   id: totrans-136
   prefs: []
@@ -766,6 +874,7 @@
   id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，顶点坐标是 `vec2` 而不是 `vec4`，因为我们只有两个坐标：U 和 V。我们新的 `fragmentShader` 比我们之前的要复杂一些：
 - en: '[PRE37]'
   id: totrans-138
   prefs: []
@@ -778,11 +887,15 @@
   id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们必须创建一个 `varying` 纹理坐标变量，以及一个统一的 `sampler2D` 变量，我们将在其中设置活动的纹理。为了获取颜色，我们必须使用
+    `texture2D` 查找函数从指定坐标的纹理中读取颜色数据。
 - en: 'Let''s now add a bitmap named `texture.png` to our drawables `res` folder and
     modify the `onSurfaceCreated()` method to load it as a texture:'
   id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们在我们的 `res` 文件夹的 drawables 中添加一个名为 `texture.png` 的位图，并修改 `onSurfaceCreated()`
+    方法以将其作为纹理加载：
 - en: '[PRE38]'
   id: totrans-141
   prefs: []
@@ -792,14 +905,17 @@
   id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是我们示例中使用的图像：
 - en: '![](img/52a4bc51-0f65-4acb-917f-1d025ff08a65.png)'
   id: totrans-143
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/52a4bc51-0f65-4acb-917f-1d025ff08a65.png)'
 - en: 'Finally, let''s update the `onDrawFrame()` method to set the texture coordinates:'
   id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，让我们更新 `onDrawFrame()` 方法以设置纹理坐标：
 - en: '[PRE39]'
   id: totrans-145
   prefs: []
@@ -809,6 +925,7 @@
   id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 这就是纹理本身：
 - en: '[PRE40]'
   id: totrans-147
   prefs: []
@@ -819,24 +936,29 @@
   id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，正如我们之前所做的，我们必须启用，稍后禁用，纹理坐标顶点数组。
 - en: 'If we run this code, we''ll get the following:'
   id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们运行这段代码，我们将得到以下结果：
 - en: '![](img/157987b0-6971-4066-ab7d-707b4325c097.png)'
   id: totrans-150
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/157987b0-6971-4066-ab7d-707b4325c097.png)'
 - en: Check the `Example25-GLDrawing` on the GitHub repository for the full example
     source code.
   id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 在GitHub仓库中查看 `Example25-GLDrawing` 以获取完整的示例源代码。
 - en: Loading external geometry
   id: totrans-152
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 加载外部几何图形
 - en: So far, we've been drawing quads and cubes, but if we want to draw more complex
     geometry, it is probably handier to model it on a 3D modeling tool rather than
     doing it by code. We can cover multiple chapters on this topic, but let's just
@@ -844,24 +966,29 @@
   id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们一直在绘制四边形和立方体，但如果我们想要绘制更复杂的几何图形，使用3D建模工具进行建模可能更为方便，而不是通过代码实现。我们可以用多个章节来涵盖这个主题，但让我们先看一个快速示例，了解如何实现，你可以根据需要扩展它。
 - en: 'We have used a Blender to model our example data. Blender is a free and open
     source 3D modeling toolset and can be downloaded for free at its website:'
   id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用了Blender来建模我们的示例数据。Blender是一个免费且开源的3D建模工具集，可以在其网站上免费下载：
 - en: '[https://www.blender.org/](https://www.blender.org/).'
   id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: '[https://www.blender.org/](https://www.blender.org/)。'
 - en: 'For this example, we haven''t modeled an extremely complex example; we''ve
     just used one of the primitives that Blender provides: Suzanne:'
   id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个例子中，我们没有建模一个极其复杂的例子；我们只是使用了Blender提供的一个基本形状：Suzanne：
 - en: '![](img/0f8fb505-8aeb-46bd-b17e-fc7dcd36f3f4.png)'
   id: totrans-157
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/0f8fb505-8aeb-46bd-b17e-fc7dcd36f3f4.png)'
 - en: 'To simplify our importing tool, we''ll select the object mesh under the Scene
     | Suzanne drop-down menu on the right and, when we press *Ctrl* + *T*, Blender
     will convert all faces into triangles. Otherwise, we''ll have both triangles and
@@ -870,10 +997,12 @@
   id: totrans-158
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了简化我们的导入工具，我们将在右侧的“场景”|“Suzanne”下拉菜单下选择对象网格，当我们按下 *Ctrl* + *T* 时，Blender将把所有面转换为三角形。否则，我们的导出文件中既有三角形也有四边形，从我们的Android应用程序代码中实现面导入器并不直接：
 - en: '![](img/976e8d5b-34e3-4ddb-8ebf-9d791dc29f78.png)'
   id: totrans-159
   prefs: []
   type: TYPE_IMG
+  zh: '![](img/976e8d5b-34e3-4ddb-8ebf-9d791dc29f78.png)'
 - en: Now, we'll export it as a `Wavefront` (`.obj`) file, which will create both
     a `.obj` and a `.mtl` file. The latter is the material information that, for the
     moment, we'll ignore. Let's put the exported file into our project in the `assets`
@@ -881,11 +1010,14 @@
   id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们将它导出为 `Wavefront`（`.obj`）文件，这将创建一个 `.obj` 文件和一个 `.mtl` 文件。后者是材质信息，目前我们将忽略它。让我们将导出的文件放入我们项目的
+    `assets` 文件夹中。
 - en: 'Let''s now create a very simple `Wavefront` file object parser ourselves. As
     we''ll be dealing with files, loading, and parsing, we''ll have to do it asynchronously:'
   id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们自己创建一个简单的 `Wavefront` 文件对象解析器。由于我们将要处理文件加载和解析，因此我们需要异步执行：
 - en: '[PRE41]'
   id: totrans-162
   prefs: []
@@ -898,6 +1030,7 @@
   id: totrans-163
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，这里并没有实际完成工作。为了进行实际的加载和解析，我们创建了一个帮助类，它将在一个单独的**线程**上执行，并根据解析文件成功或出现错误来调用监听器：
 - en: '[PRE42]'
   id: totrans-164
   prefs: []
@@ -908,6 +1041,7 @@
   id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，当我们调用 `helper.start()` 时，它将创建实际的线程，并在其上执行 `run()` 方法：
 - en: '[PRE43]'
   id: totrans-166
   prefs: []
@@ -918,6 +1052,7 @@
   id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 在之前的代码中，我们首先通过提供的名称打开文件来读取资源。为了获取应用程序资源，这里我们需要一个`context`：
 - en: '[PRE44]'
   id: totrans-168
   prefs: []
@@ -931,6 +1066,7 @@
   id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们逐行读取文件，并根据开始的关键字采取不同的行动，除非行以`#`开始，这意味着它是一个注释。我们只考虑新对象、顶点坐标和面索引的命令；我们忽略了文件中可能存在的任何附加命令，比如使用的材质，或顶点和面法线。
 - en: 'As we can get face index information, such as f 330//278 336//278 338//278
     332//278, we created a helper method to parse that information and only extract
     the face index. The number after the slashes is the face normal index. Refer to
@@ -939,6 +1075,7 @@
   id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于我们可以获取面索引信息，如f 330//278 336//278 338//278 332//278，我们创建了一个辅助方法来解析这些信息，并只提取面索引。斜杠后面的数字是面法线索引。参考官方文件格式以更详细地了解面索引数字的使用：
 - en: '[PRE45]'
   id: totrans-171
   prefs: []
@@ -948,6 +1085,7 @@
   id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，由于面索引从`1`开始，我们需要减去`1`以得到正确的结果。
 - en: 'To store all this data we''re reading from the file, we''ve also created some
     data classes. The `Object3D` class will store all relevant information-vertices,
     face indexes, and the `Scene` class will store the whole 3D scene with all the
@@ -956,6 +1094,7 @@
   id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了存储我们从文件中读取的所有这些数据，我们还创建了一些数据类。`Object3D`类将存储所有相关信息——顶点、面索引，而`Scene`类将存储整个3D场景以及所有内部的`Objects3D`。为了简单起见，我们尽可能保持了这些实现的简短，但根据我们的需要，它们可以变得更加复杂：
 - en: '[PRE46]'
   id: totrans-174
   prefs: []
@@ -967,6 +1106,7 @@
   id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以看到`Scene`类上有一个`render()`方法。我们将渲染所有3D对象的责任移到了`Scene`本身，并且应用相同的原则，每个对象也负责渲染自身：
 - en: '[PRE47]'
   id: totrans-176
   prefs: []
@@ -979,6 +1119,7 @@
   id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们为`3DObject`设置好所有数据，我们可以通过调用其`prepare()`方法来准备渲染。这个方法将创建顶点和索引`Buffer`，并且由于在这种情况下数据文件中的网格没有任何颜色信息，它将为每个顶点生成一个随机颜色，或者更确切地说是一个强度。
 - en: Creating the buffers here in the `3DObject` itself allows us to render any kind
     of object. The `Scene` container doesn't know what kind of object or what kind
     of geometry is inside. We could easily extend this class with another type of
@@ -986,10 +1127,12 @@
   id: totrans-178
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里`3DObject`本身创建缓冲区允许我们渲染任何类型的对象。`Scene`容器不知道内部是什么类型的对象或几何图形。只要它处理自己的渲染，我们可以轻松地将这个类扩展为另一种类型的`3DObject`。
 - en: 'Finally, we''ve added a `render()` method to the `3DObject`:'
   id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们在`3DObject`中添加了一个`render()`方法：
 - en: '[PRE48]'
   id: totrans-180
   prefs: []
@@ -1002,6 +1145,7 @@
   id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个方法负责启用和禁用正确的数组并渲染自身。我们从方法参数中获取`shader`属性。理想情况下，每个对象都可以有自己的`shader`，但我们不想在这个示例中增加太多复杂性。
 - en: 'In our `GLDrawer` class, we''ve also added a helper method to calculate a perspective
     frustrum matrix. One of the most used calls in OpenGL was `gluPerspective`, and
     NeHe, the author of many awesome OpenGL tutorials, created a function to convert
@@ -1009,6 +1153,7 @@
   id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的`GLDrawer`类中，我们还添加了一个辅助方法来计算透视失真矩阵。OpenGL中最常用的调用之一是`gluPerspective`，而许多出色的OpenGL教程的作者NeHe创建了一个函数将`gluPerspective`转换为`glFrustrum`调用：
 - en: '[PRE49]'
   id: totrans-183
   prefs: []
