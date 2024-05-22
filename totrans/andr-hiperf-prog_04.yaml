@@ -1,0 +1,3746 @@
+- en: Chapter 4. Memory
+  id: totrans-0
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 第四章. 内存
+- en: 'When trying to reach the performance target for our application, memory is
+    the matter to focus on: poorly managed memory in an application can affect the
+    behavior of the whole system. It can also affect the other applications installed
+    on our device in the same way as other applications could affect ours. As we all
+    know, Android has a wide range of devices on the market with a lot of different
+    configurations and memory amounts. It''s up to the developers to work out which
+    strategy to take while dealing with this amount of fragmentation, which pattern
+    to follow while developing, and which tools to use to profile the code. This is
+    the aim of this chapter. We will focus on heap memory, while we deal with cache
+    in [Chapter 10](ch10.html "Chapter 10. Performance Tips"), *Performance Tips*.'
+  id: totrans-1
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们试图达到应用程序的性能目标时，内存是需要关注的问题：管理不善的应用程序内存可能会影响整个系统的行为。它还可能以同样的方式影响设备上安装的其他应用程序，正如其他应用程序可能影响我们的应用程序一样。众所周知，Android在市场上拥有广泛的不同配置和内存量的设备。开发者需要解决如何应对这种碎片化的策略，开发时遵循哪种模式，以及使用哪些工具来分析代码。这正是本章的目标。我们将关注堆内存，而关于缓存的处理将在[第十章](ch10.html
+    "第十章. 性能提示")“*性能提示*”中进行讨论。
+- en: We will have a look at how our device handles memory, deepening our knowledge
+    of what garbage collection is and how it works in order to understand how to avoid
+    common developing mistakes, and clarify what we will discuss to define best practices.
+    We will also go through pattern definition in order to drastically reduce the
+    risk of what we will identify as memory leaks and memory churns. This chapter
+    will end with an overview of the official tools and APIs that Android provides
+    to profile our code and to find possible causes of memory leaks that aren't covered
+    in [Chapter 2](ch02.html "Chapter 2. Efficient Debugging"), *Efficient Debugging*.
+  id: totrans-2
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们将探讨设备如何处理内存，深化对垃圾回收的了解，以及它是如何工作的，从而理解如何避免常见的开发错误，并明确我们将要讨论的内容以定义最佳实践。我们还将通过模式定义，以大幅降低我们认为是内存泄漏和内存膨胀的风险。[第四章](ch04.html
+    "第四章. 内存")将总结官方工具和API，Android提供这些工具和API来分析代码并找到可能导致内存泄漏的原因，这些内容在[第二章](ch02.html
+    "第二章. 高效调试")“*高效调试*”中并未涉及。
+- en: Walkthrough
+  id: totrans-3
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 演练
+- en: Before starting the discussion about how to improve and profile our code, it's
+    really important to understand how Android devices handle memory. Then, in the
+    following pages we will analyze differences between the runtimes that Android
+    uses, we will learn more about garbage collection, understand memory leaks and
+    memory churns, and how Java handles object references.
+  id: totrans-4
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '在讨论如何改进和分析我们的代码之前，了解Android设备如何处理内存是非常重要的。接下来，在以下几页中，我们将分析Android使用的运行时的差异，我们将更深入地了解垃圾回收，理解内存泄漏和内存膨胀，以及Java如何处理对象引用。 '
+- en: How memory works
+  id: totrans-5
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 内存的工作原理
+- en: 'Have you ever thought about how a restaurant works? Let''s think about it for
+    a while: when new groups of customers get into the restaurant there''s a waiter
+    ready to search for a place to allocate them. But the restaurant is a limited
+    space. So, there is a need to free tables when possible: that''s why, when a group
+    has finished eating, another waiter cleans and prepares the table for other groups
+    to use. The first waiter has to find the table with the right number of seats
+    for every new group. Then, the second waiter''s task should be fast and shouldn''t
+    hinder or block the others'' tasks. Another important aspect of this is how many
+    seats are occupied by the group: the restaurant owner wants to have as many free
+    seats as possible to seat new clients. So it''s important to make sure that every
+    group fills the right number of seats without occupying tables that could be used
+    by other new groups.'
+  id: totrans-6
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 你是否想过餐厅是如何运作的？让我们思考一下：当新的顾客群体进入餐厅时，有服务员会寻找地方为他们安排座位。但餐厅空间有限，因此需要尽可能释放桌子：这就是为什么当一个群体吃完后，另一个服务员会清理并准备桌子供其他群体使用。第一个服务员必须找到每个新群体合适座位的桌子。然后，第二个服务员的工作应该是迅速的，不应妨碍或阻碍其他人的任务。另一个重要方面是每组占用的座位数量：餐厅老板希望有尽可能多的空座位来安排新客户。因此，确保每个群体占用的座位数量正确，而不占用可能被其他新群体使用的桌子是非常重要的。
+- en: 'This is similar to what happens in an Android system: every time we create
+    a new object in our code, it needs to be saved in memory. So it''s allocated as
+    part of our application''s private memory to be accessed whenever needed. And
+    the system keeps allocating memory for us during the whole of our application''s
+    lifetime. Nevertheless, the system has limited memory to use and it cannot allocate
+    memory indefinitely. So, how is it possible for the system to have enough memory
+    for our application all the time? And why is there no need for an Android developer
+    to free up memory? Let''s find out.'
+  id: totrans-7
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这与Android系统的情形类似：每次我们在代码中创建一个新对象，它都需要被保存在内存中。因此，它被分配为我们应用程序私有内存的一部分，以便在需要时访问。在整个应用程序生命周期内，系统会持续为我们分配内存。然而，系统可使用的内存是有限的，它不能无限期地分配内存。那么，系统如何保证应用程序始终有足够的内存呢？为什么Android开发者不需要手动释放内存？让我们来了解一下。
+- en: Garbage collection
+  id: totrans-8
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 垃圾回收
+- en: 'Garbage collection is an old concept that is based on two main concepts:'
+  id: totrans-9
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 垃圾回收是一个基于两个主要概念的老概念：
+- en: Find objects that are not referenced any more
+  id: totrans-10
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 寻找不再被引用的对象
+- en: Free the memory referenced by those objects
+  id: totrans-11
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 释放那些对象的引用内存
+- en: 'When that object is not referenced any more, its "table" can be cleaned and
+    freed up. This is what is done to provide memory for future object allocation.
+    These operations of the allocation of new objects and the deallocation of objects
+    that are not referenced any more are executed by the particular runtime in use
+    on the device, and there is no need for the developer to do anything just because
+    they are all managed automatically. In spite of what happens in other languages,
+    such as C and C++, there is no need for the developer to allocate and deallocate
+    memory. In particular, while the allocation is made when needed, the garbage collection
+    task is executed when an upper limit of memory is reached. Those automatic operations
+    in the background don''t exempt developers from being aware of their app''s memory
+    management: if the memory management is not done well, the application can be
+    prone to lags, malfunctions, and even crashes when an `OutOfMemoryError` is thrown.'
+  id: totrans-12
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当不再有对该对象的引用时，可以清理并释放它的“表”。这就是为了提供未来对象分配的内存所做的事情。这些操作，包括新对象的分配和不再被引用的对象的释放，都由设备上使用的特定运行时执行，开发者无需做任何事情，因为这些都是自动管理的。与其他语言，如C和C++发生的情况不同，开发者无需手动分配和释放内存。特别是，当需要时进行分配，当达到内存上限时执行垃圾回收任务。后台的这些自动操作并不意味着开发者可以忽视他们应用程序的内存管理：如果内存管理做得不好，应用程序可能会出现延迟、故障，甚至在抛出`OutOfMemoryError`时崩溃。
+- en: Shared memory
+  id: totrans-13
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 共享内存
+- en: 'In Android, every app has its own process that is completely managed by the
+    runtime with the aim of reclaiming memory in order to free resources for other
+    foreground processes, if necessary. The available amount of memory for our application
+    lies completely in RAM as Android doesn''t use swap memory. The main consequence
+    of this is that there is no other way for our app to have more memory than to
+    unreference objects that are no longer used. But Android uses paging and memory-mapping:
+    the first technique defines blocks of memory of the same size, called pages, in
+    a secondary storage; while the second one uses a mapping in memory with correlated
+    files in secondary storage to be used as primary. They are used when the system
+    needs to allocate memory for other processes, so the system creates paged memory-mapped
+    files to save Dalvik code files, app resources, or native code files. In this
+    way, those files can be shared between multiple processes.'
+  id: totrans-14
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在Android中，每个应用程序都有自己的进程，完全由运行时管理，目的是回收内存，以便在必要时为其他前台进程释放资源。我们应用程序可用的内存量完全位于RAM中，因为Android不使用交换内存。这种做法的主要后果是，除了取消引用不再使用的对象之外，我们的应用程序没有其他方式来获得更多内存。但Android使用分页和内存映射：第一种技术定义了相同大小的内存块，称为页，在辅助存储中；而第二种技术使用与辅助存储中相关文件关联的内存映射，作为主要使用。当系统需要为其他进程分配内存时，会使用它们，因此系统创建分页内存映射文件来保存Dalvik代码文件、应用程序资源或本地代码文件。这样，这些文件可以在多个进程之间共享。
+- en: As a matter of fact, Android uses shared memory in order to better handle resources
+    from a lot of different processes. Furthermore, every new process to be created
+    is forked by an already existing one that is called **Zygote**. This particular
+    process contains common framework classes and resources to speed up the first
+    boot of the application. This means that the Zygote process is shared between
+    processes and applications. This large use of shared memory makes it difficult
+    to profile the use of memory of our application because there are many facets
+    to consider before reaching the correct analysis of memory usage.
+  id: totrans-15
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 实际上，Android 使用共享内存以更好地处理来自许多不同进程的资源。此外，每个要创建的新进程都是由一个已存在的名为**Zygote**的进程分叉出来的。这个特殊的进程包含常见的框架类和资源，以加快应用程序的首次启动。这意味着
+    Zygote 进程在进程和应用程序之间共享。这种大量使用共享内存使得分析我们应用程序的内存使用情况变得困难，因为在达到正确的内存使用分析之前需要考虑许多方面。
+- en: Runtime
+  id: totrans-16
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 运行时
+- en: 'Some functions and operations of memory management depend on the runtime used.
+    That''s why we are going through some specific features of the two main runtimes
+    used by Android devices. They are as follows:'
+  id: totrans-17
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 内存管理的某些功能和操作取决于所使用的运行时。这就是为什么我们要了解 Android 设备使用的两个主要运行时的一些特定特性。它们如下：
+- en: Dalvik
+  id: totrans-18
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: Dalvik
+- en: '**Android runtime** (**ART**)'
+  id: totrans-19
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**Android 运行时** (**ART**)'
+- en: ART was added later to replace Dalvik to improve performance from a different
+    point of view. It was introduced in Android KitKat (API Level 19) as an option
+    for developers to enable, and it has become the main and only runtime from Android
+    Lollipop (API Level 21) onwards. Besides the difference between Dalvik and ART
+    in compiling code, file formats, and internal instructions, what we are focusing
+    on at the moment is memory management and garbage collection. So, let's understand
+    how the Google team improved performance in runtime garbage collection over time
+    and what to pay attention to while developing our application.
+  id: totrans-20
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ART 是后来添加的，用于从不同角度提升性能，替代 Dalvik。它在 Android KitKat（API 级别 19）中以开发者可启用的选项引入，并从
+    Android Lollipop（API 级别 21）开始成为主要的唯一运行时。除了在编译代码、文件格式和内部指令方面 Dalvik 和 ART 之间的差异之外，我们现在关注的是内存管理和垃圾回收。因此，让我们了解谷歌团队如何在运行时垃圾回收方面随时间提升性能，以及在我们开发应用程序时需要注意什么。
+- en: 'Let''s step back and return to the restaurant. What would happen if everything,
+    all employees, such as other waiters and cooks, and all of the services, such
+    as dishwashers, stop their tasks while they wait for a waiter to free a table?
+    The success or failure of the whole restaurant relies on that single employee''s
+    performance. So, it''s really important to have a very fast waiter in this case.
+    But what do you do if you cannot afford him? The owner wants him to do what he
+    has to as quickly as possible by maximizing his productivity and, then, allocating
+    all the customers in the best way. And this is exactly what we have to do as developers:
+    we have to optimize memory allocation in order to have a fast garbage collection,
+    even if it stops all the other operations. What is described here is just how
+    the runtime garbage collection works: when the upper limit of memory is reached,
+    the garbage collection starts its task, pausing every other method, task, thread,
+    and process execution. And those objects won''t resume until the garbage collection
+    task is completed. So, it''s really important that the collection is fast enough
+    to not impede the 16 ms per frame rule we discussed in [Chapter 3](ch03.html "Chapter 3. Building
+    Layouts"), *Building Layouts*, resulting in lags and jank in the UI: the more
+    time the garbage collection takes, the less time the system has to prepare frames
+    to be rendered on the screen.'
+  id: totrans-21
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们退一步，回到餐厅的例子。如果所有员工，比如其他服务员和厨师，以及所有服务，比如洗碗工，在等待一个服务员空出桌子时停止他们的任务会发生什么？整个餐厅的成功与否都依赖于这个单一员工的表现在这种情况下拥有一个快速的服务员非常重要。但如果你负担不起他呢？店主希望他尽可能快地完成必须完成的工作，通过最大化他的生产力，然后合理分配所有顾客。这正是我们作为开发者需要做的：我们必须优化内存分配，以实现快速的垃圾回收，即使这会暂停所有其他操作。这里描述的就是运行时垃圾回收的工作原理：当达到内存上限时，垃圾回收开始执行任务，暂停所有其他方法、任务、线程和进程的执行。这些对象在垃圾回收任务完成之前不会恢复。因此，垃圾回收的速度足够快，以不影响我们在[第3章](ch03.html
+    "第3章.构建布局")，*构建布局*中讨论的每帧16毫秒的规则至关重要，否则会导致UI出现延迟和卡顿：垃圾回收占用的时间越多，系统准备要在屏幕上渲染的帧的时间就越少。
+- en: Tip
+  id: totrans-22
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: 'Keep in mind that automatic garbage collection is not free: bad memory management
+    can lead to bad UI performance and, thus, a bad UX. No runtime feature can replace
+    good memory management. That''s why we need to be careful about new allocations
+    of objects and, above all, references.'
+  id: totrans-23
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 请记住，自动垃圾收集并非没有代价：糟糕的内存管理可能导致UI性能变差，从而影响用户体验。没有任何运行时特性可以替代良好的内存管理。这就是为什么我们需要谨慎处理新对象的分配，尤其是引用。
+- en: 'Obviously, ART introduced a lot of improvement in this process after the Dalvik
+    era, but the background concept is the same: it reduces the collection steps,
+    it adds a particular memory for bitmap objects, it uses new fast algorithms, and
+    it does other cool stuff that will get better in the future, but there is no way
+    to escape that we need to profile our code and memory usage if we want our application
+    to have the best performance.'
+  id: totrans-24
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 显然，在Dalvik时代之后，ART在这一过程中引入了许多改进，但背后的概念是相同的：它减少了收集步骤，为位图对象添加了特定的内存，使用了新的快速算法，还做了其他很酷的事情，这些将在未来变得更好，但如果我们想让应用程序有最佳性能，就没有办法逃避对我们的代码和内存使用进行剖析。
+- en: Android N JIT compiler
+  id: totrans-25
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: Android N JIT编译器
+- en: 'The ART runtime uses an ahead-of-time compilation that, as the name suggests,
+    performs compilation when the applications are first installed. This approach
+    brings advantages to the overall system in different ways because the system can
+    do the following:'
+  id: totrans-26
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ART运行时使用提前编译，顾名思义，在应用程序首次安装时执行编译。这种方法以不同的方式为整个系统带来优势，因为系统可以执行以下操作：
+- en: Reduce battery consumption due to pre-compilation and, then, improve autonomy
+  id: totrans-27
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 由于预编译，减少电池消耗，从而提高自主性
+- en: Execute applications faster than Dalvik
+  id: totrans-28
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 比Dalvik更快地执行应用程序
+- en: Improve memory management and garbage collection
+  id: totrans-29
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 改进内存管理和垃圾收集
+- en: 'However, these advantages have a cost related to installation timing: the system
+    needs to compile the application at that time, and then, it''s slower than a different
+    type of compiler.'
+  id: totrans-30
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然而，这些优势与安装时间相关的成本有关：系统需要在那时编译应用程序，然后它比其他类型的编译器要慢。
+- en: For this reason, Google added a just-in-time compiler to the ahead-of-time compiler
+    of ART in the new Android N. This one acts when needed, so during the execution
+    of the application and, then, it uses a different approach compared to the ahead-of-time
+    one. This compiler uses code profiling techniques, and it's not a replacement
+    for the ahead-of-time compiler, but it's an addition to it. It's a good enhancement
+    to the system for the advantages in terms of performance that it introduces.
+  id: totrans-31
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因此，谷歌在新的Android N中为ART的提前编译器增加了一个即时编译器。这个编译器在需要时才激活，即在应用程序执行期间，然后它采用了与提前编译不同的方法。这个编译器使用代码剖析技术，它不是提前编译器的替代品，而是对它的补充。它是系统的一个很好的增强，因为它在性能方面带来了优势。
+- en: 'Profile-guided compilation adds the possibility to precompile and then, to
+    cache and reuse methods of the application, depending on usage and/or device conditions.
+    This feature can save time in the compilation and improve performance in every
+    kind of system. So, all devices benefit from this new memory management. The key
+    advantages are as follows:'
+  id: totrans-32
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 基于剖析的编译增加了预编译的可能性，然后根据使用情况或设备条件缓存并重用应用程序的方法。这个特性可以节省编译时间，提高各种系统的性能。因此，所有设备都能从这种新的内存管理中受益。主要优势如下：
+- en: Less memory used
+  id: totrans-33
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 使用更少的内存
+- en: Fewer RAM accesses
+  id: totrans-34
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 减少RAM访问
+- en: Lower impact on the battery
+  id: totrans-35
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 对电池的影响更低
+- en: All of these advantages introduced in Android N, however, shouldn't make us
+    avoid good memory management in our applications. For this, we need to know what
+    pitfalls are lurking behind our code and, more than this, how to behave in particular
+    situations to improve the memory management of the system while our application
+    is active.
+  id: totrans-36
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然而，在Android N中引入的所有这些优势，都不应该让我们避免在应用程序中进行良好的内存管理。为此，我们需要知道代码背后潜伏着哪些陷阱，更重要的是，如何在特定情况下改善系统的内存管理，让应用程序保持活跃。
+- en: Memory leak
+  id: totrans-37
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 内存泄漏
+- en: The main mistake, from the memory performance perspective, that a developer
+    can make while developing an Android application is called **memory leak**, and
+    it refers to an object that is no longer used but is referenced by another object
+    that is still active. In this situation, the garbage collector skips it because
+    the reference is enough to leave that object in memory.
+  id: totrans-38
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 从内存性能的角度来看，开发者在开发Android应用程序时可能犯的主要错误是所谓的**内存泄漏**，它指的是一个不再使用的对象，但被另一个仍然活跃的对象引用。在这种情况下，垃圾收集器会跳过它，因为足够的引用会让这个对象留在内存中。
+- en: 'Actually, we are avoiding that the garbage collector frees memory for other
+    future allocations. So, our heap memory gets smaller because of this, and this
+    leads to the garbage collection to be invoked more often, blocking the rest of
+    the executions of the application. This could lead to a situation where there
+    is no more memory to allocate a new object and, then, `OutOfMemoryError` is thrown
+    by the system. Consider the case where a used object references objects that are
+    no longer used, that references objects that are no longer used, and so on: none
+    of them can be collected, just because the root object is still in use.'
+  id: totrans-39
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 实际上，我们是在避免垃圾收集器为其他未来的分配释放内存。因此，由于这个原因，我们的堆内存会变小，导致垃圾回收被更频繁地调用，从而阻塞应用程序的其他执行。这可能导致没有更多内存来分配新对象的情况，然后系统会抛出`OutOfMemoryError`。考虑一个已使用对象引用不再使用的对象，而这些不再使用的对象又引用其他不再使用的对象，依此类推：由于根对象仍在使用，它们都不能被回收。
+- en: Memory churn
+  id: totrans-40
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 内存抖动
+- en: Another anomaly in memory management is called **memory churn**, and it refers
+    to the amount of allocations that are not sustainable by the runtime for too many
+    newly instantiated objects in a small period of time. In this case, a lot of garbage
+    collection events are called many times, affecting the overall memory and UI performance
+    of the application.
+  id: totrans-41
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 内存管理的另一个异常称为**内存抖动**，它指的是在很短时间内大量实例化的新对象造成的运行时无法承受的内存分配量。在这种情况下，许多垃圾回收事件会被多次调用，影响应用程序的整体内存和
+    UI 性能。
+- en: 'What we discussed in [Chapter 3](ch03.html "Chapter 3. Building Layouts"),
+    *Building Layouts*, regarding the need to avoid allocations in the `View.onDraw()`
+    method, is closely related to memory churn: we know that this method is called
+    every time the view needs to be drawn again and the screen needs to be refreshed
+    every 16.6667 ms. If we instantiate objects inside that method, we could cause
+    a memory churn because those objects are instantiated in the `View.onDraw()` method
+    and no longer used, so they are collected very soon. In some cases, this leads
+    to one or more garbage collection events to be executed every time the frame is
+    drawn on the screen, reducing the available time to draw it below the 16.6667
+    ms, depending on the duration of the collection event.'
+  id: totrans-42
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们在[第三章](ch03.html "第三章. 构建布局")《构建布局》中讨论了避免在`View.onDraw()`方法中分配内存的必要性，这与内存抖动密切相关：我们知道，每次需要重新绘制视图和刷新屏幕时，大约每16.6667毫秒调用一次这个方法。如果我们在这个方法内部实例化对象，可能会引起内存抖动，因为那些对象在`View.onDraw()`方法中被实例化后很快不再使用，因此它们很快就会被回收。在某些情况下，这会导致每次在屏幕上绘制帧时执行一次或多次垃圾回收事件，根据回收事件的持续时间，可能会将可用于绘制的时间减少到16.6667毫秒以下。
+- en: References
+  id: totrans-43
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 引用
+- en: 'Let''s have a quick overview of the different objects that Java provides us
+    to reference objects. This way, we will have an idea of when we can use them and
+    how Java defines four levels of strength:'
+  id: totrans-44
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们快速了解一下 Java 提供的不同对象引用类型。通过这种方式，我们将了解何时可以使用它们，以及 Java 如何定义四种不同的引用强度：
+- en: '**Normal**: This is the main type of reference. It corresponds to the simple
+    creation of an object, and this object will be collected when it will no longer
+    be used and referenced, and it''s just the classical object instantiation:'
+  id: totrans-45
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**普通引用**：这是主要的引用类型。它对应于简单创建一个对象，当这个对象不再被使用和引用时，它将被回收，这就是传统的对象实例化方式：'
+- en: '[PRE0]'
+  id: totrans-46
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE0]'
+- en: '**Soft**: This is a reference that''s not strong enough to keep an object in
+    memory when a garbage collection event is triggered, so it can be null any time
+    during execution. Using this reference, the garbage collector decides when to
+    free the object memory based on the memory demand of the system. To use it, just
+    create a `SoftReference` object passing the real object as parameter in the constructor
+    and call the `SoftReference.get()` to get the object:'
+  id: totrans-47
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**软引用**：这是一种在垃圾回收事件触发时不足以将对象保留在内存中的引用，因此它可以在执行期间的任何时间变为 null。使用这种引用，垃圾收集器会根据系统的内存需求来决定何时释放对象内存。要使用它，只需创建一个`SoftReference`对象，在构造函数中传递实际对象作为参数，并调用`SoftReference.get()`来获取对象：'
+- en: '[PRE1]'
+  id: totrans-48
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE1]'
+- en: '**Weak**: This is like `SoftReferences`, but weaker:'
+  id: totrans-49
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**弱引用**：这类似于`SoftReferences`，但强度更弱：'
+- en: '[PRE2]'
+  id: totrans-50
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE2]'
+- en: '**Phantom**: This is the weakest reference; the object is eligible for finalization.
+    This kind of reference is rarely used and the `PhantomReference.get()` method
+    always returns null. This is for reference queues that don''t interest us at the
+    moment, but it''s useful to know that this kind of reference is also provided.'
+  id: totrans-51
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**Phantom**：这是最弱的引用；对象符合终结条件。这种引用很少使用，`PhantomReference.get()`方法总是返回null。这是针对我们不感兴趣的引用队列，但有用的是，我们也提供了这种类型的引用。'
+- en: These classes may be useful while developing if we know which objects have a
+    lower level of priority and can be collected without causing problems in the normal
+    execution of our application. We will see how they can help us manage memory in
+    the following pages.
+  id: totrans-52
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果我们知道哪些对象的优先级较低，可以在不导致应用程序正常执行问题的前提下被收集，那么这些类在开发时可能很有用。我们将在接下来的页面中看到它们如何帮助我们管理内存。
+- en: Memory-side projects
+  id: totrans-53
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 内存侧项目
+- en: 'During the development of the Android platform, Google has always tried to
+    improve the memory management system of the platform to maintain wide compatibility
+    with increasing performance devices and low resource ones. This is the main purpose
+    of two projects Google develops in parallel with the platform, and, then, every
+    new Android version released means new improvements and changes to those projects
+    and their impacts on the system performance. Every one of these side projects
+    focuses on a different matter:'
+  id: totrans-54
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在Android平台的发展过程中，谷歌一直在努力改进平台的内存管理系统，以保持与性能不断提高的设备和低资源设备的广泛兼容性。这是谷歌并行开发两个项目的主要目的，然后，每个新发布的Android版本都意味着对这些项目的改进和变化，以及它们对系统性能的影响。这些侧项目中的每一个都关注不同的问题：
+- en: '**Project Butter**: This was introduced in Android Jelly Bean 4.1 (API Level
+    16) and then improved in Android Jelly Bean 4.2 (API Level 17); it added features
+    related to the graphical aspect of the platform (VSync and buffering are the main
+    additions) in order to improve the responsiveness of the device while in use.'
+  id: totrans-55
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**项目Butter**：在Android Jelly Bean 4.1（API级别16）中引入，并在Android Jelly Bean 4.2（API级别17）中改进；它增加了与平台图形方面的特性（VSync和缓冲是主要的增加内容），以提高设备在使用时的响应性。'
+- en: '**Project Svelte**: This was introduced in Android KitKat 4.4 (API Level 19);
+    it deals with memory management improvements in order to support low RAM devices.'
+  id: totrans-56
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**项目Svelte**：在Android KitKat 4.4（API级别19）中引入，它处理内存管理的改进，以支持低RAM设备。'
+- en: '**Project Volta**: This was introduced in Android Lollipop (API Level 21);
+    it focuses on the battery life of the device. Then, it adds important APIs to
+    deal with batching expensive battery draining operations, such as the JobScheduler,
+    or new tools such as the Battery Historian.'
+  id: totrans-57
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**项目Volta**：在Android Lollipop（API级别21）中引入，它关注设备的电池寿命。然后，它添加了重要的API来处理批处理耗电操作，例如JobScheduler，或者新的工具，如Battery
+    Historian。'
+- en: Project Svelte and Android N
+  id: totrans-58
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 项目Svelte和Android N
+- en: When it was first introduced, Project Svelte reduced the memory footprint and
+    improved the memory management in order to support entry-level devices with low
+    memory availability and then broadened the supported range of devices with clear
+    advantages for the platform.
+  id: totrans-59
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当项目Svelte首次引入时，它减少了内存占用并改进了内存管理，以支持内存可用性低的入门级设备，然后扩大了支持设备的范围，这对平台有明显的好处。
+- en: 'With the release of Android N, Google wants to provide an optimized way to
+    run applications in the background. We know that the process of our application
+    runs in the background even if it is not visible on the screen, and even if there
+    are no running activities, because a service could be executing some operations.
+    This is a key feature for memory management: the overall system performance could
+    be affected by bad memory management of the background processes.'
+  id: totrans-60
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 随着Android N的发布，谷歌希望提供一种优化方式来在后台运行应用程序。我们知道，即使应用程序在屏幕上看不到，也没有运行的活动，但由于服务可能正在执行某些操作，应用程序的进程仍然在后台运行。这是内存管理的一个关键特性：后台进程的内存管理不当可能会影响整个系统的性能。
+- en: 'But what''s changed in the application behavior and the APIs with the new Android
+    N? The chosen strategy to improve memory management, reducing the impact of background
+    processes, is to avoid sending the application broadcasts for the following actions:'
+  id: totrans-61
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 但是在新的Android N中，应用程序行为和API有哪些变化呢？为了改善内存管理，减少后台进程影响的策略是避免为以下操作发送应用程序广播：
+- en: '`ConnectivityManager.CONNECTIVITY_ACTION`: Starting from Android N, a new connectivity
+    action will just be received from those applications that are in the foreground
+    and that have a registered `BroadcastReceiver` for this action. No application
+    with an implicit intent declared inside the manifest file will receive it any
+    longer. Hence, the application needs to change its logic to do the same as before.
+    [Chapter 6](ch06.html "Chapter 6. Networking"), *Networking*, deals with this,
+    so refer to that chapter to learn more about this particular topic.'
+  id: totrans-62
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`ConnectivityManager.CONNECTIVITY_ACTION`：从Android N开始，只有那些在前台并注册了此操作的`BroadcastReceiver`的应用程序才能接收到新的连接动作。任何在清单文件中声明了隐式意图的应用程序将不再接收到它。因此，应用程序需要改变其逻辑以实现之前的相同功能。[第六章](ch06.html
+    "第六章. 网络连接")，*网络连接*，讨论了这一点，所以请参考那一章以了解更多关于这个特定主题的信息。'
+- en: '`Camera.ACTION_NEW_PICTURE`: This is used to notify that a picture has just
+    been taken and added to the media store. This action won''t be available any more,
+    neither for receiving nor for sending, and it will be for any application, not
+    just for the ones that are targeting the new Android N.'
+  id: totrans-63
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`Camera.ACTION_NEW_PICTURE`：这用于通知刚刚拍摄了一张照片并添加到媒体库中。此操作将不再可用，无论是接收还是发送，对于任何应用程序来说都是如此，不仅仅是那些针对新Android
+    N的应用程序。'
+- en: '`Camera.ACTION_NEW_VIDEO`: This is used to notify that a video has just been
+    taken and added to the media store. As with the previous one, this action cannot
+    be used any more, and it will be for any application too.'
+  id: totrans-64
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`Camera.ACTION_NEW_VIDEO`：这用于通知刚刚拍摄了一段视频并添加到媒体库中。与之前的操作一样，此操作已不再可用，对于任何应用程序来说也是如此。'
+- en: Keep in mind these changes when targeting the application with the new Android
+    N to avoid unwanted or unexpected behaviors.
+  id: totrans-65
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在针对新Android N的应用程序时，请记住这些更改，以避免不希望或意外的行为。
+- en: All of the actions listed have been changed by Google to force developers not
+    to use them in applications. As a general rule, we should not use implicit receivers
+    for the same reason. Hence, we should always check the behavior of our application
+    while it's in the background because this could lead to unexpected memory usage
+    and battery drain. Implicit receivers can start our application components, while
+    the explicit ones are set up for a limited time while the activity is in the foreground,
+    and then they cannot affect the background processes.
+  id: totrans-66
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 所有列出的操作都已被谷歌更改，以强制开发者不要在应用程序中使用它们。通常情况下，我们不应使用隐式接收者也是出于同样的原因。因此，我们应该始终检查应用程序在后台运行时的行为，因为这可能导致意外的内存使用和电池耗电。隐式接收者可以启动我们的应用程序组件，而显式接收者在活动在前台时设置的时间有限，之后它们就不能影响后台进程了。
+- en: Tip
+  id: totrans-67
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: It's a good practice to avoid the use of implicit broadcasts while developing
+    applications to reduce the impact of it on background operations that could lead
+    to unwanted waste of memory and, then, a battery drain.
+  id: totrans-68
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 开发应用程序时避免使用隐式广播是一个好习惯，这样可以减少对后台操作的影响，可能导致不希望的记忆浪费，进而导致电池耗电。
+- en: 'Furthermore, Android N introduces a new command in ADB to test the application''s
+    behavior of ignoring the background processes. Use the following command to ignore
+    background services and processes:'
+  id: totrans-69
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 此外，Android N在ADB中引入了一个新命令，用于测试应用程序忽略后台进程的行为。使用以下命令忽略后台服务和进程：
+- en: '[PRE3]'
+  id: totrans-70
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE3]'
+- en: 'Use the following command to restore the initial state:'
+  id: totrans-71
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 使用以下命令来恢复初始状态：
+- en: '[PRE4]'
+  id: totrans-72
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE4]'
+- en: Refer to [Chapter 5](ch05.html "Chapter 5. Multithreading"), *Multithreading*,
+    to understand how processes work on an Android device.
+  id: totrans-73
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 请参考第[五章](ch05.html "第五章. 多线程")，*多线程*，了解进程如何在Android设备上工作。
+- en: Best practices
+  id: totrans-74
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 最佳实践
+- en: Now that we know what can happen in memory while our application is active,
+    let's examine what we can do to avoid memory leaks and memory churns and optimize
+    our memory management in order to reach our performance target, not just in memory
+    usage, but in garbage collection attendance, because, as we know, it stops any
+    other operation from working.
+  id: totrans-75
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在我们知道了应用程序在活跃时内存中可能发生的情况，让我们看看我们能做些什么来避免内存泄漏和内存翻滚，并优化我们的内存管理，以便达到性能目标，不仅仅是内存使用，还有垃圾回收的参与，因为正如我们所知，它会阻止任何其他操作运行。
+- en: 'In the following pages, we will go through a lot of hints and tips using a
+    bottom-up strategy: starting from low-level shrewdness in Java code to highest-level
+    Android practices.'
+  id: totrans-76
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在接下来的页面中，我们将采用自下而上的策略，通过大量的提示和技巧，从Java代码的低级巧妙方法到Android实践的高级方法进行讲解。
+- en: Data types
+  id: totrans-77
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 数据类型
+- en: 'We weren''t joking: we are really talking about Java primitive types, as they
+    are the foundation of all the applications and it''s really important to know
+    how to deal with them, even though it may be obvious. It''s not, and we will soon
+    understand why.'
+  id: totrans-78
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们不是在开玩笑：我们真的是在谈论Java原始类型，因为它们是所有应用程序的基础，了解如何处理它们非常重要，尽管这可能很显然。事实并非如此，我们很快就会明白为什么。
+- en: 'Java provides primitive types that need to be saved in memory when used: the
+    system allocates an amount of memory related to the amount requested for that
+    particular type. The following are Java primitive types with the related amount
+    of bits needed to allocate the type:'
+  id: totrans-79
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Java提供了在用时需要保存在内存中的原始类型：系统会分配与该特定类型请求的内存量相关的内存量。以下是Java原始类型及其相关位数的列表：
+- en: '`byte`: 8 bits'
+  id: totrans-80
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`byte`：8位'
+- en: '`short`: 16 bits'
+  id: totrans-81
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`short`：16位'
+- en: '`int`: 32 bits'
+  id: totrans-82
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`int`：32位'
+- en: '`long`: 64 bits'
+  id: totrans-83
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`long`：64位'
+- en: '`float`: 32 bits'
+  id: totrans-84
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`float`：32位'
+- en: '`double`: 64 bits'
+  id: totrans-85
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`double`：64位'
+- en: '`boolean`: 8 bits, but it depends on the virtual machine'
+  id: totrans-86
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`boolean`：8位，但取决于虚拟机'
+- en: '`char`: 16 bits'
+  id: totrans-87
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`char`：16位'
+- en: At first glance, what is clear is that you should be careful when choosing the
+    right primitive type every time you are going to use them.
+  id: totrans-88
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 乍一看，很明显，每次使用时，你应该小心选择正确的原始类型。
+- en: Tip
+  id: totrans-89
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: 'Don''t use a bigger primitive type if you don''t really need it: never use
+    `long`, `float`, or `double` if you can represent the number with an integer.
+    It would be a useless waste of memory and calculations every time the CPU needs
+    to deal with it. And remember that to calculate an expression, the system needs
+    to do a widening primitive implicit conversion to the largest primitive type involved
+    in the calculation.'
+  id: totrans-90
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你不需要，不要使用更大的原始类型：如果可以用整数表示数字，就不要使用`long`、`float`或`double`。这将是一种浪费内存和计算，每次CPU需要处理它时。记住，为了计算一个表达式，系统需要对参与计算的最大原始类型进行拓宽的隐式转换。
+- en: Autoboxing
+  id: totrans-91
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 自动装箱
+- en: 'Autoboxing is the term used to indicate an automatic conversion between a primitive
+    type and its corresponding wrapper class object. Primitive type wrapper classes
+    are as follows:'
+  id: totrans-92
+  prefs: []
+  type: TYPE_NORMAL
+  zh: “自动装箱”是指原始类型与其对应的包装类对象之间的自动转换。原始类型包装类如下：
+- en: '`java.lang.Byte`'
+  id: totrans-93
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`java.lang.Byte`'
+- en: '`java.lang.Short`'
+  id: totrans-94
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`java.lang.Short`'
+- en: '`java.lang.Integer`'
+  id: totrans-95
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`java.lang.Integer`'
+- en: '`java.lang.Long`'
+  id: totrans-96
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`java.lang.Long`'
+- en: '`java.lang.Float`'
+  id: totrans-97
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`java.lang.Float`'
+- en: '`java.lang.Double`'
+  id: totrans-98
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`java.lang.Double`'
+- en: '`java.lang.Boolean`'
+  id: totrans-99
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`java.lang.Boolean`'
+- en: '`java.lang.Character`'
+  id: totrans-100
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`java.lang.Character`'
+- en: 'They can be instantiated using the assignment operator as for the primitive
+    types and they can be used as their primitive types:'
+  id: totrans-101
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 可以使用赋值运算符实例化它们，就像原始类型一样，它们也可以被当作原始类型使用：
+- en: '[PRE5]'
+  id: totrans-102
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE5]'
+- en: 'This is exactly the same as the following:'
+  id: totrans-103
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这与以下内容完全相同：
+- en: '[PRE6]'
+  id: totrans-104
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE6]'
+- en: 'But the use of autoboxing is not the right way to improve the performance of
+    our applications. There are many costs associated with it: first of all, the wrapper
+    object is much bigger than the corresponding primitive type. For instance, an
+    `Integer` object needs 16 bytes in memory instead of 16 bits for the primitive
+    type. Hence, more memory is used to handle it. Then, when we declare a variable
+    using the primitive wrapper object, any operation on that implies at least another
+    object allocation. Have a look at the following snippet:'
+  id: totrans-105
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 但使用自动装箱并不是提高应用程序性能的正确方法。它有很多相关成本：首先，包装对象比相应的原始类型大得多。例如，`Integer`对象在内存中需要16字节，而原始类型只需要16位。因此，处理它需要更多的内存。然后，当我们使用包装对象声明变量时，对该变量的任何操作至少意味着另一个对象的分配。看看以下代码段：
+- en: '[PRE7]'
+  id: totrans-106
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE7]'
+- en: 'Every Java developer knows what it is, but this simple code needs an explanation
+    of what happened step by step:'
+  id: totrans-107
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 每个Java开发者都知道这是什么，但这段简单的代码需要逐步解释发生了什么：
+- en: 'First of all, the integer value is taken from the `Integer` value `integer`
+    and it''s increased by 1:'
+  id: totrans-108
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 首先，从`Integer`值`integer`中取出整数值，并将其增加1：
+- en: '[PRE8]'
+  id: totrans-109
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE8]'
+- en: 'Then, the result is assigned to the integer, but this means that a new autoboxing
+    operation needs to be executed:'
+  id: totrans-110
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 然后，结果被赋值给整数，但这意味着需要执行一个新的自动装箱操作：
+- en: '[PRE9]'
+  id: totrans-111
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+  zh: '[PRE9]'
+- en: 'Undoubtedly, these operations are slower than if we used the primitive type
+    instead of the wrapper class: there''s no need for autoboxing, hence, no more
+    bad allocations. Things can get worse in loops, where the preceding operations
+    are repeated every cycle. Take, for example, the following snippet:'
+  id: totrans-112
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 毫无疑问，这些操作比我们使用包装类而不是原始类型时要慢：不需要自动装箱，因此，不再有糟糕的分配。在循环中，情况可能会变得更糟，因为前面的操作在每个周期都会重复。例如，以下代码段：
+- en: '[PRE10]'
+  id: totrans-113
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE10]'
+- en: 'In this case, there are a lot of inappropriate allocations caused by autoboxing
+    and if we compare this with the primitive type `for` loop, we notice that there
+    are no allocations:'
+  id: totrans-114
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这种情况下，由于自动装箱导致了很多不适当的分配，如果我们将其与基本类型的`for`循环进行比较，我们会注意到没有分配：
+- en: '[PRE11]'
+  id: totrans-115
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE11]'
+- en: Note
+  id: totrans-116
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: 'Autoboxing should be avoided as much as possible: the more we use primitive
+    wrapper classes instead of primitive types, the more wasted memory there will
+    be while executing our application. And this waste could be propagated when using
+    autoboxing in loop cycles, affecting not just memory, but CPU timings as well.'
+  id: totrans-117
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 应尽可能避免自动装箱：我们在应用执行时使用基本包装类代替基本类型的次数越多，浪费的内存就越多。这种浪费可能会在循环中使用自动装箱时传播，不仅影响内存，还影响CPU的定时。
+- en: Sparse array family
+  id: totrans-118
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 稀疏数组家族
+- en: 'So, in all of the cases described in the previous paragraph, we can just use
+    the primitive type instead of the object counterpart. Nevertheless, it''s not
+    always so simple. What happens if we are dealing with generics? For example, let''s
+    think about collections: we cannot use primitive types as generics for objects
+    that implement one of the following interfaces. We have to use the wrapper class
+    like this:'
+  id: totrans-119
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因此，在上一段中描述的所有情况下，我们可以使用基本类型代替对象对应物。然而，这并不总是那么简单。如果我们处理泛型时会发生什么？例如，考虑集合：我们无法将基本类型用作实现以下接口的对象的泛型。我们必须像这样使用包装类：
+- en: '[PRE12]'
+  id: totrans-120
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE12]'
+- en: 'Every time we use one of the `Integer` objects of a collection, autoboxing
+    occurs at least once, producing the preceding waste outlined. And we well know
+    how many times we deal with this kind of object in everyday developing time. But
+    isn''t there a solution to avoid autoboxing in these situations? Android provides
+    a useful family of objects created to replace `Map` objects and avoid autoboxing,
+    protecting memory from pointlessly large allocations: they are the Sparse arrays.'
+  id: totrans-121
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 每当我们使用集合中的`Integer`对象时，至少会发生一次自动装箱，产生前面概述的浪费。我们都知道在日常工作开发中处理这类对象的频率。但在这些情况下有没有办法避免自动装箱呢？Android提供了一系列有用的对象，用于替换`Map`对象并避免自动装箱，从而保护内存免受无谓的大分配：它们就是稀疏数组。
+- en: 'A list of Sparse arrays, with the related type of maps they can replace, is
+    as follows:'
+  id: totrans-122
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以下是稀疏数组列表，以及它们可以替换的相关类型的映射：
+- en: '`SparseBooleanArray: HashMap<Integer, Boolean>`'
+  id: totrans-123
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`SparseBooleanArray: HashMap<Integer, Boolean>`'
+- en: '`SparseLongArray: HashMap<Integer, Long>`'
+  id: totrans-124
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`SparseLongArray: HashMap<Integer, Long>`'
+- en: '`SparseIntArray: HashMap<Integer, Integer>`'
+  id: totrans-125
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`SparseIntArray: HashMap<Integer, Integer>`'
+- en: '`SparseArray<E>: HashMap<Integer, E>`'
+  id: totrans-126
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`SparseArray<E>: HashMap<Integer, E>`'
+- en: '`LongSparseArray<E>: HashMap<Long, E>`'
+  id: totrans-127
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`LongSparseArray<E>: HashMap<Long, E>`'
+- en: In the following section we will talk about the `SparseArray` object specifically,
+    but everything we say is true for all of the previously mentioned objects as well.
+  id: totrans-128
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在下一节中，我们将特别讨论`SparseArray`对象，但我们对所有之前提到的对象所说的都是正确的。
+- en: 'The `SparseArray` object uses two different arrays to store hashes and objects.
+    The first one collects sorted hashes, while the second one stores the key-value
+    pairs ordered according to the key hashes array sorting in *Figure 1*:'
+  id: totrans-129
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`SparseArray`对象使用两个不同的数组来存储散列和对象。第一个收集排序后的散列，而第二个根据*图1*中的键散列数组排序存储键值对。'
+- en: '![Sparse array family](img/4666_04_01.jpg)'
+  id: totrans-130
+  prefs: []
+  type: TYPE_IMG
+  zh: '![稀疏数组家族](img/4666_04_01.jpg)'
+- en: 'Figure 1: SparseArray''s hashes structure'
+  id: totrans-131
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图1：SparseArray的散列结构
+- en: When you need to add a value, you have to specify the integer key and the value
+    to be added in the `SparseArray.put()` method, just like in `HashMap`. This could
+    create collisions if multiple key hashes are added to the same position.
+  id: totrans-132
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当你需要添加一个值时，你必须在`SparseArray.put()`方法中指定整数键和要添加的值，就像在`HashMap`中一样。如果多个键散列被添加到同一个位置，这可能会导致冲突。
+- en: 'When a value is needed, simply call `SparseArray.get()`, specifying the related
+    key: internally, the key object is used to binary search the index of the hash
+    and then, the value of the related key, as in *Figure 2*:'
+  id: totrans-133
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 需要值时，只需调用`SparseArray.get()`，并指定相关键：在内部，键对象用于二分查找散列的索引，然后获取相关键的值，如*图2*所示：
+- en: '![Sparse array family](img/4666_04_02.jpg)'
+  id: totrans-134
+  prefs: []
+  type: TYPE_IMG
+  zh: '![稀疏数组家族](img/4666_04_02.jpg)'
+- en: 'Figure 2: SparseArray''s workflow'
+  id: totrans-135
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图2：SparseArray的工作流程
+- en: When the key found in the index resulting from the binary search does not match
+    the original one, a collision happened, so the search keeps on in both directions
+    to find the same key and to provide the value, if it's still inside the array.
+    Thus, the time needed to find the value increases significantly if a large number
+    of objects is contained by the array.
+  id: totrans-136
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当二分搜索产生的索引中的键与原始键不匹配时，发生了碰撞，因此搜索会继续在两个方向上进行，以找到相同的键并提供值（如果它仍然在数组内）。因此，如果数组包含大量对象，找到值所需的时间将显著增加。
+- en: By contrast, a `HashMap` contains just a single array to store hashes, keys,
+    and values, and it uses large arrays as a technique to avoid collisions. This
+    is not good for memory, because it's allocating more memory than is really needed.
+    So `HashMap` is fast, because it implements a better way of avoiding collisions,
+    but it's not memory efficient. Conversely, `SparseArray` is memory efficient because
+    it uses the right number of object allocations, with an acceptable increase in
+    execution timing.
+  id: totrans-137
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 相比之下，`HashMap`只包含一个数组来存储哈希、键和值，并且它使用大型数组作为一种避免碰撞的技术。这对于内存来说并不好，因为它分配的内存比实际需要的更多。所以`HashMap`之所以快速，是因为它实现了一种更好的避免碰撞的方法，但它不是内存效率高的。相反，`SparseArray`在内存使用上更高效，因为它使用正确数量的对象分配，执行时间的增加是可以接受的。
+- en: 'The memory used for these arrays is contiguous, so every time you remove a
+    key/value pair from a `SparseArray`, they can be compacted or resized:'
+  id: totrans-138
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这些数组使用的内存是连续的，因此每次从`SparseArray`中删除键/值对时，它们可以被压缩或调整大小：
+- en: '**Compaction**: The object to remove is shifted to the end and all the other
+    objects are shifted left. The last block containing the item to be removed can
+    be reused for future additions to save allocations.'
+  id: totrans-139
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**压缩**：要删除的对象被移到末尾，所有其他对象都向左移动。包含要删除项的最后一个块可以重新用于将来的添加，以节省分配。'
+- en: '**Resize**: All the elements of the arrays are copied to other arrays and the
+    old ones are deleted. On the other hand, the addition of new elements produces
+    the same effect as copying all the elements into new arrays. This is the slowest
+    method, but it''s completely memory safe because there are no useless memory allocations.'
+  id: totrans-140
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**调整大小**：数组的所有元素都被复制到其他数组，旧的数组被删除。另一方面，添加新元素会产生与将所有元素复制到新数组相同的效果。这是最慢的方法，但它完全保证了内存安全，因为没有无用的内存分配。'
+- en: In general, `HashMap` is faster while doing these operations because it contains
+    more blocks than is really needed, hence the memory waste.
+  id: totrans-141
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通常，在进行这些操作时，`HashMap`速度更快，因为它包含的块比实际需要的多，从而造成了内存浪费。
+- en: Note
+  id: totrans-142
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: 'The use of `SparseArray` family objects depends on the strategy of memory management
+    and CPU performance patterns being used because of the calculation performance
+    cost compared to the memory saving. So, the use is right in some situations. Consider
+    the use of it when:'
+  id: totrans-143
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 使用`SparseArray`系列对象取决于内存管理和CPU性能模式的策略，因为与内存节省相比，计算性能成本较高。因此，在某些情况下使用它是正确的。在以下情况下考虑使用它：
+- en: The number of objects you are dealing with is below a thousand and you are not
+    going to do a lot of additions and deletions
+  id: totrans-144
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 你正在处理的对象数量不到一千，并且你不会进行大量的添加和删除操作。
+- en: You are using collections of maps with few items, but lots of iterations
+  id: totrans-145
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 你正在使用包含少量项目但有很多迭代的地图集合
+- en: 'Another useful feature of these objects is that they let you iterate over indexing,
+    instead of using the iterator pattern, which is slower and memory inefficient.
+    The following snippet shows how the iteration doesn''t involve objects:'
+  id: totrans-146
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这些对象的另一个有用特性是，它们允许你遍历索引，而不是使用更慢且内存效率低下的迭代器模式。以下代码段显示了迭代不涉及对象：
+- en: '[PRE13]'
+  id: totrans-147
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE13]'
+- en: 'Contrariwise, the `Iterator` object is needed to iterate through `HashMaps`:'
+  id: totrans-148
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 相反，需要`Iterator`对象来遍历`HashMap`：
+- en: '[PRE14]'
+  id: totrans-149
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE14]'
+- en: Some developers think the `HashMap` object is the better choice because it can
+    be exported from an Android application to other Java ones, while the `SparseArray`
+    family's objects don't. But what we have analyzed here as memory management gains
+    is applicable to any other case. And, as developers, we should strive to reach
+    performance goals on every platform, instead of reusing the same code on different
+    platforms, because different platforms could be affected differently from a memory
+    perspective. That's why our main suggestion is to always profile the code in every
+    platform we are working on, and then make our own personal considerations on the
+    best and worst approaches, depending on results.
+  id: totrans-150
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一些开发者认为`HashMap`对象是更好的选择，因为它可以从Android应用程序导出到其他Java应用程序，而`SparseArray`家族的对象则不能。但我们在这里分析的内存管理收益适用于任何其他情况。作为开发者，我们应该努力在每个平台上达到性能目标，而不是在不同平台上重复使用相同的代码，因为从内存的角度来看，不同的平台可能会受到不同的影响。这就是为什么我们主要的建议是始终在每个我们工作的平台上分析代码，并根据结果做出关于最佳和最差方法的个人判断。
+- en: ArrayMap
+  id: totrans-151
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: ArrayMap
+- en: An `ArrayMap` object is an Android implementation of the `Map` interface that
+    is more memory efficient than the `HashMap` one. This class is provided by the
+    Android platform starting from Android KitKat (API Level 19), but there is another
+    implementation of this inside the support package v4 because of its main usage
+    on older and low-end devices.
+  id: totrans-152
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`ArrayMap`对象是Android平台上对`Map`接口的一种实现，它比`HashMap`更节省内存。这个类从Android KitKat（API级别19）开始提供，但在支持包v4中也有另一种实现，因为其主要在老旧和低端设备上使用。'
+- en: Its implementation and usage is similar to the `SparseArray` objects with all
+    the implications about memory usage and computational costs, but its main purpose
+    is to let you use `Objects` as keys of the map, just like `HashMap` does. Hence,
+    it provides the best of both worlds.
+  id: totrans-153
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 它的实现和用法与`SparseArray`对象类似，这涉及到内存使用和计算成本的所有含义，但其主要目的是允许你像`HashMap`一样使用`Objects`作为映射的键。因此，它提供了两者的最佳结合。
+- en: Syntax
+  id: totrans-154
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 语法
+- en: Sometimes, we are not careful enough with the simple and common Java structures
+    we use every day in Android application development. But are we sure those basic
+    Java syntaxes are always suitable for performance? Let's find out.
+  id: totrans-155
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 有时，我们在日常的Android应用程序开发中对那些简单且常见的Java结构并不够小心。但我们确定那些基本的Java语法总是适合性能吗？让我们找出答案。
+- en: Collections
+  id: totrans-156
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 集合
+- en: 'We dealt with collections in the previous paragraph. We now want to face the
+    implications of iteration over a collection to detect the best choice to iterate
+    objects inside a collection and, then, improve memory management. Let''s compare
+    timing results of three different cycles:'
+  id: totrans-157
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在上一段中我们已经处理了集合。现在我们想要面对遍历集合的含义，以找出在集合内部迭代对象的最好选择，然后改善内存管理。让我们比较三种不同循环的时间结果：
+- en: The `Iterator` cycle
+  id: totrans-158
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`Iterator`循环'
+- en: The `while` cycle
+  id: totrans-159
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`while`循环'
+- en: The `for` cycle
+  id: totrans-160
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`for`循环'
+- en: 'We have used the following snippet of code to compare their timings:'
+  id: totrans-161
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们使用了以下代码片段来比较它们的时间：
+- en: '[PRE15]'
+  id: totrans-162
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE15]'
+- en: We tested ten times the performance of the loops using different number of items
+    in the list and we averaged the measurements. The results of these measurements
+    are in *Figure 3*.
+  id: totrans-163
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们使用不同数量的列表项测试了循环的性能十次，并平均了这些测量结果。《图3》展示了这些测量的结果。
+- en: '![Collections](img/4666_04_03.jpg)'
+  id: totrans-164
+  prefs: []
+  type: TYPE_IMG
+  zh: '![集合](img/4666_04_03.jpg)'
+- en: 'Figure 3: Memory statistics results for the cycle measurements'
+  id: totrans-165
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图3：循环测量内存统计结果
+- en: 'The results can vary depending on a lot of different factors: memory, CPU,
+    running applications on the device, and so on. But what we are interested in is
+    finding the average performance for these cycles. What is evident from the graph
+    is that the `Iterator` cycle type is the slowest one, while the `for` cycle is
+    always the fastest in our measurements.'
+  id: totrans-166
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 结果可能会受到许多不同因素的影响：内存、CPU、设备上运行的应用程序等等。但我们感兴趣的是找到这些循环的平均性能。从图表中显而易见的是，`Iterator`循环类型是最慢的，而`for`循环在我们的测量中始终是最快的。
+- en: 'Now, is there just a single way to create a `for` cycle? No, there are different
+    alternative. Let''s see them:'
+  id: totrans-167
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 那么，创建`for`循环只有一种方法吗？不，有多种选择。让我们看看它们：
+- en: '[PRE16]'
+  id: totrans-168
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE16]'
+- en: The first case is the slowest one, because there is an extra cost due to array
+    length calculations in every cycle, because the just-in-time compilation needs
+    to translate it every time. The second case avoids this cost by calculating the
+    length just once, while the last one is the enhanced `for` loop syntax introduced
+    with Java 5, which is the fastest way to index using the `for` loop.
+  id: totrans-169
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一个案例是最慢的，因为在每个周期中都需要进行数组长度计算，这增加了额外的成本，因为即时编译每次都需要转换它。第二个案例通过只计算一次长度来避免这个成本，而最后一个案例是Java
+    5引入的增强的`for`循环语法，这是使用`for`循环进行索引的最快方式。
+- en: Note
+  id: totrans-170
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: Enhanced `for` loop syntax is the fastest way to index over an array, even if
+    the device has a just-in-time compilation, so consider it every time you deal
+    with array iterations and avoid iterations with the `iterator` object as much
+    as possible, as it is the slowest one.
+  id: totrans-171
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 增强的`for`循环语法是遍历数组的最快方式，即使设备具有即时编译，因此每次处理数组迭代时都应考虑使用它，并尽可能避免使用`iterator`对象的迭代，因为这是最慢的。
+- en: Enumerations
+  id: totrans-172
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 枚举
+- en: 'Enumerations are very comfortable for developers: a limited number of elements,
+    descriptive names, and therefore improved code readability. They also support
+    polymorphism. For these reasons they are widely used in our code. But are they
+    really good performance-wise? The main alternative to an enumeration is the declaration
+    of integers that are publicly accessible and static. For example, let''s have
+    a look at the following snippet:'
+  id: totrans-173
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 枚举对开发者来说非常方便：有限数量的元素、描述性的名称，从而提高了代码的可读性。它们还支持多态。因此，它们在我们的代码中被广泛使用。但从性能角度来看，它们真的好吗？枚举的主要替代品是声明公开可访问且静态的整数。例如，让我们看一下以下代码段：
+- en: '[PRE17]'
+  id: totrans-174
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE17]'
+- en: 'That can be replaced by the following:'
+  id: totrans-175
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这可以被以下代码替换：
+- en: '[PRE18]'
+  id: totrans-176
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE18]'
+- en: 'Now, which one is more expensive from a memory perspective? The answer to this
+    question is twofold: we can check the DEX size produced for our app that, then,
+    affects the heap memory usage during execution with enumerations or with integer
+    values.'
+  id: totrans-177
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在，从内存的角度来看，哪一个成本更高？这个问题的答案有两方面：我们可以检查为我们的应用程序生成的DEX大小，这会影响在执行时使用枚举或整数值时的堆内存使用情况。
+- en: Our example enumeration is converted into four objects allocation with `String`
+    for the name and an `integer` value as the ordinal, and an `array` and the wrapper
+    class. Instead, the class implementation is light because it just allocates the
+    four integer values with a considerable saving of memory.
+  id: totrans-178
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们的示例枚举被转换成四个对象分配，其中`String`表示名称，`integer`值作为序号，以及数组和一个包装类。相比之下，类的实现较轻量，因为它只需分配四个整数值，从而在内存上节省了大量空间。
+- en: To make matters worse, the enumeration needs to be replicated in every process
+    your app is using, so, its costs increase in a multiprocess application.
+  id: totrans-179
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 更糟糕的是，枚举需要在应用程序使用的每个进程中复制，因此在多进程应用程序中，其成本会增加。
+- en: 'For the classic usage of an enumeration, a `switch...case` statement is needed,
+    so let''s look at it using our enumeration:'
+  id: totrans-180
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 对于枚举的经典用法，需要使用`switch...case`语句，所以让我们使用我们的枚举来查看它：
+- en: '[PRE19]'
+  id: totrans-181
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE19]'
+- en: 'And now, let''s change the previous code using the integer values:'
+  id: totrans-182
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在，让我们使用整数值更改之前的代码：
+- en: '[PRE20]'
+  id: totrans-183
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE20]'
+- en: This kind of change in our code is pretty simple. So, we should think of planning
+    to reformat our code to reduce or remove used enumerations, due to our previous
+    reasoning.
+  id: totrans-184
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这种代码更改非常简单。因此，我们应该考虑计划重新格式化我们的代码，以减少或移除使用的枚举，这是基于我们之前的推理。
+- en: 'Android provides a useful annotation to simplify the transition from enumeration
+    to integer values: `@IntDef`. This annotation can be used to enable multiple constants
+    by using the `flag` attribute in the following way:'
+  id: totrans-185
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 安卓提供了一个有用的注解，以简化从枚举到整数值的过渡：`@IntDef`。这个注解可以用来通过以下方式使用`flag`属性启用多个常量：
+- en: '[PRE21]'
+  id: totrans-186
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE21]'
+- en: 'This annotation says that the possible values are those specified inside the
+    annotation itself. For example, let''s change our integer values to use the annotation
+    and transform those values to something similar to an enumeration without all
+    the memory performance issues:'
+  id: totrans-187
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这个注解表示可能的值是注解内部指定的那些值。例如，让我们将整数值更改为使用注解，并将这些值转换为类似枚举的东西，同时避免所有内存性能问题：
+- en: '[PRE22]'
+  id: totrans-188
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE22]'
+- en: 'Now, to use it in our code, simply specify the new annotation where you are
+    expecting to have a `Shape` value:'
+  id: totrans-189
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在，要在我们的代码中使用它，只需在你期望有`Shape`值的地方指定新的注解：
+- en: '[PRE23]'
+  id: totrans-190
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE23]'
+- en: Tip
+  id: totrans-191
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: Enumerations affect the overall memory performance because of their unneeded
+    allocations. Then, avoid using them and swap as many as possible with static final
+    integer values. Then create your own annotation to use those integer values as
+    if they were an enumeration, just to have a limited number of values.
+  id: totrans-192
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 枚举由于它们不必要的分配，影响整体内存性能。因此，尽量避免使用它们，尽可能用static final整数替换。然后创建自己的注解，像使用枚举一样使用这些整数值，以限制值的数量。
+- en: In some situations, you cannot remove your enumerations. Nevertheless, Proguard
+    can be enhanced to decrease the impact of enumerations on our application memory
+    performance. Refer to [Chapter 10](ch10.html "Chapter 10. Performance Tips"),
+    *Performance Tips*, to learn more about this topic.
+  id: totrans-193
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在某些情况下，你可能无法移除枚举。然而，可以通过增强Proguard来减少枚举对应用程序内存性能的影响。[参考第10章](ch10.html "第10章.
+    性能技巧")，*性能技巧*，了解更多关于这个话题的信息。
+- en: Constants
+  id: totrans-194
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 常量
+- en: Often, we need a variable that is not related to a particular instance of a
+    class, but that is used all over the application. Yes, we are talking about static
+    variables. They are useful in a lot of situations. But how are they managed by
+    the system? What memory implications are behind this? Let's step back and talk
+    about how the compiler handles static variables during execution. There is a special
+    method in the Java compiler called `<clinit>`. As the name suggests, it deals
+    with class initializations, but it's just used for variables and static blocks
+    and it initializes them in the order they are inside the class. It's executed
+    starting from the class's super-classes and interfaces, down to the class itself.
+    So, our static variables are initialized as soon as the application starts.
+  id: totrans-195
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通常，我们需要一个与类特定实例无关的变量，但它被整个应用程序使用。是的，我们说的是静态变量。它们在许多情况下都很有用。但系统是如何管理它们的呢？这背后有什么内存影响？让我们退一步，谈谈编译器在执行期间如何处理静态变量。Java编译器中有一个特殊的方法叫做`<clinit>`。顾名思义，它处理类的初始化，但它只用于变量和静态代码块，并按照它们在类中的顺序进行初始化。它从类的超类和接口开始执行，一直到类本身。因此，我们的静态变量在应用程序启动时就被初始化了。
+- en: 'It''s a different perspective if the static variables are final as well: in
+    this case, they aren''t initialized by the `<clinit>` method, but they are stored
+    inside the DEX file with double benefits. They don''t need either more memory
+    allocations, nor the operations to allocate it. This only applies to primitive
+    types and string constants, so there''s no need to do it for objects.'
+  id: totrans-196
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果静态变量也是final的，那就另当别论了：在这种情况下，它们不是由`<clinit>`方法初始化的，而是存储在DEX文件中，具有双重好处。它们既不需要更多的内存分配，也不需要分配内存的操作。这只适用于基本类型和字符串常量，所以对于对象来说没有必要这样做。
+- en: Tip
+  id: totrans-197
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: Constants in the code should be static and final in order to take advantage
+    of memory savings and to avoid their initialization in the Java compiler `<clinit>`
+    method.
+  id: totrans-198
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 代码中的常量应该是static和final的，以便利用内存节省，并避免在Java编译器的`<clinit>`方法中进行初始化。
+- en: Object management
+  id: totrans-199
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 对象管理
+- en: Let's look at a higher Java topic, covering the correct management of objects
+    and some practices to avoid memory pitfalls.
+  id: totrans-200
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们探讨一个更高阶的Java话题，涵盖正确管理对象和一些避免内存陷阱的做法。
+- en: 'Let''s start with banalities that aren''t actually so trivial: be careful not
+    to instantiate unnecessary objects. We never tire of saying it. Memory allocations
+    are expensive, and deallocations are too: the system allocates memory for it and
+    the garbage collection limit is reached sooner, and, as we know, this slows down
+    the overall application performance from memory availability to lags in the user
+    experience.'
+  id: totrans-201
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们从一些看似平凡却并不简单的事情开始：注意不要实例化不必要的对象。我们对此从不厌倦重复。内存分配是昂贵的，同样，释放内存也是：系统为其分配内存，垃圾收集的界限会更快达到，众所周知，这将从内存可用性到用户体验的延迟，整体降低应用程序的性能。
+- en: Tip
+  id: totrans-202
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: 'Every developer should know and do this task of cleaning up unnecessary objects
+    in the code. There is no absolute rule for this: just keep in mind that a few
+    useful objects are more memory safe than a lot of rarely used ones.'
+  id: totrans-203
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 每个开发者都应该知道并完成代码中清理不必要对象的任务。这方面没有绝对的规定：只要记住，几个有用的对象比大量很少使用的对象在内存上更安全。
+- en: Create fewer temporary objects, as they are often garbage collected, and avoid
+    instantiating unnecessary objects, as they are expensive for memory and computational
+    performance.
+  id: totrans-204
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 尽量创建较少的临时对象，因为它们经常被垃圾收集，避免实例化不必要的对象，因为它们对内存和计算性能来说是昂贵的。
+- en: The following pages are rich with simple practices to follow in order to limit
+    as much as possible the memory consumption of our application so it will never
+    fall into lags. We want to deal with Java techniques for object management in
+    the next paragraphs, while we will present later on the methodologies related
+    to Android. They are, however, related to common situations for Android developers.
+  id: totrans-205
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以下几页内容提供了简单实践，以尽可能限制我们应用程序的内存消耗，避免出现延迟。接下来几段，我们将讨论Java的对象管理技术，稍后我们会介绍与Android相关的方法论。不过，这些内容与Android开发者的常见情况有关。
+- en: Strings
+  id: totrans-206
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 字符串
+- en: 'The `String` objects are immutable. When you instantiate a string this way,
+    you are forcing the allocation of two different objects:'
+  id: totrans-207
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`String`对象是不可变的。以这种方式实例化字符串，你将强制分配两个不同的对象：'
+- en: '[PRE24]'
+  id: totrans-208
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE24]'
+- en: 'The two objects are as follows:'
+  id: totrans-209
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这两个对象如下所示：
+- en: The `String` `"example"`, which is an object itself, and its memory must be
+    allocated anyway
+  id: totrans-210
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`String` `"example"`本身就是一个对象，其内存必须被分配'
+- en: The new `String string`
+  id: totrans-211
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 新的`String string`
+- en: 'So, the other initialization of a `String` object is much more suitable for
+    memory performance:'
+  id: totrans-212
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因此，另一种初始化`String`对象的方式对内存性能来说更为合适：
+- en: '[PRE25]'
+  id: totrans-213
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE25]'
+- en: String concatenation
+  id: totrans-214
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 字符串拼接
+- en: 'Often, we use strings and manipulate them with no thought of the aftermath
+    in memory. One would think that when we need to concatenate two or more strings,
+    the following snippet would be good for memory performance because it doesn''t
+    use more object allocations:'
+  id: totrans-215
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通常，我们在操作字符串时，不会考虑内存使用后果。有人可能会认为，当我们需要拼接两个或更多字符串时，以下代码片段对内存性能是有好处的，因为它没有使用更多的对象分配：
+- en: '[PRE26]'
+  id: totrans-216
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE26]'
+- en: 'But instead, for this kind of operation, `StringBuffer` and `StringBuilder`
+    are more efficient than the `String` class because they work on character arrays.
+    Then, for a better execution, the previous snippet should be changed into the
+    following:'
+  id: totrans-217
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然而，对于这类操作，`StringBuffer`和`StringBuilder`比`String`类更有效率，因为它们是基于字符数组工作的。因此，为了更好的执行效率，前面的代码片段应该改为如下形式：
+- en: '[PRE27]'
+  id: totrans-218
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE27]'
+- en: 'This is preferable if you work a lot with string concatenation, but it can
+    be used as a good practice all the time, just because of the higher efficiency
+    of `StringBuffer` and `StringBuilder` compared to string concatenations. Remember
+    the difference between `StringBuffer` and `StringBuilder`: the first one is thread
+    safe, so it''s slower, but it can be used in a multithreading environment; while
+    `StringBuilder` is not thread safe, so it''s faster, but it can only be used in
+    a single thread.'
+  id: totrans-219
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你经常进行字符串拼接操作，这种方式是可取的，但也可以作为一项始终遵循的好习惯，因为与字符串拼接相比，`StringBuffer`和`StringBuilder`的效率更高。记住`StringBuffer`和`StringBuilder`之间的区别：前者是线程安全的，因此速度较慢，但可以在多线程环境中使用；而`StringBuilder`不是线程安全的，因此速度更快，但只能在单线程中使用。
+- en: 'Another thing to keep in mind is that both `StringBuilder` and `StringBuffer`
+    have an initial capacity of 16 characters, and when they need to be increased
+    because of full capacity, a new object with double capacity is instantiated and
+    allocated and the old one is waiting for the next garbage collection to be done.
+    To avoid this unnecessary waste of memory, if you know an estimation of the string
+    capacity you are dealing with, you can instantiate `StringBuffer` or `StringBuilder`
+    by specifying a different initial capacity:'
+  id: totrans-220
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 另外需要注意的是，`StringBuilder`和`StringBuffer`的初始容量都是16个字符，当它们因容量满而需要增加时，会实例化并分配一个容量加倍的新对象，而旧对象则等待下一次垃圾回收。为了避免这种不必要的内存浪费，如果你知道自己要处理的字符串容量的估计值，可以通过指定不同的初始容量来实例化`StringBuffer`或`StringBuilder`：
+- en: '[PRE28]'
+  id: totrans-221
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE28]'
+- en: This way, no object recreation is needed if the string capacity is lower than
+    64 characters and it will not be collected until it's no longer referenced.
+  id: totrans-222
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这样，如果字符串容量低于64个字符，就不需要重新创建对象，且在它不再被引用之前不会被回收。
+- en: Local variables
+  id: totrans-223
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 局部变量
+- en: 'Looking at our code, sometimes we notice that an object used in a method is
+    used without being modified for all of the method execution. This means that it
+    can be exported outside the method, so it''s allocated once and never collected,
+    improving memory management. For example, the next code suggests just that:'
+  id: totrans-224
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 查看我们的代码，有时我们会注意到，在方法的整个执行过程中，一个对象没有被修改就被使用了。这意味着它可以被移出方法外部，这样它只需分配一次且不会被回收，从而改善内存管理。例如，下面的代码就建议这样做：
+- en: '[PRE29]'
+  id: totrans-225
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE29]'
+- en: 'In this case, the `DateFormat` object doesn''t need to be instantiated every
+    time the method is executed. Furthermore, a new object is allocated every time
+    and it''s not collected until the garbage collector limit is reached, occupying
+    memory unnecessarily in the meantime. It would be much better to extract that
+    object from the method and make it available from the outside, so that it''s only
+    instantiated once and it''s available throughout the life cycle of the `class`
+    object. The overall performance benefit would come from the reuse of a single
+    object in multiple places where a `DateFormate.format()` method call is needed.
+    Then, a solution could be used, as follows:'
+  id: totrans-226
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在此情况下，`DateFormat`对象无需在每次方法执行时都进行实例化。此外，每次都会分配一个新对象，并且在垃圾收集器达到限制之前不会被收集，这期间会不必要的占用内存。将这个对象从方法中提取出来，并使其可以从外部访问，这样它只需实例化一次，并且在`class`对象的生命周期内都可以使用，这将好得多。整体性能的提升将来自于在需要`DateFormat.format()`方法调用的多个地方重用一个单一对象。然后，可以使用以下解决方案：
+- en: '[PRE30]'
+  id: totrans-227
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE30]'
+- en: 'In general, there are a lot of different situations where you need to handle
+    local variables that could be extracted and there are lots of different solutions:
+    it''s up to you to find the one that fits your code well.'
+  id: totrans-228
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通常，有许多不同的场合需要处理可以提取的局部变量，并且有许多不同的解决方案：由你决定哪个最适合你的代码。
+- en: Arrays versus collections
+  id: totrans-229
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 数组与集合
+- en: 'Collections can be automatically enlarged or reduced in need and provide a
+    lot of helpful methods to add, remove, get, change, and move objects, and other
+    cool things. This comes with a high cost. If the number of objects you are dealing
+    with is fixed, raw arrays are more memory efficient than collections. The [http://bigocheatsheet.com](http://bigocheatsheet.com)
+    website reports a deeper analysis about cost comparison between arrays and collections.
+    For this purpose, the Big O notation is used: it describes the trend of the algorithm
+    to the growth of the number of elements of the array/collection.'
+  id: totrans-230
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 集合可以根据需要自动扩大或缩小，并提供许多有用的方法来添加、移除、获取、更改和移动对象，以及其他很酷的功能。这是有高昂代价的。如果你处理的对象数量是固定的，原始数组比集合在内存上更有效率。[http://bigocheatsheet.com](http://bigocheatsheet.com)网站对数组和集合之间的成本比较进行了更深入的分析。为此，使用了大O表示法：它描述了算法与数组/集合元素数量增长的趋势。
+- en: Streams
+  id: totrans-231
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 流
+- en: 'A common error made while dealing with I/O stream Java objects is to not release
+    and free them properly, or to not free them at all, with obvious consequent memory
+    leaks. Remember to release them every time, because this mistake can affect overall
+    performance. Let''s look at the following sample code:'
+  id: totrans-232
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在处理Java的I/O流对象时，一个常见的错误是没有适当地释放和回收它们，或者根本不释放，这显然会导致内存泄漏。请记住，每次都要释放它们，因为这个错误可能会影响整体性能。让我们看看以下示例代码：
+- en: '[PRE31]'
+  id: totrans-233
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE31]'
+- en: 'The preceding code for releasing is the incorrect one. Many developers use
+    it, but there''s still a source of memory leak. If an exception is thrown while
+    closing `InputStream`, `OutputStream` is not closed and it remains referenced,
+    causing the memory leak mentioned earlier. The following snippet shows how to
+    handle it correctly:'
+  id: totrans-234
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 前述的释放代码是错误的。许多开发者使用它，但仍然存在内存泄漏的源头。如果在关闭`InputStream`时抛出异常，`OutputStream`将不会被关闭并且仍然被引用，导致前面提到的内存泄漏。以下代码段展示了如何正确处理它：
+- en: '[PRE32]'
+  id: totrans-235
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE32]'
+- en: As a general rule, you should always use the `finally` keyword in the `try...catch`
+    statements to free resources and memory and close every closable object separately
+    from other ones.
+  id: totrans-236
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通常，你应该在`try...catch`语句中使用`finally`关键字来释放资源和内存，并且分别关闭每个可关闭的对象。
+- en: Memory patterns
+  id: totrans-237
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 内存模式
+- en: In this section, we will have a look at a couple of useful design patterns that
+    can decrease the risk of memory churn, if well handled, or limit the memory used
+    for the objects used. Their aim is to reduce the memory allocations if a lot of
+    objects are about to be used. They reduce the garbage collector calls as well.
+    The choice of whether to use them depends on the particular situation, the requirements,
+    and the expertise of the developer. They can be very useful, but if you use them,
+    it's really important that you are careful about memory leaks that you may introduce
+    that could nullify the effects of their use.
+  id: totrans-238
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在本节中，我们将看看一些有用的设计模式，如果妥善处理，它们可以减少内存抖动（churn）的风险，或者限制用于对象的内存。它们的目的是减少如果大量使用对象时的内存分配。它们也减少了垃圾收集器的调用。是否使用它们取决于具体情况、需求和开发者的专业知识。它们可能非常有用，但如果你使用它们，你一定要注意可能引入的内存泄漏，这可能会抵消它们使用的效果。
+- en: The object pool pattern
+  id: totrans-239
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 对象池模式
+- en: Among creational design patterns, the object pool pattern is really helpful
+    to reuse already allocated objects and then reaching the goal of avoiding memory
+    churn and all of its possible side effects on the application performance. It's
+    particularly useful when we are dealing with expensive creation objects and we
+    need to create a lot of them.
+  id: totrans-240
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在创建型设计模式中，对象池模式对于重用已分配的对象非常有帮助，从而避免内存抖动及其可能对应用程序性能造成的影响。当我们处理昂贵的创建对象并且需要创建很多这样的对象时，它特别有用。
+- en: 'The idea behind this is to avoid garbage collection on an object that can be
+    reused for future needs and to save time creating it. To get to this, an object
+    called `ObjectPool` handles many reusable objects, making them available to those
+    who request them. These requesting objects are called **clients**. So, this patterns
+    deals with three kinds of objects:'
+  id: totrans-241
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这背后的想法是为了避免对将来可能需要重用的对象进行垃圾回收，以及节省创建它的时间。为此，一个名为`ObjectPool`的对象管理许多可重用对象，使它们对请求者可用。这些请求对象被称为**客户端**。因此，这个模式处理三种类型的对象：
+- en: '`ReusableObject`: These are objects that can be made available for clients
+    and that are handled by the pool'
+  id: totrans-242
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`可重用对象`：这些是可供客户端使用并由池管理的对象。'
+- en: '`Client`: This is the object that needs a reusable object to do some stuff,
+    so it has to ask the pool and it has to return it once the stuff is completed'
+  id: totrans-243
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`客户端`：这是需要一个可重用对象来完成某些操作的对象，因此它必须向池请求，并在操作完成后返回它。'
+- en: '`ObjectPool`: This holds every reusable object in order to provide and regain
+    every single one of them'
+  id: totrans-244
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`对象池`：这保存了每个可重用对象，以便提供和回收每一个。'
+- en: '`ObjectPool` should be a singleton object in order to have a centralized management
+    of all the reusable objects, to avoid confusing exchanges between different pools
+    and to share a correct and consistent policy approach for every reusable object''s
+    creation.'
+  id: totrans-245
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`对象池`应该是单例对象，以便集中管理所有可重用对象，避免不同池之间的混乱交换，并确保每个可重用对象的创建都有正确且一致的政策方法。'
+- en: 'The pool can have an upper limit for the number of contained objects. This
+    means that if a client is requesting a reusable object and the pool is full and
+    doesn''t have free reusable objects, the serving requested is delayed until another
+    object gets free from another client. *Figure 4* shows a flowchart to explain
+    what happens when a client needs an object:'
+  id: totrans-246
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 池可以对其包含的对象数量设置上限。这意味着，如果客户端请求一个可重用对象而池已满且没有空闲的可重用对象，服务请求将被延迟，直到另一个对象从另一个客户端释放出来。*图4*展示了一个流程图，解释了当客户端需要一个对象时会发生什么：
+- en: '![The object pool pattern](img/4666_04_04.jpg)'
+  id: totrans-247
+  prefs: []
+  type: TYPE_IMG
+  zh: '![对象池模式](img/4666_04_04.jpg)'
+- en: 'Figure 4: ObjectPool flowchart'
+  id: totrans-248
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图4：对象池流程图
+- en: 'Pausing for a moment on the chart, we can see how important it is that each
+    client always returns the object as soon as its use is no longer necessary: when
+    the limit is reached, the pool cannot create new reusable objects and the client
+    waits indefinitely, blocking all the executions. For this reason, we need to make
+    sure that every client has this behavior. From a client''s perspective, the use
+    of the pool changes its behavior just by adding this particular action of returning
+    the used object. It also needs to be aware that sometimes the pool cannot return
+    an object because none of them are available at that moment: then, it needs to
+    handle this particular exception to the typical flow.'
+  id: totrans-249
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 暂停一下查看图表，我们可以看到每个客户端在不再需要时立即返回对象是多么重要：当达到限制时，池无法创建新的可重用对象，客户端将无限期等待，阻塞所有执行。因此，我们需要确保每个客户端都有这种行为。从客户端的角度来看，使用池只是通过添加返回已使用对象的这一特定行为来改变其行为。同时，它还需要意识到有时候池无法返回对象，因为那一刻没有任何对象可用：这时，它需要处理这种特定异常情况。
+- en: 'Another point to be aware of is that the object that''s just been used should
+    be restored to a particular consistent state before being passed to another asking
+    client in order to maintain clean management of the objects: the client doesn''t
+    know that the object acquired has already been used by another client and it cannot
+    receive the object in an unexpected state that can lead to unexpected behaviors.
+    This can also produce a memory leak if the reusable objects reference other objects
+    that keep being referenced by that after its release by the client. So, in most
+    situations, the reusable object should be restored to a state as if it had just
+    been created.'
+  id: totrans-250
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 另外需要注意的一点是，刚刚使用过的对象在传递给另一个请求的客户端之前，应该恢复到一个特定的稳定状态，以保持对象的清洁管理：客户端不知道获取到的对象已经被另一个客户端使用过，不能以可能导致意外行为的状态接收对象。这也可能导致内存泄漏，如果可重用对象引用了在客户端释放后仍然被引用的其他对象。因此，在大多数情况下，可重用对象应该被恢复到就像刚刚创建时的状态。
+- en: Then, if this pattern needs to be used in a multithreaded environment, it has
+    to be implemented in a thread-safe way to avoid concurrent modifications to the
+    pool's objects.
+  id: totrans-251
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果这种模式需要在多线程环境中使用，那么必须以线程安全的方式进行实现，以避免对池中对象的并发修改。
+- en: When the pool is first used, it's empty, and every time a client needs a reusable
+    object, it is created from scratch. So, for newly created objects, there is a
+    lag in their allocation. It could be a good idea, in some situations, if this
+    fits your strategy, to allocate a number of objects as the pool is created to
+    save time for future access.
+  id: totrans-252
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当首次使用对象池时，它是空的，每次客户端需要一个可重用对象时，都会从头开始创建。因此，对于新创建的对象，在分配上会有延迟。在某些情况下，如果这符合你的策略，可以在创建池的时候预先分配一定数量的对象，以节省未来访问的时间。
+- en: 'Let''s have a quick overview of a simple code implementation of this pattern.
+    The `ObjectPool` is as follows:'
+  id: totrans-253
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们快速了解一下这种模式的简单代码实现。以下是`ObjectPool`的代码：
+- en: '[PRE33]'
+  id: totrans-254
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE33]'
+- en: 'We used two Sparse arrays to save the collection of objects and to prevent
+    those objects from being collected when lent. We defined an initial capacity for
+    the pool and a maximum one: this way, if there are too many request to manage,
+    new objects can be created until the maximum capacity or all the requests are
+    served. We delegated the creation of the object to the concrete class or to the
+    direct implementation to let it have more flexibility. The two public methods
+    are `ObjectPool.acquire()` and `ObjectPool.release()`: the clients can use them
+    to ask for pre-allocated objects and give them back to the pool.'
+  id: totrans-255
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们使用了两个稀疏数组来保存对象集合，并防止这些对象在借出时被回收。我们为池定义了初始容量和最大容量：这样，如果有太多的请求需要处理，可以创建新对象直到达到最大容量或满足所有请求。我们将对象的创建委托给具体类或直接实现，以使其具有更大的灵活性。两个公共方法是`ObjectPool.acquire()`和`ObjectPool.release()`：客户端可以使用它们来请求预先分配的对象，并将对象返回给池。
+- en: 'There is an `ObjectPool` interface inside Apache Commons with some useful implementations.
+    That class uses a different name for methods used by the client: they are `ObjectPool.borrowObject()`
+    and `ObjectPool.returnObject()`, and they add a special method, `ObjectPool.close()`
+    to free the pool''s memory when done.'
+  id: totrans-256
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Apache Commons 内部有一个`ObjectPool`接口，其中包含一些有用的实现。这个类为客户端使用的方法使用了不同的名称：它们是`ObjectPool.borrowObject()`和`ObjectPool.returnObject()`，并且增加了一个特殊的方法`ObjectPool.close()`，在完成使用后释放池的内存。
+- en: 'Perhaps not everyone knows this pattern, but it''s used a lot in everyday developing
+    life: `AsyncTask` worker thread executions and `RecyclerView` recycled views are
+    examples of the use of this pattern. This doesn''t mean we should use it in every
+    situation. It should be used sparingly because of its pitfalls, but it can be
+    really helpful in some situations.'
+  id: totrans-257
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 也许不是每个人都了解这种模式，但在日常开发中它被广泛使用：`AsyncTask`工作线程的执行和`RecyclerView`的回收视图都是这种模式使用的例子。这并不意味着我们应在任何情况下都使用它。由于其陷阱，应该谨慎使用，但在某些情况下它确实非常有帮助。
+- en: Note
+  id: totrans-258
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: When our code needs to allocate a lot of expansive instantiation objects, we
+    could use `ObjectPool` to limit garbage collection and avoid memory churns. In
+    every other situation, classic garbage collection is enough to handle our object's
+    life cycle. If we decide to use this pattern, we need to use it carefully because
+    we are responsible for releasing every object from the client and restoring the
+    starting state for the reused object in order to avoid memory leaks. We also need
+    to be sure to do it in a thread-safe way if in a multithreaded environment.
+  id: totrans-259
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们的代码需要分配很多昂贵的实例对象时，我们可以使用`ObjectPool`来限制垃圾回收并避免内存波动。在所有其他情况下，经典的垃圾回收足以处理我们对象的生命周期。如果我们决定使用这种模式，我们需要谨慎使用，因为我们有责任从客户端释放每个对象，并恢复重用对象的起始状态以避免内存泄漏。如果是在多线程环境中，我们也需要确保以线程安全的方式进行。
+- en: The FlyWeight pattern
+  id: totrans-260
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: FlyWeight模式。
+- en: 'Many developers confuse the object pool pattern with the FlyWeight pattern,
+    but they have different scopes: while the object pool''s aim is to reduce the
+    impact of allocation and garbage collection in an environment with a lot of highly
+    expensive objects, the FlyWeight pattern''s aim is to reduce the load into memory
+    by saving the state shared by all of the objects. For this reason, we will consider
+    two types of state for the object clients are asking for:'
+  id: totrans-261
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 许多开发者将对象池模式与FlyWeight模式混淆，但它们有不同的范围：对象池的目标是减少在有很多非常昂贵的对象的环境中分配和垃圾回收的影响，而FlyWeight模式的目标是通过保存所有对象共享的状态来减少内存负载。因此，我们将考虑客户端请求的对象的两种状态：
+- en: '**Internal state**: This is composed by fields that identify the object and
+    are not shared with other objects'
+  id: totrans-262
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**内部状态**：这是由标识对象的字段组成，并且不与其他对象共享。'
+- en: '**External state**: This is the set of fields shared between all the exchanged
+    objects'
+  id: totrans-263
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**外部状态**：这是在所有交换对象之间共享的字段集合。'
+- en: So, what the FlyWeight pattern does is reuse their internal state by creating
+    just one instance of it for all of the objects, saving the cost of replicating
+    it.
+  id: totrans-264
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 所以，FlyWeight模式所做的就是通过为所有对象创建一个实例来重用它们的内部状态，从而节省了复制它的成本。
+- en: 'The flowchart of this pattern is shown in *Figure 5*:'
+  id: totrans-265
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '*图5*展示了这种模式的流程图：'
+- en: '![The FlyWeight pattern](img/4666_04_05.jpg)'
+  id: totrans-266
+  prefs: []
+  type: TYPE_IMG
+  zh: '![FlyWeight模式](img/4666_04_05.jpg)'
+- en: 'Figure 5: The FlyWeight pattern''s flowchart'
+  id: totrans-267
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图5：FlyWeight模式的流程图
+- en: 'In this pattern, there are three actors:'
+  id: totrans-268
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这个模式中，有三个参与者：
+- en: '`FlyWeightObjects`: They can change the internal state and access the internal
+    object.'
+  id: totrans-269
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`FlyWeightObjects`：它们可以改变内部状态并访问内部对象。'
+- en: '`FlyWeightFactory`: This creates `FlyWeightObjects` when the client asks for
+    them, managing their internal state. It can also be responsible for storing a
+    pool of `FlyWeightObject` to lend to clients.'
+  id: totrans-270
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`FlyWeightFactory`：当客户端请求时，它创建`FlyWeightObjects`，并管理它们的内部状态。它还可以负责存储一个`FlyWeightObject`池，以便借给客户端使用。'
+- en: '`Clients`: They ask for `FlyWeightObjects` and can change their intrinsic state.'
+  id: totrans-271
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`Clients`：它们请求`FlyWeightObjects`并可以改变它们的内部状态。'
+- en: Then, there is a pool of `FlyWeightObjects`, but no borrowing this time. The
+    memory related to the `FlyWeight` objects is freed by garbage collection when
+    they are no longer referenced, as in the classic Java case.
+  id: totrans-272
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后，有一个`FlyWeightObjects`池，但这次没有借用。当不再引用`FlyWeight`对象时，与`FlyWeight`对象相关的内存将被垃圾回收释放，就像在经典的Java案例中一样。
+- en: 'Let''s see the code for this pattern. We need an interface to define methods
+    for `FlyWeightObjects`:'
+  id: totrans-273
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们看看这个模式的代码。我们需要一个接口来定义`FlyWeightObjects`的方法：
+- en: '[PRE34]'
+  id: totrans-274
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE34]'
+- en: 'Then, we need at least one implementation of our interface:'
+  id: totrans-275
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后，我们需要至少实现一次我们的接口：
+- en: '[PRE35]'
+  id: totrans-276
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE35]'
+- en: 'The client this time is an object that uses the implementation of the interface
+    as part of its status:'
+  id: totrans-277
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这次的客户端是一个对象，它将接口的实现作为其状态的一部分：
+- en: '[PRE36]'
+  id: totrans-278
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE36]'
+- en: 'As you can see, `Delivery` asks `Factory` for `Courier` and it joins the object
+    state. But let''s see `Factory`:'
+  id: totrans-279
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如你所见，`Delivery`向`Factory`请求`Courier`并加入了对象状态。但让我们看看`Factory`：
+- en: '[PRE37]'
+  id: totrans-280
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE37]'
+- en: '`Factory` holds a Sparse array of defined couriers. Note that no more than
+    one instance for each type is created. Then every time a new `Delivery` is created,
+    the `Factory` will give it the same `Courier` object. Hence, it will be shared
+    and, in this particular case, every `Delivery` will be completed by the same `Courier`,
+    as in the following snippet:'
+  id: totrans-281
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`Factory`持有已定义的快递员稀疏数组。请注意，每种类型的实例不会超过一个。然后每次创建新的`Delivery`时，`Factory`会为它提供相同的`Courier`对象。因此，它将被共享，在这种情况下，每个`Delivery`都将由同一个`Courier`完成，如下面的代码段所示：'
+- en: '[PRE38]'
+  id: totrans-282
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE38]'
+- en: Android component leaks
+  id: totrans-283
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 安卓组件泄漏
+- en: 'In the following section, we will focus on particularly obnoxious memory leaks
+    that we often don''t realize. When dealing with main components, memory leaks
+    have an important impact on the overall performance of our applications: if we
+    understand how to avoid them and we are very careful about these details, we will
+    see a significant improvement in our app''s responsiveness.'
+  id: totrans-284
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在下一节中，我们将关注一些特别讨厌的内存泄漏，而我们经常没有意识到它们。在处理主要组件时，内存泄漏对应用程序的整体性能有着重要影响：如果我们了解如何避免它们，并且对这些细节非常小心，我们将看到应用程序响应性的显著提高。
+- en: Activities
+  id: totrans-285
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 活动
+- en: Activities are the most commonly used components in an Android application and
+    are the only ones with a user interface. There is a strong reference between the
+    activity and every single contained view. This makes them particularly vulnerable
+    to memory leaks.
+  id: totrans-286
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 活动是Android应用程序中最常用的组件，并且是唯一具有用户界面的组件。活动和每个包含的视图之间存在强引用。这使得它们特别容易受到内存泄漏的影响。
+- en: There are a lot of different memory leaks related to activities, so let's deal
+    with all of them, keeping in mind that we must avoid them all in order to have
+    a fast environment for our applications.
+  id: totrans-287
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 活动相关的内存泄漏有很多种，让我们一一对付它们，记住我们必须避免所有这些情况，以使我们的应用程序有一个快速的环境。
+- en: 'An activity is really expensive to keep in memory when no longer referenced.
+    It references a lot of other objects that cannot be collected if the activity
+    itself can''t. Furthermore, an activity can be destroyed and recreated many times
+    during our application''s life cycle, for configuration changes or memory reclamation.
+    If the activity is leaked, every instance of it may be stored in memory indefinitely,
+    with a really expensive effect on memory. So, this is the worst mistake we can
+    make in our code: never leak an activity. But how is it possible to leak an activity?
+    You will be surprised how easy it is. Keep in mind that the system is destroying
+    and creating activities for you when particular events occur, like a configuration
+    change. Let''s go through some examples of common mistakes to better know how
+    to avoid them, but before that, here''s a simple tip:'
+  id: totrans-288
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当不再有引用时，保留活动在内存中是非常昂贵的。它引用了很多其他对象，如果活动本身不能被回收，这些对象也不能被回收。此外，活动在应用程序的生命周期中可能会被销毁和重新创建多次，这可能是由于配置更改或内存回收。如果活动被泄漏，它的每个实例可能会无限期地存储在内存中，这对内存的影响是极其昂贵的。因此，这是我们在代码中可能犯的最严重的错误：永远不要泄漏活动。但活动是如何被泄漏的呢？你会惊讶于这是多么容易。请记住，当特定事件发生时，系统会为你销毁和创建活动，比如配置更改。在了解如何避免常见错误之前，先来看一些简单的提示：
+- en: Tip
+  id: totrans-289
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: It is much easier to find a memory leak than to find the cause. But most of
+    them are behind static classes, both static fields with activity dependencies
+    and singletons. When you are searching for an activity leak, begin checking if
+    the static fields have a reference to the activity itself. And, then, if this
+    is not enough, find all the places you used the keyword `this` inside the activity
+    code, because the instance can be used in different ways, maybe for a strong reference
+    to an object with a longer lifetime.
+  id: totrans-290
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 寻找内存泄漏要比找出其原因容易得多。但它们大多数都与静态类有关，既有带有活动依赖的静态字段，也有单例模式。当你寻找活动的内存泄漏时，首先检查静态字段是否对活动本身有引用。然后，如果这还不够，找出你在活动代码中所有使用`this`关键字的地方，因为实例可以用不同的方式使用，可能会对生命周期更长的对象的强引用。
+- en: 'As a general rule to avoid activity leaks, sometimes, when we don''t need specific
+    activity methods, we could use the application context instead of the activity
+    itself by calling the `Context.getApplicationContext()` method: this uses an object
+    that certainly won''t need to be collected before the application ends, just because
+    it''s the application itself.'
+  id: totrans-291
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 为了避免活动泄漏，通常的一个规则是，当我们不需要特定的活动方法时，可以通过调用`Context.getApplicationContext()`方法来使用应用上下文而不是活动本身：这使用的是一个肯定在应用程序结束前不需要被回收的对象，因为它就是应用程序本身。
+- en: Static fields
+  id: totrans-292
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: 静态字段
+- en: 'Static fields are really dangerous: they can reference and/or be referenced
+    by activities and/or other objects causing the most of our memory problems. As
+    we all know, the lifetime of a static object matches the application''s lifetime,
+    meaning that it cannot be collected until the end. For example, if we declare
+    a static `View` in our code, it will leak its activity as long as it''s not null,
+    because every view holds the reference to its own activity. The following code
+    shows a typical case:'
+  id: totrans-293
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 静态字段真的很危险：它们可以引用活动或/和其他对象，导致我们大多数的内存问题。众所周知，静态对象的寿命与应用程序的寿命相匹配，这意味着它只有在最后才能被回收。例如，如果我们在代码中声明一个静态`View`，只要它不为null，它就会泄漏其活动，因为每个视图都持有对其自身活动的引用。以下代码显示了一个典型的情况：
+- en: '[PRE39]'
+  id: totrans-294
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE39]'
+- en: 'When the `Activity.setContentView()` method is called, every `View` inside
+    the layout XML file is instantiated using the `Activity` class as reference for
+    `Context`. Look at its constructors:'
+  id: totrans-295
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当调用`Activity.setContentView()`方法时，布局XML文件中的每个`View`都使用`Activity`类作为`Context`的引用来实例化。看看它的构造函数：
+- en: '[PRE40]'
+  id: totrans-296
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE40]'
+- en: 'It doesn''t matter how the `View` is instantiated: it needs to reference the
+    `Activity` class, hence the memory leak if the `View` is declared as a `static`
+    field. This is not related just to views, but it can happen with every object
+    that references `Activity`. Furthermore, this can be extended to objects referenced
+    by views: the background `Drawable` strong-references its `View`, which strong-references
+    the `Activity`. This means that the following code has the same side-effect of
+    the previous one, as the activity leak is still occurring, even if `View` is non-static
+    this time:'
+  id: totrans-297
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 无论`View`是如何实例化的：它都需要引用`Activity`类，因此如果将`View`声明为`static`字段，就会发生内存泄漏。这不仅仅与视图有关，任何引用`Activity`的对象都可能发生这种情况。此外，这可以扩展到被视图引用的对象：背景`Drawable`强引用它的`View`，而`View`又强引用`Activity`。这意味着以下代码与之前的代码有同样的副作用，即使这次`View`是非静态的，活动泄漏仍然会发生：
+- en: '[PRE41]'
+  id: totrans-298
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE41]'
+- en: Someone might think it's easier to fix this problem by setting the views to
+    null when the activity life cycle is about to finish, for example, in `Activity.onStop()`
+    or in the `Activity.onDestroy()` callbacks, but this could lead to `NullPointerException`
+    if the instantiations at creation time are not properly handled, turning this
+    solution into a dangerous one. Simply, avoid the use of static variables to avoid
+    the memory leaks mentioned earlier.
+  id: totrans-299
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 有人可能会认为，在活动生命周期即将结束时，例如在`Activity.onStop()`或者在`Activity.onDestroy()`回调中，将视图设置为null可以更容易地解决这个问题，但这可能导致如果创建时的实例化处理不当，会引发`NullPointerException`，使得这个解决方案变得危险。简单来说，避免使用静态变量以避免前面提到的内存泄漏。
+- en: Non-static inner classes
+  id: totrans-300
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: 非静态内部类
+- en: 'Non-static inner classes are largely used in Android because they allow us
+    to access outer classes fields without passing its reference directly. Then, many
+    times Android developers add inner classes to save time, heedless of the effects
+    on memory performance. Let''s create an inner class to explain what happens in
+    this case:'
+  id: totrans-301
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 非静态内部类在Android中被广泛使用，因为它们允许我们访问外部类的字段，而无需直接传递其引用。然后，很多时候Android开发者为了节省时间，不考虑对内存性能的影响而添加内部类。让我们创建一个内部类来说明在这种情况下会发生什么：
+- en: '[PRE42]'
+  id: totrans-302
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE42]'
+- en: A simple `AsyncTask` is created and executed when the `Activity` is started.
+    But the inner class needs to have access to the outer class for all of its lifetime,
+    so memory leaks occur every time the `Activity` is destroyed, but the `AsyncTask`
+    is still working. This happens not only when the `Activity.finish()` method is
+    called, but even when `Activity` is destroyed forcibly by the system for configuration
+    changes or memory needs and then it's created again. `AsyncTask` holds a reference
+    to every `Activity`, making it not available for garbage collection when it's
+    destroyed.
+  id: totrans-303
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一个简单的`AsyncTask`在`Activity`启动时创建并执行。但内部类需要在其整个生命周期内访问外部类，因此每次`Activity`被销毁，但`AsyncTask`仍在工作时，都会发生内存泄漏。这不仅仅是在调用`Activity.finish()`方法时发生，即使`Activity`由于配置更改或内存需求被系统强制销毁后再次创建时也会发生。`AsyncTask`持有对每个`Activity`的引用，在它被销毁时使其不能被垃圾回收。
+- en: 'Think about what happens if the user rotates the device while the task is running:
+    the whole instance of `Activity` needs to be available all the time until `AsyncTask`
+    completes. Moreover, most of the time we want `AsyncTask` to put the result on
+    the screen using the `AsyncTask.onPostExecute()` method. This could lead to crashes
+    because the `Activity` is destroyed while the task is still working and views
+    references may be null.'
+  id: totrans-304
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 考虑一下如果用户在任务运行时旋转设备会发生什么：整个`Activity`实例需要一直可用，直到`AsyncTask`完成。此外，大多数时候我们希望`AsyncTask`通过`AsyncTask.onPostExecute()`方法将结果显示在屏幕上。这可能导致崩溃，因为当任务仍在运行时`Activity`被销毁，视图引用可能为空。
+- en: 'So what is the solution to this? If we set the inner class as a `static` one,
+    we cannot access the outer one, so we need to provide the reference to that. In
+    order to increase the separation between the two instances and let the garbage
+    collector work properly with the `Activity`, let''s use a weaker reference to
+    achieve cleaner memory management. The previous code is changed to the following:'
+  id: totrans-305
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 那么这个问题的解决方案是什么呢？如果我们把内部类设置为`static`，我们就无法访问外部类，因此我们需要提供对该外部类的引用。为了增加两个实例之间的分离，并让垃圾收集器正确处理`Activity`，我们使用弱引用来实现更干净的内存管理。之前的代码改为如下形式：
+- en: '[PRE43]'
+  id: totrans-306
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE43]'
+- en: This way, the classes are separated and the `Activity` can be collected as soon
+    as it's no longer used and the `AsyncTask` object won't find the `Activity` instance
+    inside the `WeakReference` object and won't execute the `AsyncTask.onPostExecute`()
+    method code.
+  id: totrans-307
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这样，类被分离，一旦不再使用`Activity`就可以立即回收，`AsyncTask`对象在`WeakReference`对象中找不到`Activity`实例，也就不会执行`AsyncTask.onPostExecute()`方法的代码。
+- en: 'We used `AsyncTask` for the example, but we could cancel it in the `Activity.onDestroy()`
+    method, but it''s just an example of what can happen when using non-static inner
+    classes. For example, the following code would result in the same mistake because
+    the inner class is not static and holds a strong reference to `MainActivity`:'
+  id: totrans-308
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们在示例中使用了`AsyncTask`，但我们可以在`Activity.onDestroy()`方法中取消它，但这只是使用非静态内部类可能发生的情况的一个例子。例如，以下代码将因内部类非静态且对`MainActivity`持有强引用而导致同样的问题：
+- en: '[PRE44]'
+  id: totrans-309
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE44]'
+- en: As a general good practice, use weaker references than activities when you are
+    dealing with threads, even if the thread is not an inner class.
+  id: totrans-310
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 作为一种通用良好的实践，当处理线程时，即使线程不是一个内部类，也请使用比`Activity`更弱的引用。
+- en: Singletons
+  id: totrans-311
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: 单例模式
+- en: As we all know, a `singleton` is an object that can be instantiated once for
+    the entire lifetime of the application. This is really helpful to avoid duplications
+    of data, to share data with multiple objects of our code, and to have global access
+    to it. However, we need to be careful of what is referenced by `singleton` because
+    of its lifetime. If we use an `Activity` reference in a singleton and we don't
+    free it, it will be leaked until the application ends. This can be applied to
+    any other type of objects, but as we know, the `Activity` leak is particularly
+    frightening and we want to focus on that at the moment.
+  id: totrans-312
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 众所周知，`singleton`是在整个应用程序生命周期内只能实例化一次的对象。这有助于避免数据重复，与代码中的多个对象共享数据，以及全局访问。但是，我们需要注意`singleton`所引用的内容，因为它的生命周期很长。如果在`singleton`中使用`Activity`的引用并且不释放它，那么它将在应用程序结束时泄漏。这可以应用于任何其他类型的对象，但众所周知，`Activity`泄漏特别可怕，我们想先关注这个问题。
+- en: 'Let''s have a look at the following code, which represents a `Singleton` class
+    with an interface:'
+  id: totrans-313
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们看一下以下代码，它代表了一个带有接口的`Singleton`类：
+- en: '[PRE45]'
+  id: totrans-314
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE45]'
+- en: 'And now, let''s look at the `Activity` code:'
+  id: totrans-315
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 现在，让我们看看`Activity`的代码：
+- en: '[PRE46]'
+  id: totrans-316
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE46]'
+- en: 'In this case, the `Singleton` object will have `MainActivity` as a reference
+    until it''s destroyed and, then, until the application is destroyed. In this situation,
+    it is really important to remove the reference when the `MainActivity` needs to
+    be freed. Then, the previous `MainActivity` code can be changed into the following:'
+  id: totrans-317
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在这种情况下，`Singleton`对象将持有对`MainActivity`的引用，直到它被销毁，然后直到应用程序被销毁。在这种情况下，当需要释放`MainActivity`时，移除引用非常重要。然后，之前的`MainActivity`代码可以改为如下形式：
+- en: '[PRE47]'
+  id: totrans-318
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE47]'
+- en: 'Otherwise, we could use the same solution adopted in the previous example:
+    if we use a `WeakReference` for the callback inside `singleton`, the `Activity`
+    can be collected when needed. This solution would change the code into this:'
+  id: totrans-319
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 否则，我们可以采用上一个示例中的同样解决方案：如果在`singleton`中的回调使用`WeakReference`，那么在需要时可以回收`Activity`。这个解决方案将代码改为如下形式：
+- en: '[PRE48]'
+  id: totrans-320
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE48]'
+- en: Anonymous inner classes
+  id: totrans-321
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: 匿名内部类
+- en: 'The specialization of classes or interfaces in a class suffers from the same
+    problem described for the non-static inner classes and singleton cases: anonymous
+    inner classes need the outer class to be stored and, then, they leak it. Let''s
+    see the following snippet:'
+  id: totrans-322
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 类或接口在类中的特化遇到了与非静态内部类和单例情况相同的问题：匿名内部类需要保存外部类，然后会泄露它。让我们看看以下代码段：
+- en: '[PRE49]'
+  id: totrans-323
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE49]'
+- en: This is the same code as for the previous Singleton example, but the `Activity`
+    doesn't implement the `Callback` interface that is, instead, instantiated as an
+    anonymous inner class. As mentioned, this is still a problem, and both the solutions
+    approached earlier are still valid.
+  id: totrans-324
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这段代码与之前的单例示例相同，但`Activity`没有实现`Callback`接口，而是作为匿名内部类实例化。正如所提到的，这仍然是一个问题，之前讨论的解决方案仍然有效。
+- en: Handlers
+  id: totrans-325
+  prefs:
+  - PREF_H4
+  type: TYPE_NORMAL
+  zh: 处理器（Handlers）
+- en: 'A leak related to all of the ones discussed so far is the `Handler` leak. This
+    is insidious because it''s not so obvious. Fortunately, Lint checks for it and
+    warns us. So, inspect your code to find it. A `Handler` object can execute delayed
+    code using the `Handler.postDelayed()` method and this is the problem. Take a
+    look at the following snippet:'
+  id: totrans-326
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 与迄今为止讨论的所有泄露相关的一个问题是`Handler`泄露。这很隐蔽，因为不是那么明显。幸运的是，Lint检查会对此发出警告。所以，检查你的代码来找出这个问题。`Handler`对象可以使用`Handler.postDelayed()`方法执行延迟代码，这就是问题所在。看看以下代码段：
+- en: '[PRE50]'
+  id: totrans-327
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE50]'
+- en: 'The `Handler` object posts its `Runnable` interface to `LooperThread` until
+    execution. But we know that an anonymous inner class has a reference to the outer
+    class that is the `Activity` in our example, hence the activity leak. But `LooperThread`
+    has a queue of messages to execute `Runnable`. Then, even if our handler doesn''t
+    post a delayed message, but it''s used just because you need to change the UI
+    (and you use the `Handler` object to execute those changes on the main thread,
+    as we know this is the only thread that can do it), memory leaks can occur if
+    the queue is large. So, as with anonymous inner classes, let''s export that class,
+    setting it as `static`, and let''s pass the reference to the `TextView` because,
+    as it''s `static`, it cannot access it anymore:'
+  id: totrans-328
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`Handler`对象将其`Runnable`接口发送给`LooperThread`直到执行完毕。我们知道，匿名内部类持有对外部类的引用，在我们的例子中就是`Activity`，因此会导致活动泄露。但`LooperThread`有一个消息队列用来执行`Runnable`。即使我们的Handler没有发送延迟消息，仅仅是因为需要更改UI（我们知道只有主线程才能执行这些更改，因此我们使用`Handler`对象在主线程上执行它们），如果队列很大，也可能会发生内存泄露。因此，像匿名内部类一样，我们将这个类导出为`static`，并将对`TextView`的引用传递进去，因为它是`static`的，所以无法再访问它了：'
+- en: '[PRE51]'
+  id: totrans-329
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE51]'
+- en: 'Have we got rid of the leak? Unfortunately, no. `TextView` still has a reference
+    to the container `Activity` because it''s a view and it''s still referenced. So,
+    let''s apply the second solution we found for inner classes, using a `WeakReference`
+    to store the `TextView`:'
+  id: totrans-330
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们摆脱泄露了吗？不幸的是，没有。`TextView`仍然持有对容器`Activity`的引用，因为它是视图并且仍然被引用。因此，让我们对内部类使用找到的第二个解决方案，使用`WeakReference`来存储`TextView`：
+- en: '[PRE52]'
+  id: totrans-331
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE52]'
+- en: 'This way, the activity can be collected properly when needed and no leaks occur
+    any more. But there is one more point of improvement for this code: it may be
+    helpful to remove every message from the queue. This way, we are sure that the
+    queue is cleaned, the `Activity` can be destroyed, and the code in the `Runnable`
+    object won''t be executed when the `Activity` is no longer available:'
+  id: totrans-332
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这样，当需要时，活动可以被正确地回收，不会发生泄露。但对于这段代码还有一个改进点：可能有助于从队列中移除每条消息。这样，我们可以确保队列被清理，`Activity`可以被销毁，当`Activity`不再可用时，`Runnable`对象中的代码不会被执行：
+- en: '[PRE53]'
+  id: totrans-333
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE53]'
+- en: Services
+  id: totrans-334
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 服务（Services）
+- en: Services are addressed in depth in [Chapter 5](ch05.html "Chapter 5. Multithreading"),
+    *Multithreading*, but we want to see how services can impact memory performance
+    during the normal application life cycle. The system stores the active process
+    using a cache with the **Least Recently Used** (**LRU**) pattern, meaning that
+    it can force the closure of previously used processes, keeping the latest ones.
+    Then, every time we keep a service active that is no longer used, we not only
+    create a memory leak with a service, but we also prevent the system from cleaning
+    up the stack to insert new processes. So, it's really important to pay appropriate
+    attention to the closure and the release of a service that has just finished performing
+    work in the background.
+  id: totrans-335
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 服务在[第五章](ch05.html "第五章 多线程") *多线程* 中有深入讨论，但我们要了解服务在应用程序正常生命周期中如何影响内存性能。系统使用具有**最近最少使用**（**LRU**）模式的缓存来存储活动进程，这意味着它可以强制关闭之前使用的进程，保留最新的进程。那么，每次我们保持一个不再使用的服务活动时，我们不仅与服务产生了内存泄漏，还阻止了系统清理堆栈以插入新进程。因此，适当关注刚完成后台工作服务的关闭和释放非常重要。
+- en: As we will see in the next chapter, a service can be stopped with the `Service.stopSelf()`,
+    if internally called, or with `Context.stopService()`, if externally. This must
+    be done every time it's not working anymore because the `Service` object doesn't
+    finish. But in order to improve the memory and process management of our app,
+    we should use `IntentService` instead of a simple `Service` as much as possible,
+    because this kind of service finishes automatically when the background work is
+    completed.
+  id: totrans-336
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如我们将在下一章看到的，如果内部调用可以使用`Service.stopSelf()`停止服务，如果外部调用可以使用`Context.stopService()`。每次不再工作时都必须这样做，因为`Service`对象不会自行结束。但为了改善我们应用程序的内存和进程管理，我们应该尽可能使用`IntentService`而不是简单的`Service`，因为这种类型的服务在后台工作完成后会自动结束。
+- en: Tip
+  id: totrans-337
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: Use `IntentService` every time you can because of the automatic finalization
+    and because this way you don't risk creating memory leaks with services. This
+    is one of the worst memory mistakes we can make. So, if you cannot use `IntentService`,
+    make sure that the `Service` is finished as soon as it completes its task.
+  id: totrans-338
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 尽可能使用`IntentService`，因为它能自动结束并避免因服务产生的内存泄漏。这是我们能犯的最糟糕的内存错误之一。如果你不能使用`IntentService`，请确保`Service`在完成任务后立即结束。
+- en: Processes
+  id: totrans-339
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 进程
+- en: 'Some applications use a special technique to separate memory loads through
+    different processes. As we will see in [Chapter 5](ch05.html "Chapter 5. Multithreading"),
+    *Multithreading*, every component in Android is executed by default in the main
+    process, but they can be executed in separate ones, by simply defining the process
+    name in the manifest file for every component you want:'
+  id: totrans-340
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 一些应用程序使用特殊技术通过不同的进程分离内存负载。正如我们将在[第五章](ch05.html "第五章 多线程") *多线程* 中看到的，Android中的每个组件默认都在主进程中执行，但通过在清单文件中为每个希望单独执行的组件定义进程名称，它们也可以在单独的进程中执行。
+- en: '[PRE54]'
+  id: totrans-341
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE54]'
+- en: 'This is good for profiling the code because you can analyze a single process
+    without affecting the others. Moreover, it simplifies the Android system process
+    management. But we must be careful to properly manage memory, otherwise we risk
+    having the opposite effect and, instead of decreasing the memory allocation, we
+    increase it. So, some simple tips to create a multiprocess application are as
+    follows:'
+  id: totrans-342
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这样做有利于代码剖析，因为你可以在不影响其他进程的情况下分析单个进程。此外，它简化了Android系统进程管理。但我们必须注意适当管理内存，否则我们可能会产生相反的效果，不仅没有减少内存分配，反而增加了它。因此，创建多进程应用程序的一些简单建议如下：
+- en: Common implementations are duplicated in every process, so try to reduce them.
+    The separation between processes should be clean and common objects should be
+    cut down as much as possible.
+  id: totrans-343
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 每个进程中的常见实现都是重复的，因此尽量减少它们。进程之间的分离应该是清晰的，共同的对象应尽可能减少。
+- en: The UI should be handled by just one process, because the memory allocated for
+    it depends on a lot of factors, such as bitmaps and resource allocations. Anyway,
+    the application can show one activity at a time.
+  id: totrans-344
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: UI应由一个进程处理，因为为其分配的内存取决于许多因素，如位图和资源分配。无论如何，应用程序一次只能显示一个活动。
+- en: The relationships between processes are really important, because a process
+    cannot be deleted by the system if it is dependent on another one. This means
+    we need to be aware of using components that can access more processes, because
+    in this case, the advantages in memory performance are nullified. So, be careful
+    when using components, just like `ContentProvider` and `Service`, accessed by
+    multiple processes. Profile your code to analyze implications in situations such
+    as this in order to improve the architecture of your solution.
+  id: totrans-345
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 进程间的关系非常重要，因为如果一个进程依赖于另一个进程，系统就无法删除它。这意味着我们需要注意使用那些可以访问更多进程的组件，因为在这种情况下，内存性能的优势会被抵消。因此，在使用诸如`ContentProvider`和`Service`这类可能被多个进程访问的组件时要特别小心。分析这种情况下的影响，以改进解决方案的架构。
+- en: The memory API
+  id: totrans-346
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 内存API
+- en: What do we do if our application is in a low memory situation? And what if our
+    application needs to allocate too much memory? Let's have a look at what the platform
+    provides and if it's really helpful.
+  id: totrans-347
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果我们的应用程序处于低内存状态，我们该怎么办？如果我们的应用程序需要分配过多内存又该如何？让我们看看平台提供的内容是否真的有帮助。
+- en: 'Different devices mean different amounts of RAM to allocate memory. Then, our
+    app will have to be responsive to this particular requirement. Android provides
+    a particular way to ask for a large heap for our application. It can be done by
+    adding the attribute to the `application` node in the manifest file, as in the
+    following example:'
+  id: totrans-348
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 不同的设备意味着分配内存的不同RAM量。那么，我们的应用程序将必须响应这一特定要求。Android提供了一种特定方式，允许我们在应用程序中请求大堆内存。这可以通过在清单文件的`application`节点中添加属性来实现，如下例所示：
+- en: '[PRE55]'
+  id: totrans-349
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE55]'
+- en: 'But this large quantity of memory is asked for every single process created
+    by the application. This is just a request to the system and we are not sure our
+    processes will have a larger heap than in the normal case. And remember, this
+    is not intended to be used if we are unable to have a free memory management in
+    our application and/or you are facing `OutOfMemoryError`. If you are facing such
+    an error, then profile your code, catch any memory anomalies you can, and reduce
+    memory leaks. Just a couple of applications should be able to ask for a large
+    heap: those with an extreme justified need of memory. In general, they are applications
+    that deal with high-level photos, videos, and multimedia editing. Then this trick
+    may avoid `OutOfMemoryError`, but it may also produce an effect related to garbage
+    collection timings: the higher the available heap is, the higher the collection
+    limits are, the more time the collector needs to collect. Hence, this increased
+    duration in collection may affect our 16 ms target, resulting in UI lags.'
+  id: totrans-350
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 但是，这一大块内存是针对应用程序创建的每个进程请求的。这仅仅是向系统提出的一个请求，我们不确定我们的进程是否会比正常情况下有更大的堆内存。请记住，如果我们无法在应用程序中进行自由的内存管理，或者面临`OutOfMemoryError`，则不应使用此功能。如果你遇到这样的错误，那么请分析你的代码，捕捉任何可能的内存异常，并减少内存泄漏。只有少数应用程序应该能够请求大堆内存：那些对内存有极端正当需求的应用程序。一般来说，它们是处理高级照片、视频和多媒体编辑的应用程序。然后这个技巧可能避免`OutOfMemoryError`，但也可能产生与垃圾收集时间相关的效果：可用堆越高，收集限制越高，收集器需要的时间就越长。因此，收集时间的增加可能会影响我们16毫秒的目标，导致UI卡顿。
+- en: Tip
+  id: totrans-351
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 提示
+- en: 'Never use the `largeHeap` attribute inside the Android manifest file to avoid
+    `OutOfMemoryError`: it''s not a solution, not a trick. On the contrary, it may
+    lead to UX problems and it may affect the overall device performance.'
+  id: totrans-352
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 切勿在Android清单文件中使用`largeHeap`属性以避免`OutOfMemoryError`：这并非解决方案，也不是技巧。相反，它可能导致用户体验问题，并可能影响设备的整体性能。
+- en: 'There is a helpful class called `ActivityManager` that provides methods to
+    ask for info about memory consumption and availability. Some of them are as follows:'
+  id: totrans-353
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 有一个有用的类叫做`ActivityManager`，它提供了请求内存消耗和可用性信息的方法。其中一些如下：
+- en: '`getMemoryClass`: This returns the megabytes that are provided to the application.
+    This can be used to estimate the amount of memory we will use or the quality of
+    the images used in the application.'
+  id: totrans-354
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`getMemoryClass`：这返回了分配给应用程序的兆字节。这可以用来估计我们将使用的内存量或应用程序中使用的图片质量。'
+- en: '`getLargeMemoryClass`: This is the same as the `getMemoryClass()` method, but
+    this is for large heap requested cases.'
+  id: totrans-355
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`getLargeMemoryClass`：这与`getMemoryClass()`方法相同，但适用于请求大堆内存的情况。'
+- en: '`getMemoryInfo`: This returns a `MemoryInfo` object containing useful information
+    about memory system-related states:'
+  id: totrans-356
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`getMemoryInfo`：这会返回一个包含有关内存系统相关状态有用信息的`MemoryInfo`对象：'
+- en: '`availMem`: Available system memory.'
+  id: totrans-357
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`availMem`：可用的系统内存。'
+- en: '`lowMemory`: A boolean value that shows if the system is in low memory.'
+  id: totrans-358
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`lowMemory`：一个布尔值，表示系统是否处于低内存状态。'
+- en: '`threshold`: The threshold of memory above which the system is in low memory
+    and can start the removing processes.'
+  id: totrans-359
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`threshold`：系统处于低内存状态并可以开始移除进程的内存阈值。'
+- en: '`getMyMemoryState`: This returns `RunningAppProcessInfo` containing useful
+    information about the calling process:'
+  id: totrans-360
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`getMyMemoryState`：这将返回包含有关调用进程有用信息的`RunningAppProcessInfo`：'
+- en: '`lastTrimLevel`: This is the last trim level for the process.'
+  id: totrans-361
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`lastTrimLevel`：这是进程的最后修剪级别。'
+- en: '`importance`: The importance of the process. As we will see in [Chapter 5](ch05.html
+    "Chapter 5. Multithreading"), *Multithreading*, every process has its own priority
+    and the system will decide to remove it based on its level.'
+  id: totrans-362
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`importance`：进程的重要性。正如我们将在[第5章](ch05.html "第5章 多线程") *多线程* 中看到的，每个进程都有自己的优先级，系统会根据其级别决定是否移除它。'
+- en: '`isLowRamDevice`: This returns whether the device needs to be considered as
+    a low memory device. This can be useful to enable or disable features depending
+    on the memory we need.'
+  id: totrans-363
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`isLowRamDevice`：这将返回设备是否需要被视为低内存设备。根据我们需要的内存，这可以用来启用或禁用功能。'
+- en: 'As an example, look at the following code snippet:'
+  id: totrans-364
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 例如，请看以下代码段：
+- en: '[PRE56]'
+  id: totrans-365
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE56]'
+- en: 'This particular method has been added to the platform from Android KitKat (API
+    Level 19), but there is a compatibility class that does the same:'
+  id: totrans-366
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这个特别的方法是从Android KitKat（API级别19）开始添加到平台的，但有一个兼容类执行相同的操作：
+- en: '[PRE57]'
+  id: totrans-367
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE57]'
+- en: As the last one, let's talk about the `System.gc()` method that forces the request
+    to trigger the garbage collector. It can be used everywhere, but it's not guaranteed
+    if and when the garbage collector will be triggered. Furthermore, we should prefer
+    to have a consistent strategy to follow to manage memory during our application's
+    life cycle and profile our code to find memory leaks and churns.
+  id: totrans-368
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最后一个，让我们谈谈`System.gc()`方法，它强制请求触发垃圾收集器。它可以在任何地方使用，但不能保证垃圾收集器何时会被触发。此外，我们更应该遵循一致的策略来管理应用程序生命周期中的内存，并分析我们的代码以找到内存泄漏和内存波动。
+- en: Main components and memory management
+  id: totrans-369
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: 主要组件和内存管理
+- en: 'Among the four main components that Android provides, the `BroadcastReceivers`
+    are the only ones that don''t need a specific memory management strategy: their
+    life cycle is related to the only `BroadcastReceiver.onReceive()` method, and
+    they are destroyed just after the execution of it. Obviously, this is not valid
+    for the other three main components, as they live until we destroy them or the
+    system does, when it needs memory.'
+  id: totrans-370
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在Android提供的四个主要组件中，`BroadcastReceivers`是唯一不需要特定内存管理策略的组件：它们的生命周期与唯一的`BroadcastReceiver.onReceive()`方法相关，执行完毕后就会被销毁。显然，这对于其他三个主要组件并不适用，因为它们会一直存在，直到我们销毁它们或系统在需要内存时销毁它们。
+- en: 'For this reason, they all implement the `ComponentCallback` interface. We are
+    interested in one method in particular: the `ComponentCallback.onLowMemory()`
+    method. Its implementation is executed every time the system is running on low
+    memory and before it starts to kill processes. So this is a good chance to release
+    some of the memory of our application. We are not talking about memory leaks,
+    but other kinds of memory holding, such as heap cached objects. Then, override
+    the method to free held objects.'
+  id: totrans-371
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 因此，它们都实现了`ComponentCallback`接口。我们特别关注一个方法：`ComponentCallback.onLowMemory()`方法。每次系统在低内存状态下运行并开始杀死进程之前，都会执行其实现。因此，这是一个释放我们应用程序部分内存的好机会。这里我们不是在谈论内存泄漏，而是其他类型的内存保持，比如堆缓存对象。然后，重写该方法以释放持有的对象。
+- en: Unfortunately, this `ComponentCallback.onLowMemory()` method is called after
+    the system has already started killing other processes. This is not good because
+    an application is much more expensive to recreate from scratch than to resume
+    from the background. This is why, during the development of the Android platform,
+    the callback described above has been improved by defining a sub interface for
+    the `ComponentCallback` called `ComponentCallback2`. It introduces a more specific
+    method as well as inheriting the `ComponentCallback.onLowMemory()` method. It's
+    available from Android Ice Cream Sandwich (API Level 14) onwards. This means that
+    the main components from Android 14 implement this one instead of the `ComponentCallback`
+    interface, so the `ComponentCallback` method isn't available on earlier versions.
+  id: totrans-372
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 不幸的是，这个`ComponentCallback.onLowMemory()`方法是在系统已经开始杀死其他进程之后被调用的。这不好，因为从零开始重新创建应用比从后台恢复要昂贵得多。这就是为什么在Android平台开发过程中，上面描述的回调被改进了，通过定义一个名为`ComponentCallback2`的`ComponentCallback`的子接口。它引入了一个更具体的方法，并继承了`ComponentCallback.onLowMemory()`方法。它从Android
+    Ice Cream Sandwich（API级别14）开始可用。这意味着从Android 14开始，Android的主要组件实现这个接口，而不是`ComponentCallback`接口，因此早期版本中没有`ComponentCallback`方法。
+- en: The method we are talking about is the `ComponentCallback2.onTrimMemory()` method.
+    The idea behind it is the same as for the `ComponentCallback.onLowMemory()` method,
+    but here the system provides us the level of criticality of memory consumption
+    in the system. There are two different states our application can be, related
+    to its visibility, and every state can receive different level of memory. As mentioned
+    before, all the processes in the system are managed using a LRU policy, defining
+    a list from current processes at the top to older processes at the bottom. The
+    one at the bottom is the first to be deleted to recover memory.
+  id: totrans-373
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们正在讨论的方法是`ComponentCallback2.onTrimMemory()`。它背后的想法与`ComponentCallback.onLowMemory()`方法相同，但在这里，系统为我们提供了系统中内存消耗紧急程度的级别。我们的应用可以处于两种不同的状态，与它的可见性相关，每个状态可以接收不同级别的内存。如前所述，系统中的所有进程都使用LRU策略进行管理，定义了一个从当前进程到更老进程的列表。位于底部的进程是首先被删除以回收内存的。
+- en: 'So, let''s see the visibilities for the application and their LRU positions:'
+  id: totrans-374
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们看看应用的可视性和它们的LRU位置：
+- en: '**Visible**: The app is currently running and it''s on top of the LRU'
+  id: totrans-375
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**Visible**：应用当前正在运行，位于LRU的顶部'
+- en: '**Invisible**: The app is no longer visible and it starts to fall down the
+    list until it''s destroyed after reaching the tail, or it''s moved to the top
+    again when it becomes visible again'
+  id: totrans-376
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '**Invisible**：应用不再可见，开始从列表中下降，直到到达尾部被销毁，或者再次变得可见时移到顶部。'
+- en: 'The `ComponentCallback.onTrimMemory()` method passes an integer value as a
+    parameter. Depending on this parameter we can take different actions to prevent
+    the process reaching the bottom and being destroyed. In this case, the application
+    needs to be initialized again: this is more expensive than retrieving data to
+    recover a previous state of the cache.'
+  id: totrans-377
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '`ComponentCallback.onTrimMemory()`方法传递一个整数值作为参数。根据这个参数，我们可以采取不同的行动，以防止进程到达底部并被销毁。在这种情况下，需要重新初始化应用程序：这比恢复缓存的前一个状态获取数据要昂贵得多。'
+- en: 'The constants used as parameters in this methods are as follows:'
+  id: totrans-378
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这些方法中用作参数的常量如下：
+- en: '`TRIM_MEMORY_RUNNING_MODERATE`: The application is visible and the system is
+    starting to get on low memory.'
+  id: totrans-379
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`TRIM_MEMORY_RUNNING_MODERATE`：应用可见，系统开始进入低内存状态。'
+- en: '`TRIM_MEMORY_RUNNING_LOW`: The application is visible and the memory device
+    is getting lower.'
+  id: totrans-380
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`TRIM_MEMORY_RUNNING_LOW`：应用可见，内存设备正在变低。'
+- en: '`TRIM_MEMORY_RUNNING_CRITICAL`: The application is visible and the memory device
+    is critical, and other processes may be destroyed in order to free memory.'
+  id: totrans-381
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`TRIM_MEMORY_RUNNING_CRITICAL`：应用可见，内存设备处于临界状态，可能需要销毁其他进程以释放内存。'
+- en: '`TRIM_MEMORY_UI_HIDDEN`: The application is invisible. This is just a callback
+    to notify that the application is no longer visible and you should free some memory.'
+  id: totrans-382
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`TRIM_MEMORY_UI_HIDDEN`：应用不可见。这只是通知应用不再可见，你应该释放一些内存的回调。'
+- en: '`TRIM_MEMORY_BACKGROUND`: The application is invisible and it has started the
+    descent in the LRU list and the device is running low on memory.'
+  id: totrans-383
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`TRIM_MEMORY_BACKGROUND`：应用不可见，并且已在LRU列表中开始下降，且设备内存不足。'
+- en: '`TRIM_MEMORY_MODERATE`: The application is invisible and it has reached the
+    middle of the LRU list and the device is running low on memory.'
+  id: totrans-384
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`TRIM_MEMORY_MODERATE`：应用不可见，已达到LRU列表的中间位置，且设备内存不足。'
+- en: '`TRIM_MEMORY_COMPLETE`: The application is invisible and it has reached the
+    bottom of the LRU list and the device is running low on memory, so the application
+    is about to be killed.'
+  id: totrans-385
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`TRIM_MEMORY_COMPLETE`：应用不可见，已达到LRU列表的底部，且设备内存不足，因此应用程序即将被杀死。'
+- en: When the system starts to kill processes, it decides which one to kill by analyzing
+    the memory consumption. This means that the less memory our app is consuming,
+    the less likely it is to be killed, and the faster resume it will have.
+  id: totrans-386
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当系统开始杀死进程时，它会通过分析内存消耗来决定杀死哪个进程。这意味着我们的应用程序消耗的内存越少，被杀死的可能性就越小，恢复速度也就越快。
+- en: 'If the application is well structured memory-wise, a good practice to free
+    memory when such events are triggered may be as follows:'
+  id: totrans-387
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果应用程序在内存管理上结构良好，那么在触发此类事件时释放内存的一个好做法可能是：
+- en: '[PRE58]'
+  id: totrans-388
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE58]'
+- en: If you free objects from different caches or levels, removing the breaks from
+    the `switch` statement, every case is executed again to free memory in every more
+    critical state.
+  id: totrans-389
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果你从不同的缓存或级别释放对象，移除`switch`语句中的断点，每个案例都会再次执行，以在更关键的状态下释放内存。
+- en: Besides the main components, this interface is implemented by the `Application`
+    and `Fragment` classes as well. This way we can free memory inside single fragments
+    too, using the `onTrimMemory()` method.
+  id: totrans-390
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 除了主要组件外，此接口还由`Application`和`Fragment`类实现。这样我们也可以在单个片段内部释放内存，使用`onTrimMemory()`方法。
+- en: Debugging tools
+  id: totrans-391
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 调试工具
+- en: Knowing what a memory leak and a memory churn are and what strategies we can
+    pursue to avoid them, we now need to know how we can find them and how we can
+    profile our code from a memory perspective.
+  id: totrans-392
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 了解内存泄漏和内存碎片是什么，以及我们可以采取哪些策略来避免它们，现在我们需要知道如何找到它们，以及如何从内存角度分析我们的代码。
+- en: As we have mentioned several times in this chapter, we must always keep an eye
+    on the amount of heap memory used by our application processes, trying to keep
+    it as low as possible and to free resources as much as possible while checking
+    the garbage collector's behavior. Our application needs to be able to stay together
+    with other applications on devices with the most varied amounts of RAM. Therefore,
+    keeping that in mind, we will focus on helpful tools able to analyze the memory
+    usages and we will know how to read common logs related to garbage collection.
+  id: totrans-393
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 正如本章多次提到的，我们必须始终关注应用程序进程使用的堆内存量，尽量保持其尽可能低，并在检查垃圾收集器行为的同时尽可能释放资源。我们的应用程序需要能够与具有各种不同RAM量的设备上的其他应用程序共存。因此，考虑到这一点，我们将关注有助于分析内存使用的工具，并了解如何读取与垃圾回收相关的常见日志。
+- en: LogCat
+  id: totrans-394
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: LogCat
+- en: The simplest tool to start with is surely LogCat, which is used to print messages
+    that inform us about memory trends and garbage collection events. Every message
+    related to memory in LogCat has the same format depending on the device runtime.
+    That's why we will check both the Android runtimes, starting with Dalvik and following
+    with ART. Developers, in general, do not spend enough time analyzing these logs.
+    They are very important if we want to understand if the behavior of our application
+    is correct.
+  id: totrans-395
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 最简单的工具无疑是LogCat，它用于打印通知我们关于内存趋势和垃圾回收事件的消息。LogCat中与内存相关的每条消息根据设备运行时都有相同的格式。因此，我们将检查两个Android运行时，先从Dalvik开始，然后是ART。通常，开发者没有花足够的时间分析这些日志。如果我们想要了解应用程序的行为是否正确，这些日志非常重要。
+- en: Dalvik
+  id: totrans-396
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: Dalvik
+- en: 'The Dalvik memory log print has the following format in the LogCat:'
+  id: totrans-397
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在LogCat中，Dalvik内存日志打印的格式如下：
+- en: '[PRE59]'
+  id: totrans-398
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE59]'
+- en: 'Let''s understand the meaning of every element in the log:'
+  id: totrans-399
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们了解日志中每个元素的含义：
+- en: '`GcReason`: This is the reason why the garbage collector has been triggered.
+    All of the application threads are blocked waiting for the conclusion of collection.
+    Possible values are as follows:'
+  id: totrans-400
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`GcReason`：这是触发垃圾收集的原因。所有应用程序线程都被阻塞，等待收集完成。可能的值如下：'
+- en: '`GC_CONCURRENT`: It follows the GC event when the heap needs to be cleared.'
+  id: totrans-401
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`GC_CONCURRENT`：当堆需要清理时，它跟随GC事件。'
+- en: '`GC_FOR_MALLOC`: It follows the request of allocation of new memory, but there
+    is not enough space to do it.'
+  id: totrans-402
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`GC_FOR_MALLOC`：跟随新内存分配的请求，但没有足够的空间进行分配。'
+- en: '`GC_HPROF_DUMP_HEAP`: It follows a debug request to profile the heap. We will
+    see what this means in the following pages.'
+  id: totrans-403
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`GC_HPROF_DUMP_HEAP`：跟随一个调试请求，对堆进行剖析。我们将在接下来的页面中了解这意味着什么。'
+- en: '`GC_EXPLICIT`: It follows a forced explicit request of `System.gc()` that,
+    as we mentioned, should be avoided.'
+  id: totrans-404
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`GC_EXPLICIT`：跟随强制明确的`System.gc()`请求，正如我们提到的，应该避免这样做。'
+- en: '`GC_EXTERNAL_ALLOC`: It follows a request for external memory. This can happen
+    only on devices lower or equal to Android Gingerbread (API Level 10), because
+    in those devices, memory has different entries, but for later devices the memory
+    is handled in the heap as a whole.'
+  id: totrans-405
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`GC_EXTERNAL_ALLOC`：跟随外部内存的请求。这只能在Android Gingerbread（API级别10）或更低版本的设备上发生，因为那些设备内存有不同的条目，但对于后来的设备，内存作为一个整体在堆中处理。'
+- en: '`AmountFreed`: This is the amount of memory the garbage collector was able
+    to free.'
+  id: totrans-406
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`AmountFreed`：这是垃圾收集器能够释放的内存量。'
+- en: '`HeapStats`: This is referring to the internal heap and it''s composed of the
+    following:'
+  id: totrans-407
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`HeapStats`：这是指内部堆，由以下内容组成：'
+- en: Percentage of the free heap over the total
+  id: totrans-408
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 自由堆占总额的百分比
+- en: Size of allocated heap
+  id: totrans-409
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 分配的堆大小
+- en: Size of total heap
+  id: totrans-410
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 总堆大小
+- en: '`ExternalMemoryStats`: This is referring to the external memory for devices
+    with Android Gingerbread (Api Level 10) or lower. It contains the following:'
+  id: totrans-411
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`ExternalMemoryStats`：这是指Android Gingerbread（API级别10）或更低版本的设备的外部内存。它包含以下内容：'
+- en: Size of allocated external memory
+  id: totrans-412
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 分配的外部内存大小
+- en: Size of total external memory
+  id: totrans-413
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 总外部内存大小
+- en: '`PauseTime`: This is the duration of the pause for the garbage collection.'
+  id: totrans-414
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`PauseTime`：这是垃圾收集的暂停持续时间。'
+- en: 'The following is an example of Dalvik log to show how it could be in the LogCat:'
+  id: totrans-415
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 以下是Dalvik日志的一个示例，以展示它在LogCat中可能的样子：
+- en: '[PRE60]'
+  id: totrans-416
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE60]'
+- en: ART
+  id: totrans-417
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: ART
+- en: 'The ART memory log has a quite different format, but it''s still readable.
+    However, ART has different behavior from the Dalvik runtime: not every garbage
+    collector event is logged into LogCat. ART logs just force events and events with
+    garbage collector pause longer than 5 ms or durations longer than 100 ms.'
+  id: totrans-418
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ART内存日志格式相当不同，但仍然可读。然而，ART与Dalvik运行时的行为不同：并非每个垃圾收集器事件都会记录在LogCat中。ART仅记录强制事件以及垃圾收集器暂停时间超过5毫秒或持续时间超过100毫秒的事件。
+- en: 'Here is its format:'
+  id: totrans-419
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这是其格式：
+- en: '[PRE61]'
+  id: totrans-420
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE61]'
+- en: 'This time, the elements in the log are as follows:'
+  id: totrans-421
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这一次，日志中的元素如下：
+- en: '`GcReason`: This is the reason why the garbage collector has been triggered.
+    Possible values are as follows:'
+  id: totrans-422
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`GcReason`：这是触发垃圾收集的原因。可能的值如下：'
+- en: '`Concurrent`: It follows a concurrent GC event. This kind of event is executed
+    in a different thread from the allocating one, so this one doesn''t force the
+    other application threads to stop, including the UI thread.'
+  id: totrans-423
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`Concurrent`：跟随并发GC事件。这种事件在不同于分配线程的不同线程中执行，因此它不会强制其他应用程序线程停止，包括UI线程。'
+- en: '`Alloc`: It follows the request for the allocation of new memory, but there
+    is not enough space to do it. This time, all the application threads are blocked
+    until the garbage collection ends.'
+  id: totrans-424
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`Alloc`：跟随新内存分配的请求，但没有足够的空间进行分配。这时，所有应用程序线程都会被阻塞，直到垃圾回收结束。'
+- en: '`Explicit`: It follows a forced explicit request of `System.gc()` that should
+    be avoided for ART as well as for Dalvik.'
+  id: totrans-425
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`Explicit`：跟随强制明确的`System.gc()`请求，对于ART和Dalvik都应该避免这样做。'
+- en: '`NativeAlloc`: It follows the request for memory by native allocations.'
+  id: totrans-426
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`NativeAlloc`：跟随本地分配的内存请求。'
+- en: '`CollectorTransition`: It follows the garbage collector switch on low memory
+    devices.'
+  id: totrans-427
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`CollectorTransition`：在低内存设备上跟随垃圾收集器切换。'
+- en: '`HomogenousSpaceCompact`: It follows the need of the system to reduce memory
+    usage and to defragment the heap.'
+  id: totrans-428
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`HomogenousSpaceCompact`：跟随系统减少内存使用和堆碎片整理的需要。'
+- en: '`DisableMovingGc`: It follows the collection block after a call to a particular
+    internal method, called `GetPrimitiveArrayCritical`.'
+  id: totrans-429
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`DisableMovingGc`：在调用特定内部方法`GetPrimitiveArrayCritical`之后，跟随收集块。'
+- en: '`HeapTrim`: It follows the collection block because a heap trim isn''t finished.'
+  id: totrans-430
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`HeapTrim`：因为堆修剪未完成，跟随收集块。'
+- en: '`GcName`: ART uses different garbage collectors to free memory and they have
+    different behaviors, but we have no choice for that and this information is not
+    very useful for our analysis. Anyway, possible values for the name are as follows:'
+  id: totrans-431
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`GcName`：ART使用不同的垃圾收集器来释放内存，它们有不同的行为，但我们对此没有选择，而且这些信息对我们的分析并不非常有用。无论如何，名称的可能值如下：'
+- en: '`Concurrent mark sweep (CMS)`'
+  id: totrans-432
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`并发标记清除（CMS）`'
+- en: '`Concurrent partial mark sweep`'
+  id: totrans-433
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`并发部分标记清除`'
+- en: '`Concurrent sticky mark sweep`'
+  id: totrans-434
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`并发粘性标记清除`'
+- en: '`Marksweep + semispace`'
+  id: totrans-435
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`标记清除 + 半空间`'
+- en: '`ObjectFreed`: The number of freed objects.'
+  id: totrans-436
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`ObjectFreed`：释放的对象数量。'
+- en: '`SizeFreed`: The total size of freed objects.'
+  id: totrans-437
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`SizeFreed`：释放对象的总大小。'
+- en: '`LargeObjectFreed`: The number of freed objects from the large space.'
+  id: totrans-438
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`LargeObjectFreed`：从大空间释放的对象数量。'
+- en: '`LargeObjectSizeFreed`: The total size of freed objects from the large space.'
+  id: totrans-439
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`LargeObjectSizeFreed`：从大空间释放的对象总大小。'
+- en: '`HeapStats`: This is like the Dalvik one. It contains the percentage of free
+    heap space, the size of allocated heap, and the total heap size.'
+  id: totrans-440
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`HeapStats`：这类似于Dalvik的功能。它包含自由堆空间的百分比、已分配堆的大小和总堆大小。'
+- en: '`PauseTimes`: This is the duration of the pause for the garbage collection.'
+  id: totrans-441
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`PauseTimes`：这是垃圾回收暂停的持续时间。'
+- en: 'Let''s see an example of an ART log as well:'
+  id: totrans-442
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们看一个ART日志的例子：
+- en: '[PRE62]'
+  id: totrans-443
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE62]'
+- en: The ActivityManager API
+  id: totrans-444
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: ActivityManager API
+- en: 'We have already talked about this class before, but this time we want to show
+    other methods that can be helpful while profiling the application from the memory
+    point of view. There are two methods that help us find memory-related problems
+    when debugging and they can only be used if the application is debuggable. We
+    are talking about the following methods:'
+  id: totrans-445
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们之前已经讨论过这个类，但这次我们想要展示其他在从内存角度分析应用程序时可能有所帮助的方法。有两种方法可以帮助我们在调试时找到与内存相关的问题，但只有在应用程序可调试的情况下才能使用。我们讨论的是以下方法：
+- en: '`setWatchHeapLimit`'
+  id: totrans-446
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`setWatchHeapLimit`'
+- en: '`clearWatchHeapLimit`'
+  id: totrans-447
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`clearWatchHeapLimit`'
+- en: 'The first one, in particular, allows us to set an alarm on the heap memory:
+    when the set amount of heap has been reached, the device will automatically pick
+    a heap dump and we can analyze the result to understand if a memory leak occurred.
+    The second one has the aim of removing the set limit. Furthermore, this class
+    provides an action to be handled by an `Activity` or a `BroadcastReceiver` to
+    notify us that the limit has been reached and a heap dump has been picked. This
+    action is as follows:'
+  id: totrans-448
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 第一个方法特别允许我们对堆内存设置一个警报：当达到设定的堆内存量时，设备会自动进行堆转储，我们可以分析结果以了解是否发生了内存泄漏。第二个方法旨在移除设定的限制。此外，这个类提供了一个由`Activity`或`BroadcastReceiver`处理的行为，以通知我们已达到限制并已进行堆转储。这个行为如下：
+- en: '[PRE63]'
+  id: totrans-449
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE63]'
+- en: Unfortunately, these methods are available only from Android Marshmallow (API
+    Level 23), but this way we can keep testing while the system is profiling the
+    memory for later analysis.
+  id: totrans-450
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 不幸的是，这些方法仅在Android Marshmallow（API级别23）及以上版本可用，但这样我们可以在系统对内存进行分析以供后续分析时继续测试。
+- en: StrictMode
+  id: totrans-451
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: StrictMode
+- en: Another really helpful API provided by the platform is `StrictMode`. This class
+    is used to find memory and network problems. We will deal with just the memory
+    part here, while in [Chapter 6](ch06.html "Chapter 6. Networking"), *Networking*,
+    we will deal with the network counterpart.
+  id: totrans-452
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 平台提供的另一个非常有用的API是`StrictMode`。这个类用于查找内存和网络问题。在这里我们只处理内存部分，而在[第6章](ch06.html
+    "第6章. 网络")*网络*中，我们将处理网络方面的问题。
+- en: 'If enabled, it operates in the background and notifies us that there is an
+    issue and when it happens, depending on the policy that we choose. Then, there
+    are two things to define when using this: what to track and how. For this, we
+    can use the `StrictMode.VmPolicy` class and the `StrictMode.VmPolicy.Build` class
+    this way:'
+  id: totrans-453
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 如果启用，它将在后台运行，并通知我们存在问题以及发生的时间，这取决于我们选择的政策。然后，在使用这个功能时需要定义两件事：跟踪什么以及如何跟踪。为此，我们可以使用`StrictMode.VmPolicy`类和`StrictMode.VmPolicy.Build`类，如下所示：
+- en: '[PRE64]'
+  id: totrans-454
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE64]'
+- en: 'Let''s see what we can observe:'
+  id: totrans-455
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们看看我们可以观察到什么：
+- en: '`detectActivityLeaks`: It detects activity leaks'
+  id: totrans-456
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`detectActivityLeaks`：它会检测活动泄漏。'
+- en: '`detectLeakedClosableObjects`: It detects if a `Closable` object is finalized,
+    but not closed'
+  id: totrans-457
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`detectLeakedClosableObjects`：它会检测`Closable`对象是否被终结，但未被关闭。'
+- en: '`detectLeakedRegistrationObjects`: It detects if `ServiceConnection` or `BroadcastReceiver`
+    is leaked when `Context` is being destroyed'
+  id: totrans-458
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`detectLeakedRegistrationObjects`：当`Context`被销毁时，它会检测是否泄漏了`ServiceConnection`或`BroadcastReceiver`。'
+- en: '`detectSqlLiteObjects`: It detects if an SQLite object is finalized, but not
+    closed'
+  id: totrans-459
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`detectSqlLiteObjects`：它会检测SQLite对象是否被终结，但未被关闭。'
+- en: '`detectAll`: It detects every suspicious behavior'
+  id: totrans-460
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`detectAll`：它会检测所有可疑行为。'
+- en: 'They can be used together to detect multiple events. And now, let''s see how
+    it can notify the developer:'
+  id: totrans-461
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 它们可以一起使用来检测多个事件。现在，让我们看看它是如何通知开发者的：
+- en: '`penaltyDeath`: When a detection happens, the process is killed and the app
+    crashes'
+  id: totrans-462
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`penaltyDeath`：当检测到问题时，进程将被杀死，应用将崩溃。'
+- en: '`penaltyDropBox`: When detected, the relative logs are sent to `DropBoxManager`
+    that collects them for debugging'
+  id: totrans-463
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`penaltyDropBox`：当检测到问题时，相关的日志会被发送到`DropBoxManager`，后者会收集它们以供调试。'
+- en: '`penaltyLog`: When a detection occurs, it''s logged'
+  id: totrans-464
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`penaltyLog`：当检测到问题时，它会记录日志。'
+- en: 'It''s really helpful to understand which class isn''t respecting the limit
+    by specifying its name and the occurrences. The following is an example of a log:'
+  id: totrans-465
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 通过指定类名及其出现的次数，可以很有效地了解哪个类没有遵守限制。以下是日志的一个示例：
+- en: '[PRE65]'
+  id: totrans-466
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE65]'
+- en: Note
+  id: totrans-467
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: 注意
+- en: Enable `StrictMode` in debugging and testing environments to detect any memory
+    problems and, above all, as we discussed previously in this chapter, activity
+    leaks. Remember to disable it for release builds because it can be used for different
+    detection in future Android versions and because, even if it's silent, it's active
+    in the background, consuming resources that we may need to reach our performance
+    goal.
+  id: totrans-468
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在调试和测试环境中启用`StrictMode`，以检测任何内存问题，最重要的是，正如我们在本章前面所讨论的，活动泄漏。记得在发布版本中禁用它，因为它可能会在将来Android版本中用于不同的检测，并且即使它不发声，在后台也是活跃的，消耗我们可能需要的达到性能目标的资源。
+- en: Dumpsys
+  id: totrans-469
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+  zh: Dumpsys
+- en: 'The Dumpsys tool is in every Android device and it lets us get an impressive
+    amount of information about every service inside the device. It can be used in
+    a terminal by calling the following command:'
+  id: totrans-470
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Dumpsys工具在每一部Android设备中都有，它让我们能够获取关于设备内每个服务的令人印象深刻的信息量。它可以通过在终端调用以下命令来使用：
+- en: '[PRE66]'
+  id: totrans-471
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE66]'
+- en: 'The service is optional, but if you don''t specify that it is the service you
+    are interested in, the result of all of them will be printed, and it can be a
+    little confusing. The service''s availability depends on the particular Android
+    version installed on the device. Then, call the following for the complete list
+    of available services on your device:'
+  id: totrans-472
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 该服务是可选的，但如果你不指定你感兴趣的是哪个服务，那么所有服务的结果都会被打印出来，这可能会有些混淆。服务的可用性取决于设备上安装的特定Android版本。然后，为了获取设备上可用的服务完整列表，请调用以下命令：
+- en: '[PRE67]'
+  id: totrans-473
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE67]'
+- en: 'For every one of them, you can see the possible argument you can add, by simply
+    calling the same as before and adding the `–h` argument at the end:'
+  id: totrans-474
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 对于它们中的每一个，你可以通过简单地像之前一样调用并最后加上`–h`参数，来查看可以添加的可能参数：
+- en: '[PRE68]'
+  id: totrans-475
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE68]'
+- en: In the following pages, we will show two services of `dumpsys` that are particularly
+    useful to profile our code from a memory point of view.
+  id: totrans-476
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在接下来的页面中，我们将展示两个特别有用的`dumpsys`服务，从内存的角度来分析我们的代码。
+- en: Meminfo
+  id: totrans-477
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: Meminfo
+- en: 'The Meminfo tool shows important information about memory usage on the device.
+    The command used to invoke it is as follows:'
+  id: totrans-478
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Meminfo工具显示了关于设备上内存使用情况的重要信息。调用它的命令如下：
+- en: '[PRE69]'
+  id: totrans-479
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE69]'
+- en: 'Let''s see what is printed:'
+  id: totrans-480
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 让我们看看以下打印内容：
+- en: '[PRE70]'
+  id: totrans-481
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE70]'
+- en: The **PSS** is Linux's **Proportional Set Size** metric. It refers to the total
+    amount of memory used by the application.
+  id: totrans-482
+  prefs: []
+  type: TYPE_NORMAL
+  zh: '**PSS**是Linux的**比例集大小**指标。它指的是应用程序使用的总内存量。'
+- en: 'We can go further by asking for detailed information about a particular process
+    using its pid:'
+  id: totrans-483
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们可以通过询问有关特定进程的详细信息的pid来进一步了解：
+- en: '[PRE71]'
+  id: totrans-484
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE71]'
+- en: 'Then, we will see something like the following printed on the screen:'
+  id: totrans-485
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 然后，我们将在屏幕上看到如下内容：
+- en: '[PRE72]'
+  id: totrans-486
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE72]'
+- en: 'It contains the memory usage of our application in the foreground. The first
+    two columns of the table refer to allocated memory that we should monitor: unexpected
+    values there could mean memory leaks.'
+  id: totrans-487
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 它包含了我们应用程序在前台的内存使用情况。表的前两列指的是我们应该监控的已分配内存：那里的意外值可能意味着内存泄漏。
+- en: ProcStats
+  id: totrans-488
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+  zh: ProcStats
+- en: Android KitKat (API Level 19) introduced the ProcStats tool, which is able to
+    provide important information about processes and their memory. It can profile
+    the use of all of the processes related to the application, tracking background
+    or foreground processes, their memory usage, and running times.
+  id: totrans-489
+  prefs: []
+  type: TYPE_NORMAL
+  zh: Android KitKat（API级别19）引入了ProcStats工具，它能够提供关于进程及其内存的重要信息。它可以分析与应用程序相关的所有进程的使用情况，跟踪后台或前台进程，它们的内存使用情况以及运行时间。
+- en: 'The command to use to see general statistics of the entire system is as follows:'
+  id: totrans-490
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 用来查看整个系统的一般统计信息的命令如下：
+- en: '[PRE73]'
+  id: totrans-491
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE73]'
+- en: 'The output of this is a list of processes sorted by running times. Let''s see
+    an example of that to understand how it can be read:'
+  id: totrans-492
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这将输出一个按运行时间排序的进程列表。让我们看一个例子，以了解如何阅读它：
+- en: '[PRE74]'
+  id: totrans-493
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE74]'
+- en: 'Every process shown in the list has the memory status over the last three hours
+    in the following format:'
+  id: totrans-494
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 列表中显示的每个进程都包含过去三小时的内存状态，格式如下：
+- en: '[PRE75]'
+  id: totrans-495
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE75]'
+- en: 'While we already saw what PSS is, **USS** stands for **Unit Set Size**, and
+    it''s private memory. So, let''s see the meaning of those values:'
+  id: totrans-496
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 虽然我们已经了解了PSS是什么，但**USS**代表**单元集大小**，它是私有内存。那么，让我们看看这些值的含义：
+- en: '`percent:` It is the time percentage over the three hours of execution of the
+    process'
+  id: totrans-497
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`percent:` 是进程执行三小时内的百分比时间'
+- en: '`minPss`: Minimum total memory'
+  id: totrans-498
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`minPss`：最小总内存'
+- en: '`avgPss`: Average total memory'
+  id: totrans-499
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`avgPss`：平均总内存'
+- en: '`maxPss`: Maximum total memory'
+  id: totrans-500
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`maxPss`：最大总内存'
+- en: '`minUss`: Minimum private memory'
+  id: totrans-501
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`minUss`：最小私有内存'
+- en: '`avgUss`: Average private memory'
+  id: totrans-502
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`avgUss`：平均私有内存'
+- en: '`maxUss`: Maximum private memory'
+  id: totrans-503
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: '`maxUss`：最大私有内存'
+- en: 'When we want to see detailed information about a particular application, we
+    can use the following, that is, the same as the previous one, but this time we
+    added the package of the application to analyze:'
+  id: totrans-504
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 当我们想要查看有关特定应用程序的详细信息时，可以使用以下方法，这与前一个相同，但这次我们添加了要分析的应用程序的包名：
+- en: '[PRE76]'
+  id: totrans-505
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE76]'
+- en: 'The printed result for this looks like the following:'
+  id: totrans-506
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 对此的打印结果如下所示：
+- en: '[PRE77]'
+  id: totrans-507
+  prefs: []
+  type: TYPE_PRE
+  zh: '[PRE77]'
+- en: In this case, we can analyze the memory usage in different system memory-related
+    states. The above printout means that the device status changed from normal to
+    moderate status, or to low memory, or critical. Our application freed resources
+    and the total amount of memory dropped because of that. We also know the time
+    spent in those particular states, based on what is inside **Run Time Stats** inside
+    **Summary**.
+  id: totrans-508
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在此情况下，我们可以分析在不同系统内存相关状态下的内存使用情况。上述输出意味着设备状态从正常变为中等，或低内存，或临界状态。我们的应用程序释放了资源，因此总内存量也因此下降。我们还知道，在那些特定状态下所花费的时间，是基于**摘要**中的**运行时间统计**内部的内容。
+- en: This is really useful to understand if the policy you used for when an `onTrimMemory()`
+    event is triggered by the system is correct or if it can be improved by freeing
+    more objects.
+  id: totrans-509
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 这对于理解当系统触发`onTrimMemory()`事件时所使用的策略是否正确，或者是否可以通过释放更多对象来改进非常有用。
+- en: 'The ProcStats tool is also available directly inside the device: open **Developer
+    settings** and then **Process Stats**. You will see something like what is shown
+    in *Figure 6*, where the left screen shows the list of background processes and
+    their percentage over time, while the right screen shows the details of a process:'
+  id: totrans-510
+  prefs: []
+  type: TYPE_NORMAL
+  zh: ProcStats工具也可以直接在设备内部使用：打开**开发者设置**，然后选择**进程统计**。你会看到类似*图6*展示的内容，左屏显示了后台进程及其随时间变化的百分比，而右屏则展示了进程的详细信息：
+- en: '![ProcStats](img/4666_04_06.jpg)'
+  id: totrans-511
+  prefs: []
+  type: TYPE_IMG
+  zh: '![ProcStats](img/4666_04_06.jpg)'
+- en: 'Figure 6: ProcStats on device'
+  id: totrans-512
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 图6：设备上的ProcStats
+- en: 'Using the menu, it is possible to change the duration and the type of switching
+    of the following processes:'
+  id: totrans-513
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 使用菜单，可以更改以下进程的持续时间和切换类型：
+- en: Background processes
+  id: totrans-514
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 后台进程
+- en: Foreground processes
+  id: totrans-515
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 前台进程
+- en: Cached processes
+  id: totrans-516
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 缓存进程
+- en: 'The progress bar in the **Process Stats** screen can change its color depending
+    on the memory states:'
+  id: totrans-517
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在**进程统计**屏幕中的进度条可以根据内存状态改变颜色：
+- en: Green, if the memory state is normal
+  id: totrans-518
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 当内存状态正常时显示绿色
+- en: Yellow, if the memory state is moderate
+  id: totrans-519
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 当内存状态为中等时显示黄色
+- en: Red, if the memory state is low or critical
+  id: totrans-520
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+  zh: 当内存状态低或为临界时显示红色
+- en: Summary
+  id: totrans-521
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+  zh: 摘要
+- en: 'In the research to improve the performance of an Android application, memory
+    is central and takes a leading role in the perception of our application by the
+    users, despite being the most ignored aspect by developers during the development
+    process. Every developer should spend some time checking the memory management
+    of the application they are working on: there are many chances for memory leaks.
+    That is why we focused on how Android garbage collection works, what the main
+    causes of memory leaks are, and what a memory churn is.'
+  id: totrans-522
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 在研究如何提高Android应用程序性能的过程中，内存至关重要，它是用户对我们应用程序感知的核心，尽管在开发过程中开发者往往最容易忽视这一方面。每位开发者都应该花时间检查他们正在开发的应用的内存管理：存在许多内存泄漏的可能性。因此，我们重点关注了Android垃圾回收的运作机制、内存泄漏的主要原因以及内存波动是什么。
+- en: 'We defined a lot of best practices to help maintain good memory management,
+    introducing helpful design patterns and analyzing the best choices while developing
+    things taken for granted that can actually affect memory and performance. Then,
+    we looked at the main causes for the worst leaks in Android: those related to
+    main components such as activities and services. As a conclusion for the practices,
+    we introduced APIs both to use and not to use, then, other APIs able to define
+    a strategy for events related to the system and external to the application.'
+  id: totrans-523
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 我们定义了许多最佳实践，以帮助保持良好的内存管理，引入了有帮助的设计模式，并在开发过程中分析了最佳选择，这些选择实际上可以影响内存和性能。然后，我们查看了Android中最严重的泄漏的主要原因：与活动和服务等主要组件相关的原因。作为实践的结论，我们介绍了应该使用和不使用的API，然后是其他能够为与系统和应用程序外部相关的事件定义策略的API。
+- en: The aim of the last part of this chapter was to make the developer able to read
+    memory logs and let them identify the right tool to search for memory anomalies
+    during the debug step and collect data analysis to profile the application. This
+    way they can easily find leaks, then search for the triggering code, and finally
+    apply a fix, following the defined best practices, or improving the memory management
+    of their application.
+  id: totrans-524
+  prefs: []
+  type: TYPE_NORMAL
+  zh: 本章节最后一部分的目标是让开发者能够阅读内存日志，并使他们能够在调试阶段寻找内存异常的正确工具，并收集数据分析以对应用程序进行剖析。这样一来，他们可以轻松找到内存泄漏，进而搜索触发代码，并最终按照既定最佳实践应用修复，或改进他们应用程序的内存管理。

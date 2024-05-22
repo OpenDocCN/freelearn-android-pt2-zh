@@ -1,7 +1,9 @@
 - en: Chapter 6. Networking
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第六章. 网络
 - en: 'While talking about performance in a mobile application, the main concern is
     how our application behaves in poor connectivity conditions. No developer wants
     his users to give negative feedback because the application is too slow while
@@ -12,8 +14,10 @@
     are involved in the process: proxies, web servers, service providers, DNSs, and
     so on. We cannot know if there is a problem in one or more of the elements of
     that chain.'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在谈论移动应用程序的性能时，主要关注的是我们的应用程序在连接条件差的情况下的表现。没有开发者希望他的用户因为应用程序在上传或下载数据时太慢，或者与其他平台相同应用程序版本不同步而给出负面反馈。我们有多少次因为客户端或用户说应用程序太慢而改变应用程序的网络策略？网络并不是完全可以从客户端控制的，因为在这个过程中涉及到太多的外部因素：代理、网页服务器、服务提供商、DNS等。我们无法知道是否有一个或多个元素链中存在问题。
 - en: Moreover, the user does not know where the problem is, but he will think the
     application is not good. Then he will uninstall it. Nevertheless, we can control
     the application behavior and improve the user-perceived performance of our application
@@ -24,12 +28,16 @@
     the applications and then we will look at a couple of different, but both helpful,
     official and third-party tools to profile our code and check how our application
     is behaving in lots of different connectivity conditions.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，用户并不知道问题出在哪里，但他会认为应用程序不好。然后他会卸载它。然而，我们可以通过使用一些高级技术来减少网络负载，特别是在特定情况下使用一些网络模式，以及识别一些简化我们开发的库来控制应用程序行为并提高用户感知的应用程序性能。像往常一样，我们将通过一些理论知识来掌握这个主题，了解提高应用程序网络方法的最佳实践，然后我们将看看一些不同的，但都有帮助的，官方和第三方的工具，来分析我们的代码，并检查应用程序在不同连接条件下的表现。
 - en: Walkthrough
+  id: totrans-3
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 演练
 - en: Before we get into the code, studying different techniques to improve our strategy,
     we want to give a general overview of networking and the possibilities the Android
     platform provides. So, let's think about what a client needs to do before retrieving
@@ -44,132 +52,185 @@
     can be given back to the client. In the meantime, the user is waiting for a result
     on the application and the application instead won't receive it, and it will show
     an error when the timeout is reached.
+  id: totrans-4
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们深入代码学习不同的技术来改进我们的策略之前，我们希望对网络以及Android平台提供可能性有一个总体了解。那么，让我们考虑一下客户端在从服务器实例获取预期响应之前需要做些什么。当客户端需要服务器响应时，它在一个高层架构中被路由，这个架构包含许多参与者，如Wi-Fi接入点、局域网、代理、服务器和DNS服务器，它们有多个实例，需要完成多个请求才能得到所需的响应。然后，当服务器接收到请求时，它需要处理响应，并将其路由回客户端。完成所有这些操作所需的时间对用户来说必须是合理的。此外，链中任意两个参与者之间的链接可能会中断，然后无法向客户端返回响应。与此同时，用户正在应用程序上等待结果，但应用程序却无法接收它，当达到超时时，它将显示错误。
 - en: '*Figure 1* shows an example of a possible flow:'
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: '*图1* 显示了一个可能的流程示例：'
 - en: '![Walkthrough](img/4666_06_01.jpg)'
+  id: totrans-6
   prefs: []
   type: TYPE_IMG
+  zh: '![演练](img/4666_06_01.jpg)'
 - en: 'Figure 1: Example of an external networking architecture'
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 图1：外部网络架构示例
 - en: We do not want this to happen to our users, but we have no way to predict what
     will happen in such a high-complexity architecture. What we can do, instead, is
     to apply a couple of enhancements in the way we handle external communications
     from our application.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们不希望这种情况发生在我们的用户身上，但我们无法预测在这种高复杂性架构中会发生什么。相反，我们可以做的是，在处理应用程序外部通信的方式上应用一些增强措施。
 - en: 'Anyway, before starting, let''s check how those external requests work to understand
     better how to improve networking performance. Let''s break down what happens in
     the client when it makes a request and handles the server response. To do this,
     have a look at *Figure 2*. It shows both requests and responses from the client
     perspective, ignoring possible errors or delays: they are just possible parameters
     to be set in the request and information and operations relating to the response:'
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 无论如何，在开始之前，让我们检查一下外部请求是如何工作的，以更好地了解如何提高网络性能。让我们分解一下客户端在发起请求和处理服务器响应时发生的情况。为此，请查看*图2*。它展示了从客户端角度的请求和响应，忽略了可能的错误或延迟：它们只是可能在请求中设置的参数以及与响应相关的信息和操作。
 - en: '![Walkthrough](img/4666_06_02.jpg)'
+  id: totrans-10
   prefs: []
   type: TYPE_IMG
+  zh: '![演练](img/4666_06_02.jpg)'
 - en: 'Figure 2: Overview of request and response client items'
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 图2：请求和响应客户端项概览
 - en: 'To handle them, Android provides two main APIs:'
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了处理这些问题，Android提供了两个主要的API：
 - en: '`HttpClient`: The `DefaultHttpClient` and `AndroidHttpClient` classes are the
     main classes to use for this HTTP implementation.'
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`HttpClient`：`DefaultHttpClient`和`AndroidHttpClient`类是用于这种HTTP实现的主要类。'
 - en: '`URLConnection`: This is a more flexible and performant API to connect to a
     URL. It can use different protocols.'
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`URLConnection`：这是一个更灵活、性能更高的API，用于连接到URL。它可以使用不同的协议。'
 - en: The `URLConnection` API was so preferable to the `HttpClient` API that the latter
     was first deprecated and then removed, starting from Android MarshMallow (API
     Level 23). From now on, we will therefore refer only to the `URLConnection` API
     unless specified otherwise.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: '`URLConnection` API比`HttpClient` API更受欢迎，以至于后者首先被弃用，然后从Android MarshMallow（API级别23）开始被移除。因此，除非特别说明，否则我们将只参考`URLConnection`
+    API。'
 - en: There are external libraries we can import to our projects to use different
     APIs, but there is one, in particular, that, besides integrating some of the patterns
     we are going to see in the following sections, also handles the requests in a
     worker thread, freeing us from having to create a background thread for this.
     We are talking about the HTTP Client library for Java by Google. We will also
     refer to this in the following sections when specified.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 有一些外部库可以导入到我们的项目中，以使用不同的API，但特别值得一提的是，除了整合我们将在以下部分看到的某些模式外，还可以在工作者线程中处理请求，从而免去了我们为此创建后台线程的麻烦。我们所说的是谷歌的Java
+    HTTP客户端库。在以下部分特别说明时，我们也会提到这一点。
 - en: 'When we are dealing with Internet access, we must always ask the user for permission.
     Then, we need to add the following inside the manifest file:'
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们处理互联网访问时，我们必须始终请求用户的许可。然后，我们需要在清单文件中添加以下内容：
 - en: '[PRE0]'
+  id: totrans-18
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: Let's look in more detail at every one of the items illustrated in *Figure 2*
     from an Android perspective. This will give us a better understanding of them
     before we come to the *Best practices* section.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们从Android的角度更详细地看看*图2*中每个项目的具体内容。这将让我们在进入*最佳实践*部分之前，对它们有更好的了解。
 - en: Protocols
+  id: totrans-20
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 协议
 - en: 'What we are interested in is communication using the HTTP protocol. The `URLConnection`
     subclass-supported network protocols include the following:'
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们感兴趣的是使用HTTP协议进行通信。`URLConnection`子类支持的联网协议包括以下几种：
 - en: '**HTTP and HTTPS**: `HttpUrlConnection` is the main class, and it is what we
     will deal with in the rest of the chapter.'
+  id: totrans-22
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**HTTP和HTTPS**：`HttpUrlConnection`是主要的类，也是我们将在本章剩余部分处理的内容。'
 - en: '**FTP**: There is no specific class for **File Transfer Protocol** (**FTP**)
     communications. You can simply use the default `URLConnection` class because it
     provides everything you need.'
+  id: totrans-23
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**FTP**：没有特定的类用于**文件传输协议**（**FTP**）通信。你可以简单地使用默认的`URLConnection`类，因为它提供了你需要的一切。'
 - en: '**File**: Local files from the filesystem can be retrieved using the `URLConnection`
     class. It is based on the URI of the file; you therefore need to call a URL starting
     with the file.'
+  id: totrans-24
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**File**：可以使用`URLConnection`类从文件系统中检索本地文件。它基于文件的URI；因此，你需要调用以file开头的URL。'
 - en: '**JAR**: This protocol is used to deal with JAR files. `JarUrlConnection` is
     the appropriate class to get this kind of file.'
+  id: totrans-25
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**JAR**：此协议用于处理JAR文件。`JarUrlConnection`是获取这类文件的合适类。'
 - en: The class also allows the developer to add additional protocols using a `URLStreamHandlerFactory`
     object.
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
 - en: Methods
+  id: totrans-27
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The main request methods provided in the `HttpURLConnection` class are the
     following:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
 - en: '`GET`: This is the default method used, so you do not need to set anything
     else to use it'
+  id: totrans-29
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`POST`: This can be used by calling the `URLConnection.setDoInput()` method'
+  id: totrans-30
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Other methods can be used by setting them using the `URLConnection.setRequestMethod()`
     method.
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
 - en: Headers
+  id: totrans-32
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -178,48 +239,59 @@
     about the user and the session, and so on. Headers are key/value pairs to be added
     to the request. They are also used to change, for example, the response format,
     to enable compression, or to ask for particular HTTP features.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
 - en: 'There are two particular methods to add headers to the request and to get headers
     from the response:'
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
 - en: '`URLConnection.setRequestProperty()`'
+  id: totrans-35
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`URLConnection.getHeaderFields()`'
+  id: totrans-36
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: We will look more closely at some headers in the following pages.
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
 - en: Timeout
+  id: totrans-38
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The `URLConnection` class supports two types of timeout:'
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
 - en: '**Connect timeout**: This can be set using the `URLConnection.setConnectTimeout()`
     method. The client will be waiting for a successful connection with the server
     for the value set. If no connection has been established after a set amount of
     time, a `SocketTimeoutException` is thrown.'
+  id: totrans-40
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '**Read timeout**: This is the maximum time to wait until an input stream is
     completely read, otherwise, a `SocketTimeoutException` is thrown. To set it, use
     the `URLConnection.setReadTimeout()` method.'
+  id: totrans-41
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: For both, the default is `0`, where there is no timeout from the client. Hence,
     the timeout is handled by the TCP transport layer. We do not have control of this.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
 - en: Content
+  id: totrans-43
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -227,54 +299,65 @@
     get back the content from the response as an `InputStream` by using the `URLConnection.getContent()`
     method. The content has some parameters to be read, and there are three headers
     in the response that control how to read it:'
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
 - en: '**Content length**: This is the byte length of the response specified by the
     relative header and retrieved using the `URLConnection.getContentLength()` method.'
+  id: totrans-45
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '**Content type**: This is the MIME-type of the content coming from the `URLConnection.getContentType()`
     method.'
+  id: totrans-46
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '**Content encoding**: This is the type of encoding used for the response content.
     Use the `URLConnection.getContentEncoding()` method to know which one to use.'
+  id: totrans-47
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Compression
+  id: totrans-48
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
 - en: 'The content-encoding value is used to specify the type of compression of the
     content inside the response. The client can ask for a particular encoding of the
     response by using the `Accept-Encoding` header and by specifying one of the following:'
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
 - en: '`null` or `identity`: These are used to ask for no encoding for the response
     content'
+  id: totrans-50
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`gzip`: This is the default value; the client will always ask for gzip-compressed
     content.'
+  id: totrans-51
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Despite the client request for compressed content, the server may not have enabled
     gzip compression. We can tell if the content is compressed by checking the result
     of the `URLConnection.getContentEncoding()` method.
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
 - en: It is important to know that every time we add the `Accept-Encoding` headers
     in the request, automatic decompression of the response is disabled. We need to
     use the `GZIPInputStream` if the response content is compressed, instead of a
     classic `InputStream`.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
 - en: Response code
+  id: totrans-54
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -282,29 +365,35 @@
     to behave in different ways depending on the response code. The `HttpURLConnection.getResponseCode()`
     method returns the response code, and we can use it to switch the application''s
     behaviors. Let''s see their macro groups:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
 - en: '`2xx: Success`: The server has received the request and sent back the response.'
+  id: totrans-56
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`3xx: Redirections`: The client needs to take action to go on with the request.
     This is made automatically; we do not need to deal with actions most of the time.'
+  id: totrans-57
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`4xx: Client Error`: A response code such as this means there was something
     wrong with the request. Bad syntax in the request, an authorization is needed
     before the request, the resource requested cannot be found, and so on.'
+  id: totrans-58
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`5xx: Server Error`: The server can send back a response with this code if
     there was an internal problem, or something is overloaded.'
+  id: totrans-59
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Connection types
+  id: totrans-60
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -315,52 +404,65 @@
     to retrieve the `NetworkInfo` data. It is useful to know which connection is active
     and if it is connected. Call the `NetworkInfo.getType()` method to get the `ConnectionManager`
     constant value and to compare the following types:'
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
 - en: '`TYPE_MOBILE`'
+  id: totrans-62
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`TYPE_WIFI`'
+  id: totrans-63
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`TYPE_WIMAX`'
+  id: totrans-64
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`TYPE_ETHERNET`'
+  id: totrans-65
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`TYPE_BLUETOOTH`'
+  id: totrans-66
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: If we need the user to download big files, we should avoid doing this while
     a mobile network is active because it can be much slower than a Wi-Fi connection
     and it can lead to unexpected costs for the user.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
 - en: 'Checking the active network is not enough to know if we can start a new request
     over the network: we should also call the `NetworkInfo.isConnected()` method to
     receive a response.'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
 - en: We can even listen to network changes by using `BroadcastReceiver` and registering
     it for `ConnectivityManager.CONNECTIVITY_ACTION` events. This way we can know
     when a change on the active network occurred and, then, for example, start a new
     request if the Wi-Fi has been turned on.
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
 - en: 'For all of these operations to access the network state, we need further permission
     from the user, and then we need to add the following inside the manifest file:'
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE1]'
+  id: totrans-71
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: Best practices
+  id: totrans-72
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -369,208 +471,288 @@
     go through networking software architectures and patterns to follow to improve
     the client-server communication of our application to enhance the user's understanding
     of the speed of our applications.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在前一节讨论的网络理论是我们将要概述的最佳实践的起点。我们将研究网络软件架构和要遵循的模式，以改善应用程序的客户端-服务器通信，从而增强用户对我们应用程序速度的理解。
 - en: Latency gauging
+  id: totrans-74
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 延迟评估
 - en: We said initially that there is no way to predict the timings for a remote request
     to the server. This is always true, but we can somewhat estimate its duration
     by tracing our requests' timings and by calculating the average value. This particular
     process can be helpful to define different strategies depending on latencies.
     For example, if the response for a particular remote resource is fast, we can
     expect that, in the same connectivity conditions, this will still be fast.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们最初说过，没有办法预测到服务器远程请求的时间。这通常是正确的，但我们可以通过追踪请求的时间并计算平均值来大致估计其持续时间。这种特定的过程有助于根据延迟定义不同的策略。例如，如果对特定远程资源的响应速度很快，我们可以预期在相同的连接条件下，它仍然会很快。
 - en: 'Moreover, we can then change the request and ask for more than in a slower
     response case. The classic example is image resolution: if the response is fast
     enough, we can ask the server for a higher resolution image. On the other hand,
     if we are expecting a slow response, it is better to request a lower resolution
     image. This way, we can balance the time and get the same responsiveness.'
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，我们然后可以更改请求，在响应较慢的情况下请求更多信息。典型的例子是图像分辨率：如果响应足够快，我们可以向服务器请求更高分辨率的图像。另一方面，如果我们预期响应较慢，最好请求较低分辨率的图像。这样，我们可以平衡时间并获得相同的响应性。
 - en: Hence, there is the need to set a particular amount of latency, considering
     whether the response is fast or slow. We may even consider more than one level
     of latency to create our strategy. Then, there will be a more accurate estimation
     of response times and a better implementation of this pattern.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，需要设置特定的延迟量，考虑响应是快还是慢。我们甚至可以考虑不止一个延迟级别来创建我们的策略。这样，响应时间的估计将更准确，这种模式的实现也会更好。
 - en: 'For example, consider a case with three levels of latency: the standard one
     is for a Wi-Fi connection, the higher one for LTE, and a lower one for the GPRS.
     The following code snippet shows how to check the connection and apply the strategy:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，考虑具有三个延迟级别的案例：Wi-Fi连接的标准延迟，LTE的较高延迟和GPRS的较低延迟。以下代码段显示了如何检查连接并应用策略：
 - en: '[PRE2]'
+  id: totrans-79
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Batching connections
+  id: totrans-80
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 批处理连接
 - en: Every time the radio is turned on for a connection, it draws power for about
     20 seconds, resulting in battery draining and a low-performance perception from
     the user's point of view. Hence, it is very important to reduce the number of
     connections as much as possible.
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 每次打开无线电进行连接时，它大约会消耗20秒的电力，这会导致从用户的角度来看电池耗电量大，性能感知低。因此，尽可能减少连接次数非常重要。
 - en: One of the possible strategies to apply in our application is to gather all
     the data to be exchanged between the client and the server and set it aside for
     future connections when the amount of data to transfer is enough. The idea is
     to reduce connections and to increase data to be transferred during every connection.
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以在应用程序中应用的可能策略之一是收集客户端和服务器之间所有要交换的数据，并在数据传输量足够时为将来的连接保留。这个想法是减少连接次数，并增加每次连接时传输的数据量。
 - en: An example of this is a classic analytics library. It can execute a connection
     when an event to be tracked occurs, or it can collect events to be transferred
     to the server when some events have been reached or when a time has passed. The
     second choice is preferable because it reduces communications and increases the
     data transferred for individual connections.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 一个典型的例子是经典的分析库。它可以在发生需要追踪的事件时执行连接，或者在达到某些事件数量或过了一定时间后，收集事件以便传输到服务器。第二个选择更为可取，因为它减少了通信次数并增加了单个连接传输的数据量。
 - en: Tip
+  id: totrans-84
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: When designing a client/server architecture, reducing the communications should
     always be a crucial point. Keeping this in mind could increase the application
     performance more than expected because, if well designed, this architecture can
     lead to populated screens and reduced communications.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 在设计客户端/服务器架构时，减少通信量应始终是一个关键点。牢记这一点可能会使应用程序性能超出预期，因为如果设计得当，这种架构可以导致屏幕内容丰富且通信量减少。
 - en: 'There are two main aspects of this pattern to use in our applications: we can
     execute a single request for more data, asking the server for information about
     multiple sections of our application to reduce requests, or we can batch multiple
     connections to avoid unnecessary radio operations that could drain the battery.
     Let''s go through them in the following pages.'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的应用程序中使用这种模式主要有两个方面：我们可以执行一个请求来获取更多数据，要求服务器提供有关我们应用程序多个部分的信息以减少请求，或者我们可以批量处理多个连接以避免不必要的无线电操作，这可能会耗尽电池电量。下面几页将详细介绍它们。
 - en: Prefetching
+  id: totrans-87
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 预取
 - en: A special technique to reduce connections and avoid empty screens on our applications
     is **prefetching**. The idea behind this is to download as much data as possible
     when a connection is available for different requests and sections of our application.
     So, when it is possible, we should let our application download data in the background
     to populate sections and anticipate user requests that could lead to the perception
     of low performance.
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 一种特殊的减少连接并避免应用程序出现空白屏幕的技术是**预取**。这个想法是，在连接可用时尽可能多地下载数据，用于我们应用程序的不同请求和部分。因此，在可能的情况下，我们应该让应用程序在后台下载数据，以填充部分内容并预测可能导致性能感知下降的用户请求。
 - en: It has to be designed because, if not well used, it can lead to battery drain
     and oversized bandwidth usage just for unused data downloads. Then, a good strategy
     is to use this pattern with latency gauging. Once we estimate the latency, as
     described in the *Latency gauging* section, we could use a different prefetching
     strategy with different levels of resources to request to the server, demanding
     the higher prefetching strategy for better connection opportunities in the future.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 这必须设计好，因为如果使用不当，它可能导致电池耗电和带宽过大，仅仅因为下载了未使用的数据。因此，一个好的策略是结合延迟评估来使用这种模式。一旦我们估计了延迟，如*延迟评估*部分所述，我们可以使用不同的预取策略和不同级别的资源向服务器请求，为未来更好的连接机会要求更高的预取策略。
 - en: Queuing connections
+  id: totrans-90
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 排队连接
 - en: 'There is a particular case for reducing the amount of time while the radio
     is turned on: if the requests will not be executed immediately, they can be queued
     for future batch connections. An example of this is the following code:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开启无线电的情况下减少时间有一个特殊情况：如果请求不会立即执行，它们可以排队等待未来的批量连接。以下代码就是这种情况的一个例子：
 - en: '[PRE3]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Caching responses
+  id: totrans-93
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 缓存响应
 - en: As mentioned before, the best way to save time, bandwidth, and battery charge
     is not to execute a network request at all. This is not always possible, but we
     can use caching techniques to reduce these requests. For this purpose, there are
     a couple of choices in terms of strategies to apply.
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，节省时间、带宽和电池电量的最佳方法是不执行任何网络请求。这并不总是可能的，但我们可以使用缓存技术来减少这些请求。为此，在策略应用方面有几个选择。
 - en: Refer to [Chapter 10](ch10.html "Chapter 10. Performance Tips"), *Performance
     Tips*, for more in -depth techniques for file and bitmap caching.
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 有关文件和位图缓存的更深入技术，请参考[第10章](ch10.html "第10章. 性能技巧")，*性能技巧*。
 - en: Cache control
+  id: totrans-96
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 缓存控制
 - en: Android Ice Cream Sandwich (API Level 14) provides a helpful API to save responses
     into the filesystem as a cache. We are talking about the `HttpResponseCache` class.
     It can be used to save and reuse responses when we are using the `HttpURLConnection`
     and the `HttpsURLConnection` classes.
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓冰淇淋三明治（API级别14）提供了一个有用的API，将响应保存到文件系统中作为缓存。我们所说的是`HttpResponseCache`类。当使用`HttpURLConnection`和`HttpsURLConnection`类时，它可以用来保存和重用响应。
 - en: 'The first thing to do to use it is to design the right cache size: it needs
     to have an upper limit to start deleting unnecessary entries to free disk space.
     Then, we need to find the right amount so as to have few deletions without wasting
     disk space. It depends on the type of request the application executes and the
     amount of data downloaded for every request. When you have chosen the cache size,
     you need to install the cache as follows at the start of the application:'
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用它的第一件事是设计合适的缓存大小：它需要有一个上限，以便开始删除不必要的条目来释放磁盘空间。然后，我们需要找到合适的数量，以便在不过分占用磁盘空间的情况下进行少量删除。这取决于应用程序执行请求的类型以及每个请求下载数据的量。选择缓存大小后，需要在应用程序开始时按以下方式安装缓存：
 - en: '[PRE4]'
+  id: totrans-99
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'This way, the response of every network request will be cached inside the application
     memory for future needs. We also need to flush the cache to let it be available
     on the next application start. Let''s do it inside the `Activity.onStop()` method:'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样，每个网络请求的响应将被缓存在应用程序内存中，以供将来需要。我们还需要在`Activity.onStop()`方法中刷新缓存，以便在下次应用程序启动时可用：
 - en: '[PRE5]'
+  id: totrans-101
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'The next step is to decide whether each request must be cached or not. Depending
     on our need for every request, we will have to specify the expected behavior inside
     the request headers using the following:'
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一步是决定是否必须缓存每个请求。根据我们对每个请求的需求，我们将不得不在请求头中使用以下内容指定预期行为：
 - en: '[PRE6]'
+  id: totrans-103
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'The `POLICY` value can be one of the following:'
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: '`POLICY`的值可以是以下之一：'
 - en: '`no-cache`: This way a complete refresh is requested. The whole data is downloaded.'
+  id: totrans-105
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`no-cache`：这种方式请求完整的刷新。整个数据将被下载。'
 - en: '`max-age=SECONDS`: The client will accept the response if its age is less than
     the value specified by `SECONDS`.'
+  id: totrans-106
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`max-age=SECONDS`：如果响应的年龄小于由`SECONDS`指定的值，客户端将接受该响应。'
 - en: '`max-stale=SECONDS`: The client will accept the response if its expiration
     is no more than the specified `SECONDS`.'
+  id: totrans-107
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`max-stale=SECONDS`：如果响应的过期时间不超过指定的`SECONDS`，客户端将接受该响应。'
 - en: '`only-if-cached`: The client is forced to use the cached response. The `URLConnection.getInputStream()`
     method can throw a `FileNotFoundException` if no cached response is available.'
+  id: totrans-108
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`only-if-cached`：强制客户端使用缓存响应。如果没有任何缓存响应可用，`URLConnection.getInputStream()`方法可能会抛出`FileNotFoundException`。'
 - en: Tip
+  id: totrans-109
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Network request caching is disabled by default. We can use the `HttpResponseCache`
     API to enable it. Once the `HttpResponseCache` API is enabled, it will be used
     for every network request from our application. Then, it is up to us to decide
     how to handle every single request cache.
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 网络请求缓存默认是禁用的。我们可以使用`HttpResponseCache` API来启用它。一旦启用了`HttpResponseCache` API，它将被用于我们应用程序的每个网络请求。然后，由我们决定如何处理每个请求缓存。
 - en: When you have access to the server implementation, the best choice is to delegate
     the server side to handle the expiration time of the requests using the `cache-control`
     header of the response. This way, you can change your strategy from remote, simply
     modifying the response header. Instead, if you do not have access to the server-side
     code, a strategy is required to handle the expiration date of the cached response,
     depending on the actual response header from the server.
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你可以访问服务器实现时，最佳选择是将服务器端处理请求过期时间的任务委托给响应的`cache-control`头部。这样，你可以从远程简单修改响应头部来改变策略。相反，如果你无法访问服务器端代码，就需要一个策略来处理缓存响应的过期日期，这取决于服务器端实际的响应头部。
 - en: Last-Modified
+  id: totrans-112
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: Last-Modified
 - en: When dealing with static remote resources, we can get the date of the last change
     on a particular resource. This can be done by reading the `Last-Modified` header
     in the response. In addition to that, we can also read the `Expire` header to
@@ -578,65 +760,94 @@
     together with the date of the last change and compare this date with the one coming
     from the server side. Hence, we apply our caching strategy to update the cached
     resource and to update the graphical layout.
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 在处理静态远程资源时，我们可以获取特定资源的最后修改日期。这可以通过读取响应中的`Last-Modified`头部来实现。此外，我们还可以读取`Expire`头部来了解内容是否仍然有效。一个好的做法是连同最后修改日期一起缓存资源，并将这个日期与服务器端的日期进行比较。因此，我们可以应用缓存策略来更新缓存资源以及图形布局。
 - en: 'The following snippet is an example of this header usage:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下代码段是此头部使用的一个示例：
 - en: '[PRE7]'
+  id: totrans-115
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: In this case, the caching strategy must be chosen and implemented separately.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这种情况下，必须单独选择并实现缓存策略。
 - en: If-Modified-Since
+  id: totrans-117
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: If-Modified-Since
 - en: 'There is another clever way to achieve the same result as the `Last-Modified`
     header case: it is the `If-Modified-Since` header. If the request contains the
     `If-Modified-Since` header with the date of the last time the client checked the
     resource, the server will respond with a different status code depending on the
     `Last-Modified` header:'
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 还有一种巧妙的方法可以达到与`Last-Modified`头部案例相同的结果：那就是`If-Modified-Since`头部。如果请求包含有`If-Modified-Since`头部，其中带有客户端上次检查资源的日期，服务器将根据`Last-Modified`头部的不同返回不同的状态码：
 - en: '`200`: The remote resource has been modified after the last time the client
     checked. The response contains the resource expected.'
+  id: totrans-119
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`200`：自上次客户端检查以来，远程资源已被修改。响应包含预期的资源。'
 - en: '`304`: The remote resource has not been modified. The response does not contain
     the content.'
+  id: totrans-120
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`304`：远程资源未修改。响应不包含内容。'
 - en: The smart thing here is that if the content has not been updated, it is not
     in the response and the payload is reduced, speeding up this kind of client/server
     communication. And more than this, if the server does not implement this HTTP
     1.1 policy, the client can ask for it anyway, always receiving a `200 OK` response.
     Hence, we could implement this logic in the client for future `If-Modified-Since`
     header reception of our backend.
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里聪明的地方在于，如果内容没有被更新，它就不会在响应中，从而减少了负载，加快了这种客户端/服务器通信的速度。而且更重要的是，如果服务器没有实现这个HTTP
+    1.1策略，客户端仍然可以请求它，总是收到一个`200 OK`的响应。因此，我们可以在客户端实现这个逻辑，以便将来接收我们后端服务的`If-Modified-Since`头部。
 - en: 'Let''s check how we can use this header. It can be used in an explicit way
     as shown in the following code:'
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看如何使用这个头部。它可以像以下代码所示的那样显式使用：
 - en: '[PRE8]'
+  id: totrans-123
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Otherwise, there is a particular method for the `HttpURLConnection` class to
     be used to enable the `If-Modified-Since` header in the request. It is in the
     following code snippet:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 否则，`HttpURLConnection`类有一个特别的方法可以用来启用请求中的`If-Modified-Since`头部。它包含在以下代码片段中：
 - en: '[PRE9]'
+  id: totrans-125
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Exponential back-off
+  id: totrans-126
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 指数退避
 - en: There are cases in which we cannot avoid polling. In those situations, we should
     take care of server issues when they occur and use a different strategy. When
     the server side is overloaded because of too many requests or the network traffic
@@ -647,34 +858,48 @@
     an error. This way, we give the server the chance to dispose of excessive requests
     and turn back into a normal state. Then, when the server is back to normal, we
     can resume the right polling interval.
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 有时我们无法避免轮询。在这些情况下，我们应该在出现问题时处理服务器问题，并使用不同的策略。当服务器因过多的请求或网络流量过大而无法处理时，它开始返回错误。对于这些情况，指数退避策略是正确的选择，可以减轻服务器因大量无用的请求而拒绝服务的压力。这种模式包括如果服务器用错误响应，则在后续请求之间增加暂停时间。这样，我们给服务器一个处理过多请求并恢复正常状态的机会。然后，当服务器恢复正常时，我们可以恢复正确的轮询间隔。
 - en: 'Let''s go through some code to understand better how to implement such a network
     pattern:'
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们通过一些代码来更好地理解如何实现这样的网络模式：
 - en: '[PRE10]'
+  id: totrans-129
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'There is also an implementation of this pattern in the HTTP Client library
     for Java by Google. We can add an `UnsuccesfulResponseHandler` to the `HttpRequest`
     object passing an `HttpBackOffUnsuccessfulResponseHandler` object. Moreover, an
     `ExponentialBackOff` object before execution can be implemented in the following
     way:'
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 谷歌为Java提供的HTTP客户端库中也有这种模式的实现。我们可以向`HttpRequest`对象添加一个`UnsuccesfulResponseHandler`，传递一个`HttpBackOffUnsuccessfulResponseHandler`对象。此外，可以在执行前实现一个`ExponentialBackOff`对象，如下所示：
 - en: '[PRE11]'
+  id: totrans-131
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: Remember not to use this pattern for server response codes that indicate a developing
     error. It does not make sense to apply it for a `400 (InvalidParameters)` or `404
     (NotFound)` response code.
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 请记住，不要将此模式用于表示开发错误的服务器响应码。对于`400 (InvalidParameters)`或`404 (NotFound)`响应码，应用它是没有意义的。
 - en: Polling versus pushing
+  id: totrans-133
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 轮询与推送
 - en: We discussed the importance of reducing the number of connections due to their
     effect on the battery and the overall performance of the application. There are
     many situations where we need to synchronize data from the server, and the first
@@ -686,53 +911,71 @@
     care about the type of connection used by the user, we could let him finish the
     available bandwidth in his contract, just to check if new data is available on
     the server.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们讨论了减少连接次数的重要性，因为它们对电池和应用的整体性能有影响。有许多情况我们需要从服务器同步数据，我们首先想到的是创建一个轮询系统以保持应用程序始终更新。然后，客户、产品所有者、项目经理等要求我们改善用户体验，我们减少了轮询间隔，导致应用程序不断向服务器请求更新，尤其是从不关闭连接，从而持续增加CPU的负担。此外，如果我们不关心用户使用的连接类型，我们可能会让他用完合同中可用的带宽，只是为了检查服务器上是否有新数据可用。
 - en: 'The opposite situation is the best one: when something changes in the server,
     it contacts the client to tell it what''s happened. This way, no unnecessary connections
     are made, and the client is always up-to-date. For this purpose, Google provides
     the Google Cloud Messaging framework.'
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 相反的情况是最佳情况：当服务器端发生更改时，它会联系客户端告知发生了什么。这种方式不会建立不必要的连接，并且客户端始终保持最新。为此，谷歌提供了谷歌云消息传递框架。
 - en: 'However, sometimes we cannot change the server implementation because we do
     not have access to the backend code. Anyway, we can improve the polling mechanism
     we designed by using a few clever tips:'
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，有时我们无法更改服务器实现，因为我们无法访问后端代码。无论如何，我们可以通过使用一些巧妙的技巧来改进我们设计的轮询机制：
 - en: 'Let the user decide which interval to use: this way the user is aware of how
     the application is behaving and can change that value if it is draining the battery
     or if a more accurate update is required.'
+  id: totrans-137
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 让用户决定使用哪个间隔：这样用户就能了解应用程序的行为，并在它耗电过多或需要更准确的更新时更改该值。
 - en: When using the `AlarmManager`, use an inexact repeating alarm to execute networking
     operations. The system will automatically batch multiple connections reducing
     the activity time of the radio.
+  id: totrans-138
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用`AlarmManager`时，使用非精确重复闹钟来执行网络操作。系统会自动批量处理多个连接，减少无线电的活动时间。
 - en: When polling is active, we can check the frequency of new data from the server
     and apply an exponential back-off pattern to wait for fresh data from the server,
     reducing the number of unnecessary connections. For example, if our application
     asks for updates and none of them are available, we can let the next request wait
     twice the time before execution and so on until a maximum is reached. When new
     data is available, then we can restore the default value and go on this way.
+  id: totrans-139
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当轮询处于激活状态时，我们可以检查服务器上新数据的频率，并应用指数退避模式等待服务器上的新数据，从而减少不必要的连接数量。例如，如果我们的应用程序请求更新，而没有任何更新可用，我们可以让下一个请求在执行前等待两倍的时间，以此类推，直到达到最大值。当有新数据可用时，我们可以恢复默认值并继续这种方式。
 - en: Provided APIs
+  id: totrans-140
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 提供的API
 - en: In the following pages, we want to deal with a couple of APIs provided by Google
     to improve the networking sector of our application and to help us develop what
     we discussed earlier in a better way.
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 在以下页面中，我们希望介绍谷歌提供的一些API，以改善应用程序的网络部分，并帮助我们以更好的方式开发之前讨论的内容。
 - en: SyncManager
+  id: totrans-142
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 同步管理器
 - en: The `SyncManager` API is provided to help developers design a good synchronization
     system between the server and the client in both directions. It is useful in those
     situations where we want to transfer data from the client to the server or vice
@@ -741,8 +984,10 @@
     the right choice and free us from developing all of the necessary code to do this.
     The framework expects your application to use `ContentProvider` to store data
     locally, ready to be synchronized with the server.
+  id: totrans-143
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SyncManager` API是为了帮助开发者在客户端和服务器之间设计良好的双向同步系统而提供的。在那些我们希望从客户端传输数据到服务器或反之，但不需要立即执行的情况中，它非常有用。在设计我们的应用程序时，框架提供了许多我们必须考虑的优势，因为它可能是正确的选择，并使我们从开发完成所有必要代码中解放出来。框架期望你的应用程序使用`ContentProvider`在本地存储数据，以便与服务器同步。'
 - en: It can add our tasks to a queue and execute them when the right conditions are
     satisfied depending on the requirement we want, such as delays or when data is
     changed, and so on. It can check if the connectivity is available and batch connections
@@ -750,151 +995,217 @@
     to synchronize data to a server with login credentials. This is not mandatory
     because you can handle the login management yourself, but you need to define the
     object that deals with authentication anyway.
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 它可以将我们的任务添加到队列中，并在满足我们想要的条件时执行它们，例如延迟或在数据更改时等。它可以检查连接性是否可用，并批量连接以减少无线活动时间。它还处理用户的登录信息，以便使用登录凭据将数据同步到服务器。这不是强制性的，因为你可以自己处理登录管理，但你需要定义处理认证的对象。
 - en: 'Once the framework is implemented in our application, a synchronization operation
     can be performed in several ways:'
+  id: totrans-145
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦在我们的应用程序中实现了框架，就可以通过多种方式执行同步操作：
 - en: 'When the server notifies the client that something has changed. This is the
     best way to avoid polling methods, as discussed earlier. The best way to do this
     is by using Google Cloud Messaging: when a message has been received, simply call
     the `ContentResolver.performSync()` method to start a new synchronization.'
+  id: totrans-146
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当服务器通知客户端某些内容已更改。这是避免轮询方法的最佳方式，如之前讨论的。最好的方法是使用Google Cloud Messaging：当收到消息时，只需调用`ContentResolver.performSync()`方法来开始新的同步。
 - en: When something changes in the client and then a synchronization is needed to
     have updated information in the remote service. As with the previous case, call
     the `ContentResolver.performSync()` method.
+  id: totrans-147
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当客户端发生某些变化，需要同步以使远程服务中的信息保持更新。与前面的情况一样，调用`ContentResolver.performSync()`方法。
 - en: When the system notifies that it is the right moment to do it because there
     is a connection open for many other connections. This time, we need to use the
     `ContentResolver.setSyncAutomatically()` method.
+  id: totrans-148
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当系统通知现在是合适的时间去做这件事，因为有一个为许多其他连接打开的连接。这时，我们需要使用`ContentResolver.setSyncAutomatically()`方法。
 - en: When an interval expires due to the required recurring synchronization operations.
     Use the `ContentResolver.addPeriodicSync()` method, specifying the interval.
+  id: totrans-149
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当由于需要定期同步操作而间隔时间到期时。使用`ContentResolver.addPeriodicSync()`方法，指定间隔。
 - en: When we want to start a new synchronization without any particular condition.
     In this case, call the `ContentResolver.performSync()` method.
+  id: totrans-150
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当我们希望在没有任何特定条件的情况下开始新的同步时。在这种情况下，调用`ContentResolver.performSync()`方法。
 - en: Let's go through the framework implementation in the following paragraphs.
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们在以下段落中了解框架的实现。
 - en: Authenticator
+  id: totrans-152
   prefs:
   - PREF_H4
   type: TYPE_NORMAL
+  zh: 认证器
 - en: 'The `Authenticator` class can be created by extending the `AbstractAccountAuthenticator`
     class and implementing every abstract method you need to provide the correct authentication
     on the server. The following snippet shows what method we need to implement (if
     you do not have authentication, you can use this default implementation and employ
     it as a mock-up):'
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Authenticator`类可以通过继承`AbstractAccountAuthenticator`类并实现需要提供服务器上正确认证的每个抽象方法来创建。下面的代码段显示了我们需要实现的方法（如果没有认证，你可以使用这个默认实现并将其作为模拟）：'
 - en: '[PRE12]'
+  id: totrans-154
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'For our `Authenticator` to work, we need to create a bound service to provide
     access to the `Authenticator`. It can be just a simple service such as the one
     in the following snippet:'
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了使我们的`Authenticator`工作，我们需要创建一个绑定服务以提供对`Authenticator`的访问。它可以像下面代码段中的简单服务：
 - en: '[PRE13]'
+  id: totrans-156
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'The authenticator parameters need to be declared inside an XML file in the
     following way:'
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 身份验证器的参数需要在XML文件中以以下方式声明：
 - en: '[PRE14]'
+  id: totrans-158
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'And, finally we need to add the `service` to the manifest file specifying the
     recently created authenticator:'
+  id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们需要在清单文件中添加`service`，并指定最近创建的身份验证器：
 - en: '[PRE15]'
+  id: totrans-160
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: SyncAdapter
+  id: totrans-161
   prefs:
   - PREF_H4
   type: TYPE_NORMAL
+  zh: 同步适配器
 - en: 'The `SyncAdapter` class performs the synchronization between server and the
     client. It can be created by extending the `AbstractThreadedSyncAdapter` class
     as in the following way:'
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SyncAdapter`类负责在服务器和客户端之间执行同步。可以通过以下方式扩展`AbstractThreadedSyncAdapter`类来创建：'
 - en: '[PRE16]'
+  id: totrans-163
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: The `ContentResolver` class is used to query `ContentProvider` in the `SyncAdapter.onPerformSync()`
     method. The framework doesn't download or upload data, nor does it deal with `ContentProvider`.
     We need to do it as we need it, but the `SyncAdapter.onPerformSync()` method is
     executed in a background thread, so we don't need to create a new one for this
     purpose.
+  id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ContentResolver`类用于在`SyncAdapter.onPerformSync()`方法中查询`ContentProvider`。框架不下载或上传数据，也不处理`ContentProvider`。我们需要根据需要自行处理，但`SyncAdapter.onPerformSync()`方法在后台线程中执行，因此我们无需为此目的创建新的线程。'
 - en: 'As for the `Authenticator` class, we need a bound service for this `SyncAdapter`
     too: this way we can have a reference to `SyncAdapter` from the bound component
     to start a new synchronization whenever we want. To do this, we can create the
     following service, being careful to instantiate the `SyncAdapter` in the `Service.onCreate()`
     method to use it as a singleton:'
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于`Authenticator`类，我们需要为这个`SyncAdapter`也提供一个绑定的服务：这样我们就可以从绑定组件中引用`SyncAdapter`，以便在我们想要时启动新的同步。为此，我们可以创建以下服务，并小心地在`Service.onCreate()`方法中实例化`SyncAdapter`以作为单例使用：
 - en: '[PRE17]'
+  id: totrans-166
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'The `SyncAdapter` parameters must be declared inside an XML file in the following
     way:'
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: '`SyncAdapter`的参数必须在XML文件中以下列方式声明：'
 - en: '[PRE18]'
+  id: totrans-168
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'Finally, we need to declare the service inside the manifest file with the information
     about the provided `SyncAdapter`:'
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们需要在清单文件中声明服务，并提供有关提供的`SyncAdapter`的信息：
 - en: '[PRE19]'
+  id: totrans-170
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Android N changes
+  id: totrans-171
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Android N的变化
 - en: 'Android N introduced a couple of changes into the system behavior from a networking
     perspective. We need to be aware of these because they lead to unwanted results
     if not well understood. They are the following:'
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 从网络的角度来看，Android N在系统行为中引入了一些变化。我们需要了解这些变化，因为如果不理解清楚，它们可能导致不想要的结果。以下是这些变化：
 - en: '**Data Saver**: This is a new mode that user can enable to save expensive data
     usage in the background and the `ConnectivityManager` class provides a new way
     to access those settings'
+  id: totrans-173
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**数据节省器**：这是一个新模式，用户可以启用它以在后台节省昂贵的数据使用，`ConnectivityManager`类提供了一种新的方式来访问这些设置'
 - en: '**Background optimizations**: A broadcast to notify the application that something
     changed in the connectivity will no longer be sent'
+  id: totrans-174
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**后台优化**：不再发送通知应用程序连接性已发生变化的广播'
 - en: Let's go through these changes in the following pages to understand what we
     can do if we target our application with the new Android N SDK.
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 在接下来的几页中，我们将通过这些变化来了解如果我们针对新的Android N SDK的应用程序，我们能做什么。
 - en: Data Saver
+  id: totrans-176
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 数据节省器
 - en: 'With the new **Data Saver** feature, introduced in Android N, the user can
     save data traffic to prevent unexpected expenses on his/her data plan. How can
     the user apply these policies? Inside the **Device settings** option, the user
@@ -902,109 +1213,159 @@
     not allowed to receive data in background are allowed to read the user preferences
     and their changes. *Figure 3* shows what the new **Data Saver** feature looks
     like on a device with the new Android N:'
+  id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android N中引入的新**数据节省器**功能，用户可以通过防止数据计划中的意外费用来节省数据流量。用户如何应用这些策略？在**设备设置**选项中，用户可以检查单个应用程序在后台时访问数据。不允许在后台接收数据的应用程序可以读取用户偏好及其更改。*图3*展示了在搭载新Android
+    N的设备上，新的**数据节省器**功能的外观：
 - en: '![Data Saver](img/4666_06_03.jpg)'
+  id: totrans-178
   prefs: []
   type: TYPE_IMG
+  zh: '![数据节省器](img/4666_06_03.jpg)'
 - en: 'Figure 3: Data Saver feature inside Device settings and its details'
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 图3：设备设置内的数据节省器功能及其详情
 - en: 'Let''s see how it works. The Android N SDK provides new methods in the `ConnectionManager`
     API to check user preferences. The main method to do this is:'
+  id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看它是如何工作的。Android N SDK在`ConnectionManager` API中提供了新的方法来检查用户偏好。主要方法是：
 - en: '[PRE20]'
+  id: totrans-181
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'It returns one of the following:'
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 它返回以下之一：
 - en: '`RESTRICT_BACKGROUND_STATUS_DISABLED`: Returned when **Data Saver** is disabled.'
+  id: totrans-183
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`RESTRICT_BACKGROUND_STATUS_DISABLED`：当**数据节省器**被禁用时返回。'
 - en: '`RESTRICT_BACKGROUND_STATUS_ENABLED`: Returned when **Data Saver** is enabled;
     now the application shouldn''t use the network in the background.'
+  id: totrans-184
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`RESTRICT_BACKGROUND_STATUS_ENABLED`：当启用 **数据节省** 时返回；现在应用程序不应当在后台使用网络。'
 - en: '`RESTRICT_BACKGROUND_STATUS_WHITELISTED`: Returned when **Data Saver** is enabled,
     but the application is whitelisted. The application should limit network requests
     while **Data Saver** is enabled even if the application is whitelisted.'
+  id: totrans-185
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`RESTRICT_BACKGROUND_STATUS_WHITELISTED`：当启用 **数据节省** 但应用程序被列入白名单时返回。即使应用程序被列入白名单，在启用
+    **数据节省** 时，应用程序也应限制网络请求。'
 - en: The application should meet user-expected performance in every context. That
     is the reason why we should use this API to check user preferences, and then change
     the application behavior depending on that.
+  id: totrans-186
   prefs: []
   type: TYPE_NORMAL
+  zh: 应用程序应在每种情境下都满足用户的性能预期。这就是为什么我们应该使用此API来检查用户偏好，然后根据这些偏好来改变应用程序行为的原因。
 - en: Once we have checked the user preference for **Data Saver**, we should check
     if the current connection type is a metered one. A **metered connection** is a
     connection that shouldn't be used to download big amounts of data because of cost
     issues and data plans. To know if the current connection is a metered one, we
     can use the `ConnectivityManager.isActiveNetworkMetered()` method.
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦我们检查了用户对 **数据节省** 的偏好，我们就应该检查当前连接类型是否为计量的。一个 **计量连接** 是指由于费用和数据计划问题，不应用来下载大量数据的连接。要了解当前连接是否为计量连接，我们可以使用
+    `ConnectivityManager.isActiveNetworkMetered()` 方法。
 - en: 'Check the following code to understand how to handle this situation while dealing
     with both **Data Saver** settings and metered networks:'
+  id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查以下代码，了解如何同时处理 **数据节省** 设置和计量网络的情况：
 - en: '[PRE21]'
+  id: totrans-189
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: The new API also provides a way to listen to changes in the user preferences
     related to **Data Saver**. To do this, we just need to register `BroadcastReceiver`
     to listen to the newly added `ConnectionManager.ACTION_RESTRICT_BACKGROUND_CHANGE`
     action.
+  id: totrans-190
   prefs: []
   type: TYPE_NORMAL
+  zh: 新API还提供了一种监听与 **数据节省** 相关的用户偏好变化的方法。为此，我们只需注册 `BroadcastReceiver` 来监听新添加的 `ConnectionManager.ACTION_RESTRICT_BACKGROUND_CHANGE`
+    动作。
 - en: 'When such an action is received by our `BroadcastReceiver`, we should check
     both the active network and the **Data Saver** option''s new preference as described
     in the previous paragraph and then, as a consequence, operate so as to let the
     application have the proper behavior as expected by the user:'
+  id: totrans-191
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们的 `BroadcastReceiver` 收到此类动作时，我们应该检查活动网络和 **数据节省** 选项的新偏好，如前一段所述，然后相应地操作，以便应用程序能够展现出用户预期的适当行为：
 - en: '[PRE22]'
+  id: totrans-192
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: This particular event won't be delivered to applications that declared an implicit
     `BroadcastReceiver` to listen to it. This particular policy limits background
     work; we will explain this in the following pages.
+  id: totrans-193
   prefs: []
   type: TYPE_NORMAL
+  zh: 此特定事件不会传递给声明了隐式 `BroadcastReceiver` 来监听它的应用程序。这一特定政策限制了后台工作；我们将在后续页面中进行解释。
 - en: Background optimization
+  id: totrans-194
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 后台优化
 - en: We already explored this topic in [Chapter 4](ch04.html "Chapter 4. Memory"),
     *Memory*, while discussing the memory impact of connection changes on background
     processes. We want to go through this in a networking perspective to understand
     how to change the way our application works in the background.
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在[第4章](ch04.html "第4章. 内存") *内存* 中探讨了这一主题，当时讨论了连接变化对后台进程内存的影响。我们希望从网络的角度再次审视这个问题，以了解如何改变应用程序在后台的工作方式。
 - en: 'What has really changed with Android N? There is a particular action that can
     be delivered to the application using the Android `BroadcastReceiver` class''s
     main components. As we know, `BroadcastReceiver`, with its intent, can be registered
     in two main ways:'
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓N真正改变了什么？有一个特定的动作可以通过使用Android `BroadcastReceiver` 类的主要组件传递给应用程序。我们知道，`BroadcastReceiver`
+    可以通过意图以两种主要方式进行注册：
 - en: '**Implicitly**: You can declare an intent filter object for the component inside
     the manifest file'
+  id: totrans-197
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**隐式地**：你可以在清单文件中为组件声明一个意图过滤器对象。'
 - en: '**Explicitly**: You can register `BroadcastReceiver` by using the `Context.registerReceiver()`
     method inside the component itself'
+  id: totrans-198
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**显式地**：你可以在组件内部使用 `Context.registerReceiver()` 方法注册 `BroadcastReceiver`。'
 - en: The difference between them from a component status perspective is that if,
     you use the explicit method, the component is already created, while, using the
     implicit one, you start a new instance of the component. This behavior leads to
     background operations being executed and then extra effort is required by the
     system; this affects resources, memory, and the battery.
+  id: totrans-199
   prefs: []
   type: TYPE_NORMAL
 - en: 'For this reason, Google decided to change this behavior for a particular action:
@@ -1012,6 +1373,7 @@
     Android N, this action will be received just by the components that registered
     a receiver and then in an explicit way; however, if the implicit way is used,
     the component will no longer receive it.'
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
 - en: 'As we will see in the following pages, this could be really useful to know
@@ -1019,13 +1381,16 @@
     in the background and then update some data to prefetch content. This won''t be
     possible when starting from Android N, but there are a couple of alternatives
     Google provides to reach this target in other ways:'
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
 - en: '`JobScheduler`'
+  id: totrans-202
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`GcmNetworkManager`'
+  id: totrans-203
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
@@ -1033,46 +1398,56 @@
     conditions are met before starting a new communication with an external resource.
     Then, we can schedule operations to prefetch data as we were doing before, without
     taking note of certain conditions.
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
 - en: GcmNetworkManager
+  id: totrans-205
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
 - en: 'Google provides a helpful API called `GcmNetworkManager`. It is available inside
     the Google Cloud Messaging package of the Google Services API. It encapsulates
     the patterns discussed earlier and adds more features. It provides for:'
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
 - en: Scheduling one-off tasks
+  id: totrans-207
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Scheduling periodic tasks
+  id: totrans-208
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Exponential back-off retry implementation: in the case of errors, the task
     can be scheduled again using an exponential back-off retry strategy'
+  id: totrans-209
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Service implementation: the state of the task is independent of the application
     implementation and can be persisted over restarts and reboots'
+  id: totrans-210
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Network state-dependant task schedulation: a task can be scheduled to be executed
     only if a particular network state is required'
+  id: totrans-211
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Device charging state task schedulation: a task can be scheduled to be executed
     only if the device is in charging mode'
+  id: totrans-212
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The service implementation
+  id: totrans-213
   prefs:
   - PREF_H4
   type: TYPE_NORMAL
@@ -1080,11 +1455,14 @@
     of different situations. Let''s go through its implementation with the following
     code. First of all, we need to create our service by extending the `GcmTaskService`
     class:'
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE23]'
+  id: totrans-215
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'The `GcmTaskService.onRunTask()` method is where we should develop our request.
     The `TaskParameter` object used as a parameter is useful in order to identify
     which request has been asked for inside the `TaskParams.getTag()` method and optionally
@@ -1092,71 +1470,94 @@
     is created for every new request: hence, the `GcmTaskService.onRunTask()` method
     is executed in a worker thread and we don''t need to worry about the creation
     of a new thread for this purpose.'
+  id: totrans-216
   prefs: []
   type: TYPE_NORMAL
 - en: 'When the request code is executed we need to return the integer value indicating
     what to do next:'
+  id: totrans-217
   prefs: []
   type: TYPE_NORMAL
 - en: '`GcmNetworkManager.RESULT_SUCCESS`: The task has been executed with no errors
     and can be removed from the queue'
+  id: totrans-218
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`GcmNetworkManager.RESULT_FAILURE`: The task encountered some errors and failed,
     but it has to be removed from the queue anyway'
+  id: totrans-219
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`GcmNetworkManager.RESULT_RESCHEDULE`: The task failed, but we want it to be
     executed again later with the back-off strategy'
+  id: totrans-220
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'As it is a `service`, we must declare it inside the manifest file:'
+  id: totrans-221
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE24]'
+  id: totrans-222
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Task scheduling
+  id: totrans-223
   prefs:
   - PREF_H4
   type: TYPE_NORMAL
 - en: 'Let''s see how to schedule a task. First, we need to get the `GcmNetworkManager`
     instance:'
+  id: totrans-224
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE25]'
+  id: totrans-225
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Then, we need to create a task by using one of the `Task` subclasses:'
+  id: totrans-226
   prefs: []
   type: TYPE_NORMAL
 - en: '`OneoffTask`:'
+  id: totrans-227
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE26]'
+  id: totrans-228
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: '`PeriodicTask`:'
+  id: totrans-229
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE27]'
+  id: totrans-230
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Finally, we need to schedule the task using the `GcmNetworkManager` instance
     in the following way:'
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE28]'
+  id: totrans-232
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: Task features
+  id: totrans-233
   prefs:
   - PREF_H4
   type: TYPE_NORMAL
@@ -1164,51 +1565,62 @@
     at more closely because most of the flexibility of this API lies in those parameters.
     They inherit common parameters from the `Task` class: hence, we will look at them
     in the following pages.'
+  id: totrans-234
   prefs: []
   type: TYPE_NORMAL
 - en: Task
+  id: totrans-235
   prefs:
   - PREF_H4
   type: TYPE_NORMAL
 - en: 'Every `Task` contains the following parameters:'
+  id: totrans-236
   prefs: []
   type: TYPE_NORMAL
 - en: '`string tag`: This is the identifier of the task used to start the correct
     code to be executed inside the implementation of `GcmTaskService`.'
+  id: totrans-237
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`bundle extras`: This is used to pass extras to `Service` and execute the task
     correctly.'
+  id: totrans-238
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`class service`: It is the identifier of the `GcmTaskService` to be used to
     handle the scheduling.'
+  id: totrans-239
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`boolean isPersisted`: If set to `true`, the task will be persisted and will
     be executed after reboots. It will work only if the caller holds the right permission
     to receive the boot completed event:'
+  id: totrans-240
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE29]'
+  id: totrans-241
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: '`int requiredNetworkState`: This is used to specify the particular behavior
     needed depending on the network connection state at the moment of the execution.
     This means that the connection is checked just before starting the execution,
     but the connection can be lost shortly depending on the network state. Hence,
     we should always handle the case of absence of connectivity, no matter what value
     we choose. The possible values are the following:'
+  id: totrans-242
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`Task.NETWORK_STATE_ANY`: The task is executed anyway, regardless of the connection
     state.'
+  id: totrans-243
   prefs:
   - PREF_IND
   - PREF_UL
@@ -1216,6 +1628,7 @@
 - en: '`Task.NETWORK_STATE_CONNECTED`: The task is executed only if a data connection
     is active. Otherwise, the task is delayed until a connection is available. This
     is the default value.'
+  id: totrans-244
   prefs:
   - PREF_IND
   - PREF_UL
@@ -1223,71 +1636,97 @@
 - en: '`Task.NETWORK_STATE_UNMETERED`: The task is executed only if an unmetered connection
     is available. Otherwise, the task will be pending until an unmetered connection
     is available.'
+  id: totrans-245
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Task.NETWORK_STATE_UNMETERED`：只有在不受限制的连接可用时才会执行任务。否则，任务将挂起，直到有不受限制的连接可用。'
 - en: '`boolean requiresCharging`: This is used to specify the device charging state
     needed to execute the task. It can be useful to wait for a charging operation
     to execute particularly expensive operations. As for the network state, if the
     value set is `true` and charging is `off`, the task will not be executed until
     charging is on.'
+  id: totrans-246
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`boolean requiresCharging`：这用于指定执行任务所需的设备充电状态。在执行特别耗资源的操作时，等待充电操作可能很有用。至于网络状态，如果设置的值为`true`且不在充电状态，那么在开启充电之前任务将不会执行。'
 - en: '`boolean updateCurrent`: This is useful to correct an older scheduled task
     and override it with a new task. The default is `false`; hence, a new task is
     scheduled every time.'
+  id: totrans-247
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`boolean updateCurrent`：这有助于修正较旧的计划任务，并用新任务覆盖它。默认为`false`；因此，每次都会计划一个新任务。'
 - en: OneoffTask
+  id: totrans-248
   prefs:
   - PREF_H4
   type: TYPE_NORMAL
+  zh: OneoffTask
 - en: '`OneoffTask` allows us to specify an execution window to schedule the task.
     It has the following parameters:'
+  id: totrans-249
   prefs: []
   type: TYPE_NORMAL
+  zh: '`OneoffTask`允许我们指定一个执行窗口来计划任务。它有以下参数：'
 - en: '`long windowStartDelay`: This indicates the execution starting point for the
     task. This means it can be delayed in the future.'
+  id: totrans-250
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`long windowStartDelay`：这表示任务的执行起点。这意味着它可以在将来延迟。'
 - en: '`long windowEndDelay`: This specifies the execution ending point for the task.'
+  id: totrans-251
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`long windowEndDelay`：这指定了任务的执行结束点。'
 - en: PeriodicTask
+  id: totrans-252
   prefs:
   - PREF_H4
   type: TYPE_NORMAL
+  zh: PeriodicTask
 - en: '`PeriodicTask` adds the following parameters to the task:'
+  id: totrans-253
   prefs: []
   type: TYPE_NORMAL
+  zh: '`PeriodicTask`为任务添加以下参数：'
 - en: '`long flex`: This sets a flexibility when calculating the right moment to execute
     the task. For example, if the period is 60 seconds and the flex value is 10 seconds,
     the right moment to execute the task will be set by the scheduler to be between
     the 50 and 60 seconds. This is useful to let the scheduler choose the best network
     conditions to execute the task.'
+  id: totrans-254
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`long flex`：这设置在计算执行任务的最佳时机时的灵活性。例如，如果周期是60秒，而flex值为10秒，那么任务执行的正确时刻将由调度程序设置为50到60秒之间。这有助于让调度程序选择执行任务的最佳网络条件。'
 - en: '`long period`: This specifies the recurring period to execute the task in the
     future.'
+  id: totrans-255
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`long period`：这指定了将来执行任务的周期性周期。'
 - en: Debugging tools
+  id: totrans-256
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 调试工具
 - en: When in the debug phase, from the networking point of view, we need flexible
     tools let us test our application in different connectivity conditions, checking
     what we are transmitting over the network, how we are doing it, how we handle
     and cache responses, and if the communications are safe and secure.
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 在调试阶段，从网络的角度来看，我们需要灵活的工具来让我们在不同的连接条件下测试我们的应用程序，检查我们在网络上传输的内容，我们是如何做到的，我们如何处理和缓存响应，以及通信是否安全和可靠。
 - en: In the following sections we want to discuss the new `adb` command introduced
     to support the changes inside the new Android N SDK. And, then, besides the Android
     tools we discussed previously in [Chapter 2](ch02.html "Chapter 2. Efficient Debugging"),
@@ -1296,178 +1735,253 @@
     analyze the networking performance of the application and intercept the network
     communication to be analyzed in detail, to improve it by using the patterns we
     discussed earlier in this chapter.
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: 在以下章节中，我们想要讨论的是为了支持新Android N SDK内部变化而引入的新`adb`命令。而且，除了之前在[第2章](ch02.html "第2章.
+    高效调试") *高效调试* 中讨论的Android工具，如网络统计工具和`TrafficStats` API，我们还想简要介绍一些有帮助的工具。这些工具可以让我们分析应用程序的网络性能，并拦截网络通信以便进行详细分析，从而使用本章前面讨论的模式来改进它。
 - en: Android N Networking ADB tool
+  id: totrans-259
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Android N网络ADB工具
 - en: As discussed in the previous pages, Android N introduced new restrictions on
     data network background usage. Consequently, it provides commands inside `adb`
     to properly debug and check our implementation.
+  id: totrans-260
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，Android N对数据网络后台使用引入了新的限制。因此，它在`adb`内提供了命令，以正确调试和检查我们的实现。
 - en: 'The new commands are the following:'
+  id: totrans-261
   prefs: []
   type: TYPE_NORMAL
+  zh: 新的命令如下：
 - en: '`adb shell dumpsys netpolicy`: This is used to generate a report regarding
     the restriction setting on the network'
+  id: totrans-262
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`adb shell dumpsys netpolicy`：这用于生成关于网络限制设置的报告。'
 - en: '`adb shell cmd netpolicy`: This is used to check all the commands related to
     the netpolicy'
+  id: totrans-263
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`adb shell cmd netpolicy`：这用于检查与netpolicy相关的所有命令。'
 - en: '`adb shell cmd netpolicy set restrict-background <boolean>`: This is used to
     enable or disable the **Data Saver** feature'
+  id: totrans-264
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`adb shell cmd netpolicy set restrict-background <boolean>`：用于启用或禁用**数据节省**功能。'
 - en: '`adb shell cmd netpolicy add restrict-background-whitelist <UID>`: This is
     used to add a specific package to the whitelisted applications'
+  id: totrans-265
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`adb shell cmd netpolicy add restrict-background-whitelist <UID>`：用于将特定包添加到白名单应用程序中。'
 - en: '`adb shell cmd netpolicy remove restrict-background-whitelist <UID>`: This
     is used to remove a specific application package from the list of the whitelisted
     ones'
+  id: totrans-266
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`adb shell cmd netpolicy remove restrict-background-whitelist <UID>`：用于从白名单中移除特定的应用程序包。'
 - en: Fiddler
+  id: totrans-267
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Fiddler
 - en: Fiddler is a debugging tool used as a proxy server as it is able to capture
     HTTP and HTTPS requests on the network acting as a **Man-in-the Middle** (**MITM**).
     Besides this, it can intercept requests and change responses to test different
     use case of our application.
+  id: totrans-268
   prefs: []
   type: TYPE_NORMAL
+  zh: Fiddler是一个用作代理服务器的调试工具，它能够捕获网络上的HTTP和HTTPS请求，充当**中间人**（**MITM**）。除此之外，它还可以拦截请求并更改响应，以测试我们应用程序的不同使用场景。
 - en: 'This tool is used in a lot of different contexts, but for our Android application
     we need to configure the device to pass through the Fiddler network and use it
     as a proxy server: hence, follow the steps given here to configure the proxy:'
+  id: totrans-269
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个工具在许多不同的环境中被使用，但对于我们的Android应用程序，我们需要配置设备以通过Fiddler网络，并将其作为代理服务器：因此，按照这里给出的步骤配置代理：
 - en: Open the device Wi-Fi settings
+  id: totrans-270
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 打开设备的Wi-Fi设置。
 - en: Tap and hold on the network where Fiddler is
+  id: totrans-271
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Fiddler所在的网络上长按。
 - en: Click on **Modify network** on the dialog
+  id: totrans-272
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在对话框上点击**修改网络**。
 - en: Enable the advanced options by checking the **Show advanced options** checkbox
+  id: totrans-273
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 通过勾选**显示高级选项**复选框来启用高级选项。
 - en: Set **Proxy Settings** as **Manual**
+  id: totrans-274
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 将**代理设置**设置为**手动**。
 - en: Enter the IP address of the Fiddler PC in the **Proxy hostname**
+  id: totrans-275
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在**代理主机名**中输入Fiddler电脑的IP地址。
 - en: Enter the Fiddler port **Proxy port**
+  id: totrans-276
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 输入Fiddler端口**代理端口**。
 - en: 'The graphical interface of Fiddler is illustrated in *Figure 3*:'
+  id: totrans-277
   prefs: []
   type: TYPE_NORMAL
+  zh: Fiddler的图形界面在*图3*中说明：
 - en: '![Fiddler](img/4666_06_05.jpg)'
+  id: totrans-278
   prefs: []
   type: TYPE_IMG
+  zh: '![Fiddler](img/4666_06_05.jpg)'
 - en: 'Figure 3: The Fiddler interface'
+  id: totrans-279
   prefs: []
   type: TYPE_NORMAL
+  zh: 图3：Fiddler界面
 - en: Using this tool, we have access to many features to debug our application communication
     and many extensions to add to the tool to improve its functionality and do what
     we need to improve our networking debugging skills.
+  id: totrans-280
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用这个工具，我们可以访问许多功能来调试我们的应用程序通信，并添加许多扩展来增强其功能，从而提高我们的网络调试技能。
 - en: Wireshark
+  id: totrans-281
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Wireshark
 - en: Wireshark is a free multiplatform tool designed to analyze data packets collected
     from a connection. It acts like a man-in-the-middle. You need to connect your
     device to the desktop network in order to get the information. You can connect
     the device with a USB port, via Bluetooth, or by creating a Wi-Fi hotspot. There
     are lots of different tools to do this, even inside the Wireshark package itself.
+  id: totrans-282
   prefs: []
   type: TYPE_NORMAL
+  zh: Wireshark是一个免费的多平台工具，旨在分析从连接中收集的数据包。它像一个中间人一样工作。你需要将你的设备连接到桌面网络以获取信息。你可以通过USB端口、蓝牙或创建Wi-Fi热点来连接设备。有很多不同的工具可以做到这一点，甚至在Wireshark软件包内部也有。
 - en: 'The capture of every single packet from WireShark is shown in *Figure 4*:'
+  id: totrans-283
   prefs: []
   type: TYPE_NORMAL
+  zh: WireShark捕获的每个单独数据包在*图4*中显示：
 - en: '![Wireshark](img/4666_06_04.jpg)'
+  id: totrans-284
   prefs: []
   type: TYPE_IMG
+  zh: '![Wireshark](img/4666_06_04.jpg)'
 - en: 'Figure 4: Collected packets in Wireshark'
+  id: totrans-285
   prefs: []
   type: TYPE_NORMAL
+  zh: 图4：Wireshark中收集的数据包。
 - en: The content of a capture can be filtered in several ways to find the particular
     packet type we are interested in. For this reason, this tool is one of the most
     flexible and appreciated packet analyzers.
+  id: totrans-286
   prefs: []
   type: TYPE_NORMAL
+  zh: 捕获的内容可以通过多种方式过滤，以找到我们感兴趣的特殊数据包类型。因此，这个工具是最灵活和受欢迎的数据包分析器之一。
 - en: Application Resource Optimizer
+  id: totrans-287
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 应用程序资源优化器
 - en: 'The AT&T **Application Resource Optimizer** (called **ARO** in the following
     pages) is a great tool for desktops to find improvements in our networking strategy.
     It checks a list of defined points of improvement and suggests what to do. There''s
     no need for root permissions. It can be used on every device and uses two consecutive
     steps:'
+  id: totrans-288
   prefs: []
   type: TYPE_NORMAL
+  zh: AT&T的**应用程序资源优化器**（在以下页面中称为**ARO**）是一个用于在桌面查找网络策略改进的好工具。它检查一系列定义的改进点，并给出建议。无需root权限。它可以在每个设备上使用，并采用两个连续的步骤：
 - en: '**Data collection**: It collects data by registering a video and tracing the
     network requests'
+  id: totrans-289
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**数据收集**：通过注册视频和追踪网络请求来收集数据。'
 - en: '**Data analysis**: It analyzes the networking of the application by checking
     25 best practices'
+  id: totrans-290
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**数据分析**：通过检查25项最佳实践来分析应用程序的网络连接。'
 - en: 'A VPN is required to collect data, but the application will automatically install
     what is needed to create one on the device. Then, to start the collection, click
     on **Data Collector** and then on **Start Collector**. Navigate your application
     on the device and, when done, click on **Data Collector** and **Stop Collector**
     on the ARO application on the desktop. ARO will analyze data and then it will
     show the results in a graphical way, as shown in *Figure 5*:'
+  id: totrans-291
   prefs: []
   type: TYPE_NORMAL
 - en: '![Application Resource Optimizer](img/4666_06_06.jpg)'
+  id: totrans-292
   prefs: []
   type: TYPE_IMG
 - en: 'Figure 5: AT&T Application Resource Optimizer results'
+  id: totrans-293
   prefs: []
   type: TYPE_NORMAL
 - en: ARO shows the result for every one of the analyzed best practices and we can
     check each in detail to understand what went wrong and how to fix it.
+  id: totrans-294
   prefs: []
   type: TYPE_NORMAL
 - en: 'Its Waterfall view can also be used to understand the timings of every single
     connection and check what is slowing down the responses, as shown in *Figure 6*:'
+  id: totrans-295
   prefs: []
   type: TYPE_NORMAL
 - en: '![Application Resource Optimizer](img/4666_06_07.jpg)'
+  id: totrans-296
   prefs: []
   type: TYPE_IMG
 - en: 'Figure 7: ARO Waterfall view'
+  id: totrans-297
   prefs: []
   type: TYPE_NORMAL
 - en: Network attenuation
+  id: totrans-298
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -1477,114 +1991,147 @@
     a couple of options to choose from. That is why, in the following, we will go
     with tools that can let us change those values for locally connected devices and
     then we will deal with the advanced management of emulator speed and delay.
+  id: totrans-299
   prefs: []
   type: TYPE_NORMAL
 - en: Speed and delay emulation
+  id: totrans-300
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: The graphical emulator controller allows us to set only pre-set values for both
     speed and latency. Anyhow, the command-line emulator controller has the possibility
     to set and change them using custom values, even if the emulator is running.
+  id: totrans-301
   prefs: []
   type: TYPE_NORMAL
 - en: 'To set a speed and start an emulator, we can run the following command:'
+  id: totrans-302
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE30]'
+  id: totrans-303
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Where `<speed>` can be one of the following:'
+  id: totrans-304
   prefs: []
   type: TYPE_NORMAL
 - en: '`gsm`: Upload speed: 14.4 kbps, download speed: 14.4 kbps'
+  id: totrans-305
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`hscsd`: Upload speed: 14.4 kbps, download speed: 43.2 kbps'
+  id: totrans-306
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`gprs`: Upload speed: 40.0 kbps, download speed: 80.0 kbps'
+  id: totrans-307
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`edge`: Upload speed: 118.4 kbps, download speed: 236.8 kbps'
+  id: totrans-308
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`umts`: Upload speed: 128.0 kbps, download speed: 1920.0 kbps'
+  id: totrans-309
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`hsdpa`: Upload speed: 348.0 kbps, download speed: 14400.0 kbps'
+  id: totrans-310
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`full`: Max Upload speed, max download speed'
+  id: totrans-311
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`<link>`: Upload speed: link value in kbps, download speed: link value in kbps'
+  id: totrans-312
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`<up>:<down>`: Upload speed: up value in kbps, download speed: down value in
     kbps'
+  id: totrans-313
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'The last two values, in particular, let us decide any value for the network
     speed. Then, if we want to change the speed while the emulator is still running,
     we can use the following command with the same values mentioned previously:'
+  id: totrans-314
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE31]'
+  id: totrans-315
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'It is similar to the delay values. The command to start an emulator with a
     selected delay, this time, is the following:'
+  id: totrans-316
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE32]'
+  id: totrans-317
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'Where `<delay>` can be one of the following:'
+  id: totrans-318
   prefs: []
   type: TYPE_NORMAL
 - en: '`gprs`: Min delay: 150 ms, max delay: 550 ms'
+  id: totrans-319
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`edge`: Min delay: 80 ms, max delay: 400 ms'
+  id: totrans-320
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`umts`: Min delay: 35 ms, max delay: 200 ms'
+  id: totrans-321
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`none`: Min delay: 0 ms, max delay: 0 ms'
+  id: totrans-322
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`<latency>`: Min delay: latency value in ms, max delay: latency value in ms'
+  id: totrans-323
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`<min>:<max>`: Min delay: min value in ms, max delay: max value in ms'
+  id: totrans-324
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'As for the speed, we can change the delay of the network for our running emulator.
     Just execute the following command with the particular delay value from those
     above:'
+  id: totrans-325
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE33]'
+  id: totrans-326
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: Fiddler
+  id: totrans-327
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
@@ -1592,21 +2139,26 @@
     Fiddler allows us to change the delays of a network by adding a particular plugin
     to do this. This is the Fiddler Delayed Responses Extension and looks like the
     screenshot in *Figure 7*:'
+  id: totrans-328
   prefs: []
   type: TYPE_NORMAL
 - en: '![Fiddler](img/4666_06_08.jpg)'
+  id: totrans-329
   prefs: []
   type: TYPE_IMG
 - en: 'Figure 8: The Fiddler Delayed Responses Extension'
+  id: totrans-330
   prefs: []
   type: TYPE_NORMAL
 - en: As we know, Fiddler is working as a proxy and every request passes through it.
     Hence, we can add every session with a specific remote resource to the plugin
     shown in the screenshot in *Figure 7* and set a particular delay in milliseconds
     for it.
+  id: totrans-331
   prefs: []
   type: TYPE_NORMAL
 - en: Network Link Conditioner
+  id: totrans-332
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
@@ -1614,15 +2166,19 @@
     helpful to set a particular network profile on the device. Hence, we can use it
     in tethering to take advantage of this tool and test our application on real devices.
     It looks like the screenshot in *Figure 8*:'
+  id: totrans-333
   prefs: []
   type: TYPE_NORMAL
 - en: '![Network Link Conditioner](img/4666_06_09.jpg)'
+  id: totrans-334
   prefs: []
   type: TYPE_IMG
 - en: 'Figure 9: The Network Link Conditioner'
+  id: totrans-335
   prefs: []
   type: TYPE_NORMAL
 - en: Network Attenuator
+  id: totrans-336
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
@@ -1631,35 +2187,44 @@
     is still in beta mode and can only be used on a Samsung Galaxy S3 with root permissions,
     but hopefully, it will be improved in the future to support more devices. Let''s
     have a brief overview about it to understand how it can be helpful:'
+  id: totrans-337
   prefs: []
   type: TYPE_NORMAL
 - en: 'When it is installed on the device, Network Attenuator can do the following:'
+  id: totrans-338
   prefs: []
   type: TYPE_NORMAL
 - en: Change the upload and download network speed
+  id: totrans-339
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Change network efficiency by setting a packet loss percentage
+  id: totrans-340
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Block remote resource access by domain or IP address
+  id: totrans-341
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'With this tool, there is no need to connect the device to particular networks
     that are controlled and limited by other applications. It looks like the screenshot
     in *Figure 9*:'
+  id: totrans-342
   prefs: []
   type: TYPE_NORMAL
 - en: '![Network Attenuator](img/4666_06_10.jpg)'
+  id: totrans-343
   prefs: []
   type: TYPE_IMG
 - en: 'Figure 10: The AT&T Network Attenuator'
+  id: totrans-344
   prefs: []
   type: TYPE_NORMAL
 - en: Summary
+  id: totrans-345
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -1671,69 +2236,83 @@
     extra parameters to requests such as headers and cookies, and handle compression
     in communications. Then, we went through an overview of the connection types available
     on the platform to know which speeds our application can reach in networking transmissions.
+  id: totrans-346
   prefs: []
   type: TYPE_NORMAL
 - en: 'Then, the patterns discussed in the *Best practices* section are really useful
     when it comes to improving networking performance. The general principles to follow
     are:'
+  id: totrans-347
   prefs: []
   type: TYPE_NORMAL
 - en: Change what to transmit depending on the connectivity speed to speed up application.
+  id: totrans-348
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Prefetch data to speed up navigation and reduce remote requests. It is even
     better to measure the latency to define the correct strategy for prefetching to
     reach the right compromise between speed and transmission savings.
+  id: totrans-349
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Enable the response cache to save data transmitted on a single connection. Consider
     the `If-Modified-Since` header to reduce the load of a request when you need a
     static remote resource and it is already cached and not modified on the server.
+  id: totrans-350
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Consider using the pushing pattern instead of a polling one whenever it is possible
     to save bandwidth and battery and not to activate the radio when it is not needed.
+  id: totrans-351
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: It could be helpful to limit requests when there is a temporary error on the
     backend. For this purpose, the exponential back-off pattern is the right choice
     to let the server recover time and resources when overloaded.
+  id: totrans-352
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'After having defined the best practices, we went through a couple of helpful
     APIs provided by the platform to put into practice what we discussed in the chapter.
     These are the following:'
+  id: totrans-353
   prefs: []
   type: TYPE_NORMAL
 - en: The `SyncManager` API
+  id: totrans-354
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The `GCMNetworkManager` API
+  id: totrans-355
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'To verify we are doing well with what we studied, we discussed the right tools
     in the *Debugging tools* section to check three main targets:'
+  id: totrans-356
   prefs: []
   type: TYPE_NORMAL
 - en: Test the application in different networking conditions, changing speeds, and
     latencies
+  id: totrans-357
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Analyze request properties from an external point of view to check they are
     correct for our needs
+  id: totrans-358
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Check we are not executing unneeded transmissions during the application life
     cycle
+  id: totrans-359
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
@@ -1741,6 +2320,7 @@
     profile our application and to let us know how to improve it. Finally, we discussed
     a couple of methods to simulate poor connectivity conditions both on emulators
     and on real devices.'
+  id: totrans-360
   prefs: []
   type: TYPE_NORMAL
 - en: Here we dealt with everything related to networking architecture and strategies
@@ -1750,5 +2330,6 @@
     for future reuse, to use serialization techniques, and then to improve performance
     from both the CPU and networking perspectives, speeding up the overall responsiveness
     of the application.
+  id: totrans-361
   prefs: []
   type: TYPE_NORMAL
