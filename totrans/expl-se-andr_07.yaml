@@ -1,7 +1,9 @@
 - en: Chapter 7. Utilizing Audit Logs
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第七章：利用审计日志
 - en: So far we've seen AVC records or the SELinux denial messages show up in `dmesg`,
     but `dmesg` is a circular memory buffer, subject to frequent rollover dependent
     on how verbose your kernel is. By using the audit kernel subsystem, we can route
@@ -12,35 +14,50 @@
     Android 4.3\. The officially merged version as of April 7, 2014 can be found at
     [https://android-review.googlesource.com/#/c/89645/](https://android-review.googlesource.com/#/c/89645/).
     It's implemented within `logd`, and merged at [https://android-review.googlesource.com/#/c/83526/](https://android-review.googlesource.com/#/c/83526/).
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们已经看到AVC记录或SELinux拒绝消息在`dmesg`中出现，但`dmesg`是一个循环内存缓冲区，它可能会因为你的内核有多啰嗦而频繁翻滚。通过使用审计内核子系统，我们可以将这些消息路由到用户空间并将它们记录到磁盘上。在桌面上，执行这项工作的守护进程被称为`auditd`。`auditd`的最小端口在NSA分支中维护，但它尚未正式合并到AOSP中。由于我们正在Android
+    4.3上工作，我们将使用来自NSA分支的`auditd`版本。截至2014年4月7日的正式合并版本可以在[https://android-review.googlesource.com/#/c/89645/](https://android-review.googlesource.com/#/c/89645/)找到。它是在`logd`中实现的，并在[https://android-review.googlesource.com/#/c/83526/](https://android-review.googlesource.com/#/c/83526/)合并。
 - en: 'In this chapter, we will:'
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将：
 - en: Update our system with the fast-paced SE for **Android Open Source Community**
     (**AOSP**)
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用快速发展的SE更新我们的系统，为**Android开源社区**（**AOSP**）
 - en: Investigate how the audit subsystem works
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 调查审计子系统的工作原理
 - en: Learn to read SELinux audit logs and start writing policy
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 学习阅读SELinux审计日志并开始编写策略
 - en: Look at contexts relative to the logs
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 观察与日志相关的上下文
 - en: All LSMs should log their messages into the audit subsystem. The audit subsystem
     can then route the messages to the kernel circular buffer using `printk`, or to
     the auditing daemon in user space, if one is present. The kernel and userspace
     logging daemon communicate using the `AUDIT_NETLINK` socket. We will dissect this
     interface further in the chapter.
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有的LSM都应该将它们的日志信息记录到审计子系统中。审计子系统可以将这些信息通过`printk`路由到内核循环缓冲区，或者如果有的话，路由到用户空间的审计守护进程。内核和用户空间日志守护进程通过`AUDIT_NETLINK`套接字进行通信。我们将在本章中进一步剖析这个接口。
 - en: Lastly, the audit subsystem has the capability to print comprehensive records
     when policy violations occur. Although you don't need this feature to enable and
     work with SELinux, it can make your life easier. To enable this system, you must
@@ -48,76 +65,108 @@
     to build your kernel with `CONFIG_AUDITSYSCALL=y` and place an `audit.rules` file
     in `/data/misc/audit/`. After you patch your tree with the following instructions,
     read `system/core/auditd/README`.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，审计子系统在发生策略违规时具有打印全面记录的能力。虽然你不需要这个功能来启用和操作SELinux，但它可以让你更轻松。要启用这个系统，你必须使用`auditd`，因为`logd`目前不支持这个功能。你需要使用`CONFIG_AUDITSYSCALL=y`构建你的内核，并在`/data/misc/audit/`中放置一个`audit.rules`文件。在你按照以下说明补丁你的树之后，阅读`system/core/auditd/README`。
 - en: Unfortunately, the UDOO kernel version 3.0.35 does not support `CONFIG_AUDITSYSCALL`.
     The patch located at [https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=29ef73b7a823b77a7cd0bdd7d7cded3fb6c2587b](https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=29ef73b7a823b77a7cd0bdd7d7cded3fb6c2587b)
     should enable the support. However, on the UDOO, it causes a deadlock we could
     not trace down.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 不幸的是，UDOO内核版本3.0.35不支持`CONFIG_AUDITSYSCALL`。位于[https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=29ef73b7a823b77a7cd0bdd7d7cded3fb6c2587b](https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=29ef73b7a823b77a7cd0bdd7d7cded3fb6c2587b)的补丁应该能够启用支持。然而，在UDOO上，它导致了一个我们无法追踪的死锁。
 - en: Upgrades – patches galore
+  id: totrans-10
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 升级——大量的补丁
 - en: Although Android 4.3, released from Google, had SE for Android support, it is
     still limited, especially in the areas of auditing. One of the simplest ways to
     bring this to a more useable state is to get the patches for some of the projects
     from the NSA's SE for Android 4.3 branch. Here, the community has staged and deployed
     many of the more advanced features which were not merged in the 4.3 timeframe.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 虽然谷歌发布的Android 4.3支持SE for Android，但在审计方面仍然有限制。将此功能带入更易用状态的最简单方法之一是从国家安全局（NSA）的SE
+    for Android 4.3分支获取一些项目的补丁。在这里，社区已经开发和部署了许多在4.3时间框架内未合并的更高级功能。
 - en: 'The NSA maintains repositories at [https://bitbucket.org/seandroid/](https://bitbucket.org/seandroid/).
     There are many projects so figuring out which to use and what branch can be daunting.
     A way to find them is to go through each project and find the projects with a
     `SEAndroid-4.3` branch. You don''t need to descend into the device trees since
     we''re not building AOSP devices. The list of such project is:'
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: NSA在[https://bitbucket.org/seandroid/](https://bitbucket.org/seandroid/)维护着仓库。项目众多，因此确定使用哪个项目以及哪个分支可能会让人望而却步。找到它们的方法是逐个查看每个项目，并找到具有`SEAndroid-4.3`分支的项目。由于我们不构建AOSP设备，因此无需深入设备树。这样的项目列表如下：
 - en: '[https://bitbucket.org/seandroid/system-core](https://bitbucket.org/seandroid/system-core)'
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[https://bitbucket.org/seandroid/system-core](https://bitbucket.org/seandroid/system-core)'
 - en: '[https://bitbucket.org/seandroid/frameworks-base](https://bitbucket.org/seandroid/frameworks-base)'
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[https://bitbucket.org/seandroid/frameworks-base](https://bitbucket.org/seandroid/frameworks-base)'
 - en: '[https://bitbucket.org/seandroid/external-libselinux](https://bitbucket.org/seandroid/external-libselinux)'
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[https://bitbucket.org/seandroid/external-libselinux](https://bitbucket.org/seandroid/external-libselinux)'
 - en: '[https://bitbucket.org/seandroid/build](https://bitbucket.org/seandroid/build)'
+  id: totrans-16
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[https://bitbucket.org/seandroid/build](https://bitbucket.org/seandroid/build)'
 - en: '[https://bitbucket.org/seandroid/frameworks-native](https://bitbucket.org/seandroid/frameworks-native)'
+  id: totrans-17
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[https://bitbucket.org/seandroid/frameworks-native](https://bitbucket.org/seandroid/frameworks-native)'
 - en: 'We can also safely skip `sepolicy` since we''ve already updated it to the bleeding
     edge, but the kernels are a bit trickier. We need the changes from kernel-common
     ([https://bitbucket.org/seandroid/kernel-common](https://bitbucket.org/seandroid/kernel-common))
     and the binder patch ([https://android-review.googlesource.com/#/c/45984/](https://android-review.googlesource.com/#/c/45984/)),
     which can be attained as follows:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还可以安全地跳过`sepolicy`，因为我们已经将其更新到最前沿，但内核有点棘手。我们需要来自kernel-common（[https://bitbucket.org/seandroid/kernel-common](https://bitbucket.org/seandroid/kernel-common)）的更改和binder补丁（[https://android-review.googlesource.com/#/c/45984/](https://android-review.googlesource.com/#/c/45984/)），可以按如下方式获取：
 - en: '[PRE0]'
+  id: totrans-19
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: We can start by figuring out the exact version we need to patch to by looking
     at the `build/core/build_id.mk` file, and by using the webpage [https://source.android.com/source/build-numbers.html](https://source.android.com/source/build-numbers.html)
     to do a lookup.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以先通过查看`build/core/build_id.mk`文件，以及使用网页[https://source.android.com/source/build-numbers.html](https://source.android.com/source/build-numbers.html)进行查询，来确定我们需要修补的确切版本。
 - en: The file shows `BUILD_ID` is `JSS15J`, and the lookup shows that we are working
     with the `android-4.3_r2.1` release for the UDOO.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 文件显示`BUILD_ID`是`JSS15J`，查询结果显示我们正在使用`android-4.3_r2.1`版本为UDOO工作。
 - en: For each downloaded project so far, generate the patches by running the command
     `git checkout origin/seandroid-4.3_r2`. Finally, execute `git format-patch origin/jb-mr2.0-release`.
     Since there is no `4.3._r2.1` branch, we're using `r2`.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于到目前为止下载的每个项目，通过运行命令`git checkout origin/seandroid-4.3_r2`生成补丁。最后，执行`git format-patch
+    origin/jb-mr2.0-release`。由于没有`4.3._r2.1`分支，我们使用`r2`。
 - en: For each of these patches, you'll need to apply them in the tree from their
     corresponding `udoo/<project>` folder. It is important to apply the patches for
     each project in numeric order starting with the `0001*` patch, moving on to `0002*`,
@@ -125,28 +174,42 @@
     look at the first patch needed for `system-core`. Note that these Git repositories
     use hyphens in place of the slashes in the source tree; so `frameworks-base` correlates
     to `frameworks/base`.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于这些补丁中的每一个，你需要从对应的`udoo/<project>`文件夹中在树形结构中应用它们。重要的是，需要按照数字顺序为每个项目应用补丁，从`0001*`补丁开始，然后是`0002*`，依此类推。以下是为`system-core`项目应用第一个补丁的示例。请注意，这些Git仓库使用连字符代替源树中的斜杠；因此`frameworks-base`对应于`frameworks/base`。
 - en: 'First, generate the patches:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，生成补丁：
 - en: '[PRE1]'
+  id: totrans-25
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Apply the first patch, as follows:'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 按如下方式应用第一个补丁：
 - en: '[PRE2]'
+  id: totrans-27
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Note
+  id: totrans-28
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Note that for UDOO, it is important not to apply a patch number higher than
     `0005` in `frameworks/base`. For other projects, you should apply all the patches.
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意对于UDOO来说，在`frameworks/base`中不要应用高于`0005`编号的补丁。对于其他项目，你应该应用所有补丁。
 - en: Note the error. Just hit *Ctrl* + *C* to quit the patching process whenever
     you see this. The Git trees are not quite perfect, and because of this, some of
     the patches are already in the UDOO source. The patch command will let us know,
@@ -154,8 +217,11 @@
     going through the patches, canceling the ones already applied, and fixing up any
     failures. After patching userspace, it's *highly* recommended that you build to
     ensure nothing is broken.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意错误。一旦你看到这个，就按*Ctrl* + *C*退出补丁过程。Git树并不完美，因此一些补丁已经存在于UDOO源码中。补丁命令会通知我们，并且当有警告时，我们可以通过取消它们（用*Ctrl*
+    + *C*）来跳过这些补丁。继续检查补丁，取消已经应用的，并修复任何失败的部分。在补丁用户空间后，强烈建议你构建一次以确保没有任何东西被破坏。
 - en: 'Once userspace is completely patched, we need to patch the kernel. Start by
     cloning the kernel-common project from Bitbucket with the `git clone https://bitbucket.org/seandroid/kernel-common.git`
     command. We will patch the kernel with the same method as the rest of the projects
@@ -163,74 +229,112 @@
     mentioned, [https://android-review.googlesource.com/#/c/45984/](https://android-review.googlesource.com/#/c/45984/),
     we found that the Git SHA hash is `a3c9991b560cf0a8dec1622fcc0edca5d0ced936`,
     as given in the **Patch set 4** reference field in the following screenshot:'
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦用户空间完全打上补丁，我们需要对内核进行补丁处理。首先使用`git clone https://bitbucket.org/seandroid/kernel-common.git`命令从Bitbucket克隆kernel-common项目。我们将使用与其他项目相同的方法对内核进行补丁处理，除了binder补丁。通过查看提到的binder补丁链接[https://android-review.googlesource.com/#/c/45984/](https://android-review.googlesource.com/#/c/45984/)，我们发现Git
+    SHA哈希是`a3c9991b560cf0a8dec1622fcc0edca5d0ced936`，如下截图中的**补丁集4**参考字段所示：
 - en: '![Upgrades – patches galore](img/0594OS_7_1.jpg)'
+  id: totrans-32
   prefs: []
   type: TYPE_IMG
+  zh: '![升级 - 补丁丰富](img/0594OS_7_1.jpg)'
 - en: 'We can then generate the patch for this SHA hash:'
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们可以为这个SHA哈希生成补丁：
 - en: '[PRE3]'
+  id: totrans-34
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Then, apply that patch with the patch command as we did before. The patch has
     a failed hunk for a header file inclusion; just fix it up like the others by using
     the reject file. When you build, you''ll get this error in the kernel:'
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，像之前一样使用补丁命令应用该补丁。补丁有一个头文件包含的失败块；只需像其他一样使用拒绝文件修复它。当你构建时，你会在内核中得到这个错误。
 - en: '[PRE4]'
+  id: totrans-36
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Go ahead and remove this line and all references. This was a change made in
     the 3.0 kernels:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 去掉这一行以及所有相关引用。这是在3.0内核中做出的一个更改：
 - en: '[PRE5]'
+  id: totrans-38
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Note
+  id: totrans-39
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: 'We figured this out by looking through the original 3.0 patches, which can
     be found at following link:'
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们通过查看原始3.0补丁找出了这个问题，这些补丁可以在以下链接找到：
 - en: '[https://bitbucket.org/seandroid/kernel-omap/commits/59bc19226c746f479edc2acca9a41f60669cbe82?at=seandroid-omap-tuna-3.0](https://bitbucket.org/seandroid/kernel-omap/commits/59bc19226c746f479edc2acca9a41f60669cbe82?at=seandroid-omap-tuna-3.0)'
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: '[https://bitbucket.org/seandroid/kernel-omap/commits/59bc19226c746f479edc2acca9a41f60669cbe82?at=seandroid-omap-tuna-3.0](https://bitbucket.org/seandroid/kernel-omap/commits/59bc19226c746f479edc2acca9a41f60669cbe82?at=seandroid-omap-tuna-3.0)'
 - en: 'As you recall, the UDOO uses a custom `init.rc`. We need to add any changes
     to `init.rc` to the one UDOO actually uses. All the patches that can modify `init.rc`
     will be in the system-core project, specifically these:'
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所知，UDOO使用自定义的`init.rc`。我们需要将任何对`init.rc`的更改添加到UDOO实际使用的那个文件中。所有可以修改`init.rc`的补丁都会在system-core项目中，特别是这些：
 - en: '`0003-Auditd-initial-commit.patch`'
+  id: totrans-43
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`0003-Auditd-initial-commit.patch`'
 - en: '`0007-Handle-policy-reloads-within-ueventd-rather-than-res.patch`'
+  id: totrans-44
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`0007-Handle-policy-reloads-within-ueventd-rather-than-res.patch`'
 - en: '`0009-Allow-system-UID-to-set-enforcing-and-booleans.patch`'
+  id: totrans-45
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`0009-Allow-system-UID-to-set-enforcing-and-booleans.patch`'
 - en: Go ahead and find the changes to `init.rc` in these patches and apply them to
     `device/fsl/imx6/etc/init.rc` using the same patch technique.
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 去找这些补丁中对`init.rc`的更改，并使用同样的补丁技术将它们应用到`device/fsl/imx6/etc/init.rc`中。
 - en: The audit system
+  id: totrans-47
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 审计系统
 - en: In the previous section, we did a lot of patching; the point of which was to
     enable the audit integration work done on Android and its dependencies. These
     patches also fix some bugs in the code and, very importantly, enable the SELinux/LSM
     binder hooks and policy controls.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一节中，我们做了很多补丁工作；其目的是为了启用在Android及其依赖项上完成的审核集成工作。这些补丁还修复了一些代码中的错误，并且非常重要地启用了SELinux/LSM
+    binder挂钩和政策控制。
 - en: The audit system in Linux is used by LSMs to print the denial records as well
     as to gather very thorough and complete records of events. No matter what, when
     an LSM prints a message, it gets propagated to the audit subsystem and printed.
@@ -238,12 +342,16 @@
     with the denial. The audit subsystem even supports loading rules for watching
     this. For instance, you could watch all writes to `/system` that were not done
     by the system UID.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: Linux中的审计系统被LSMs用来打印拒绝记录，以及收集非常详尽和完整的事件记录。无论何时，当LSM打印消息时，它都会传播到审计子系统并打印出来。然而，如果启用了审计子系统，那么你将获得与拒绝相关的更多上下文信息。审计子系统甚至支持加载规则来观察这些情况。例如，你可以观察所有对`/system`的写入操作，这些操作并非由系统UID执行。
 - en: The auditd daemon
+  id: totrans-50
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`auditd`守护进程'
 - en: The `auditd` daemon, or service, runs in userspace and listens over a NETLINK
     socket to the audit subsystem. The daemon registers itself to receive the kernel
     messages, and can also load the audit rules over this socket. Once registered,
@@ -252,8 +360,10 @@
     However, `auditd` has been used by various OEMs (such as Samsung) and by the NSA's
     4.3 branch. An alternative approach that put records in logcat was later merged
     into Android (for more information, refer to [https://android-review.googlesource.com/89645](https://android-review.googlesource.com/89645)).
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: '`auditd`守护进程或服务在用户空间运行，并通过NETLINK套接字监听审计子系统。守护进程注册自己以接收内核消息，并且可以通过此套接字加载审计规则。一旦注册，`auditd`守护进程就会接收到所有审计事件。`auditd`守护进程被最小化移植，并且曾经尝试将其主线化到Android中，但后来被拒绝。然而，`auditd`已被多个OEM（如三星）以及NSA的4.3分支使用。后来将记录放入logcat的替代方法被合并到Android中（更多信息，请参考[https://android-review.googlesource.com/89645](https://android-review.googlesource.com/89645)）。'
 - en: Earlier, we saw the AVC denial messages from SELinux in `dmesg`. The problem
     with this is that the circular memory log is prone to rollover when you have many
     denials or a chatty kernel. With `auditd`, all the messages come to the daemon
@@ -264,43 +374,66 @@
     (set during compile time in the `system/core/auditd/Android.mk` file) is exceeded.
     This threshold is typically 1000 KB but can be changed in the device's `makefile`.
     Also, sending `SIGHUP` with `kill` will cause a rotate as in the following example.
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前，我们在`dmesg`中看到了来自SELinux的AVC拒绝消息。这个问题在于，当有大量拒绝或内核通信频繁时，循环内存日志容易发生翻转。使用`auditd`，所有消息都会发送到守护进程，并写入`/data/misc/audit/audit.log`文件。这个日志文件，即本文中的`audit.log`，可能在设备启动时存在，并轮换到`/data/misc/audit/audit.old`文件，即`audit.old`。守护进程将恢复到新的`audit.log`文件中记录。当超过大小阈值`AUDITD_MAX_LOG_FILE_SIZEKB`（在编译时在`system/core/auditd/Android.mk`文件中设置）时，会发生轮换事件。这个阈值通常是1000
+    KB，但可以在设备的`makefile`中更改。此外，使用`kill`发送`SIGHUP`也会导致轮换，如下例所示。
 - en: 'Verify the daemon is running and get its PID:'
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 验证守护进程正在运行并获取其PID：
 - en: '[PRE6]'
+  id: totrans-54
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Verify only one log exists:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 验证只存在一个日志文件：
 - en: '[PRE7]'
+  id: totrans-56
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'Rotate the logs:'
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 轮换日志：
 - en: '[PRE8]'
+  id: totrans-58
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Verify `audit.old`:'
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 验证`audit.old`：
 - en: '[PRE9]'
+  id: totrans-60
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Auditd internals
+  id: totrans-61
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`auditd`内部机制'
 - en: Since the `auditd` and `libaudit` code from the Linux desktop have a GPL license,
     a rewrite was done for Android, released under the Apache license. The rewrite
     is minimal, thus you will only find the functions implemented that were required
     to support the daemon. The functional and header interfaces should remain identical
     though.
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于Linux桌面版的`auditd`和`libaudit`代码采用GPL许可证，因此针对Android进行了重写，并在Apache许可证下发布。重写工作是最小化的，因此你只会找到为实现守护进程所必需的函数。不过，功能和头文件接口应该保持一致。
 - en: The `auditd` daemon starts life at `main()` in `system/core/auditd.c`. It quickly
     changes its permissions from UID root to a special `auditd` UID. When it does
     this, it retains `CAPSYS_AUDIT`, which is a required DAC capability check to use
@@ -313,8 +446,13 @@
     const char *rotatefile, size_t threshold)`. This function checks whether the `audit.log`
     file exists and, if it does, renames it to `audit.old`. It then creates a new
     empty log file in which the data is recorded.
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: '`auditd`守护进程的生命周期始于`system/core/auditd.c`中的`main()`函数。它迅速将权限从root UID更改为特殊的`auditd`
+    UID。这样做时，它保留了`CAPSYS_AUDIT`，这是使用`AUDIT` NETLINK套接字所需的DAC能力检查。它通过调用`drop_privileges_or_die()`来实现这一点。从那里，它使用`getopt()`进行一些选项解析，最终我们到达了审计特定的调用，第一个调用是使用`audit_open()`打开NETLINK套接字。这个函数简单地调用`socket(PF_NETLINK,
+    SOCK_RAW, NETLINK_AUDIT)`，它打开到NETLINK套接字的文件描述符。打开套接字后，守护进程通过调用`audit_log_open(const
+    char *logfile, const char *rotatefile, size_t threshold)`来打开对`audit.log`的句柄。这个函数检查`audit.log`文件是否存在，如果存在，将其重命名为`audit.old`。然后创建一个新的空日志文件来记录数据。'
 - en: The next step is to register the daemon with the audit subsystem so that it
     knows to whom to send messages. By setting the PID of the daemon, you ensure that
     only this daemon will get the messages. Since NETLINK can support many readers,
@@ -326,8 +464,12 @@
     1)` and adds rules to the audit subsystem via `audit_rules_read_and_add(audit_fd,
     AUDITD_RULES_FILE)`. This function reads the rules from that file, formats some
     structures, and sends those structures to the kernel.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一步是将守护进程注册到审计子系统，这样它就知道要向谁发送消息。通过设置守护进程的PID，你可以确保只有这个守护进程会收到消息。由于NETLINK可以支持许多读取者，你不会希望一个"流氓`auditd`"读取这些消息。说到这一点，守护进程调用`audit_set_pid(audit_fd,
+    getpid(), WAIT_YES)`，其中`audit_fd`来自`audit_open()`的NETLINK套接字，`getpid()`返回守护进程的PID，`WAIT_YES`使守护进程阻塞直到操作完成。接下来，守护进程通过调用`audit_set_enabled(audit_fd,
+    1)`启用审计子系统的先进功能，并通过`audit_rules_read_and_add(audit_fd, AUDITD_RULES_FILE)`向审计子系统添加规则。这个函数从该文件读取规则，格式化一些结构，并将这些结构发送到内核。
 - en: The `audit_set_enabled()` and `audit_rules_read_and_add()`only have an effect
     if the kernel is built with `CONFIG_AUDITSYSCALL`. After this, the daemon checks
     whether the `-k` option was specified. The `-k` option tells `auditd` to look
@@ -335,8 +477,10 @@
     between capturing audit records before the circular buffer overflows and userspace
     starting many services, generating audit events and policy violations. Essentially,
     this helps coalesce the audit events from early boot into the same log files.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: '`audit_set_enabled()`和`audit_rules_read_and_add()`只有在内核构建时带有`CONFIG_AUDITSYSCALL`时才有效。在此之后，守护进程检查是否指定了`-k`选项。`-k`选项告诉`auditd`在`dmesg`中查找任何错过的审计记录。它这样做是因为在捕获审计记录之前，环形缓冲区溢出与用户空间启动许多服务、生成审计事件和政策违规之间存在竞争。本质上，这有助于将早期启动的审计事件合并到相同的日志文件中。'
 - en: After this, the daemon enters a loop to read from the NETLINK socket, formatting
     the messages, and writing them to the log file. It starts this loop by waiting
     for IO on the NETLINK socket using `poll()`. If `poll()` exits with an error,
@@ -348,101 +492,148 @@
     `audit.log` file with `audit_log_write(alog, "type=%d msg=%.*s\n", rep.type, rep.len,
     rep.msg.data)`. It does this until `EINTR` is raised, at which point, the daemon
     exits.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 在此之后，守护进程进入一个循环，从NETLINK套接字读取，格式化消息，并将其写入日志文件。它通过使用`poll()`等待NETLINK套接字上的IO来开始这个循环。如果`poll()`以错误退出，循环继续检查`quit`变量。如果引发`EINTR`，则在信号处理程序中将循环保护变量`quit`设置为`true`，守护进程退出。如果`poll()`在NETLINK上有数据，守护进程调用`audit_get_reply(audit_fd,
+    &rep, GET_REPLY_BLOCKING, 0)`，通过`rep`参数获取一个`audit_reply`结构体。然后它将`audit_reply`结构体（带有格式化）写入`audit.log`文件，使用`audit_log_write(alog,
+    "type=%d msg=%.*s\n", rep.type, rep.len, rep.msg.data)`。它这样做直到引发`EINTR`，此时守护进程退出。
 - en: When the daemon exits, it clears the PID registered with the kernel (`audit_set_pid(audit_fd,
     0)`), closes the audit socket via `audit_close()` (which is really just the syscall,
     `close(audit_fd)`), and closes the `audit.log` with `audit_log_close()`. The `audit_log_*`
     family of functions is not part of the GPLed interface to audit and is a custom
     write.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 当守护进程退出时，它会清除已注册到内核的PID（`audit_set_pid(audit_fd, 0)`），通过`audit_close()`关闭审计套接字（实际上只是系统调用，`close(audit_fd)`），并使用`audit_log_close()`关闭`audit.log`。`audit_log_*`函数家族不是审计GPLed接口的一部分，是一种自定义写入方式。
 - en: When Google ported `auditd` to the `logd` infrastructure in Android, it used
     the same functions and library code used by the daemon's `main()` and wrapped
     it into `logd`. However, Google *did not* take the `audit_set_enabled()` and `audit_rules_read_and_add()`
     functions.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 当谷歌将`auditd`移植到Android的`logd`基础架构时，它使用了守护进程`main()`使用的相同函数和库代码，并将其包装到`logd`中。然而，谷歌并没有采用`audit_set_enabled()`和`audit_rules_read_and_add()`函数。
 - en: Interpreting SELinux denial logs
+  id: totrans-69
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 解释SELinux拒绝日志
 - en: The SELinux denials get routed to the kernel audit subsystem, to `auditd`, and
     finally, to `audit.log` and `audit.old`. With the logs resident in `audit.log`,
     let's pull this file over `adb` and have a closer look at it.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: SELinux拒绝信息会被路由到内核审计子系统，到`auditd`，最终到达`audit.log`和`audit.old`。由于日志位于`audit.log`中，让我们通过`adb`拉取这个文件，并仔细查看它。
 - en: 'Run the following command from the host, with `adb` enabled:'
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 在主机上运行以下命令，确保已启用`adb`：
 - en: '[PRE10]'
+  id: totrans-72
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'Now, let''s tail that file and look for these lines:'
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们跟踪那个文件，查找这些行：
 - en: '[PRE11]'
+  id: totrans-74
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'The records here consist of two major portions: `type` and `msg`. The `type`
     field indicates what type of message it is. Messages with type 1400 are AVC messages,
     which are SELinux denial messages (there are other types, as well). The `msg`
     (short for message) portion of the preceding policy contains the part for us to
     analyze.'
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里的记录由两个主要部分组成：`type`和`msg`。`type`字段指示了消息的类型。类型为1400的消息是AVC消息，即SELinux拒绝消息（还有其他类型）。前述策略的`msg`（消息的简称）部分包含我们需要分析的部分。
 - en: 'The last command we executed was `adb pull /data/misc/audit/aduit.log` and,
     as you can see, we have a few `adb` policy violations at the tail of the `audit.log`
     file. Let''s start by looking at this event:'
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们最后执行的命令是 `adb pull /data/misc/audit/aduit.log`，正如你所见，在`audit.log`文件的末尾我们有几处`adb`策略违规。让我们先从这个事件开始查看：
 - en: '[PRE12]'
+  id: totrans-77
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'We can see that the `comm` field is `adbd`. However, it''s not wise to trust
     this value since it can be controlled from userspace using the `prctl()` interface.
     It can only be viewed as a hint. The best way to verify this is to check the PID
     using `ps -Z`:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以看到`comm`字段是`adbd`。然而，相信这个值并不明智，因为它可以使用`prctl()`接口从用户空间进行控制。它只能被视为一个提示。最好的验证方法是使用`ps
+    -Z`检查PID：
 - en: '[PRE13]'
+  id: totrans-79
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'With the daemon verified, we can now check the message in more detail. The
     message consists of the following fields (optional fields are identified by `*`):'
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 在验证守护进程后，我们现在可以更详细地检查这个消息。消息由以下字段组成（可选字段由`*`标识）：
 - en: '`avc: denied`: This part will always happen and denotes it is a denial record.'
+  id: totrans-81
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`avc: denied`：这部分将始终发生，表示它是一个拒绝记录。'
 - en: '`{ permission }`: This is the permission that was denied, in this case, `getattr`.'
+  id: totrans-82
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`{ permission }`：这是被拒绝的权限，在本例中是`getattr`。'
 - en: '`for`: This will always be printed and makes the output readable.'
+  id: totrans-83
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`for`：这将始终被打印出来，使输出可读。'
 - en: '`Path*`: This is the optional field that contains the path of the object in
     question. It only makes sense for filesystem access denials.'
+  id: totrans-84
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Path*`：这是可选字段，包含有关对象路径的信息。它只对文件系统访问拒绝有意义。'
 - en: '`dev*`: This is the optional field that identifies the block device for the
     mounted filesystem. It only makes sense for filesystem access denials.'
+  id: totrans-85
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`dev*`：这是可选字段，用于标识挂载文件系统的块设备。它只对文件系统访问拒绝有意义。'
 - en: '`ino*`: This is the optional inode of the file. Only the anonymous files in
     Linux print inode. It only makes sense for filesystem access denials.'
+  id: totrans-86
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ino*`：这是文件的可选inode。Linux中只有匿名文件会打印inode。它只对文件系统访问拒绝有意义。'
 - en: '`tclass`: This is the target class of the object, which in our case was `file`.'
+  id: totrans-87
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`tclass`：这是对象的目标类，在我们的案例中是`file`。'
 - en: 'At this point, we need to understand what the `msg` portion of the denial record
     is telling us at a very distilled level. It is saying that the Android debug bridge
     daemon wants to be able to call `getattr` on our policy file. A few events down,
@@ -451,75 +642,108 @@
     the `read/open` are from `read()` and `open()` syscalls. If you want to allow
     this in your policy, which would be a security decision based on your threat model,
     you should add:'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，我们需要从非常精炼的层面理解拒绝记录中的`msg`部分在告诉我们什么。它说的是Android调试桥接守护进程想要在我们的策略文件上调用`getattr`。在下面几个事件中，我们还会看到它还想要`read`和`open`。这是运行`adb
+    pull`的副作用。`getattr`权限拒绝来自`stat()`系统调用，而`read/open`则来自`read()`和`open()`系统调用。如果你想要在策略中允许这一点，这将是基于你的威胁模型的安全决策，你应该添加：
 - en: '[PRE14]'
+  id: totrans-89
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Alternatively, use the macro sets defined in `global_macros`:'
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 或者，使用`global_macros`中定义的宏集合：
 - en: '[PRE15]'
+  id: totrans-91
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: Most of the time, you should use the macros defined in `global_macros` for file
     permission accesses. Typically, adding them one by one is very time consuming
     and tedious. The macros group the permissions in a context analogous to read,
     write, and execute DAC permissions. For instance, if you give it `open` and `read`,
     there's a good chance at some point that the source domain will need to stat the
     file. So, the `r_file_perms` macro has those permissions in it already.
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 大多数时候，你应该使用`global_macros`中定义的宏进行文件权限访问。通常，逐个添加它们非常耗时且繁琐。宏将权限分组在一个与读、写、执行DAC权限类似的环境中。例如，如果你给它`open`和`read`，那么源域在某个时刻可能需要stat文件。所以，`r_file_perms`宏已经包含了这些权限。
 - en: 'You should add this rule to `external/sepolicy/adbd.te`. The `.te` files (also
     called `type enforcement` files) are organized by source context, so make sure
     you add it to the correct file. We do not recommend adding this allow rule—there''s
     no legitimate reason that `adbd` needs access to the audit logs—we can safely
     ignore these with a `dontaudit` rule:'
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 你应该将此规则添加到`external/sepolicy/adbd.te`中。`.te`文件（也称为`type enforcement`文件）是按源上下文组织的，因此请确保将其添加到正确的文件中。我们不推荐添加此允许规则——没有合法的理由让`adbd`需要访问审计日志——我们可以通过`dontaudit`规则安全地忽略这些：
 - en: '[PRE16]'
+  id: totrans-94
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: The `dontaudit` rule is a policy statement that says don't audit (print) denials
     that match this rule.
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: '`dontaudit`规则是一个策略声明，表示不要审计（打印）符合此规则的拒绝操作。'
 - en: If you're not sure what to do, the best advice is to leverage the mailing lists
     for SE for Android, SELinux, and audit. Just keep the messages appropriate to
     the specific mailing lists topic.
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你不确定该怎么办，最好的建议是利用SE for Android、SELinux和audit的邮件列表。只需确保信息与特定邮件列表主题相关即可。
 - en: 'A tool exists called `audit2allow`, which can help you write policy allow rules.
     However, it''s only a tool and can be misused. It translates the policy file to
     the allow rules for the policy:'
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 存在一个名为`audit2allow`的工具，可以帮助你编写策略允许规则。然而，它只是一个工具，可能会被误用。它将策略文件转换为策略的允许规则：
 - en: '[PRE17]'
+  id: totrans-98
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: The `audit2allow` tool is not macro aware or aware if you really want to add
     this allow rule to the policy file. Only the policy author can make this decision.
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: '`audit2allow`工具不知道宏，也不清楚你是否真的想要将此允许规则添加到策略文件中。只有策略作者才能做出这个决定。'
 - en: 'There is also a tool to enable the `r_file_*` macro mapping called `fixup.py`.
     You can get the tool at [https://bitbucket.org/billcroberts/fixup/overview](https://bitbucket.org/billcroberts/fixup/overview).
     After downloading, make it executable, and place it somewhere in your executable
     path:'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 还有一个名为`fixup.py`的工具，用于启用`r_file_*`宏映射。你可以在[https://bitbucket.org/billcroberts/fixup/overview](https://bitbucket.org/billcroberts/fixup/overview)获取此工具。下载后，使其可执行，并将其放在你的可执行路径中的某个位置：
 - en: '[PRE18]'
+  id: totrans-101
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Contexts
+  id: totrans-102
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 上下文
 - en: In the simplest sense, writing policies is just the activity of identifying
     policy violations and adding the appropriate allow rules to the policy file. However,
     in order for SELinux to be effective, the source and target contexts must be correct.
     If they are not, the allow rules are meaningless.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 从最简单的意义上说，编写策略只是识别策略违规并添加适当的允许规则到策略文件的活动。然而，为了使SELinux有效，源和目标上下文必须正确。如果它们不正确，允许规则就没有意义。
 - en: The first things you might encounter are denials where the target type is unlabeled.
     In this case, the proper target label needs to be set (refer to [Chapter 11](ch11.html
     "Chapter 11. Labeling Properties"), *Labeling Properties*). Also, process labels
@@ -529,157 +753,246 @@
     see multiple processes in `init`, `system_server`, `adbd`, `auditd`, `debuggerd`,
     `dhcp`, `servicemanager`, `vold`, `netd`, `surfaceflinger`, `drmserver`, `mediaserver`,
     `installd`, `keystore`, `sdcardd`, `wpa`, and `zygote` domains.
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能首先遇到的是目标类型未标记的拒绝问题。在这种情况下，需要设置适当的目标标签（参考[第11章](ch11.html "第11章. 标签属性")，*标签属性*）。此外，进程标签可能也会出错。多个进程可能属于一个域，除非通过策略明确操作，否则子进程会继承父进程的域。然而，在Android中，具有多个进程的域是非常有限的。你永远不会在`init`、`system_server`、`adbd`、`auditd`、`debuggerd`、`dhcp`、`servicemanager`、`vold`、`netd`、`surfaceflinger`、`drmserver`、`mediaserver`、`installd`、`keystore`、`sdcardd`、`wpa`和`zygote`域中看到多个进程。
 - en: 'It''s okay to see multiple processes in the following domains:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 在以下域中看到多个进程是可以的：
 - en: '`system_app`'
+  id: totrans-106
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`system_app`'
 - en: '`untrusted_app`'
+  id: totrans-107
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`untrusted_app`'
 - en: '`platform_app`'
+  id: totrans-108
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`platform_app`'
 - en: '`shared_app`'
+  id: totrans-109
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`shared_app`'
 - en: '`media_app`'
+  id: totrans-110
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`media_app`'
 - en: '`release_app`'
+  id: totrans-111
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`'
 - en: '`isolated_app`'
+  id: totrans-112
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`isolated_app`'
 - en: '`shell`'
+  id: totrans-113
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`shell`'
 - en: 'On a released device, nothing should be run in the `su`, `recovery`, and `init_shell`
     domains. The following table provides a complete mapping of domains to the expected
     executables and cardinality:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 在已发布的设备上，不应该在`su`、`recovery`和`init_shell`域中运行任何东西。下表提供了域到预期可执行文件和量度的完整映射：
 - en: '| Domain | Executable(s) | Cardinality (N) |'
+  id: totrans-115
   prefs: []
   type: TYPE_TB
+  zh: '| 域 | 可执行文件 | 量度 (N) |'
 - en: '| --- | --- | --- |'
+  id: totrans-116
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- | --- |'
 - en: '| `u:r:init:s0"` | `/init` | `N == 1` |'
+  id: totrans-117
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:init:s0` | `/init` | `N == 1` |'
 - en: '| `u:r:ueventd:s0` | `/sbin/ueventd` | `N == 1` |'
+  id: totrans-118
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:ueventd:s0` | `/sbin/ueventd` | `N == 1` |'
 - en: '| `u:r:healthd:s0` | `/sbin/healthd` | `N == 1` |'
+  id: totrans-119
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:healthd:s0` | `/sbin/healthd` | `N == 1` |'
 - en: '| `u:r:servicemanager:s0` | `/system/bin/servicemanager` | `N == 1` |'
+  id: totrans-120
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:servicemanager:s0` | `/system/bin/servicemanager` | `N == 1` |'
 - en: '| `u:r:vold:s0` | `/system/bin/vold` | `N == 1` |'
+  id: totrans-121
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:vold:s0` | `/system/bin/vold` | `N == 1` |'
 - en: '| `u:r:netd:s0` | `/system/bin/netd` | `N == 1` |'
+  id: totrans-122
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:netd:s0` | `/system/bin/netd` | `N == 1` |'
 - en: '| `u:r:debuggerd:s0` | `/system/bin/debuggerd, /system/bin/debuggerd64` | `N
     == 1` |'
+  id: totrans-123
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:debuggerd:s0` | `/system/bin/debuggerd, /system/bin/debuggerd64` | `N
+    == 1` |'
 - en: '| `u:r:surfaceflinger:s0` | `/system/bin/surfaceflinger` | `N == 1` |'
+  id: totrans-124
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:surfaceflinger:s0` | `/system/bin/surfaceflinger` | `N == 1` |'
 - en: '| `u:r:zygote:s0` | `zygote, zygote64` | `N == 1` |'
+  id: totrans-125
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:zygote:s0` | `zygote, zygote64` | `N == 1` |'
 - en: '| `u:r:drmserver:s0` | `/system/bin/drmserver` | `N == 1` |'
+  id: totrans-126
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:drmserver:s0` | `/system/bin/drmserver` | `N == 1` |'
 - en: '| `u:r:mediaserver:s0` | `/system/bin/mediaserver` | `N >= 1` |'
+  id: totrans-127
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:mediaserver:s0` | `/system/bin/mediaserver` | `N >= 1` |'
 - en: '| `u:r:installd:s0` | `/system/bin/installd` | `N == 1` |'
+  id: totrans-128
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:installd:s0` | `/system/bin/installd` | `N == 1` |'
 - en: '| `u:r:keystore:s0` | `/system/bin/keystore` | `N == 1` |'
+  id: totrans-129
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:keystore:s0` | `/system/bin/keystore` | `N == 1` |'
 - en: '| `u:r:system_server:s0` | `system_server` | `N ==1` |'
+  id: totrans-130
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:system_server:s0` | `system_server` | `N ==1` |'
 - en: '| `u:r:sdcardd:s0` | `/system/bin/sdcard` | `N >=1` |'
+  id: totrans-131
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:sdcardd:s0` | `/system/bin/sdcard` | `N >=1` |'
 - en: '| `u:r:watchdogd:s0` | `/sbin/watchdogd` | `N >=0 && N < 2` |'
+  id: totrans-132
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:watchdogd:s0` | `/sbin/watchdogd` | `N >=0 && N < 2` |'
 - en: '| `u:r:wpa:s0` | `/system/bin/wpa_supplicant` | `N >=0 && N < 2` |'
+  id: totrans-133
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:wpa:s0` | `/system/bin/wpa_supplicant` | `N >=0 && N < 2` |'
 - en: '| `u:r:init_shell:s0` | `null` | `N == 0` |'
+  id: totrans-134
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:init_shell:s0` | `null` | `N == 0` |'
 - en: '| `u:r:recovery:s0` | `null` | `N == 0` |'
+  id: totrans-135
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:recovery:s0` | `null` | `N == 0` |'
 - en: '| `u:r:su:s0` | `null` | `N == 0` |'
+  id: totrans-136
   prefs: []
   type: TYPE_TB
+  zh: '| `u:r:su:s0` | `null` | `N == 0` |'
 - en: Several **Compatibility Test Suite** (**CTS**) tests have been written around
     this and submitted to AOSP at [https://android-review.googlesource.com/#/c/82861/](https://android-review.googlesource.com/#/c/82861/).
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 已经编写了几个围绕此问题的**兼容性测试套件**（**CTS**）测试，并提交到了AOSP，地址为[https://android-review.googlesource.com/#/c/82861/](https://android-review.googlesource.com/#/c/82861/)。
 - en: Based on these generic assertions of what a good policy should look like, let's
     evaluate ours.
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据一个好的策略应该具备的这些通用断言，我们来评估我们的策略。
 - en: 'First, we will check for unlabeled objects. From the host, with the `audit.log`
     file you obtained with `adb pull`:'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将检查未标记的对象。从主机上，使用`adb pull`获取的`audit.log`文件：
 - en: '[PRE19]'
+  id: totrans-140
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: It looks like we have some files and other things that are not labeled properly;
     we will address these in the [Chapter 11](ch11.html "Chapter 11. Labeling Properties"),
     *Labeling Properties*. Now, let's check for domains that have multiple processes
     when they should not, and find improper binaries in those domains (refer to the
     previous table for the complete mapping.)
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 看起来我们有一些文件和其他东西没有正确标记；我们将在[第11章](ch11.html "第11章. 标签属性") *标签属性* 中解决这些问题。现在，让我们检查那些不应该有多个进程的域，并在这些域中找到不适当的二进制文件（参考之前的表格以获取完整的映射。）
 - en: 'Init:'
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: Init：
 - en: '[PRE20]'
+  id: totrans-143
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'Zygote:'
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: Zygote：
 - en: '[PRE21]'
+  id: totrans-145
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: After doing this, we found issues because something is running in the `init_shell`
     domain, and `watchdogd` is in the `init` domain. These must be corrected.
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 在进行这项工作后，我们发现了一些问题，因为某些进程正在`init_shell`域中运行，而`watchdogd`在`init`域中。这些必须得到纠正。
 - en: Summary
+  id: totrans-147
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 概述
 - en: Writing `sepolicy` is relatively easy, writing good policy is an art. It requires
     the policy author to understand the system and the implications of the `allow`
     rule. Policy itself is a meta-programming language where the language controls
@@ -687,8 +1000,10 @@
     can be architected for a specific use. Policies can be too porous (essentially
     useless) or very tight and difficult to change without breaking the portions that
     already work.
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 编写`sepolicy`相对简单，编写好的策略则是一门艺术。它要求策略作者理解系统和`allow`规则的含义。策略本身是一种元编程语言，这种语言控制用户空间和内核如何协同工作，与任何程序类似，策略可以针对特定的用途进行架构设计。策略可能过于宽松（基本上无用），或者非常严格，在不破坏已正常工作部分的情况下难以更改。
 - en: A good policy needs to preserve the intended proper function of the system,
     so thorough testing of all the systems within Android is essential. CTS is a great
     help in exercising Android, but it often does not cover all the cases; user testing
@@ -696,5 +1011,7 @@
     objects get their security labels and how we can change them. Later, we will go
     over how to use CTS as a tool to test the system and generate policy violations
     for intended behaviors.
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: 一个好的策略需要保持系统预期功能的正常运行，因此对Android内的所有系统进行彻底测试是至关重要的。CTS在锻炼Android方面非常有帮助，但它通常并不能覆盖所有情况；建议进行用户测试。在下一章中，我们将介绍文件系统和文件系统对象如何获得其安全标签，以及我们如何更改它们。稍后，我们将介绍如何使用CTS作为一个工具来测试系统，并对预期行为生成策略违规。
