@@ -209,6 +209,7 @@
   id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于底层的`LocalSocket` `mSocket`是Unix域套接字，你可以获取连接客户端的凭据。在这种情况下，调用`getPeerContext()`获取客户端的安全上下文，或者更正式地说，是进程标签。初始化后，在方法`runOnce()`中进一步向下，我们看到它在调用`applyUidSecurityPolicy`和其他`apply*SecurityPolicy`例程时被使用。受保护的`runOnce()`方法被调用以从套接字读取一个启动命令和参数。最终，在`apply*SecurityPolicy`检查之后，它调用`forkandSpecialize()`。每个安全策略检查都已修改为在现有的DAC安全控制之上使用SELinux。如果我们审查`applyUidSecurityPolicy`，我们会看到他们进行如下调用：
 - en: '[PRE0]'
   id: totrans-27
   prefs: []
@@ -224,6 +225,8 @@
   id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个用户空间利用强制访问控制的示例，这在对象管理器中是众所周知的。此外，在`applyseInfoSecurityPolicy()`方法中为神秘的`seinfo`字符串添加了一个安全检查。这里所有的SELinux安全检查都指定了目标类`zygote`。所以如果我们查看`sepolicy
+    access_vectors`，我们会看到添加的类`zygote`。这是Android的一个自定义类，定义了所有在安全检查中检查的向量。
 - en: The last file we'll consider from this patch is `ActivityManagerService.java`.
     The `ActivityManager` is responsible for starting applications and managing their
     lifecycles. It's a consumer of the `Process.start` API and needs to specify `seinfo`.
@@ -232,6 +235,8 @@
   id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从这个补丁中考虑的最后一个文件是`ActivityManagerService.java`。`ActivityManager`负责启动应用程序并管理它们的生命周期。它是`Process.start`
+    API的使用者，需要指定`seinfo`。这个补丁很简单，目前只是发送了`null`。稍后，我们将看到启用其使用的补丁。
 - en: The next patch, [https://android-review.googlesource.com/#/c/31063/](https://android-review.googlesource.com/#/c/31063/),
     executes within the context of the Android Dalvik VM and is coded in the VM zygote
     process space. The `forkAndSpecialize()` we saw in `ZygoteConnection` ends up
@@ -241,6 +246,9 @@
   id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个补丁，[https://android-review.googlesource.com/#/c/31063/](https://android-review.googlesource.com/#/c/31063/)，在Android
+    Dalvik VM的上下文中执行，并在VM zygote进程空间中编码。我们在`ZygoteConnection`中看到的`forkAndSpecialize()`最终进入了这个本地例程。它通过`static
+    pid_t forkAndSpecializeCommon(const u4* args, bool isSystemServer)`进入。这个例程负责创建成为应用程序的新进程。
 - en: It begins with housekeeping code moving from Java to C and sets up the `niceName`
     and `seinfo` values as C-style strings. Eventually, the code calls `fork()` and
     the child process starts doing things, like executing `setgid` and `setuid`. The
@@ -254,6 +262,7 @@
   id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 它从Java开始，将清理代码移动到C，并设置C风格字符串的`niceName`和`seinfo`值。最终，代码调用`fork()`，子进程开始执行操作，如执行`setgid`和`setuid`。`uid`和`gid`值通过`Process.start`方法指定给zygote连接。我们还看到一个对`setSELinuxContext()`的新调用。顺便说一下，这些事件的顺序在这里很重要。如果你太早设置新进程的SELinux上下文，那么进程在新上下文中需要额外的能力才能执行像`setuid`和`setgid`这样的操作。然而，这些权限最好留给`zygote`域，这样我们进入的应用程序域可以尽可能最小化。
 - en: Continuing, `setSELinuxContext` eventually calls `selinux_android_setcontext()`.
     Note that the `HAVE_SELINUX` conditional compilation macros were removed after
     this commit, but prior to the 4.3 release. Also note that `selinux_android_setcontext()`
@@ -262,6 +271,7 @@
   id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 接着，`setSELinuxContext`最终调用了`selinux_android_setcontext()`。注意，在这个提交之后，移除了`HAVE_SELINUX`条件编译宏，但在4.3版本发布之前。还要注意，`selinux_android_setcontext()`在`libselinux`中定义，所以我们的旅程将带我们到那里。在这里我们看到神秘的`seinfo`仍然在传递。
 - en: The next patch to evaluate is [https://android-review.googlesource.com/#/c/39601/](https://android-review.googlesource.com/#/c/39601/).
     This patch actually passes a more meaningful `seinfo` value from the Java layer.
     Rather than being set to `null`, this patch introduces some parsing logic from
@@ -269,6 +279,7 @@
   id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个要评估的补丁是[https://android-review.googlesource.com/#/c/39601/](https://android-review.googlesource.com/#/c/39601/)。这个补丁实际上从Java层传递了一个更有意义的`seinfo`值。这个补丁没有设置为`null`，而是引入了从XML文件中解析的逻辑，并将其传递给`Process.start`方法。
 - en: 'This patch modifies two major components: `PackageManager` and `installd`.
     `PackageManager` runs inside the `system_server`, and performs application installation.
     It maintains the state of all installed packages in the system. The second component,
@@ -280,6 +291,7 @@
   id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个补丁修改了两个主要组件：`PackageManager`和`installd`。`PackageManager`在`system_server`内部运行，执行应用程序安装。它维护系统中所有已安装包的状态。第二个组件，称为`installd`的服务，是一个非常特权级的root服务，在磁盘上创建所有应用程序的私有目录。这种方法不是给系统服务器，因此`PackageManager`提供创建这些目录的能力，只有`installd`拥有这些权限。即使系统服务器也无法读取您的私有数据目录中的数据，除非您将其设置为全局可读。
 - en: This patch is larger than the others, so we are only going to inspect the parts
     directly relevant to our discussion. We'll start by looking at `PackageManagerService.java`.
     This class is the package manager, proper for Android. In the constructor for
@@ -287,6 +299,8 @@
   id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个补丁比其他的要大，因此我们只检查与讨论直接相关的部分。我们将从查看`PackageManagerService.java`开始。这个类是Android的包管理器。在`PackageManagerService()`的构造函数中，我们看到了添加了`mFoundPolicyFile
+    = SELinuxMMAC.readInstallPolicy();`这一行。
 - en: Based on the naming, we can conjecture that this method is looking for some
     type of policy configuration file, and if found, returns true, setting the `mFoundPolicyFile`
     member variable. We also see some calls to `createDataDirs` and `mInstaller.*`
@@ -294,10 +308,12 @@
   id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据命名，我们可以推测这个方法是在寻找某种策略配置文件，如果找到，返回true，并设置`mFoundPolicyFile`成员变量。我们还看到一些对`createDataDirs`和`mInstaller.*`的调用。我们可以忽略这些，因为那些调用是发送给`installd`的。
 - en: 'The next major portion adds the following:'
   id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个主要部分添加了以下内容：
 - en: '[PRE1]'
   id: totrans-38
   prefs: []
@@ -310,6 +326,7 @@
   id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 重要的是要注意这段代码被添加到了`scanPackageLI()`方法中。每次需要扫描包以进行安装时，都会调用这个方法。因此，在高级别上，如果在服务启动期间找到某些策略文件，那么就会为包分配一个`seinfo`值。
 - en: The next file to look at is `ApplicationInfo.java`, a container class for maintaining
     meta information about a package. As we can see, the `seinfo` value is specified
     here for storage purposes. Additionally, there is some code for serializing and
@@ -317,12 +334,14 @@
   id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 下一个要查看的文件是`ApplicationInfo.java`，这是一个用于维护关于包的元信息的容器类。正如我们所见，`seinfo`值在这里指定以供存储。此外，还有一些通过Android特定的`Parcel`实现序列化和反序列化类的代码。
 - en: At this point, we should have a closer look at the `SELinuxMMAC.java` code to
     confirm our understanding of what's going on. The class starts by declaring two
     locations for policy files.
   id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，我们应该仔细查看`SELinuxMMAC.java`代码，以确认我们对正在发生的事情的理解。这个类开始时声明了两个策略文件的位置。
 - en: '[PRE2]'
   id: totrans-42
   prefs: []
@@ -335,6 +354,7 @@
   id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据这个，策略文件可以存在于两个位置：`/data/system/mac_permissions.xml`和`/system/etc/security/mac_permissions.xml`。最终，我们看到`PackageManagerService`初始化时对类中定义的方法`readInstallPolicy()`的调用，最终简化为以下调用：
 - en: '[PRE3]'
   id: totrans-44
   prefs: []
@@ -348,6 +368,7 @@
   id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 当`policyFiles`设置为`INSTALL_POLICY_FILE`时，这段代码使用数组在指定位置查找文件。它是基于优先级的，`/data`位置优先于`/system`。这个方法中的其余代码看起来像解析逻辑，并填充了在类声明中定义的两个哈希表：
 - en: '[PRE4]'
   id: totrans-46
   prefs: []
@@ -358,23 +379,28 @@
   id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: '`sSigSeinfo`将`Signatures`（或签名密钥）映射到`seinfo`字符串。另一个映射`sPackageSeinfo`将包名映射到字符串。'
 - en: At this point, we can read some formatted XML from the `mac_permissions.xml`
     file and create internal mappings from signing key to `seinfo` and package name
     to `seinfo`.
   id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，我们可以从`mac_permissions.xml`文件中读取一些格式化的XML，并从签名密钥到`seinfo`以及包名到`seinfo`创建内部映射。
 - en: The other call from `PackageManagerService` into this class came from `void
     assignSeinfoValue(PackageParser.Package pkg)`.
   id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: '`PackageManagerService` 类调用这个类的另一个方法来自于 `void assignSeinfoValue(PackageParser.Package
+    pkg)`。'
 - en: 'Let''s investigate what this method can do. It starts by checking if the application
     is system UID or a system installed app. In other words, it checks whether the
     application is a third-party application:'
   id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们调查一下这个方法能做什么。它首先检查应用程序是否为系统UID或系统安装的应用程序。换句话说，它检查应用程序是否为第三方应用程序：
 - en: '[PRE5]'
   id: totrans-51
   prefs: []
@@ -390,6 +416,7 @@
   id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 这段代码后来被谷歌删除，最初是合并的要求。然而，我们可以继续进行评估。代码遍历包中的所有签名，并与哈希表进行对比。如果它使用该映射中的某个内容签名，它就会使用关联的`seinfo`值。另一种情况是它通过包名匹配。在任一情况下，包的`ApplictionInfo`类的`seinfo`值都会更新以反映这一点，并供`installd`和zygote应用程序生成在其他地方使用：
 - en: '[PRE6]'
   id: totrans-53
   prefs: []
@@ -408,6 +435,7 @@
   id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 顺便一提，主线AOSP（Android Open Source Project）中合并的内容与NSA在Bitbucket仓库中维护的内容略有不同。NSA在这些策略文件中有额外的控制，可能导致应用程序安装被终止。可以说，谷歌和NSA在这个问题上“分道扬镳”。在NSA版本的`SELinuxMMAC.java`中，你可以指定匹配特定签名或包名的应用程序被允许拥有某些Android级别的权限集。例如，你可以阻止所有请求`CAMERA`权限的应用程序安装，或者阻止使用某些密钥签名的应用程序。这也突显了在大型代码库中找到补丁并快速了解项目如何发展的重要性，这往往可能显得有些困难。
 - en: The last file in this patch for us to consider is `ActivityManagerService.java`.
     This patch replaces the null with `app.info.seinfo`. After all that work and all
     that plumbing, we finally have the mystical `seinfo` value fully parsed, associated
@@ -415,6 +443,7 @@
   id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个补丁中，我们需要考虑的最后一个文件是`ActivityManagerService.java`。这个补丁用`app.info.seinfo`替换了null。经过所有这些工作和管道铺设，我们最终有了完全解析的神秘的`seinfo`值，与每个应用程序包关联，并传递给zygote，在`selinux_android_setcontext()`中使用。
 - en: Now it would benefit us to sit back and think about some of the properties we
     wanted to achieve in labeling applications. One of them is to somehow couple a
     security context with the application signing key, and this is precisely the main
@@ -424,11 +453,14 @@
   id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在让我们回顾一下，我们希望在标记应用程序时实现的一些属性。其中之一是以某种方式将安全上下文与应用程序签名密钥耦合，这正是 `seinfo` 的主要好处。这是一个高度敏感且受信任的与签名密钥相关联的字符串值。字符串的实际内容是任意的，在
+    `mac_permissions.xml` 中指定，这是我们冒险旅程的下一站。
 - en: The mac_permissions.xml file
   id: totrans-57
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`mac_permissions.xml` 文件'
 - en: The `mac_permissions.xml` file has a very confusing name. Expanded, the name
     is MAC permissions. However, its major mainline functionality is to map a signing
     key to a `seinfo` string. Secondarily, it can also be used to configure a non-mainstream
@@ -440,40 +472,48 @@
   id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: '`mac_permissions.xml` 文件的名字非常容易混淆。展开来看，名字是MAC权限。然而，其主要主流功能是将签名密钥映射到一个 `seinfo`
+    字符串。其次，它还可以用于配置非主流的安装时权限检查功能，称为安装时MMAC。MMAC控制是国家安全局（NSA）在中层实现强制访问控制工作的一部分。MMAC代表“中间件强制访问控制”。谷歌没有合并任何MMAC功能。但是，由于我们使用了NSA的Bitbucket仓库，我们的代码库包含了这些功能。'
 - en: 'The `mac_permissions.xml` is an XML file, and should adhere to the following
     rules, where italicized portions are only supported on NSA branches:'
   id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: '`mac_permissions.xml` 是一个XML文件，应遵循以下规则，其中斜体部分仅在NSA分支上支持：'
 - en: A signature is a hex encoded X.509 certificate and is required for each signer
     tag.
   id: totrans-60
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 签名是一个十六进制编码的X.509证书，每个签名者标签都需要。
 - en: 'A `<signer signature="" >` element may have multiple child elements:'
   id: totrans-61
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`<signer signature="" >` 元素可能有多个子元素：'
 - en: '`allow-permission`: It produces a set of maximal allowed permissions (whitelist)'
   id: totrans-62
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`allow-permission`：它生成一组最大允许的权限集合（白名单）。'
 - en: '`deny-permission`: It produces a blacklist of permissions to deny'
   id: totrans-63
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`deny-permission`：它生成一个要拒绝的权限黑名单。'
 - en: '`allow-all`: It is a wildcard tag that will allow every permission requested'
   id: totrans-64
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`allow-all`：这是一个通配符标签，将允许所有请求的权限。'
 - en: '`package`: It is a complex tag which defines allow, deny, and wildcard sub-elements
     for a specific package name protected by the signature'
   id: totrans-65
@@ -481,51 +521,60 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`package`：这是一个复杂的标签，定义了一个特定包名的签名保护的允许、拒绝和通配符子元素。'
 - en: Zero or more global `<package name="">` tags are allowed. These tags allow a
     policy to be set outside any signature for specific package names.
   id: totrans-66
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 零个或多个全局 `<package name="">` 标签是被允许的。这些标签允许在特定包名的外部设置策略，不受任何签名限制。
 - en: A `<default>` tag is allowed that can contain install policy for all apps not
     signed with a previously listed cert and not having a per package global policy.
   id: totrans-67
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 允许使用 `<default>` 标签，其中可以包含未使用先前列出的证书签名的所有应用的安装策略，且没有每个包的全局策略。
 - en: Unknown tags at any level are skipped.
   id: totrans-68
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 任何级别的未知标签将被跳过。
 - en: Zero or more signer tags are allowed.
   id: totrans-69
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 零个或多个签名者标签是被允许的。
 - en: Zero or more package tags are allowed per signer tag.
   id: totrans-70
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 每个签名者标签允许零个或多个包标签。
 - en: A `<package name="">` tag may not contain another `<package name="">` tag. If
     found, it's skipped.
   id: totrans-71
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`<package name="">` 标签可能不包含另一个 `<package name="">` 标签。如果发现，则跳过。'
 - en: 'When multiple sub-elements appear for a tag, the following logic is used to
     ultimately determine the type of enforcement:'
   id: totrans-72
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当一个标签出现多个子元素时，以下逻辑用于最终确定执行类型：
 - en: A blacklist is used if at least one deny-permission tag is found.
   id: totrans-73
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果至少找到一个 deny-permission 标签，则使用黑名单。
 - en: A whitelist is used, if not a blacklist, and at least one allow-permission tag
     is found.
   id: totrans-74
@@ -533,6 +582,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果没有黑名单，则使用白名单，并且至少找到一个 allow-permission 标签。
 - en: A wildcard (accept all permissions) policy is used if not a blacklist and not
     a whitelist, and at least one allow-all tag is present.
   id: totrans-75
@@ -540,6 +590,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果没有黑名单和白名单，且至少存在一个 allow-all 标签，则使用通配符（接受所有权限）策略。
 - en: If a `<package name="">` sub-element is found, then that sub-element's policy
     is used according to the earlier logic and overrides any signature global policy
     type.
@@ -548,6 +599,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果找到 `<package name="">` 子元素，则根据之前的逻辑使用该子元素的策略，并覆盖任何签名全局策略类型。
 - en: In order for a policy stanza to be enforced, at least one of the preceding situations
     must apply. Meaning, empty signer, default or package tags will not be accepted.
   id: totrans-77
@@ -716,6 +768,9 @@
   id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Android 中，构建时你可以有三个级别的构建：`engineering`，`userdebug` 或 `user`。在 `keys.conf`
+    文件中，你可以将一个密钥与 `ALL` 区段属性关联以用于所有级别，或者你可以为每个级别分配不同的密钥。这对于使用非常特殊的发布密钥构建发布或用户版本很有帮助。我们在
+    `@RELEASE` 区段看到了一个这样的例子：
 - en: '[PRE13]'
   id: totrans-102
   prefs: []
@@ -730,11 +785,14 @@
   id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 该文件还允许通过传统的 `$` 特殊字符使用环境变量。pem 文件的默认位置是 `build/target/product/security`。然而，你*绝不能*将这些密钥用于用户发布版本。这些密钥是
+    AOSP 测试密钥，是公开的！这样做的话，任何人都可以使用系统密钥来签署他们的应用并获得系统权限。`keys.conf` 文件只在构建过程中使用，并且不在系统上。
 - en: seapp_contexts
   id: totrans-104
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: seapp_contexts
 - en: 'So far, we have looked at how a finished `mac_permssions.xml` file assigns
     the `seinfo` value. Now we should address how the labeling is actually configured
     and utilizes this value. The labeling of applications is managed in another configuration
@@ -744,100 +802,119 @@
   id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们已经了解了完成的 `mac_permssions.xml` 文件如何分配 `seinfo` 值。现在我们应该探讨标记实际上是如何配置并使用这个值的。应用程序的标记是在另一个配置文件
+    `seapp_contexts` 中管理的。与 `mac_permissions.xml` 一样，它被加载到设备上。然而，默认位置是 `/seapp_contexts`。`seapp_contexts`
+    的格式是每行遵循 `key=value` 对映射，以下规则：
 - en: 'Input selectors:'
   id: totrans-106
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 输入选择器：
 - en: '`isSystemServer` (boolean)'
   id: totrans-107
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`isSystemServer`（布尔值）'
 - en: '`user` (string)'
   id: totrans-108
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`user`（字符串）'
 - en: '`seinfo` (string)'
   id: totrans-109
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`seinfo`（字符串）'
 - en: '`name` (string)'
   id: totrans-110
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`name`（字符串）'
 - en: '`sebool` (string)'
   id: totrans-111
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`sebool`（字符串）'
 - en: 'Input selector rules:'
   id: totrans-112
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 输入选择器规则：
 - en: '`isSystemServer=true` can only be used once.'
   id: totrans-113
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`isSystemServer=true` 只能使用一次。'
 - en: An unspecified `isSystemServer` defaults to false.
   id: totrans-114
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 未指定的 `isSystemServer` 默认为 false。
 - en: An unspecified string selector will match any value.
   id: totrans-115
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 未指定的字符串选择器将匹配任何值。
 - en: A user string selector that ends in `*` will perform a prefix match.
   id: totrans-116
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 以 `*` 结尾的用户字符串选择器将执行前缀匹配。
 - en: '`user=_app` will match any regular app UID.'
   id: totrans-117
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`user=_app` 将匹配任何常规的应用 UID。'
 - en: '`user=_isolated` will match any isolated service UID.'
   id: totrans-118
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`user=_isolated` 将匹配任何隔离服务 UID。'
 - en: All specified input selectors in an entry must match (logical AND).
   id: totrans-119
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 一个条目中所有指定的输入选择器必须匹配（逻辑与）。
 - en: Matching is case-insensitive.
   id: totrans-120
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 匹配不区分大小写。
 - en: 'Precedence rules in order:'
   id: totrans-121
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 优先级规则如下：
 - en: '`isSystemServer=true` before `isSystemServer=false`'
   id: totrans-122
   prefs:
@@ -845,6 +922,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`isSystemServer=true` 优先于 `isSystemServer=false`'
 - en: Specified `user=` string before unspecified `user=` string
   id: totrans-123
   prefs:
@@ -852,6 +930,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 指定的 `user=` 字符串优先于未指定的 `user=` 字符串。
 - en: Fixed the `user=` string before the `user=` prefix (ending in `*`)
   id: totrans-124
   prefs:
@@ -859,6 +938,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 修复了 `user=` 字符串，使其优先于以 `*` 结尾的 `user=` 前缀。
 - en: Longer `user=` prefix before shorter `user=` prefix
   id: totrans-125
   prefs:
@@ -866,6 +946,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 较长的 `user=` 前缀优先于较短的前缀。
 - en: Specified `seinfo=` string before unspecified `seinfo=` string.
   id: totrans-126
   prefs:
@@ -873,6 +954,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 指定的 `seinfo=` 字符串优先于未指定的 `seinfo=` 字符串。
 - en: Specified `name=` string before unspecified `name=` string.
   id: totrans-127
   prefs:
@@ -880,6 +962,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 指定的 `name=` 字符串优先于未指定的 `name=` 字符串。
 - en: Specified `sebool=` string before unspecified `sebool=` string.
   id: totrans-128
   prefs:
@@ -887,17 +970,20 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 指定的 `sebool=` 字符串优先于未指定的 `sebool=` 字符串。
 - en: 'Outputs:'
   id: totrans-129
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 输出：
 - en: '`domain` (string): It specifies the process domain for the application.'
   id: totrans-130
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`domain`（字符串）：它指定了应用程序的进程域。'
 - en: '`type` (string): It specifies the disk label for the applications'' private
     data directory.'
   id: totrans-131
@@ -905,6 +991,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`type`（字符串）：它指定了应用程序私有数据目录的磁盘标签。'
 - en: '`levelFrom` (string; one of `none`, `all`, `app`, or `user`): It gives the
     MLS specifier.'
   id: totrans-132
@@ -912,47 +999,55 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`levelFrom`（字符串；值为 `none`，`all`，`app` 或 `user`）：它给出了 MLS 指示符。'
 - en: '`level` (string): It shows the hardcoded MLS value.'
   id: totrans-133
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`level`（字符串）：它显示硬编码的 MLS 值。'
 - en: 'Output rules:'
   id: totrans-134
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 输出规则：
 - en: Only entries that specify `domain=` will be used for app process labeling.
   id: totrans-135
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 只有指定了 `domain=` 的条目会被用于应用进程标记。
 - en: Only entries that specify `type=` will be used for app directory labeling.
   id: totrans-136
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 只有指定了 `type=` 的条目才会用于应用目录标记。
 - en: '`levelFrom=user` is only supported for `_app` or `_isolated` UIDs.'
   id: totrans-137
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`levelFrom=user` 只支持 `_app` 或 `_isolated` UIDs。'
 - en: '`levelFrom=app` or `levelFrom=all` is only supported for `_app` UIDs.'
   id: totrans-138
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`levelFrom=app` 或 `levelFrom=all` 只支持 `_app` UIDs。'
 - en: '`level` may be used to specify a fixed level for any UID.'
   id: totrans-139
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`level` 可用于为任何 UID 指定固定的级别。'
 - en: 'During application spawn, this file is used by the `selinux_android_setcontext()`
     and `selinux_android_setfilecon2()` functions to look up the proper application
     domain or filesystem context, respectively. The source for these can be found
@@ -962,6 +1057,9 @@
   id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 在应用程序生成期间，`selinux_android_setcontext()` 和 `selinux_android_setfilecon2()` 函数会使用此文件来查找适当的应用程序域或文件系统上下文。这些函数的源代码可以在
+    `external/libselinux/src/android.c` 中找到，推荐阅读。例如，以下条目将所有具有 UID `bluetooth` 的应用程序放在
+    `bluetooth` 域中，数据目录标签为 `bluetooth_data_file`：
 - en: '[PRE14]'
   id: totrans-141
   prefs: []
@@ -973,6 +1071,8 @@
   id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 此示例将所有第三方或“默认”应用程序放入 `untrusted_app` 的进程域和 `app_data_file` 的数据目录中。它还使用基于 MLS
+    的 `levelFrom=app` 类别以帮助提供额外的分离。
 - en: '[PRE15]'
   id: totrans-143
   prefs: []
@@ -985,6 +1085,7 @@
   id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 目前，此功能是实验性的，因为它破坏了一些已知的应用程序兼容性问题。在撰写本文时，这成为了谷歌和美国国家安全局工程师的热门关注点。由于它是实验性的，让我们验证其功能，然后禁用它。
 - en: 'We have not installed any third party applications yet, so we''ll need to do
     so in order to experiment. FDroid is a useful place to find third party applications,
     so let''s download something from there and install it. We can use the `0xbenchmark`
@@ -994,6 +1095,9 @@
   id: totrans-145
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还没有安装任何第三方应用程序，因此我们需要安装一个以便进行实验。FDroid 是一个寻找第三方应用程序的好地方，因此我们可以从那里下载并安装一些内容。我们可以使用位于
+    [https://f-droid.org/repository/browse/?fdid=org.zeroxlab.zeroxbenchmark](https://f-droid.org/repository/browse/?fdid=org.zeroxlab.zeroxbenchmark)
+    的 `0xbenchmark` 应用程序，APK 下载地址为 [https://f-droid.org/repo/org.zeroxlab.zeroxbenchmark_9.apk](https://f-droid.org/repo/org.zeroxlab.zeroxbenchmark_9.apk)，如下所示：
 - en: '[PRE16]'
   id: totrans-146
   prefs: []
@@ -1004,10 +1108,12 @@
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: 'Check `logcat` for the install time `seinfo` value:'
   id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查 `logcat` 中的安装时 `seinfo` 值：
 - en: '[PRE17]'
   id: totrans-149
   prefs: []
@@ -1018,6 +1124,7 @@
   id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: 从 UDOO 中启动 `0xbenchmark` APK。我们应在 `ps` 中看到它正在运行，并带有其标签：
 - en: '[PRE18]'
   id: totrans-151
   prefs: []
@@ -1028,6 +1135,7 @@
   id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意上下文字符串中的级别部分 `s0:c40,c256`。这些类别是在 `seapp_contexts` 中使用 `level=app` 设置创建的。
 - en: To disable it, we could simply remove the key-value pair for level from the
     entry in `seapp_contexts`, or we could leverage the `sebool` conditional assignment.
     Let's use the Boolean approach. Modify the sepolicy `seapp_contexts` file so the
@@ -1037,10 +1145,15 @@
   id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: 要禁用它，我们可以简单地从 `seapp_contexts` 中的条目中删除 level 的键值对，或者我们可以利用 `sebool` 条件赋值。让我们使用布尔值方法。修改
+    sepolicy `seapp_contexts` 文件，以便修改现有的 `untrusted_app` 条目，并添加一个新条目。将 `user=_app
+    domain=untrusted_app type=app_data_file` 更改为 `user=_app sebool=app_level domain=untrusted_app
+    type=app_data_file levelFrom=app`。
 - en: 'Build that with `mmm external/sepolicy`, as follows:'
   id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用 `mmm external/sepolicy` 进行构建，如下所示：
 - en: '[PRE19]'
   id: totrans-155
   prefs: []
@@ -1053,6 +1166,8 @@
   id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 好吧，在 `seapp_contexts` 的第 42 行有一个构建错误，抱怨找不到 `selinux` 布尔值。让我们尝试通过声明布尔值来纠正问题。在
+    `app.te` 中添加：`bool app_level false;`。现在将新构建的 `seapp_contexts` 和 sepolicy 文件推送到设备上，并触发动态重载：
 - en: '[PRE20]'
   id: totrans-157
   prefs: []
@@ -1062,6 +1177,7 @@
   id: totrans-158
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以通过以下方式验证布尔值是否存在：
 - en: '[PRE21]'
   id: totrans-159
   prefs: []
@@ -1071,6 +1187,7 @@
   id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于设计限制，我们需要卸载并重新安装应用程序：
 - en: '[PRE22]'
   id: totrans-161
   prefs: []
@@ -1080,6 +1197,7 @@
   id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 在启动进程后，重新安装并检查进程的上下文内容：
 - en: '[PRE23]'
   id: totrans-163
   prefs: []
@@ -1091,11 +1209,13 @@
   id: totrans-164
   prefs: []
   type: TYPE_NORMAL
+  zh: 很好！它失败了。在经过一些调试后，我们发现问题的根源是 `/data/security` 路径不是全局可搜索的，导致 DAC 权限失败。
 - en: Note
   id: totrans-165
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: We found this by printing off the result and error codes in `android.c` where
     we saw the `fopen` on `seapp_contexts_file[]` array (files in priority order)
     while checking the result of `fp = fopen(seapp_contexts_file[i++], "r")` in `selinux_android_seapp_context_reload()`
@@ -1103,6 +1223,9 @@
   id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们通过在 `android.c` 中打印结果和错误代码找到这个，我们看到在检查 `fp = fopen(seapp_contexts_file[i++],
+    "r")` 的结果时，`selinux_android_seapp_context_reload()` 中的 `seapp_contexts_file[]`
+    数组（按优先级排序的文件）上的 `fopen`，并使用 `selinux_log()` 将数据转储到 `logcat`。
 - en: '[PRE24]'
   id: totrans-167
   prefs: []
@@ -1116,6 +1239,9 @@
   id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 请记住，`set selinux` 上下文发生在 UID 切换之后，因此我们需要使其对其他人可搜索。我们可以通过更改 `device/fsl/imx6/etc/init.rc`
+    中的 UDOO `init.rc` 脚本的权限来修复权限。具体来说，将行 `mkdir /data/security 0700 system system`
+    更改为 `mkdir /data/security 0711 system system`。构建并刷新 `bootimage`，然后再次尝试上下文测试。
 - en: '[PRE25]'
   id: totrans-169
   prefs: []
@@ -1129,6 +1255,8 @@
   id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 迄今为止，我们已经演示了如何使用 `seapp_contexts` 上的 `sebool` 选项来禁用 MLS 类别。需要注意的是，在更改 APK 的类别或类型时，需要卸载并重新安装
+    APK，否则在大多数情况下，由于没有访问权限，该进程会与其数据目录脱离。
 - en: 'Next, let''s take this APK, uninstall it, and assign it a unique domain by
     changing its `seinfo` string. Typically, you use this feature to take a set of
     applications signed with a common key and get them into a custom domain to do
@@ -1138,6 +1266,8 @@
   id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，让我们拿这个 APK，卸载它，并通过更改其 `seinfo` 字符串为其分配一个唯一的域。通常，你使用这个特性将一组用共同密钥签名的应用程序放入自定义域以执行自定义操作。例如，如果你是
+    OEM，你可能需要允许未用 OEM 控制的密钥签名的第三方应用程序拥有自定义权限。首先卸载 APK：
 - en: '[PRE26]'
   id: totrans-172
   prefs: []
@@ -1147,6 +1277,7 @@
   id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过添加以下内容在 `mac_permissions.xml` 中创建一个新条目：
 - en: '[PRE27]'
   id: totrans-174
   prefs: []
@@ -1157,6 +1288,7 @@
   id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们需要为 `keys.conf` 获取一个 pem 文件。因此，解压 APK 并提取公共证书：
 - en: '[PRE28]'
   id: totrans-176
   prefs: []
@@ -1167,6 +1299,7 @@
   id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要从生成的 `CERT.pem` 文件中删除任何多余的内容。如果你打开它，你应该会在顶部看到这些行：
 - en: '[PRE29]'
   id: totrans-178
   prefs: []
@@ -1178,11 +1311,13 @@
   id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 它们需要被删除，因此只删除主题和发行者行。文件应以 `BEGIN CERTIFICATE` 开头，以 `END CERTIFICATE` 剪切线结尾。
 - en: 'Let''s move this to a new folder in our workspace called `certs` and move the
     certificate into this folder with a better name:'
   id: totrans-180
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们将这个移动到工作区中名为 `certs` 的新文件夹，并将证书移动到这个文件夹，并赋予其一个更好的名字：
 - en: '[PRE30]'
   id: totrans-181
   prefs: []
@@ -1192,6 +1327,7 @@
   id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以通过添加以下内容来设置 `keys.conf`：
 - en: '[PRE31]'
   id: totrans-183
   prefs: []
@@ -1201,6 +1337,7 @@
   id: totrans-184
   prefs: []
   type: TYPE_NORMAL
+  zh: 别忘了更新 `seapp_contexts` 以使用新的映射：
 - en: '[PRE32]'
   id: totrans-185
   prefs: []
@@ -1211,6 +1348,7 @@
   id: totrans-186
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在声明要使用的新类型。域类型应在 `sepolicy` 中名为 `benchmark_app.te` 的文件中声明：
 - en: '[PRE33]'
   id: totrans-187
   prefs: []
@@ -1220,6 +1358,7 @@
   id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: 还在 `file.te` 中添加 `benchmark_app_data_file`：
 - en: '[PRE34]'
   id: totrans-189
   prefs: []
@@ -1230,6 +1369,7 @@
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: You may not always want *all* of these attributes, especially if you're doing
     something security critical. Make sure you look at each attribute and macro and
     see its usage. You don't want to open up an unintended hole by having an overly
@@ -1237,10 +1377,12 @@
   id: totrans-191
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能并不总是想要这些*所有*属性，尤其是如果你在做一些安全关键的事情。确保你查看每个属性和宏以及其用法。你不想因为过于宽松的域而打开一个未预期的大门。
 - en: Rebuild the policy, push the required pieces, and trigger a reload.
   id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: 重新构建策略，推送所需的部分，并触发重新加载。
 - en: '[PRE35]'
   id: totrans-193
   prefs: []
@@ -1251,6 +1393,7 @@
   id: totrans-194
   prefs: []
   type: TYPE_NORMAL
+  zh: 启动一个 shell 并使用 grep logcat 查看基准测试 APK 安装时的 `seinfo` 值。然后安装该 APK：
 - en: '[PRE36]'
   id: totrans-195
   prefs: []
