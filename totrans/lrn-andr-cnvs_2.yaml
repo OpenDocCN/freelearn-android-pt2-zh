@@ -1,7 +1,9 @@
 - en: Chapter 2. Drawing Threads
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第二章. 绘制线程
 - en: A thread is the smallest sequence of instructions that can be managed by the
     operating system independently. Normally, a single task is achieved in a single
     thread in a single process but, if we want to change the normal behavior and want
@@ -21,15 +23,19 @@
     away from the main thread and keep the frontend responsive and active. If we don't
     do this and retain heavy operations that consume a lot of processor power and
     memory, the application may end up nonresponsive or even ask us for a forced close.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 线程是可以由操作系统独立管理的最小指令序列。通常，在单个进程的单个线程中完成单个任务，但如果我们想改变正常行为，希望多个任务同时运行，我们将使用多线程。线程共享相同的进程资源，但独立执行。如果系统只有一个处理器，任务可能会看起来是同时处理的，但实际上并非如此。实际上，在一个处理器的情况下，处理线程的分配会从线程切换到线程，但切换非常快，以至于看起来像是同时处理的。如果系统有多个处理器，两个线程可以同时执行——彼此并行。多线程是一种执行模型，在单个进程中可以执行一个以上的线程。线程可以用多种方式使用，每种方式都有自己的重要性；例如，要么同时执行多个任务，要么如果需要在后台处理某些内容而让前端保持响应和活跃，就可以将负载从主线程移开。这是Android应用程序的理想情况，因为我们必须将尽可能多的负载从主线程移开，并保持前端响应和活跃。如果我们不这样做，保留消耗大量处理器能力和内存的重操作，应用程序可能会变得无响应，甚至要求我们强制关闭。
 - en: The objective of this chapter is to clear the understanding of threads in Android.
     We will not dig deep into the details of threads and their coding, but will have
     a basic understanding of threads in Android. What are the known issues with this?
     Why are Android threads important in terms of drawing and Canvas? We will see
     a simple structure of code through which we want our tasks to run on another thread.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章节的目标是清晰理解Android中的线程。我们不会深入探讨线程及其编码的细节，但会对Android中的线程有一个基本的了解。这有什么已知问题？在绘制和Canvas方面，Android线程的重要性何在？我们将看到一个简单的代码结构，通过它我们希望任务在另一个线程上运行。
 - en: All applications run on a single thread in Android. All instructions run in
     a sequence, meaning that the second instruction will not start unless the first
     one is finished. This main thread is also called the **UI** (**User Interface**)
@@ -39,12 +45,16 @@
     or UI thread and the first operation takes too long to finish, the system will
     ask the user to forcibly close the application or wait for the process to complete.
     This scenario is called **ANR** (**Application Not Responding**).
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android中，所有应用都在单个线程上运行。所有指令按顺序执行，这意味着第二条指令不会在第一条完成之前开始。这个主线程也被称为**UI**（**用户界面**）线程，因为它负责在屏幕上绘制所有对象或视图，并处理所有事件，例如屏幕触摸和按钮点击。现在的问题是，如果我们有两个操作计划在同一个默认线程或UI线程中运行，而第一个操作需要很长时间才能完成，系统会要求用户强制关闭应用程序或等待进程完成。这种情况被称为**ANR**（**应用程序无响应**）。
 - en: The need for drawing threads
+  id: totrans-4
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 绘制线程的需求
 - en: We know we will work with images, drawings, and other graphics processing and
     we also know that they are pretty heavy on system resources. So we would like
     to design our application very carefully, keeping performance in mind. What if
@@ -67,12 +77,16 @@
     is supported, the system will decide which thread to start and which to stop,
     but no thread will be permanently stopped. So the control will switch between
     the running threads and it will look as if all threads are running in parallel.
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们知道我们将要处理图像、绘图和其他图形处理，我们也知道它们对系统资源非常重。因此，我们希望在设计应用程序时非常谨慎，考虑到性能。如果我们忽略这一点，将所有的图像、位图、图形和其他图形处理项都放在默认的UI线程上会怎样呢？这是新Android开发者的工作方式——将所有内容都放在默认活动的代码中，意味着将整个负载放在UI线程上。默认活动是我们希望应用程序运行时首先加载的活动。UI线程是我们应用程序的主要执行线程。这是大多数应用程序代码运行的地方。如`Activities`、`Services`、`ContentPorviders`和`BroadcastReceivers`等应用程序组件都在这个线程中创建。这种情况下会发生什么？即使我们的应用程序是地球上最有用、最吸引人的应用程序，它也撑不过一天。每次用户运行我们的应用程序，它最终都会变得没有响应。Play商店上用户的几条愤怒评论，我们的应用程序就完了。我们将失去这个想法，因为到那时它已经是公开的，我们也会失去我们的观众。为了解决这个问题，我们将从主UI线程中移走所有繁重的工作和负载，放到另一个线程上。理想情况下，当它运行时，看起来所有的线程都在并行运行，但这仅在有多CPU的情况下。如果只有一个CPU但支持多线程，系统将决定启动哪个线程，停止哪个线程，但没有任何线程会被永久停止。因此，控制将在运行中的线程之间切换，看起来就像是所有线程都在并行运行。
 - en: The issue with multithreading in Android
+  id: totrans-6
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Android中多线程的问题
 - en: We will put our heavy, resource-consuming operations on a separate thread, but
     in Android this generates a problem and that is the reason why no other thread
     is allowed to update the main UI thread that is responsible for all UI elements
@@ -80,31 +94,45 @@
     state of the UI thread. Android provides a class that specifically deals with
     this issue. It's called the `AsyncTask` class. We will discuss this later in this
     chapter.
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将把耗时的资源密集型操作放在一个单独的线程上，但在Android中这会产生一个问题，那就是为什么不允许其他线程更新负责所有UI元素和处理过程的主UI线程。为了解决这个问题，我们需要将其与UI线程的当前状态同步。Android提供了一个专门处理这个问题的类，它就是`AsyncTask`类。我们将在本章后面讨论这个问题。
 - en: The Thread class
+  id: totrans-8
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Thread类
 - en: The `Thread` and `Runnable` classes are the basic classes that enable us to
     use multithreading, but they have a very limited functionality but still do provide
     the base for `AsyncTask`, `HandlerThread`, `IntentService.Thread`, and `ThreadPoolExecuter`.
     These classes automatically manage threads and can run multiple threads in parallel.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Thread`和`Runnable`类是使我们能够使用多线程的基本类，它们的功能非常有限，但仍然为`AsyncTask`、`HandlerThread`、`IntentService.Thread`和`ThreadPoolExecuter`提供了基础。这些类能够自动管理线程，并可以并行运行多个线程。'
 - en: 'The following is a piece of sample code of the `Runnable` class:'
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面是`Runnable`类的一个示例代码片段：
 - en: '[PRE0]'
+  id: totrans-11
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'If we want our thread to run in the background, we will add the following line
     to the `run()` method mentioned previously:'
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们希望线程在后台运行，我们将在前面提到的`run()`方法中添加以下这行代码：
 - en: '[PRE1]'
+  id: totrans-13
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: Let's say we have our `Runnable` class. We still won't be able to display anything
     on the user interface because only the UI thread executes the UI objects such
     as views. Objects running on the UI thread have access to other objects. Now the
@@ -115,25 +143,35 @@
     to change something on the UI, it can't do that by itself but will use the facility
     provided by `runOnUiThread`, which will enable us to run the code inside a background
     thread on the main UI thread. Optionally, we can use `Handler` objects.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 假设我们有我们的`Runnable`类。我们仍然无法在用户界面上显示任何内容，因为只有UI线程执行UI对象，如视图。在UI线程上运行的对象可以访问其他对象。现在，在我们的线程上运行的任务不在UI线程上，因此它们无法访问UI对象。为了使我们的任务能够访问UI线程上的UI对象，我们必须使用可以将在后台线程中的数据移动到UI线程的东西。如果一个线程在后台运行，并且需要更改UI上的内容，它本身无法做到这一点，但可以使用`runOnUiThread`提供的功能，这将使我们能够在主UI线程上运行后台线程中的代码。另外，我们可以选择使用`Handler`对象。
 - en: Tip
+  id: totrans-15
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Downloading the example code**'
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: '**下载示例代码**'
 - en: You can download the example code files for all Packt books you have purchased
     from your account at [http://www.packtpub.com](http://www.packtpub.com). If you
     purchased this book elsewhere, you can visit [http://www.packtpub.com/support](http://www.packtpub.com/support)
     and register to have the files e-mailed directly to you.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 您可以从您的账户下载您购买的所有Packt图书的示例代码文件，访问地址为[http://www.packtpub.com](http://www.packtpub.com)。如果您在别处购买了这本书，可以访问[http://www.packtpub.com/support](http://www.packtpub.com/support)注册，我们会将文件直接通过电子邮件发送给您。
 - en: Handler objects that run on the UI thread
+  id: totrans-18
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 在UI线程上运行的Handler对象
 - en: To code `Handler` objects that run on the UI thread, firstly a `Handler` object
     should be defined on the UI thread and then the data should be stored in a `Task`
     object. The status of the object should be sent up the hierarchy of objects. When
@@ -141,62 +179,90 @@
     to achieve our goal of running tasks on another thread in the background and when
     needed communicate with the main UI thread to get our desired output. However,
     this requires a lot of efforts.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 要编写在UI线程上运行的`Handler`对象，首先应在UI线程上定义一个`Handler`对象，然后将数据存储在`Task`对象中。应该将对象的状态发送到对象层次结构的上层。完成这些操作后，应将数据移动到UI线程。我们这样做是为了实现在后台的另一个线程上运行任务，并在需要时与主UI线程通信以获得我们期望的输出。然而，这需要付出很多努力。
 - en: '![Handler objects that run on the UI thread](img/5396_02_01.jpg)'
+  id: totrans-20
   prefs: []
   type: TYPE_IMG
+  zh: '![在UI线程上运行的Handler对象](img/5396_02_01.jpg)'
 - en: AsyncTask
+  id: totrans-21
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: AsyncTask
 - en: To significantly reduce workload and complications, Android provides the `AsyncTask`
     class. This class will allocate our tasks to run on another thread in the background
     and when needed will communicate with the UI thread automatically, saving us the
     time and effort we will spend on `Handler` objects. To get the job done, we will
     create a class that will extend `AsyncTask`, will put in our functionality, and
     will execute our application. `AsyncTask` will do a lot for us.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了显著减少工作量和复杂性，Android提供了`AsyncTask`类。这个类将我们的任务分配到后台的另一个线程上运行，并在需要时自动与UI线程通信，为我们节省了使用`Handler`对象的时间和精力。为了完成任务，我们将创建一个扩展`AsyncTask`的类，将我们的功能放入其中，并执行我们的应用程序。`AsyncTask`会为我们做很多工作。
 - en: Summary
+  id: totrans-23
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 概述
 - en: 'In this chapter we have learned about the following:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们了解了以下内容：
 - en: The thread structure of a simple Android application
+  id: totrans-25
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 简单Android应用程序的线程结构
 - en: The role of the UI thread and its power
+  id: totrans-26
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: UI线程的角色及其重要性
 - en: The need to keep heavy resource-consuming operations away from the main UI thread
+  id: totrans-27
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 需要将耗用资源的操作从主UI线程中分离出来
 - en: The limitations of threads that are not the UI thread
+  id: totrans-28
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 非UI线程的局限性
 - en: How to handle problems using `Handler` objects and communicate with the UI thread
+  id: totrans-29
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如何使用`Handler`对象处理问题并与UI线程通信
 - en: The code structure of a class that implements the `Runnable` interface, which
     enables us to use threading
+  id: totrans-30
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 实现`Runnable`接口的类的代码结构，使我们能够使用线程
 - en: The facility that Android provides us in the form of the `AsyncTask` class;
     we also learned about its importance
+  id: totrans-31
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android以`AsyncTask`类的形式提供给我们的功能；我们也了解到了它的重要性。
 - en: In the next chapter we will learn about the `Drawable` class and drawing on
     Canvas using images from resources and XML. Drawing on `View` and `SurfaceView`
     and drawing of basic shapes such as circles will also be covered.
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将学习`Drawable`类以及在Canvas上使用资源中的图像和XML进行绘图。同时还将介绍在`View`和`SurfaceView`上的绘图以及基本形状如圆形的绘制。
