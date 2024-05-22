@@ -85,12 +85,15 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**慢动作与新电影制作人**：这类用途最常使用的帧率是48 FPS——这是电影帧率的两倍。新电影制作人采用这种方法来提高动作电影的流畅性。这种帧率也用于放慢场景，因为以24
+    FPS播放的48 FPS录制的场景具有与电影相同的感知水平，但速度减半。'
 - en: What about an application frame rate? Our goal to achieve is to keep our apps
     at 60 FPS for all of their life cycle. This means that the screen should be refreshed
     60 times in a second, or every 16.6667 ms.
   id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 那么应用程序的帧率又如何呢？我们的目标是让应用程序在其整个生命周期内保持60 FPS。这意味着屏幕应该每秒刷新60次，或者每16.6667毫秒刷新一次。
 - en: There are a lot of things that can cause this 16 ms deadline to not be respected;
     for example, this can happen when the view hierarchy is redrawn too many times,
     taking up too many CPU cycles. If this happens, the frame is dropped and the UI
@@ -100,6 +103,7 @@
   id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 有很多因素可能导致这个16毫秒的截止时间不被遵守；例如，当视图层次结构被重绘太多次，占用了过多的CPU周期时，这种情况就可能发生。如果发生这种情况，帧就会被丢弃，UI就不会刷新，用户将看到同样的画面，直到下一个帧被绘制。这正是你需要避免的，以提供流畅的用户体验给你的用户。
 - en: 'There is a trick to speed up UI drawing and hit 60 FPS: when you build your
     layout and you add it to the activity using the `Activity.setContentView()` method,
     a lot of other views are added to the hierarchy to create the desired UI. In *Figure
@@ -108,14 +112,17 @@
   id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 有一个技巧可以加快UI绘制并达到60 FPS：当你构建布局并通过`Activity.setContentView()`方法将其添加到活动中时，为了创建所需的UI，会有许多其他视图被添加到层次结构中。在*图1*中，有一个完整的视图层次结构，但我们添加到活动XML布局文件中的视图只属于下面两层：
 - en: '![Rendering performance](img/8951_03_01.jpg)'
   id: totrans-13
   prefs: []
   type: TYPE_IMG
+  zh: '![渲染性能](img/8951_03_01.jpg)'
 - en: 'Figure 1: An example of full hierarchy view'
   id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 图1：完整层次结构视图示例
 - en: What we are interested in now is the view on the top level of the hierarchy;
     that view is called **DecorView** and it holds the background of the activity
     defined by the theme. However, this default background is quite often covered
@@ -125,12 +132,14 @@
   id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 目前我们关注的是层次结构顶层的视图；这个视图被称为**DecorView**，它包含了由主题定义的活动背景。然而，这个默认背景通常会被你的布局背景覆盖。这意味着它会影响GPU的工作量，降低渲染速度，从而降低帧率。因此，诀窍就是避免绘制这个背景，从而提高性能。
 - en: 'The way to remove this `drawable` background is to add the attribute to the
     activity''s theme or use the following theme (the same attribute is available
     even for compatibility themes):'
   id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 移除这个`drawable`背景的方法是在活动的主题中添加属性，或者使用以下主题（即使对于兼容主题，该属性也是可用的）：
 - en: '[PRE0]'
   id: totrans-17
   prefs: []
@@ -148,6 +157,7 @@
   id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 每当你处理全屏活动，用不透明的子视图覆盖整个DecorView屏幕时，这都很有帮助。不过，将活动布局背景移动到窗口DecorView是一个好习惯。这样做的主要原因是DecorView的背景是在任何其他布局之前绘制的：这意味着无论其他UI组件加载操作需要多长时间，用户都会立即看到背景，而不会错误地认为应用程序没有在加载。为此，只需将背景`drawable`作为先前主题XML文件中的`windowBackground`属性，并将其从活动根布局中移除：
 - en: '[PRE1]'
   id: totrans-19
   prefs: []
@@ -160,15 +170,18 @@
   id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 总的来说，这第二个变化并不是一个适当的改进，而只是一个让用户感觉应用程序更流畅的技巧；背景绘图与GPU消耗相对应，无论它是DecorView还是活动布局的根。
 - en: Screen tearing and VSYNC
   id: totrans-21
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 屏幕撕裂与VSYNC
 - en: 'There are two main aspects to be considered when we talk about refreshing:'
   id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们谈论刷新时，需要考虑两个主要方面：
 - en: '**Frame rate**: This is about how many times the device GPU is able to draw
     a whole frame on the screen and it''s specified in frames per second. Our goal
     is to maintain 60 FPS, the standard in Android devices, and we will learn why.'
@@ -176,6 +189,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**帧率**：这是指设备GPU能够在屏幕上绘制一整帧的次数，以每秒帧数（frames per second）表示。我们的目标是保持60 FPS，这是Android设备的标准，我们将会了解为什么。'
 - en: '**Refresh rate**: This refers to how many times the screen is updated in a
     second and it''s specified in Hertz. Most Android device screens have a 60 Hz
     refresh rate.'
@@ -183,11 +197,13 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**刷新率**：这指的是屏幕每秒更新的次数，以赫兹为单位。大多数Android设备屏幕的刷新率为60 Hz。'
 - en: While the second is fixed and unchangeable, the first one, as mentioned, depends
     on a lot of factors, but first of all on the developer's skills.
   id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 虽然第二个是固定且不可更改的，但如前所述，第一个取决于许多因素，但首先取决于开发者的技能。
 - en: 'It could happen that those values are not synced. So, the display is about
     to be updated, but what to be drawn is decided by two different and subsequent
     frames in a single screen draw, causing a noticeable cut on the screen until the
@@ -198,14 +214,17 @@
   id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些值可能不同步。因此，显示器即将更新，但决定要绘制的内容是由两个不同的后续帧在单个屏幕绘制中决定的，直到下一次屏幕绘制，这会导致屏幕上出现明显的割裂，如图*图2*所示。这个事件也被称为**屏幕撕裂**，它会影响每个带有GPU系统的显示器。图像上的不连续线条称为**撕裂点**，它们是这种**屏幕撕裂**的结果：
 - en: '![Screen tearing and VSYNC](img/8951_03_02.jpg)'
   id: totrans-27
   prefs: []
   type: TYPE_IMG
+  zh: '![屏幕撕裂与VSYNC](img/8951_03_02.jpg)'
 - en: 'Figure 2: An example of screen tearing'
   id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 图2：屏幕撕裂的一个示例
 - en: 'The main cause of this phenomenon can be found in the single flow of data used
     to draw the frames: every new frame overwrites the previous one in such a way
     that there is only one buffer to read to draw on the screen. This way, when the
@@ -215,22 +234,26 @@
   id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种现象的主要成因可以追溯到用于绘制帧的单一流数据：每个新帧都以这样的方式覆盖前一个帧，以至于只有一个缓冲区可以读取以在屏幕上绘制。这样，当屏幕即将刷新时，它会从缓冲区读取要绘制的帧的状态，但它可能还在完成中并未完全完成。因此，如图*图2*所示的撕裂屏幕。
 - en: 'The most frequently used solution to this problem is double-buffering the frames.
     This solution has the following implementations:'
   id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 解决这个问题的最常用方案是对帧进行双缓冲处理。这个解决方案有以下实现：
 - en: All the drawing operations are saved in a back buffer
   id: totrans-31
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 所有绘图操作都保存在后台缓冲区中
 - en: When those operations are completed, the whole back buffer is copied in another
     memory location, called the front buffer
   id: totrans-32
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当这些操作完成后，整个后台缓冲区（back buffer）会被复制到另一个内存位置，称为前台缓冲区（front buffer）。
 - en: The copying operation is synchronized with the screen rate. The screen reads
     just from the front buffer in order to avoid screen tearing and all the background
     drawing operations can be executed without affecting the screen ones. But, what
@@ -241,6 +264,8 @@
   id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 复制操作与屏幕速率同步。屏幕只从前台缓冲区读取以避免屏幕撕裂，所有后台绘图操作都可以在不影响屏幕操作的情况下执行。但是，在从后台缓冲区到前台缓冲区的复制操作过程中，是什么防止屏幕更新的呢？这称为**VSYNC**。这代表**垂直同步**，最早在Android
+    4.1 Jelly Bean（API级别16）中引入。
 - en: 'VSYNC is not the solution to the problem: it works fine if the frame rate is
     at least equal to the refresh rate. Let''s have a look at *Figure 3*; the frame
     rate is 80 FPS, while the refresh rate is 60 Hz. A new frame is always available
@@ -248,14 +273,17 @@
   id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: VSYNC并不是这个问题的解决方案：如果帧率至少等于刷新率，它工作得很好。看看*图3*；帧率为80 FPS，而刷新率为60 Hz。总是有新帧可供绘制，因此屏幕上不会有延迟：
 - en: '![Screen tearing and VSYNC](img/8951_03_03.jpg)'
   id: totrans-35
   prefs: []
   type: TYPE_IMG
+  zh: '![屏幕撕裂与VSYNC](img/8951_03_03.jpg)'
 - en: 'Figure 3: VSYNC example with frame rate higher than the refresh rate'
   id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 图3：帧率高于刷新率的VSYNC示例
 - en: 'But, what happens if the frame rate is lower than the refresh rate? Let''s
     have a look at the following example, describing step by step what is happening
     with a 40 FPS GPU and a 60 Hz refresh rate screen: namely, the frame rate is 2/3
@@ -263,12 +291,14 @@
   id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 但是，如果帧率低于刷新率会发生什么呢？让我们看一下以下示例，逐步描述40 FPS GPU和60 Hz刷新率屏幕上发生的情况：即帧率是刷新率的2/3，导致每1.5个屏幕刷新更新一次帧：
 - en: At instant 0, the screen refreshes for the first time, frame 1 falls into the
     front buffer, and the GPU starts preparing the second frame in the back buffer.
   id: totrans-38
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在0时刻，屏幕第一次刷新，第一帧落入前景缓冲区，GPU开始在后台缓冲区准备第二帧。
 - en: 'The second time the screen refreshes, frame 1 is drawn onto the screen while
     the second frame cannot be copied into the front buffer because the GPU is still
     completing the drawing operation for it: it''s still at 2/3 of the operation on
@@ -277,6 +307,7 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在屏幕第二次刷新时，第一帧被绘制到屏幕上，而第二帧无法复制到前景缓冲区，因为GPU仍在完成它的绘图操作：它仍在这一操作的2/3处。
 - en: On the third refresh, the second frame has been copied into the front buffer,
     so it has to wait for the next refresh to be displayed on the screen. The GPU
     starts preparing the third frame.
@@ -284,12 +315,14 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在第三次刷新时，第二帧已被复制到前景缓冲区，因此它必须等待下一次刷新才能显示在屏幕上。GPU开始准备第三帧。
 - en: In the fourth step, frame 2 is drawn on the screen because it's on the front
     buffer and the GPU is still preparing the third frame.
   id: totrans-41
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在第四步中，由于第二个帧在前景缓冲区，而GPU仍在准备第三个帧，因此会在屏幕上绘制第二个帧。
 - en: 'The fifth refresh is similar to the second one: the third frame cannot be displayed
     because a new refresh is needed, so the second one is shown for the second time
     in a row.'
@@ -297,18 +330,22 @@
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 第五次刷新与第二次相似：由于需要新的刷新，第三帧无法显示，因此第二个帧连续第二次显示。
 - en: 'What is described here is shown in *Figure 4*:'
   id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里所描述的内容在*图4*中展示：
 - en: '![Screen tearing and VSYNC](img/8951_03_04.jpg)'
   id: totrans-44
   prefs: []
   type: TYPE_IMG
+  zh: '![屏幕撕裂与VSYNC](img/8951_03_04.jpg)'
 - en: 'Figure 4: VSYNC example with frame rate lower than the refresh rate'
   id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 图4：帧率低于刷新率的VSYNC示例
 - en: 'After all, just two frames have been drawn out of four screen refreshes. But
     this happens every time the frame rate is lower than the refresh rate: even if
     the frame rate is 59 FPS, the actual frames shown on the screen are 30 a second,
@@ -321,11 +358,14 @@
   id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 毕竟，在四个屏幕刷新中只绘制了两帧。但是，每当帧率低于刷新率时，这种情况就会发生：即使帧率是59 FPS，实际每秒显示在屏幕上的帧数也只有30，因为GPU需要等待新的刷新开始，然后才能在后台缓冲区开始新的绘图操作。这导致了滞后和抖动，并抵消了任何图形设计上的努力。这种行为对开发者来说是透明的，并且没有API可以控制或更改它，因此保持应用程序中的高帧率以及遵循性能技巧以达到60
+    FPS目标至关重要。
 - en: Hardware acceleration
   id: totrans-47
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 硬件加速
 - en: The evolving history of the Android platform also has incremental improvements
     in graphics rendering. The biggest improvement in this area was the introduction
     of hardware acceleration in Android 3.0 Honeycomb (API Level 11). Device screens
@@ -336,6 +376,7 @@
   id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓平台的演变历史在图形渲染方面也有逐步的改进。这一领域最大的改进是在Android 3.0 Honeycomb（API级别11）中引入了硬件加速。设备屏幕变得越来越大，平均设备像素密度在增长，因此CPU和软件已不再足以满足UI和性能需求的增长。随着平台行为的这一变化，由`Canvas`对象进行的视图及其所有绘图操作都开始使用GPU而不是CPU。
 - en: 'Hardware acceleration was initially optional and should have been declared
     in the manifest file to be enabled, but with the next major release (Android 4.0
     Ice Cream Sandwich, API Level 14), it was enabled by default. Its introduction
@@ -344,6 +385,7 @@
   id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 硬件加速最初是可选的，应在清单文件中声明以启用，但从下一个主要版本（Android 4.0 Ice Cream Sandwich，API级别14）开始，默认启用。它在平台上的引入带来了一种新的绘图模型。基于软件的绘图模型基于以下两个步骤：
 - en: '**Invalidation**: When the `View.invalidate()` method is called due to a needed
     update on the view hierarchy or just to a change a view property, the invalidation
     is propagated through the whole hierarchy. This step can be also called by a non-main
@@ -353,34 +395,40 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**失效**：当由于需要更新视图层次结构或仅更改视图属性而调用`View.invalidate()`方法时，失效会通过整个层次结构传播。这一步也可以由非主线程使用`View.postInvalidate()`方法调用，失效在下一个循环周期发生。'
 - en: '**Redrawing**: Every view is redrawn with a high drain on the CPU.'
   id: totrans-51
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**重绘**：每个视图都会在CPU大量消耗的情况下重新绘制。'
 - en: 'With the new hardware-accelerated drawing model, the redrawing is not executed
     immediately because the views are stored. So, the steps become the following:'
   id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 在新的硬件加速绘图模型中，由于视图被存储，重绘不会立即执行。因此，步骤变为以下：
 - en: '**Invalidation**: As in the software-based drawing model, a view needs to be
     updated, so the `View.invalidate()` method is propagated through all the hierarchy.'
   id: totrans-53
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**失效**：与基于软件的绘图模型一样，视图需要更新，因此`View.invalidate()`方法会传播到整个层次结构中。'
 - en: '**Storing**: In this case, just the views affected by invalidation are redrawn
     and stored for future reuse, decreasing runtime computation.'
   id: totrans-54
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**存储**：在这种情况下，仅重绘由失效影响的视图，并将其存储以供将来重用，从而减少运行时计算。'
 - en: '**Redrawing**: Every view is updated using the stored drawing, so the views
     not affected by invalidation are updated using their last stored drawing.'
   id: totrans-55
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**重绘**：每个视图都使用存储的绘图进行更新，因此未受失效影响的视图使用其最后一次存储的绘图进行更新。'
 - en: Every view can be rendered and saved into an off-screen bitmap for future use.
     It can be done by using the `Canvas.saveLayer()` method and then `Canvas.restore()`
     is used to draw back the saved bitmap to the canvas. It should be used with caution
@@ -389,6 +437,7 @@
   id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个视图都可以被渲染并保存到离屏位图中以供将来使用。可以通过使用`Canvas.saveLayer()`方法来实现，然后使用`Canvas.restore()`将保存的位图绘制回画布。应谨慎使用，因为它会绘制一个不需要的位图，根据提供的边界尺寸增加计算绘图成本。
 - en: 'Starting with Android 3.0 Honeycomb (API Level 11), it is possible to choose
     which type of layer is to be used while creating the off-screen bitmap for every
     view using the `View.setLayerType()` method. This method expects one of the following
@@ -396,12 +445,14 @@
   id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 从Android 3.0 Honeycomb（API级别11）开始，可以使用`View.setLayerType()`方法在为每个视图创建离屏位图时选择要使用的层类型。此方法期望以下内容作为第一个参数：
 - en: '`View.LAYER_TYPE_NONE`: No layers are applied, so the view cannot be saved
     into an off-screen bitmap. This is the default behavior.'
   id: totrans-58
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`View.LAYER_TYPE_NONE`：不应用任何层，因此视图不能被保存到离屏位图中。这是默认行为。'
 - en: '`View.LAYER_TYPE_SOFTWARE`: This forces the software-based drawing model to
     render the desired view even if hardware acceleration is enabled. It can be used
     when:'
@@ -409,6 +460,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`View.LAYER_TYPE_SOFTWARE`：即使启用了硬件加速，这也会强制基于软件的绘图模型渲染所需的视图。在以下情况下可以使用它：'
 - en: A color filter, blending mode, or transparency needs to be applied to the view
     and the application doesn't use hardware acceleration
   id: totrans-60
@@ -416,12 +468,14 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果需要对视图应用颜色滤镜、混合模式或透明度，并且应用不使用硬件加速
 - en: Hardware acceleration is enabled, but it cannot apply the render drawing primitives
   id: totrans-61
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 启用了硬件加速，但它无法应用渲染绘图原语
 - en: '`View.LAYER_TYPE_HARDWARE`: The hardware-specific pipeline renders the layer
     if the hardware acceleration is enabled for the view hierarchy; otherwise the
     behavior will be the same as per `View.LAYER_TYPE_SOFTWARE`.'
@@ -429,12 +483,14 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`View.LAYER_TYPE_HARDWARE`：如果为视图层次结构启用了硬件加速，则硬件特定的管道会渲染层；否则，其行为将与`View.LAYER_TYPE_SOFTWARE`相同。'
 - en: 'The right layer type to use for performance purposes is the hardware one: the
     view doesn''t need to be redrawn until its `View.invalidate()` method is called;
     otherwise, the layer bitmap is used with no additional costs.'
   id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了性能考虑，正确的层类型是硬件层：除非调用了视图的`View.invalidate()`方法，否则视图无需重绘；否则，将使用层位图，且无需额外成本。
 - en: 'What we have discussed in this section can be helpful to keep to the 60 FPS
     target while dealing with animations; hardware acceleration layers can use textures
     to avoid the view being invalidated and redrawn every time one of its properties
@@ -444,78 +500,93 @@
   id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在本节中讨论的内容对于在处理动画时保持60 FPS的目标非常有帮助；硬件加速层可以使用纹理来避免每次更改视图的一个属性时视图被无效并重绘。这是可能的，因为改变的不是视图的属性，而只是层的属性。以下是可以更改而不涉及整个层次结构无效的属性：
 - en: '`alpha`'
   id: totrans-65
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`alpha`'
 - en: '`x`'
   id: totrans-66
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`x`'
 - en: '`y`'
   id: totrans-67
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`y`'
 - en: '`translationX`'
   id: totrans-68
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`translationX`'
 - en: '`translationY`'
   id: totrans-69
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`translationY`'
 - en: '`scaleX`'
   id: totrans-70
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`scaleX`'
 - en: '`scaleY`'
   id: totrans-71
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`scaleY`'
 - en: '`rotation`'
   id: totrans-72
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`rotation`'
 - en: '`rotationX`'
   id: totrans-73
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`rotationX`'
 - en: '`rotationY`'
   id: totrans-74
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`rotationY`'
 - en: '`pivotX`'
   id: totrans-75
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pivotX`'
 - en: '`pivotY`'
   id: totrans-76
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`pivotY`'
 - en: These are the same properties involved in the property animation released by
     Google with Android 3.0 Honeycomb (API Level 11), just as the support to hardware
     acceleration.
   id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些属性与谷歌在Android 3.0 Honeycomb（API级别11）中发布的属性动画相同，包括对硬件加速的支持。
 - en: 'A good practice to improve the performance of animations and decrease unnecessary
     computation is to enable the hardware layer just before starting the animation
     and disable it as soon as the animation finishes to free used video memory:'
   id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 提高动画性能、减少不必要计算的一个好方法是，在动画开始前启用硬件层，并在动画结束后立即禁用它以释放使用的视频内存：
 - en: '[PRE2]'
   id: totrans-79
   prefs: []
@@ -526,6 +597,7 @@
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Consider using `View.LAYER_TYPE_HARDWARE` every time you are animating a view,
     changing its alpha, or just setting a different alpha. This is so important that
     Google changed the behavior of the `View.setAlpha()` method, automatically applying
@@ -534,11 +606,14 @@
   id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 每当你在动画化视图、改变其透明度或只是设置不同的透明度时，请考虑使用`View.LAYER_TYPE_HARDWARE`。这一点非常重要，谷歌从Android
+    6.0 Marshmallow（API级别23）开始，自动应用硬件层，因此如果你的应用程序的目标SDK是23或更高，你就不需要手动操作。
 - en: Overdraw
   id: totrans-82
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 过度绘制
 - en: 'Layout construction to meet UI requirements is often a misleading task: once
     finished with our layouts, simply checking that what we have just done is in line
     with what the graphical designers thought is not enough. Our goal is to verify
@@ -550,11 +625,13 @@
   id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 满足UI要求的布局构建通常是一个容易误导的任务：完成布局后，仅仅检查我们所做的是否与图形设计师的想法一致是不够的。我们的目标是验证用户界面不会影响我们应用程序的性能。通常我们会忽略在布局内部如何构建视图，但有一个非常重要的点需要记住：系统不知道哪些视图对用户可见，哪些不可见。这意味着无论如何都会绘制每个视图，无论它是否被覆盖、隐藏或不可见。
 - en: Note
   id: totrans-84
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: 'Remember that a view life cycle is not terminated if the view is invisible,
     hidden, or covered by another view or layout: its computation effort continues
     to impact the final layout performance even if it''s not displayed, from the calculation
@@ -563,6 +640,7 @@
   id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 请记住，如果视图不可见、隐藏或被另一个视图或布局覆盖，视图的生命周期并没有结束：从计算和内存的角度来看，它的计算工作仍然会影响最终布局的性能，即使它没有显示。因此，一个良好的实践是在UI设计阶段限制使用的视图数量，以防止性能显著下降。
 - en: From the system perspective, every single pixel on the screen needs to be updated
     a number of times equal to the number of overlapping views for every frame update.
     This phenomenon is called **overdraw**. The developer's goal is to limit overdraw
@@ -570,12 +648,14 @@
   id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 从系统角度来看，屏幕上的每一个像素都需要在每一帧更新时被更新多次，更新的次数等于重叠视图的数量。这种现象称为**过度绘制**。开发者的目标是尽可能限制过度绘制。
 - en: 'How can we reduce the number of views being drawn on the screen? The answer
     to this question depends on how our application UI is designed. But there are
     some simple rules to follow in order to accomplish this goal:'
   id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们如何减少屏幕上绘制的视图数量？这个问题的答案取决于我们应用程序用户界面的设计方式。但为了实现这一目标，有一些简单的规则可以遵循：
 - en: 'The window background adds a layer to be drawn every update. Background removal
     can free one level from the overdrawing amount. This can be done for the DecorView,
     as discussed earlier in this chapter, by deleting it from the used theme of our
@@ -585,6 +665,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '窗口背景在每次更新时都会增加一个绘制层。移除背景可以减少一个过度绘制的层次。这可以通过本章前面讨论的DecorView来完成，直接在XML样式文件中删除我们活动使用的主题中的它。否则，也可以在运行时通过在活动代码中添加以下内容来完成： '
 - en: '[PRE3]'
   id: totrans-89
   prefs:
@@ -598,6 +679,7 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这可以应用于层次结构中的每个视图；这一想法是为了消除不必要的背景，以限制系统每次必须处理和绘制的层数。
 - en: 'Flattening the view hierarchy is a good way to reduce the risk of overdraw;
     the use of **Hierarchy Viewer** and **On device GPU overdraw**, described in the
     following pages, is the crucial step to achieve this goal. In this operation of
@@ -607,6 +689,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 展平视图层次结构是减少过度绘制风险的好方法；使用下面几页将要介绍的**层次查看器**和**设备上的GPU过度绘制**是达到此目标的关键步骤。在这种展平操作中，由于RelativeLayout管理，您可能会无意中遇到过度绘制问题：视图可能会重叠，使得这项任务效率低下。
 - en: 'Android manages bitmaps and 9-patches in different ways: a special optimization
     on 9-patches lets the system avoid drawing their transparent pixels, so they don''t
     continue overdrawing while every bitmap pixel does. So the use of 9-patches for
@@ -615,11 +698,13 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android以不同的方式管理位图和9-patches：9-patches的一种特殊优化让系统避免绘制其透明像素，因此它们不会像每个位图像素那样继续过度绘制。因此，使用9-patches作为背景可以帮助限制过度绘制的面积。
 - en: Multi-window mode
   id: totrans-93
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 多窗口模式
 - en: One of the new features added in the new Android N version, in preview at the
     time of the writing of this book, is called **multi-window mode**. This is about
     enabling the user to make two activities visible side by side on the screen at
@@ -628,33 +713,40 @@
   id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 在新版本的Android N中，新增了一项功能，即在本书撰写时处于预览状态的**多窗口模式**。这是关于让用户在屏幕上同时并排显示两个活动。在分析其性能影响之前，我们先快速了解一下这个功能。
 - en: Overview
   id: totrans-95
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 概览
 - en: 'This split-mode is available in both portrait and landscape mode. You can see
     how it looks in *Figure 5* for the portrait mode and in *Figure 6* for the landscape
     mode:'
   id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种分屏模式在竖屏和横屏模式下都可用。您可以在*图5*中看到竖屏模式的样子，在*图6*中看到横屏模式的样子：
 - en: '![Overview](img/8951_03_05.jpg)'
   id: totrans-97
   prefs: []
   type: TYPE_IMG
+  zh: '![概览](img/8951_03_05.jpg)'
 - en: 'Figure 5: Android N Split mode in portrait'
   id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 图5：Android N竖屏分屏模式
 - en: '![Overview](img/8951_03_06.jpg)'
   id: totrans-99
   prefs: []
   type: TYPE_IMG
+  zh: '![概览](img/8951_03_06.jpg)'
 - en: 'Figure 6: Android N split mode in landscape'
   id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 图6：Android N横屏分屏模式
 - en: From the user perspective, this is the way to interact with multiple applications
     or activities without leaving the current screen and opening the recent application
     screen. The dividing bar in the center can be moved to close the split mode. This
@@ -665,6 +757,7 @@
   id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 从用户的角度来看，这种方式可以在不离开当前屏幕和打开最近应用屏幕的情况下与多个应用或活动进行交互。位于屏幕中央的分割条可以移动以关闭分屏模式。这种行为适用于智能手机，而制造商可以在更大的设备中启用**自由形态**模式，让用户通过简单的滑动手势为两个活动选择合适的屏幕比例。也可以将对象从一个活动拖放到另一个活动。
 - en: 'On TV devices, this is done by using a **picture-in-picture** mode, as shown
     in *Figure 7*. In this case, video content keeps being played, while the user
     can navigate the application. Then, video activity is still visible, but in a
@@ -673,20 +766,25 @@
   id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 在电视设备上，这是通过使用**画中画**模式实现的，如图*图7*所示。在这种情况下，视频内容继续播放，而用户可以浏览应用程序。然后，视频活动仍然可见，但只占用屏幕的一小部分：它是位于屏幕右上角的240
+    x 135 dp窗口：
 - en: '![Overview](img/8951_03_07.jpg)'
   id: totrans-103
   prefs: []
   type: TYPE_IMG
+  zh: '![概览](img/8951_03_07.jpg)'
 - en: 'Figure 7: Android N picture-in-picture mode'
   id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 图7：Android N画中画模式
 - en: Due to the small dimension of the window, the activity should show just the
     video content and avoid showing anything else. Apart from that, be sure the picture-in-picture
     window doesn't obscure anything from the background activity.
   id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于窗口尺寸较小，活动应该只显示视频内容，避免显示其他任何内容。此外，要确保画中画窗口不会遮挡后台活动的内容。
 - en: Let's now check what is different from the typical activity life cycle and how
     the system deals with two activities on the screen at the same time. While the
     multi-window mode is active, the latest used activity is in its resumed state
@@ -699,17 +797,21 @@
   id: totrans-106
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们来检查与典型的活动生命周期有何不同，以及系统如何同时处理屏幕上的两个活动。在多窗口模式激活时，最近使用的活动处于恢复状态，而另一个活动处于暂停状态。当用户与第二个活动交互时，这将进入恢复状态，而第一个活动将进入暂停状态。这就是为什么无需修改活动生命周期，在新
+    SDK 中状态与之前相同的原因。但请记住，在多窗口模式开启时，处于暂停状态的活动应继续不限制用户体验。
 - en: Configuration
   id: totrans-107
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 配置
 - en: 'Developers can choose to set activities to support multi-window or picture-in-picture
     modes by using new attributes to be added inside the manifest file of the application.
     The new attributes are the following:'
   id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 开发者可以选择通过在应用程序的清单文件中添加新的属性来设置活动支持多窗口或画中画模式。这些新属性包括以下内容：
 - en: '[PRE4]'
   id: totrans-109
   prefs: []
@@ -723,11 +825,13 @@
   id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 它们的默认值为 true，因此如果我们应用的目标是支持 Android N 的多窗口或画中画模式，则无需指定它们。画中画模式被视为多窗口模式的一个特例：此时，只有当`android:resizableActivity`设置为`true`时，才会考虑其属性。
 - en: 'Those attributes can be put inside the `<activity>` or `<application>` nodes
     in the manifest file as shown in following snippet:'
   id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些属性可以放在清单文件中的`<activity>`或`<application>`节点内，如下面的代码片段所示：
 - en: '[PRE5]'
   id: totrans-112
   prefs: []
@@ -740,33 +844,39 @@
   id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: 开发者还可以向清单文件中添加更多配置信息，以定义在这些特定新模式下的期望行为。为此，我们可以在`<activity>`节点中添加一个新节点，称为`<layout>`。这个新节点支持以下四个属性：
 - en: '`defaultWidth`: Default width for the activity in free-form mode'
   id: totrans-114
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`defaultWidth`: 活动在自由形态模式下的默认宽度'
 - en: '`defaultHeight`: Default height for the activity in free-form mode'
   id: totrans-115
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`defaultHeight`：活动在自由形态模式下的默认高度'
 - en: '`gravity`: Gravity for the activity when first placed on the screen in free-form
     mode'
   id: totrans-116
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`gravity`: 活动在自由形态模式下首次放置在屏幕上时的对齐方式'
 - en: '`minimalSize`: This specifies the minimum desired height or width to be used
     for the activity in split-screen and free-form mode'
   id: totrans-117
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`minimalSize`: 这指定了在分屏和自由形态模式下活动所需的最小高度或宽度'
 - en: 'Hence, the previous activity declaration inside the manifest file becomes the
     following:'
   id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，清单文件内部的前一个活动声明变为以下内容：
 - en: '[PRE6]'
   id: totrans-119
   prefs: []
@@ -777,18 +887,21 @@
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 管理
 - en: 'The new SDK provides new methods for the `Activity` class to know if one of
     the modes is enabled and to handle the switch between different states. These
     methods are listed as follows:'
   id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 新 SDK 为`Activity`类提供了新的方法，以了解是否启用了这些模式之一，以及处理不同状态之间的切换。这些方法如下所示：
 - en: '`Activity.isMultiWindow()`: This returns whether the activity is currently
     in multi-window mode.'
   id: totrans-122
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Activity.isMultiWindow()`: 这返回活动当前是否处于多窗口模式。'
 - en: '`Activity.inPictureInPicture()`: This returns whether the activity is currently
     in picture-in-picture mode. As mentioned, this is a special case of multi-window
     mode; so, if this is returning `true`, the `Activity.isMultiWindow()` method is
@@ -797,23 +910,27 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Activity.inPictureInPicture()`: 这返回活动当前是否处于画中画模式。如前所述，这是多窗口模式的一个特例；因此，如果这返回`true`，则`Activity.isMultiWindow()`方法也会返回`true`。'
 - en: '`Activity.onMultiWindowChanged()`: This is a new callback invoked when the
     activity is entering or leaving the multi-window mode.'
   id: totrans-124
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Activity.onMultiWindowChanged()`: 这是一个新回调，当活动进入或离开多窗口模式时调用。'
 - en: '`Activity.onPictureInPictureChanged()`: This is a new callback invoked when
     the activity is entering or leaving the picture-in-picture mode.'
   id: totrans-125
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Activity.onPictureInPictureChanged()`: 这是一个新回调，当活动进入或离开画中画模式时调用。'
 - en: The methods with the same signatures are also defined for the `Fragment` class
     to provide the same flexibility to this component too.
   id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于`Fragment`类，也定义了具有相同签名的这些方法，以向此组件提供同样的灵活性。
 - en: 'Developers can also start a new activity in one of these particular modes.
     This can be done by using a new intent flag added just for this purpose; this
     is `Intent.FLAG_ACTIVITY_LAUNCH_TO_ADJACENT` and it can be used in the following
@@ -821,6 +938,7 @@
   id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 开发者也可以在这些特定模式下启动一个新活动。这可以通过使用专门为此目的添加的新意图标志来实现；这是`Intent.FLAG_ACTIVITY_LAUNCH_TO_ADJACENT`，它可以以下列方式使用：
 - en: '[PRE7]'
   id: totrans-128
   prefs: []
@@ -830,6 +948,7 @@
   id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种效果取决于屏幕上当前活动的状态：
 - en: '**Split mode active**: The activity is created and placed next to the old one
     and they share the screen. If in addition to the multi-window mode being enabled
     (the free-form mode is also enabled), we can specify the initial dimensions using
@@ -839,6 +958,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**分屏模式激活**：活动被创建并放置在旧活动旁边，它们共享屏幕。如果除了启用多窗口模式（还启用了自由形式模式），我们可以使用`ActivityOptions.setLaunchBounds()`方法为两个定义的尺寸或全屏（传递null对象而不是`Rect`对象）指定初始尺寸，如下所示：'
 - en: '[PRE8]'
   id: totrans-131
   prefs:
@@ -851,11 +971,13 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**分屏模式未激活**：标志无效，活动以全屏方式打开。'
 - en: Drag and drop
   id: totrans-133
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 拖放
 - en: As mentioned, the new multi-window mode enables the drag and drop functionality
     to pass views between the two activities that share the screen. This is possible
     by using the following new methods, added purposely for this feature. We need
@@ -867,11 +989,13 @@
   id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，新的多窗口模式允许通过拖放功能在两个共享屏幕的活动之间传递视图。这是通过使用以下新方法实现的，这些方法是专门为这个功能而添加的。我们需要使用`Activity.requestDropPermissions()`方法请求开始拖放手势的权限，然后获取与想要传递的`DragEvent`相关的`DropPermission`对象。完成后，应调用`View.startDragAndDrop()`方法，并将`View.DRAG_FLAG_GLOBAL`标志作为参数传递，以启用多个应用程序之间的拖放功能。
 - en: Performance impact
   id: totrans-135
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 性能影响
 - en: 'How does all of this change the behavior of the system from a performance perspective?
     The paused activity on the screen corresponds with the process of creation of
     the final frame as before. Think about a visible activity covered by a dialog:
@@ -886,11 +1010,13 @@
   id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 从性能的角度来看，这一切如何改变系统的行为？屏幕上暂停的活动与之前创建最终帧的过程相对应。考虑一个被对话框覆盖的可视活动：它仍然在屏幕上，当出现内存问题时系统不能杀死它。然而，在多窗口模式的情况下，如前所述，活动需要在与另一个活动交互之前继续它正在做的事情。因此，系统将不得不同时处理两个视图层次结构，这使得准备每一个单独的帧更加费力。如果我们计划启用这个新模式，那么在创建活动布局时，我们需要更加小心。因此，关注下一节*最佳实践*中表达的概念以及之后的一节将是非常好的。
 - en: Best practices
   id: totrans-137
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 最佳实践
 - en: We will explain some useful approaches to achieve the previously set goals directly
     within the code to limit as much as possible the reasons why applications lag,
     exploring how to reduce overdrawing of our views, how to flatten our layouts,
@@ -900,11 +1026,13 @@
   id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将直接在代码中解释一些有用的方法，以尽可能限制应用程序滞后原因，探索如何减少我们视图的重叠绘制，如何简化我们的布局，以及如何提高用户体验——特别是常见情况，以及如何正确开发我们自己的自定义视图和布局，以构建高性能UI。
 - en: Provided layout overview
   id: totrans-139
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 提供的布局概览
 - en: Every time the `Activity.setContentView(int layoutRes)` method is called or
     a view is inflated using the `LayoutInflater` object, the related layout XML file
     is loaded and parsed and every capitalized XML node corresponds to a `View` object
@@ -915,6 +1043,7 @@
   id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 每当调用`Activity.setContentView(int layoutRes)`方法或使用`LayoutInflater`对象膨胀视图时，相关的布局XML文件将被加载和解析，每个大写的XML节点对应一个`View`对象，系统必须实例化该对象，并且在整个`Activity`或`Fragment`生命周期中，它将是UI层次结构的一部分。这影响了应用程序使用期间的内存分配。让我们来了解Android平台UI系统的关键概念。
 - en: 'As mentioned, every capitalized XML node in a layout resource will be instantiated
     using its name and its attributes. The `ViewGroup` class defines a special kind
     of view that can manage other `View` or `ViewGroup` classes as a container, describing
@@ -926,24 +1055,28 @@
   id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，布局资源中每个大写的XML节点将根据其名称和属性进行实例化。`ViewGroup`类定义了一种特殊的视图，可以作为容器管理其他`View`或`ViewGroup`类，描述如何测量和定位子视图。因此，我们将把扩展了`ViewGroup`类的每个类都称为布局。Android平台提供了不同的`ViewGroup`子类，供我们在布局中使用。以下是主要直接子类的简要概述，通常在构建布局XML资源文件时使用，仅解释它们如何管理嵌套视图：
 - en: '`LinearLayout`: Every child is drawn next to the previously added one in a
     row or in a column while horizontal or vertical, respectively.'
   id: totrans-142
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`LinearLayout`：每个子元素在水平或垂直方向上紧邻之前添加的元素绘制，分别对应行或列。'
 - en: '`RelativeLayout`: Every child is positioned in relation to other sibling views
     or to the parent.'
   id: totrans-143
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`RelativeLayout`：每个子元素相对于其他兄弟视图或父视图定位。'
 - en: '`FrameLayout`: This is used to block a screen area to manage a stack of views
     with the most recently added one drawn on top.'
   id: totrans-144
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`FrameLayout`：这用于封锁屏幕区域，以管理以最近添加的视图为顶部的视图堆栈。'
 - en: '`AbsoluteLayout`: This was deprecated in API level 3 because of its poor flexibility.
     As a matter of fact, you have to provide the exact location (by specifying the
     *x* or *y* coordinates of all its children). Its only direct subclass is `WebView`.'
@@ -951,39 +1084,46 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`AbsoluteLayout`：在API级别3中已弃用，因为其灵活性较差。实际上，你必须为所有子元素提供确切的位置（通过指定所有子元素的*x*或*y*坐标）。其唯一的直接子类是`WebView`。'
 - en: '`GridLayout`: This places its children in a grid, so its use is limited to
     certain cases where you are supposed to put children inside cells.'
   id: totrans-146
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GridLayout`：这会将子元素放置在网格中，因此其使用限于将子元素放入单元格的特定情况。'
 - en: Hierarchical layout management
   id: totrans-147
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 分层布局管理
 - en: 'Let''s have an overview of what happens every time the system is asked to draw
     a layout. This process is made by two subsequent top-down steps:'
   id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们了解一下每次系统被要求绘制布局时会发生什么。这个过程由两个相继的从上到下的步骤组成：
 - en: '**Measurement**:'
   id: totrans-149
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**测量**：'
 - en: The root layout measures itself
   id: totrans-150
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 根布局测量自身
 - en: The root layout requests all its children to measure themselves
   id: totrans-151
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 根布局请求所有子元素进行自我测量
 - en: Any child layout needs to do the same with its children recursively until the
     end of the hierarchy
   id: totrans-152
@@ -991,11 +1131,13 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 任何子布局都需要对其子元素递归执行相同的操作，直到层次结构的末尾
 - en: '**Positioning**:'
   id: totrans-153
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**定位**：'
 - en: When all of the views in the layout have their own measurements stored the root
     layout positions all of its children
   id: totrans-154
@@ -1003,6 +1145,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 当布局中的所有视图都有自己的测量存储时，根布局定位其所有子元素
 - en: Any child layout needs to do the same with its children recursively until the
     end of the hierarchy
   id: totrans-155
@@ -1010,6 +1153,7 @@
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 任何子布局都需要对其子元素递归执行相同的操作，直到层次结构的末尾
 - en: 'Whenever a `View` property is changed (such as the image of an `ImageView`
     or the text or the appearance of a `TextView`), the view itself calls the `View.invalidate()`
     method, which propagates its request in a bottom-up way until the root layout:
@@ -1020,6 +1164,7 @@
   id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 每当更改`View`属性（例如`ImageView`的图像或`TextView`的文本或外观）时，视图本身会调用`View.invalidate()`方法，该方法从下到上传播其请求，直到根布局：前面的过程可能需要一次又一次地重复，因为视图需要再次测量自己（例如，仅为了更改文本）。这会影响绘制UI的加载时间。你的层次结构越复杂，UI加载越慢。因此，尽可能开发扁平的布局非常重要。
 - en: 'While `AbsoluteLayout` is no longer used and `FrameLayout` and `GridLayout`
     have their own specific use, `LinearLayout` and `RelativeLayout` are interchangeable:
     this means the developer can choose to use one or the other. But both have strengths
@@ -1028,14 +1173,18 @@
   id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 虽然`AbsoluteLayout`不再使用，而`FrameLayout`和`GridLayout`有其特定的用途，但`LinearLayout`和`RelativeLayout`是可以互换的：这意味着开发者可以选择使用其中之一。但两者都有优缺点。当你开发如图*8*所示的简单布局时，你可以选择使用不同类型的方
+    法来构建布局。
 - en: '![Hierarchical layout management](img/8951_03_08.jpg)'
   id: totrans-158
   prefs: []
   type: TYPE_IMG
+  zh: '![分层布局管理](img/8951_03_08.jpg)'
 - en: 'Figure 8: Layout example'
   id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 图8：布局示例
 - en: 'The first one is based on `LinearLayout` and it''s good for readability but
     bad for performance, as you need to nest `LinearLayout` every time there is a
     change of orientation in positioning the children:'
@@ -1043,6 +1192,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 第一种基于`LinearLayout`，它有利于提高可读性，但性能不佳，因为每次需要对子视图进行方向定位更改时，你都需要嵌套`LinearLayout`：
 - en: '[PRE9]'
   id: totrans-161
   prefs:
@@ -1054,16 +1204,19 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 此布局的视图层次结构如图*9*所示：
 - en: '![Hierarchical layout management](img/8951_03_09.jpg)'
   id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![分层布局管理](img/8951_03_09.jpg)'
 - en: 'Figure 9: View hierarchy example built using LinearLayout'
   id: totrans-164
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 图9：使用LinearLayout构建的视图层次结构示例
 - en: 'The second one is based on `RelativeLayout` and in this particular case you
     don''t need to nest any other `ViewGroup`, as every child position can be related
     to others or to the parent:'
@@ -1071,6 +1224,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 第二种基于`RelativeLayout`，在这种情况下，你不需要嵌套任何其他`ViewGroup`，因为每个子视图的位置可以与其他视图或父视图相关：
 - en: '[PRE10]'
   id: totrans-166
   prefs:
@@ -1082,31 +1236,37 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这个替代布局的层次结构如图*10*所示：
 - en: '![Hierarchical layout management](img/8951_03_10.jpg)'
   id: totrans-168
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![分层布局管理](img/8951_03_10.jpg)'
 - en: 'Figure 10: View hierarchy example built using RelativeLayout'
   id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 图10：使用RelativeLayout构建的视图层次结构示例
 - en: Comparing the two approaches, it's easy to see that there are six views in three
     hierarchical levels in the first and five in only two levels in the second case.
   id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过比较这两种方法，可以很容易看出，在第一种方法中有六个视图分布在三个层次级别中，而在第二种方法中，五个视图只分布在两个级别中。
 - en: The typical situation is that of a mixed approach as it's not always possible
     to position views relatively to others.
   id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常的情况是采用混合方法，因为不可能总是相对于其他视图来定位视图。
 - en: Note
   id: totrans-172
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: In order to achieve performance goals while creating every sort of layout and
     to avoid overdraw, the hierarchy should be as flat as possible to let the system
     draw every view again in the shortest time when needed. So, the use of RelativeLayouts
@@ -1114,6 +1274,7 @@
   id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了在创建各种布局时实现性能目标并避免过度绘制，视图层次结构应尽可能扁平，以便系统在需要时以最短的时间重新绘制每个视图。因此，建议在可能的情况下使用RelativeLayout，而不是LinearLayout。
 - en: A common bad approach in long application development processes is to leave
     redundant layouts in our XML files after deleting no more necessary views. This
     increases complexity in the view hierarchy in vain. As discussed in [Chapter 2](ch02.html
@@ -1123,6 +1284,8 @@
   id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: 在长期的应用开发过程中，一个常见的错误做法是在删除不再需要的视图后，在XML文件中留下多余的布局。这无谓地增加了视图层次结构的复杂性。正如在第2章[高效调试](ch02.html
+    "第2章. 高效调试")以及本章后续页面中讨论的那样，通过使用LINT和层次结构查看器，可以方便地避免这一点。
 - en: 'Unfortunately, the most used ViewGroup is LinearLayout, just because it''s
     quite simple to understand and to manage. So, new Android developers approach
     it first. For this reason, Google decided to provide a new ViewGroup, starting
@@ -1138,14 +1301,20 @@
   id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: 不幸的是，最常用的 ViewGroup 是 LinearLayout，因为它相对简单易懂易管理。因此，新的 Android 开发者首先会接触它。出于这个原因，谷歌决定从
+    Android 4.0 冰淇淋三明治开始提供一个全新的 ViewGroup，如果使用得当，可以在处理网格时减少特定情况下的冗余。我们所说的是 GridLayout。显然，可以使用
+    LinearLayout 创建网格，但生成的布局至少有三层层次结构。也可以使用 RelativeLayout 仅两层层次结构创建，但生成的布局管理起来并不那么容易，视图之间的引用太多。GridLayout
+    只需定义自己的行和列以及单元格，就可以管理其空间。以下 XML 布局展示了如何使用 GridLayout 创建与 *图11* 相同的布局：
 - en: '![Hierarchical layout management](img/8951_03_11.jpg)'
   id: totrans-176
   prefs: []
   type: TYPE_IMG
+  zh: '![层次布局管理](img/8951_03_11.jpg)'
 - en: 'Figure 11: View hierarchy example built using GridLayout'
   id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: 图11：使用 GridLayout 构建视图层次结构示例
 - en: '[PRE11]'
   id: totrans-178
   prefs: []
@@ -1158,11 +1327,14 @@
   id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 可以注意到，如果你希望 `android:layout_height` 和 `android:layout_width` 标签属性为 `LayoutParams.WRAP_CONTENT`，则无需指定，因为这正是它们的默认值。`GridLayout`
+    与 `LinearLayout` 非常相似，因此从后者转换过来相当简单。
 - en: Reusing layouts
   id: totrans-180
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 重用布局
 - en: 'Android SDK provides a useful tag to use in particular situations when you
     want to reuse a portion of your UI in other layouts or when you want to change
     just that portion of the UI in different device configurations. This `<include/>`
@@ -1172,6 +1344,8 @@
   id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: Android SDK 提供了一个有用的标签，在特定情况下使用，当你想在其他布局中重用 UI 的一部分，或者当你想在不同的设备配置中只更改 UI 的这一部分时。这个
+    `<include/>` 标签允许你添加另一个布局文件，只需指定其引用 ID。如果你想重用上一个示例的头部，只需创建如下可重用布局 XML 文件：
 - en: '[PRE12]'
   id: totrans-182
   prefs: []
@@ -1182,6 +1356,7 @@
   id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后将 `<include/>` 标签放置在你希望它出现的布局中，替换导出的视图：
 - en: '[PRE13]'
   id: totrans-184
   prefs: []
@@ -1199,6 +1374,10 @@
   id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样，你就不需要在不同的配置中为所有布局复制/粘贴相同的视图；你只需为所需配置定义 `@layout/content_building_layout`
+    文件，并且可以在每个需要的布局中这样做。但这样做，你可能会引入布局冗余，因为像前一个示例中那样将 `ViewGroup` 作为可重用布局的根节点。其视图层次结构与
+    *图9* 相同，有三层和六个视图。这就是为什么 Android SDK 提供了另一个有用的标签 `<merge />`，它可以帮助移除冗余布局并保持更扁平的层次结构。只需用
+    `<merge />` 标签替换可重用的根布局。可重用布局将变成以下这样：
 - en: '[PRE14]'
   id: totrans-186
   prefs: []
@@ -1211,21 +1390,26 @@
   id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样，整个最终布局就具有两层层次结构，没有多余的布局，因为系统将 `<merge />` 标签内的视图直接包含在其他视图内，替代 `<include />`
+    标签。实际上，相应的布局层次结构与 *图10* 中的相同。
 - en: 'When dealing with this tag, you need to keep in mind that it has two main limitations:'
   id: totrans-188
   prefs: []
   type: TYPE_NORMAL
+  zh: 在处理这个标签时，你需要记住它有两个主要限制：
 - en: It can only be used as root in an XML layout file
   id: totrans-189
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 它只能作为 XML 布局文件中的根元素使用
 - en: 'You must supply a view as parent and attach it to that every time you call
     the `LayoutInflater.inflate()` method:'
   id: totrans-190
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 每次调用`LayoutInflater.inflate()`方法时，你必须提供一个视图作为父视图并附加到它：
 - en: '[PRE15]'
   id: totrans-191
   prefs:
@@ -1237,12 +1421,14 @@
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`ViewStub`'
 - en: 'The `ViewStub` class can be added as a node inside the layout hierarchy specifying
     a layout reference, but no views are drawn for it until its layout is inflated
     at runtime using the `ViewStub.inflate()` or `View.setVisibility()` methods:'
   id: totrans-193
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ViewStub`类可以作为布局层次结构中的节点添加，并指定一个布局引用，但在运行时使用`ViewStub.inflate()`或`View.setVisibility()`方法加载其布局之前，不会为它绘制任何视图：'
 - en: '[PRE16]'
   id: totrans-194
   prefs: []
@@ -1253,6 +1439,7 @@
   id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 在运行时，以下方法被调用之前，`ViewStub`指向的布局不会被加载：
 - en: '[PRE17]'
   id: totrans-196
   prefs: []
@@ -1265,6 +1452,7 @@
   id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 加载的布局在层次结构中占据了`ViewStub`的位置，`ViewStub`不再可用。当以上方法之一调用后，`ViewStub`将无法再被访问；取而代之的是使用`android:inflatedId`属性中的ID。
 - en: This class is useful, particularly when you are dealing with a complex layout
     hierarchy, but you can defer the loading of some views to a later time and as
     and when needed, reducing the first loading time and freeing memory from unnecessary
@@ -1272,47 +1460,56 @@
   id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你处理复杂的布局层次时，这个类特别有用，但你可以将某些视图的加载推迟到稍后的时间，并在需要时加载，从而减少首次加载时间并释放不必要的内存分配。
 - en: AdapterViews and view recycling
   id: totrans-199
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: '`AdapterView`和视图回收'
 - en: 'There is a special `ViewGroup` subclass that needs an `Adapter` class to manage
     all of its children: this class is called `AdapterView`. Commonly used specializations
     of `AdapterView` are:'
   id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 有一个特殊的`ViewGroup`子类，它需要一个`Adapter`类来管理其所有子项：这个类被称为`AdapterView`。`AdapterView`的常见专用类型包括：
 - en: '`ListView`'
   id: totrans-201
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ListView`'
 - en: '`ExpandableListView`'
   id: totrans-202
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ExpandableListView`'
 - en: '`GridView`'
   id: totrans-203
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GridView`'
 - en: '`Gallery`'
   id: totrans-204
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Gallery`'
 - en: '`Spinner`'
   id: totrans-205
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Spinner`'
 - en: '`StackView`'
   id: totrans-206
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`StackView`'
 - en: The `Adapter` class is responsible for defining the number of children of the
     `AdapterView` and inflating every single child view within its `Adapter.getView()`
     method, while the `AdapterView` defines how the children are positioned on the
@@ -1320,32 +1517,38 @@
   id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Adapter`类负责定义`AdapterView`的子项数量，并在其`Adapter.getView()`方法中加载每一个子视图，而`AdapterView`定义了子项在屏幕上的位置以及如何响应用户交互。'
 - en: 'The platform provides different implementations of `Adapter` depending on how
     the developer chooses to handle the model:'
   id: totrans-208
   prefs: []
   type: TYPE_NORMAL
+  zh: 平台根据开发者选择处理模型的方式，提供了不同的`Adapter`实现：
 - en: '`ArrayAdapter`: Used to map the `toString()` method result to every single
     row'
   id: totrans-209
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`ArrayAdapter`：用于将`toString()`方法的结果映射到每一行'
 - en: '`CursorAdapter`: Used to handle data from a database'
   id: totrans-210
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`CursorAdapter`：用于处理数据库中的数据'
 - en: '`SimpleAdapter`: Used to bind CheckBoxes, TextViews, and ImageViews'
   id: totrans-211
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SimpleAdapter`：用于绑定复选框、文本视图和图像视图'
 - en: 'Every one of these extends `BaseAdapter`, which is also widely used to create
     custom adapters. The following is an example of `BaseAdapter` implementation:'
   id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些控件都扩展了`BaseAdapter`，后者也广泛用于创建自定义适配器。以下是`BaseAdapter`实现的一个示例：
 - en: '[PRE18]'
   id: totrans-213
   prefs: []
@@ -1355,6 +1558,7 @@
   id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 每一行的布局描述如下：
 - en: '[PRE19]'
   id: totrans-215
   prefs: []
@@ -1364,6 +1568,7 @@
   id: totrans-216
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使用这个`Adapter`，只需按照以下方式将其设置到`ListView`中：
 - en: '[PRE20]'
   id: totrans-217
   prefs: []
@@ -1380,17 +1585,20 @@
   id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个控件最常见的用途就是用于`ListView`。让我们来了解一下用户滚动`ListView`时会发生什么；对于需要添加的每一个新行，都会调用`Adapter.getView()`方法。每次都会加载一个新的视图，并通过`View.findViewById()`方法引用行布局中的每一个视图。这些操作只能由主线程执行，因为它是唯一可以处理UI的线程。这会影响运行时的计算，经常导致滚动出现延迟，性能下降。此外，行布局层次的复杂性可能会加剧这种行为。
 - en: The ViewHolder pattern
   id: totrans-219
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: '`ViewHolder`模式'
 - en: To avoid this computationally expensive amount of calls to the `View.findViewById()`
     method inside `Adapter.getView()`, it's a good practice to use the ViewHolder
     design pattern.
   id: totrans-220
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了避免在`Adapter.getView()`内部对`View.findViewById()`方法的计算密集型调用，使用`ViewHolder`设计模式是一个好习惯。
 - en: A `ViewHolder` is a static class with the purpose of storing layout component
     views to make them available for subsequent calls; the same view is reused and
     there is no need to call the `View.findViewById()` method for every single view
@@ -1398,10 +1606,12 @@
   id: totrans-221
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ViewHolder`是一个静态类，其目的是存储布局组件视图，以便在后续调用时可用；相同的视图被重复使用，无需为布局中的每个视图调用`View.findViewById()`方法。'
 - en: 'The previous `SampleObjectAdapter` becomes as follows:'
   id: totrans-222
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前的`SampleObjectAdapter`如下所示：
 - en: '[PRE21]'
   id: totrans-223
   prefs: []
@@ -1417,17 +1627,20 @@
   id: totrans-224
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是因为`Adapter.getView()`方法提供了一个旧的引用视图作为`convertView`参数，以便重复使用。而其神奇之处在于：当`convertView`为空时，会填充一个视图，并将每个包含的视图存储在`ViewHolder`对象中以便后续重用，同时将`ViewHolder`对象设置为刚刚初始化的`convertView`的标签。这样，当`convertView`不为空时，`Adapter`类会给我们提供相同的实例，以便我们可以从`convertView`中检索`ViewHolder`并使用其属性视图。
 - en: Tip
   id: totrans-225
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: When dealing with `BaseAdapter`, the use of the `ViewHolder` pattern is highly
     recommended in order to avoid frequent calls to the `View.findViewById()` method,
     which can affect computation during runtime.
   id: totrans-226
   prefs: []
   type: TYPE_NORMAL
+  zh: 在使用`BaseAdapter`时，强烈建议使用`ViewHolder`模式，以避免频繁调用`View.findViewById()`方法，这可能会影响运行时的计算。
 - en: The use of the pattern is at the discretion of the developer; new Android developers
     have tended not to use it for years, increasing the bad reputation of Android
     platform performance because of lags while scrolling a `ListView` or a `GridView`.
@@ -1439,6 +1652,8 @@
   id: totrans-227
   prefs: []
   type: TYPE_NORMAL
+  zh: 模式的使用由开发者自行决定；多年来，新的Android开发者往往不使用它，导致Android平台性能因在滚动`ListView`或`GridView`时出现延迟而声誉不佳。这正是谷歌引入一个名为`RecyclerView`的新视图来创建列表和网格，并自行管理子视图回收的原因之一；它可以从Android
+    2.1 Éclair开始使用，因为它包含在支持包库v7中。在使用这个高度灵活的新对象时，开发者不能跳过使用`ViewHolder`对象。
 - en: In both situations it's really important to display images with the right dimensions
     for the `ImageView` lying in the row layout as a placeholder, and not their original
     one, in order to avoid CPU and GPU processing, which can usually turn in to an
@@ -1446,6 +1661,7 @@
   id: totrans-228
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这两种情况下，使用正确的尺寸显示行布局中`ImageView`的占位图像，而不是其原始尺寸，以避免CPU和GPU处理，这通常会导致`OutOfMemoryError`。
 - en: From the computation perspective, this pattern cannot be enough to create a
     smooth application; as mentioned before, only the main thread is responsible for
     touching views and dealing with the UI. Furthermore, every processing task should
@@ -1455,11 +1671,14 @@
   id: totrans-229
   prefs: []
   type: TYPE_NORMAL
+  zh: 从计算的角度来看，这一模式还不足以创建一个流畅的应用程序；如前所述，只有主线程负责处理视图和UI交互。此外，每个处理任务都应该在工作线程中执行，以便主线程能够快速访问视图。关于这个话题，请阅读更多关于[第5章](ch05.html
+    "第5章 多线程")，*多线程*的内容。
 - en: Custom views and layouts
   id: totrans-230
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 自定义视图和布局
 - en: In our UI application development, we often face a lack of views that have the
     feature we need for a layout, or we need to create a view with some great features
     from scratch. Luckily, the Android platform lets us develop every kind of view
@@ -1471,12 +1690,14 @@
   id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的UI应用开发中，我们经常遇到缺乏具有我们所需布局功能的视图，或者我们需要从头开始创建一个具有某些出色功能的视图。幸运的是，Android平台允许我们开发各种类型的视图，以便构建所需的UI。有很多自由度来做这件事，所以如果你在开发自定义视图时不够小心，你可能会损害内存和GPU，造成灾难性的后果。根据我们目前所了解的内容，让我们了解在Android中视图是如何工作的，它是如何被测量和绘制的，以及如何优化这个过程。
 - en: 'Despite the fact that you can add as many attributes to your custom view as
     you want to improve its appearance, what matters most is how you draw everything
     on the screen. There are two main option to do this:'
   id: totrans-232
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管你可以根据需要为自定义视图添加尽可能多的属性来改善其外观，但最重要的是你如何在屏幕上绘制所有内容。有两种主要的方法可以实现这一点：
 - en: You can wrap up a layout with all the needed views to have a reusable object,
     where every held view is handled by the view hierarchy. No need to specify what
     and how to be drawn, but just a classical layout with the desired views arranged
@@ -1485,6 +1706,7 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 你可以包装一个包含所有所需视图的布局，以得到一个可重用的对象，其中每个持有的视图都由视图层次结构处理。无需指定要绘制的内容以及如何绘制，只需使用所需视图的经典布局按需排列。
 - en: You can create your own view specifying what to be drawn, and how, overriding
     the `View.onDraw()` method that is executed every time the view is invalidated
     with the call to the `View.invalidate()` method, which notifies the system that
@@ -1493,10 +1715,12 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 你可以创建自己的视图，通过重写每次调用`View.invalidate()`方法使视图失效时执行的`View.onDraw()`方法，来指定要绘制的内容和方式。该方法通知系统视图需要重新绘制。
 - en: 'With this second approach you will deal with two main objects to draw with:'
   id: totrans-235
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过第二种方法，你将处理两个主要的绘图对象：
 - en: '`Canvas`: This is the object that draws something. With this you can specify
     what to draw; what a `Canvas` object can draw is indicated by the invoked method
     on it. These are the main `Canvas` methods used to draw:'
@@ -1504,150 +1728,175 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Canvas`：这是用来绘制内容的对象。通过它，你可以指定绘制的内容；一个`Canvas`对象能够绘制的内容由其调用的方法决定。以下是主要的`Canvas`绘图方法：'
 - en: '`drawARGB()`'
   id: totrans-237
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawARGB()`'
 - en: '`drawArc()`'
   id: totrans-238
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawArc()`'
 - en: '`drawBitmap()`'
   id: totrans-239
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawBitmap()`'
 - en: '`drawCircle()`'
   id: totrans-240
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawCircle()`'
 - en: '`drawColor()`'
   id: totrans-241
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawColor()`'
 - en: '`drawLine()`'
   id: totrans-242
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawLine()`'
 - en: '`drawOval()`'
   id: totrans-243
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawOval()`'
 - en: '`drawPaint()`'
   id: totrans-244
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawPaint()`'
 - en: '`drawPath()`'
   id: totrans-245
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawPath()`'
 - en: '`drawPicture()`'
   id: totrans-246
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawPicture()`'
 - en: '`drawPoints()`'
   id: totrans-247
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawPoints()`'
 - en: '`drawRect()`'
   id: totrans-248
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawRect()`'
 - en: '`drawText()`'
   id: totrans-249
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`drawText()`'
 - en: '`Paint`: This is the object used to tell the `Canvas` how to draw what is about
     to be drawn. The following are some `Paint` methods used to change an object property:'
   id: totrans-250
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Paint`：这是用来告诉`Canvas`如何绘制即将绘制的内容的对象。以下是用来改变对象属性的某些`Paint`方法：'
 - en: '`setARGB()`'
   id: totrans-251
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setARGB()`'
 - en: '`setAlpha()`'
   id: totrans-252
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setAlpha()`'
 - en: '`setColor()`'
   id: totrans-253
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setColor()`'
 - en: '`setLetterSpacing()`'
   id: totrans-254
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setLetterSpacing()`'
 - en: '`setShader()`'
   id: totrans-255
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setShader()`'
 - en: '`setStrikeThruText()`'
   id: totrans-256
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setStrikeThruText()`'
 - en: '`setTextAlign()`'
   id: totrans-257
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setTextAlign()`'
 - en: '`setTextSize()`'
   id: totrans-258
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setTextSize()`'
 - en: '`setTypeFace()`'
   id: totrans-259
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setTypeFace()`'
 - en: '`setUnderlineText()`'
   id: totrans-260
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`setUnderlineText()`'
 - en: When you override the `View.onDraw()` method, you will have to use the `Canvas`
     object made available as a parameter of the method to let your drawing appear
     on the screen (or in your view bounds). The `Paint` objects used to customize
@@ -1655,6 +1904,7 @@
   id: totrans-261
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你重写`View.onDraw()`方法时，你将需要使用作为方法参数提供的`Canvas`对象，让你的绘图显示在屏幕上（或视图边界内）。用于自定义绘图的`Paint`对象需要单独处理。
 - en: Every view needs to be able to be added to `ViewGroups` that take care of placing
     their children after having measured them. Then, the method to tell the parent
     view which size has the view is the `View.onMeasure()` method. This is a crucial
@@ -1664,6 +1914,7 @@
   id: totrans-262
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个视图都需要能够被添加到`ViewGroups`中，这些`ViewGroups`负责在测量它们后放置其子视图。然后，告诉父视图视图大小的方法是`View.onMeasure()`。在自定义视图开发中，这是一个关键步骤，因为每个视图都必须有自己的宽度和高度；实际上，如果在`View.onMeasure()`中忘记调用`View.setMeasuredDimension()`，会导致抛出异常。
 - en: 'Every time the view needs to be measured again because its bounds are changed
     or because it needs more or less space than it had, you need to call the `View.requestLayout()`
     method: instead of invalidating just the view itself, it asks the parent to calculate
@@ -1673,6 +1924,7 @@
   id: totrans-263
   prefs: []
   type: TYPE_NORMAL
+  zh: 每当视图因为边界改变或需要比之前更多或更少的空间而需要重新测量时，你需要调用`View.requestLayout()`方法：它不是仅使视图本身无效，而是要求父视图重新计算所有子视图的位置并重新绘制它们。这相当于使整个视图层次结构无效。如前所述，这可能会非常昂贵，应尽可能避免。
 - en: Thanks to the capabilities of the platform, the custom view creation can lead
     to really interesting results, but all this freedom must be controlled, and above
     all, measured. It's a good practice to verify your view timings by checking the
@@ -1681,43 +1933,51 @@
   id: totrans-264
   prefs: []
   type: TYPE_NORMAL
+  zh: 幸亏平台的强大功能，自定义视图的创建可以带来非常有趣的结果，但所有这些自由都必须受到控制和衡量。检查视图的定时，通过查看仅包含视图的布局中的 GPU 性能，然后在一个更广泛的背景下，控制它在与其他视图一起时的行为，这是一种好习惯。
 - en: 'Knowing how this works, let''s identify and classify performance errors a developer
     can make while developing a custom view:'
   id: totrans-265
   prefs: []
   type: TYPE_NORMAL
+  zh: 了解这一点后，让我们识别和分类开发者在开发自定义视图时可能犯的性能错误：
 - en: Refreshing the view drawing when unneeded
   id: totrans-266
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在不需要时刷新视图绘制
 - en: 'Drawing pixels that won''t be visible: this is what we previously called overdraw'
   id: totrans-267
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 绘制不可见的像素：这是我们之前所说的过度绘制。
 - en: Consuming memory resources during the drawing by doing unnecessary operations
   id: totrans-268
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在绘制过程中通过进行不必要的操作消耗内存资源
 - en: 'Every one of those can prevent the GPU from reaching the 60 FPS goal. Let''s
     explore them on more depth:'
   id: totrans-269
   prefs: []
   type: TYPE_NORMAL
+  zh: 每一个都可能导致 GPU 无法达到 60 FPS 的目标。让我们更深入地探讨它们：
 - en: View invalidation is widely used among newcomers just because this is the fastest
     way to have a refreshed and updated view at any time.
   id: totrans-270
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 视图无效化是新手广泛使用的方法，因为这是在任何时候刷新和更新视图的最快方式。
 - en: Tip
   id: totrans-271
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: While developing custom views, be careful not to invoke unnecessary methods
     that force the entire hierarchy to be redrawn again and again, consuming precious
     frame drawing cycles. Always check when and where the calls to `View.invalidate()`
@@ -1727,6 +1987,8 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在开发自定义视图时，要小心不要调用那些会导致整个层次结构一次又一次重新绘制的非必要方法，这会消耗宝贵的帧绘制周期。一定要检查`View.invalidate()`和`View.requestLayout()`的调用时机和位置，因为这可能会影响整个
+    UI，减慢 GPU 和其帧率。
 - en: To avoid overdraw in a custom view, you could use a Canvas API that lets you
     draw just a desired portion of the custom view. This can be very helpful while
     designing a stack view or any other view with overlapping portions. The API we
@@ -1738,27 +2000,32 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 为了在自定义视图中避免过度绘制，你可以使用 Canvas API，它允许你只绘制自定义视图的所需部分。在设计堆叠视图或其他具有重叠部分的视图时，这会非常有帮助。我们指的是`Canvas.clipRect()`方法。例如，如果你的视图需要在屏幕上绘制多个重叠对象，我们的目标是要正确剪辑每个视图以避免不必要的过度绘制，只绘制每个对象的可见部分。
 - en: 'For instance, *Figure 12* shows a stack view where the overlapped cards don''t
     need to be entirely drawn:'
   id: totrans-274
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 例如，*图 12* 显示了一个堆叠视图，其中重叠的卡片不需要完全绘制：
 - en: '![Custom views and layouts](img/8951_03_12.jpg)'
   id: totrans-275
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![自定义视图和布局](img/8951_03_12.jpg)'
 - en: 'Figure 12: Custom view example with overlapping parts'
   id: totrans-276
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 图 12：具有重叠部分的自定义视图示例
 - en: 'The following code snippet shows how to avoid overdraw:'
   id: totrans-277
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 下面的代码片段展示了如何避免过度绘制：
 - en: '[PRE22]'
   id: totrans-278
   prefs:
@@ -1776,12 +2043,14 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在我们的`View.onDraw()`方法实现中，我们不应该在任何由`View.onDraw()`调用的方法中放置任何分配。这是因为，当在该方法内部进行分配时，需要创建并初始化对象。然后，当`View.onDraw()`的执行结束时，垃圾回收器会释放内存，因为没有人在使用它。此外，如果视图是动画的，视图每秒会重绘60次。因此，避免在`View.onDraw()`方法中进行分配的重要性。
 - en: Tip
   id: totrans-280
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Never allocate objects inside the `View.onDraw()` method (or inside other methods
     called by it) in order not to burden the execution of this method, which can be
     invoked many times during the view life cycle; the garbage collector could free
@@ -1791,11 +2060,13 @@
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 不要在`View.onDraw()`方法（或由它调用的其他方法）内部分配对象，以免增加此方法的执行负担，该方法在视图生命周期内可能会被多次调用；垃圾回收器可能会频繁释放内存，导致卡顿。更好的做法是在视图首次创建时实例化它们。
 - en: Screen zoom
   id: totrans-282
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 屏幕缩放
 - en: 'The new Android N preview introduces a special feature for accessibility that
     can put a strain on our application if we don''t observe the best practices introduced
     earlier. We are talking about **Display size**, which can be changed from inside
@@ -1804,27 +2075,33 @@
   id: totrans-283
   prefs: []
   type: TYPE_NORMAL
+  zh: 新的Android N预览版引入了一项特殊功能，如果我们不遵循之前介绍的最佳实践，可能会对我们的应用程序造成压力。我们所说的是**显示大小**，它可以在设备的**设置**中的**辅助功能**部分进行更改，如图*图13*所示：
 - en: '![Screen zoom](img/8951_03_13.jpg)'
   id: totrans-284
   prefs: []
   type: TYPE_IMG
+  zh: '![屏幕缩放](img/8951_03_13.jpg)'
 - en: 'Figure 13: Display size settings in Accessibility'
   id: totrans-285
   prefs: []
   type: TYPE_NORMAL
+  zh: 图13：辅助功能中的显示大小设置
 - en: 'When the user changes the settings, a preview is shown and it looks like *Figure
     14*:'
   id: totrans-286
   prefs: []
   type: TYPE_NORMAL
+  zh: 当用户更改设置时，会显示预览，看起来像*图14*：
 - en: '![Screen zoom](img/8951_03_14.jpg)'
   id: totrans-287
   prefs: []
   type: TYPE_IMG
+  zh: '![屏幕缩放](img/8951_03_14.jpg)'
 - en: 'Figure 14: Display size change effect for the default and largest sizes'
   id: totrans-288
   prefs: []
   type: TYPE_NORMAL
+  zh: 图14：默认和最大尺寸的显示大小更改效果
 - en: Now let's have a quick overview of what happens when the user sets this new
     feature on the device. If the application is compiled using the new Android N
     version as the target, the application processes are notified by the typical runtime
@@ -1836,22 +2113,26 @@
   id: totrans-289
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们快速了解一下用户在设备上设置此新功能时会发生什么。如果应用程序以新的Android N版本为目标进行编译，那么应用程序进程将通过典型的运行时更改框架得到通知。否则，所有进程将被杀死，活动将被重新创建，就像改变方向时一样。但这次重建会使用不同的屏幕宽度，以dp表示。因此，我们应该测试这个特定的用例，以确保我们的应用程序性能不受此新功能的影响。
 - en: This is a further incentive not to use the px measurement and to opt for the
     better-suited dp one.
   id: totrans-290
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是我们不使用px测量单位，而选择更合适的dp单位的进一步原因。
 - en: In addition to this, as explained in [Chapter 6](ch06.html "Chapter 6. Networking"),
     *Networking*, we should change any density-dependent behavior of our application,
     such as image format caching or requests to the backend side.
   id: totrans-291
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，如[第6章](ch06.html "第6章. 网络通信")*网络通信*中所解释，我们应该改变应用程序的任何与密度相关的行为，比如图像格式缓存或对后端的服务请求。
 - en: Debugging tools
   id: totrans-292
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 调试工具
 - en: We now know the problems behind the creation of a flexible and efficient UI
     and how to solve them. But, how can we know if we are doing well? Moreover, how
     can we measure the output quality of our hard work? Let's go through the various
@@ -1861,11 +2142,13 @@
   id: totrans-293
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们知道了创建灵活高效UI背后的问题以及如何解决它们。但是，我们如何知道我们做得好不好呢？此外，我们如何衡量我们辛勤工作的输出质量？让我们了解你可以使用各种工具来衡量我们的产品，同时发现并解决其他问题，以提高应用程序在整个生命周期内的性能。
 - en: The Design view
   id: totrans-294
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 设计视图
 - en: 'During the development process, the creation of XML layout files is an underestimated
     activity: if the layout is well-designed in the development step, the application
     won''t need any particular effort to improve performance. While writing XML files,
@@ -1875,14 +2158,17 @@
   id: totrans-295
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开发过程中，创建XML布局文件是一个被低估的活动：如果在开发阶段布局设计得当，应用程序无需特别努力就能提升性能。在编写XML文件时，IDE允许我们在布局编辑器中以预览模式查看我们所设计的内容。这包括**文本**和**设计**视图，如图*15*所示：
 - en: '![The Design view](img/8951_03_15.jpg)'
   id: totrans-296
   prefs: []
   type: TYPE_IMG
+  zh: '![设计视图](img/8951_03_15.jpg)'
 - en: 'Figure 15: The Design view'
   id: totrans-297
   prefs: []
   type: TYPE_NORMAL
+  zh: 图15：设计视图
 - en: 'The Design view contains a special view called **Component Tree** that shows
     the view hierarchy while we are making it. In *Figure 16*, the hierarchy view
     corresponds to the one in *Figure 19*. This is a practical visual way to evaluate
@@ -1890,25 +2176,30 @@
   id: totrans-298
   prefs: []
   type: TYPE_NORMAL
+  zh: 设计视图包含一个名为**组件树**的特殊视图，它在我们构建视图层次时显示该层次。在*图16*中，层次视图与*图19*中的相同。这是一种实用的视觉方法，用于评估我们布局的深度：
 - en: '![The Design view](img/8951_03_16.jpg)'
   id: totrans-299
   prefs: []
   type: TYPE_IMG
+  zh: '![设计视图](img/8951_03_16.jpg)'
 - en: 'Figure 16: View hierarchy preview in the Design view'
   id: totrans-300
   prefs: []
   type: TYPE_NORMAL
+  zh: 图16：设计视图中的视图层次预览
 - en: As discussed in this chapter, our target is to flatten the hierarchy depth to
     limit the calculation and speed up the creation of views to be shown on screen
     as fast as possible.
   id: totrans-301
   prefs: []
   type: TYPE_NORMAL
+  zh: 如本章所讨论，我们的目标是扁平化层次深度，以限制计算并加速创建要在屏幕上尽可能快显示的视图。
 - en: Note
   id: totrans-302
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The design view is the right tool to highlight cases where we can limit the
     hierarchy depth during the development process; if we pay attention to details
     during the analysis and development processes, we can significantly reduce the
@@ -1916,11 +2207,13 @@
   id: totrans-303
   prefs: []
   type: TYPE_NORMAL
+  zh: 设计视图是在开发过程中限制层次深度的正确工具；如果在分析和开发过程中注意细节，我们可以显著减少恢复应用程序丢失性能所需的工作量。
 - en: Hierarchy Viewer
   id: totrans-304
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 层次查看器
 - en: 'The main tool to analyze the view hierarchy, debug the UI, and profile our
     layouts, is the **Hierarchy Viewer**. It''s in the Android Device Monitor and
     it provides a complete visual tool. As in *Figure 17*, the tool contains a lot
@@ -1928,45 +2221,54 @@
   id: totrans-305
   prefs: []
   type: TYPE_NORMAL
+  zh: 分析视图层次、调试UI以及分析布局的主要工具是**层次查看器**。它位于Android设备监视器中，提供了一个完整的可视化工具。如图*17*所示，该工具包含许多视图，帮助我们分析UI：
 - en: '![Hierarchy Viewer](img/8951_03_17.jpg)'
   id: totrans-306
   prefs: []
   type: TYPE_IMG
+  zh: '![层次查看器](img/8951_03_17.jpg)'
 - en: 'Figure 17: Hierarchy Viewer'
   id: totrans-307
   prefs: []
   type: TYPE_NORMAL
+  zh: 图17：层次查看器
 - en: Tree View
   id: totrans-308
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 树状视图
 - en: 'The center panel contains the **Tree View** with a zoomed part of the view
     hierarchy. Every view can be selected to open the detail with the following information
     related to the selected view and all the others hierarchically lower:'
   id: totrans-309
   prefs: []
   type: TYPE_NORMAL
+  zh: 中间面板包含带有视图层次结构缩放部分的**树状视图**。每个视图可以被选中，以打开与所选视图以及所有层次结构中较低视图相关的详细信息：
 - en: The number of contained views
   id: totrans-310
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 包含的视图数量
 - en: Measure time
   id: totrans-311
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 测量时间
 - en: Layout time
   id: totrans-312
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 布局时间
 - en: Draw time
   id: totrans-313
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 绘制时间
 - en: 'This means that the times in the leftmost view in the **Tree View** tell us
     how long it took for the entire UI creation process, because it''s the root of
     our layout. This is the parameter that must always be considered; as discussed
@@ -1975,40 +2277,48 @@
   id: totrans-314
   prefs: []
   type: TYPE_NORMAL
+  zh: 这意味着**树状视图**最左边的视图告诉我们整个UI创建过程所需的时间，因为它是我们布局的根。这是必须始终考虑的参数；正如前几页所讨论的，我们的目标是保持这个值低于16毫秒。*图18*展示了一个选中了**ImageView**的**树状视图**示例：
 - en: '![Tree View](img/8951_03_18.jpg)'
   id: totrans-315
   prefs: []
   type: TYPE_IMG
+  zh: '![树状视图](img/8951_03_18.jpg)'
 - en: 'Figure 18: Tree View inside the Hierarchy Viewer'
   id: totrans-316
   prefs: []
   type: TYPE_NORMAL
+  zh: 图18：层次查看器中的树状视图
 - en: Tip
   id: totrans-317
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Checking the layout-creation time should be part of the testing process every
     time. The measure, layout, and draw steps must be completed in 16.67 ms at the
     most. The **Tree View** inside the **Hierarchy Viewer** helps us measure the timings.
   id: totrans-318
   prefs: []
   type: TYPE_NORMAL
+  zh: 每次测试过程都应检查布局创建时间。测量、布局和绘制步骤最多需要在16.67毫秒内完成。**层次查看器**中的**树状视图**可以帮助我们测量这些时间。
 - en: 'Using the **Tree View**, the depth of our layout is straightforward: this is
     very helpful to understand where we overloaded the layout of our activity and
     where we could accidentally add overdraw.'
   id: totrans-319
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用**树状视图**，我们布局的深度非常直观：这有助于我们了解在活动布局中过度设计的地方以及可能不小心添加的过度绘制。
 - en: View properties
   id: totrans-320
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 视图属性
 - en: 'The left panel contains two views:'
   id: totrans-321
   prefs: []
   type: TYPE_NORMAL
+  zh: 左侧面板包含两个视图：
 - en: '**Windows**: Here you can find a list of all connected devices and emulators
     with the subsidiary list of all debuggable processes, with the selected one in
     bold. One of them can be selected and, after click on the icon, the related view
@@ -2017,22 +2327,26 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**窗口**：在这里，你可以找到所有已连接设备和模拟器的列表以及所有可调试进程的子列表，选中的进程以粗体显示。可以选择其中一个，点击图标后，相关的视图将加载到树视图中，整个面板切换到**视图属性**。'
 - en: '**View Properties**: This contains a list of view properties useful to debug
     the view:![View properties](img/8951_03_19.jpg)'
   id: totrans-323
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**视图属性**：这包含了一系列用于调试视图的视图属性：![视图属性](img/8951_03_19.jpg)'
 - en: 'Figure 19: View properties inside the Hierarchy Viewer'
   id: totrans-324
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 图19：层次查看器内的视图属性
 - en: Tree overview
   id: totrans-325
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 树状图概览
 - en: 'On the right-hand side of the Android Device Monitor, the **Tree Overview**
     shows the view hierarchy as a whole, and the zoomed part standing in the **Tree
     View** is grayed in order to be highlighted. This view shows us the complexity
@@ -2041,19 +2355,23 @@
   id: totrans-326
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Android 设备监视器的右侧，**树状图概览**显示了整个视图层次结构，而**树视图**中放大的部分被灰色处理以突出显示。这个视图向我们展示了我们构建的视图层次结构的复杂性。看*图20*以了解**树状图概览**的外观：
 - en: '![Tree overview](img/8951_03_20.jpg)'
   id: totrans-327
   prefs: []
   type: TYPE_IMG
+  zh: '![树状图概览](img/8951_03_20.jpg)'
 - en: 'Figure 20: Tree Overview inside the Hierarchy Viewer'
   id: totrans-328
   prefs: []
   type: TYPE_NORMAL
+  zh: 图20：层次查看器内的树状图概览
 - en: Layout View
   id: totrans-329
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 布局视图
 - en: 'Under the **Tree Overview**, there is a view called **Layout View** that shows
     the area covered by every view simulating the layout shown on the device screen,
     so you can select a particular view inside the **Tree View** and simplify the
@@ -2062,30 +2380,36 @@
   id: totrans-330
   prefs: []
   type: TYPE_NORMAL
+  zh: 在**树状图概览**下方，有一个名为**布局视图**的视图，它显示了模拟设备屏幕上显示的布局中每个视图所覆盖的区域，这样你可以在**树视图**中选择一个特定的视图，简化在布局中查找单个视图的过程。*图21*展示了本章示例所用的**布局视图**：
 - en: '![Layout View](img/8951_03_21.jpg)'
   id: totrans-331
   prefs: []
   type: TYPE_IMG
+  zh: '![布局视图](img/8951_03_21.jpg)'
 - en: 'Figure 21: Layout View inside the Hierarchy Viewer'
   id: totrans-332
   prefs: []
   type: TYPE_NORMAL
+  zh: 图21：层次查看器内的布局视图
 - en: On device tools
   id: totrans-333
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 设备工具
 - en: When you want to debug and profile your UI, it is important to do this on real
     devices. The Android system provides a lot of flexible tools to be used on the
     device inside the **Developer options** settings.
   id: totrans-334
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你想调试和评估你的用户界面时，在真实设备上进行操作是非常重要的。Android 系统在**开发者选项**设置中提供了许多灵活的工具，可以在设备上使用。
 - en: Debugging GPU overdraw
   id: totrans-335
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 调试 GPU 过度绘制
 - en: 'To debug the overdraw on the device, Android provides a helpful tool that can
     be enabled inside the **Developer options**. Inside the **Hardware accelerated
     rendering** section, there is the **Debug GPU overdraw** option. When enabled,
@@ -2095,31 +2419,37 @@
   id: totrans-336
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了在设备上调试过度绘制，Android 提供了一个有用的工具，可以在**开发者选项**内启用。在**硬件加速渲染**部分中，有**调试 GPU 过度绘制**的选项。启用后，屏幕会根据每个像素的过度绘制级别以不同的颜色显示，如果存在过度绘制，则通过添加覆盖颜色来指示：
 - en: '**True color**: No overdraw'
   id: totrans-337
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**真彩色**：无过度绘制'
 - en: '**Blue**: 1X overdraw'
   id: totrans-338
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**蓝色**：1倍过度绘制'
 - en: '**Green**: 2X overdraw'
   id: totrans-339
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**绿色**：2倍过度绘制'
 - en: '**Pink**: 3X overdraw'
   id: totrans-340
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**粉色**：3倍过度绘制'
 - en: '**Red**: 4X+ overdraw'
   id: totrans-341
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**红色**：4倍以上过度绘制'
 - en: 'For example, let''s look at *Figure 22*. The left-hand screen is not optimized,
     but the right-hand one is. So, this tool is really helpful for finding overdraw
     in our layouts. Our goal as developers is to reduce overlays as much as possible
@@ -2129,36 +2459,44 @@
   id: totrans-342
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，让我们看看*图22*。左侧屏幕未经优化，而右侧屏幕则进行了优化。因此，这个工具对于查找我们布局中的过度绘制非常有帮助。作为开发者的我们的目标是尽可能减少叠加，以减少过度绘制并提高
+    GPU 计时和渲染速度。需要执行的主要操作是检查我们布局的背景和 RelativeLayouts 内部重叠的视图：
 - en: '![Debugging GPU overdraw](img/8951_03_22.jpg)'
   id: totrans-343
   prefs: []
   type: TYPE_IMG
+  zh: '![调试 GPU 过度绘制](img/8951_03_22.jpg)'
 - en: 'Figure 22: Overdraw comparison, respectively before and after the optimizations'
   id: totrans-344
   prefs: []
   type: TYPE_NORMAL
+  zh: 图22：优化前后的过度绘制比较
 - en: Profile GPU rendering
   id: totrans-345
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 分析 GPU 渲染
 - en: This tool shows the developer how long the frame rendering operations take,
     defining if they are completed in respect of the 16 ms limit or if they aren't.
     It's a good way to benchmark our application from a rendering perspective.
   id: totrans-346
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个工具向开发者展示了帧渲染操作需要多长时间，并定义了这些操作是否在16毫秒限制内完成。从渲染的角度来看，这是评估我们应用程序性能的一个很好的方法。
 - en: 'Despite the name, all of the observed processes are executed by the CPU: the
     GPU works in an asynchronous way, after the rendering operations are submitted
     by the CPU.'
   id: totrans-347
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管名字如此，所有观察到的过程都是由CPU执行的：GPU以异步方式工作，在CPU提交渲染操作之后。
 - en: 'To enable it, simply select the **Profile GPU rendering** inside the **Monitoring
     section** of the **Developer settings** of the device. There are two options:'
   id: totrans-348
   prefs: []
   type: TYPE_NORMAL
+  zh: 要启用它，只需在设备的**开发者设置**中的**监控部分**选择**分析GPU渲染**。有两个选项：
 - en: '**On screen as bars**: This shows the result on the screen and it''s useful
     to have a quick glance at the rendering performance of our application against
     the 16 ms per frame target'
@@ -2166,12 +2504,14 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**以条形图显示在屏幕上**: 这显示了屏幕上的结果，有助于快速查看我们的应用程序针对每帧16毫秒目标的渲染性能。'
 - en: '**In adb shell dumpsys gfxinfo**: This stores benchmark results to be read
     by using the `adb` command'
   id: totrans-350
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**在adb shell dumpsys gfxinfo中**: 这会存储基准测试结果，以便使用`adb`命令读取'
 - en: '*Figure 23* shows how it''s shown on the screen. Every vertical bar corresponds
     to the time for a frame to be rendered on the screen. Every new line takes place
     to the right of the previous one. The horizontal green line indicates the 16 ms
@@ -2180,14 +2520,17 @@
   id: totrans-351
   prefs: []
   type: TYPE_NORMAL
+  zh: '*图23*展示了它在屏幕上的显示方式。每个垂直条对应于一帧在屏幕上渲染的时间。每新一行都在前一行的右侧。水平绿色线表示16毫秒的目标：如果超过这个时间，说明有东西在拖慢我们的帧渲染操作：'
 - en: '![Profile GPU rendering](img/8951_03_23.jpg)'
   id: totrans-352
   prefs: []
   type: TYPE_IMG
+  zh: '![分析GPU渲染](img/8951_03_23.jpg)'
 - en: 'Figure 23: The GPU rendering tool'
   id: totrans-353
   prefs: []
   type: TYPE_NORMAL
+  zh: 图23：GPU渲染工具
 - en: 'This tool provides more information about what happens while rendering every
     single frame. The vertical bar is divided in to four colored segments. Each one
     of them represents the time spent while completing a different sub rendering operation,
@@ -2195,35 +2538,41 @@
   id: totrans-354
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个工具提供了关于每一帧渲染时发生情况的信息。垂直条被分为四个彩色段。从下到上，每一个都代表了完成不同子渲染操作所花费的时间：
 - en: '**Blue bar – draw**: This represents the time spent drawing the views. This
     gets longer when too much work is needed in the `View.onDraw()` method.'
   id: totrans-355
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**蓝色条——绘制**: 这表示绘制视图所花费的时间。当`View.onDraw()`方法需要做的工作太多时，这个时间会变长。'
 - en: '**Purple bar – prepare**: This represents the time spent preparing and transfering
     to the rendering thread the resources to be displayed on the screen.'
   id: totrans-356
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**紫色条——准备**: 这表示准备并将要在屏幕上显示的资源传输到渲染线程所花费的时间。'
 - en: '**Red bar – process**: This is the time spent processing OpenGL operations.'
   id: totrans-357
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**红色条——处理**: 这是处理OpenGL操作所花费的时间。'
 - en: '**Orange bar – execute**: This is the time spent by the CPU waiting for the
     GPU to finish its work. This gets longer when the GPU is overloaded.'
   id: totrans-358
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**橙色条——执行**: 这是CPU等待GPU完成工作的时间。当GPU超负荷时，这个时间会变长。'
 - en: 'The `adb shell dumbsys` method is useful to compare the results of our optimization
     and prove whether we are doing well or not. The result is printed in the Terminal
     when called with the following command:'
   id: totrans-359
   prefs: []
   type: TYPE_NORMAL
+  zh: '`adb shell dumpsys`方法有助于比较我们的优化结果，以证明我们做得是否好。当使用以下命令调用时，结果会打印在终端中：'
 - en: '[PRE23]'
   id: totrans-360
   prefs: []
@@ -2233,6 +2582,7 @@
   id: totrans-361
   prefs: []
   type: TYPE_NORMAL
+  zh: 跟踪信息如下所示：
 - en: '[PRE24]'
   id: totrans-362
   prefs: []
@@ -2245,11 +2595,13 @@
   id: totrans-363
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种渲染性能基准测试提供了比视觉测试更多的信息，如显示列表操作、内存使用情况、每个渲染操作的确切时间（这在视觉基准测试中会显示为一条条形图），以及关于视图层次结构的信息。
 - en: 'New helpful information has been added in Android Marshmallow (API Level 23)
     to the previous print trace:'
   id: totrans-364
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Marshmallow（API级别23）中，对先前的打印跟踪添加了新的有用信息：
 - en: '[PRE25]'
   id: totrans-365
   prefs: []
@@ -2260,6 +2612,7 @@
   id: totrans-366
   prefs: []
   type: TYPE_NORMAL
+  zh: 这更有效地解释了我们的应用程序帧渲染的实际性能。
 - en: 'There is another useful advanced feature added in Android Marshmallow, and
     it''s called **framestats**. It lists detailed frame timings and adds data to
     the previous print (the amount of rows has been reduced to limit the used space).
@@ -2269,6 +2622,7 @@
   id: totrans-367
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android Marshmallow中增加了一个有用的先进特性，称为**framestats**。它列出了详细的帧时序，并将数据添加到之前的打印输出（行数已减少以限制使用空间）。终端将列名作为第一行，然后列出所有其他列的值，这样第一个对应于第一个名称，第二个值对应于第二个名称，依此类推：
 - en: '[PRE26]'
   id: totrans-368
   prefs: []
@@ -2279,6 +2633,7 @@
   id: totrans-369
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们解释一下这些值代表什么。每个时间戳都以纳秒为单位，新增的列如下所示：
 - en: '`Flags`: If it''s `0`, the frame timing related to the row should be considered;
     otherwise, it shouldn''t. It can be non-zero if the frame is an exception from
     the normal performance.'
@@ -2286,75 +2641,89 @@
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Flags`：如果是`0`，应考虑与该行相关的帧时序；否则，不考虑。如果帧的性能与正常性能有异常，它可以是非零值。'
 - en: '`IntendedVsync`: This is the starting point. It can be different from the `Vsync`
     value if the UI thread is occupied.'
   id: totrans-371
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`IntendedVsync`：这是起点。如果UI线程被占用，它可能与`Vsync`值不同。'
 - en: '`Vsync`: The time value for VSYNC.'
   id: totrans-372
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`Vsync`：VSYNC的时间值。'
 - en: '`OldestInputEvent`: The timestamp of the oldest input event.'
   id: totrans-373
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`OldestInputEvent`：最老输入事件的时间戳。'
 - en: '`NewestInputEvent`: The timestamp of the newest input event.'
   id: totrans-374
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`NewestInputEvent`：最新输入事件的时间戳。'
 - en: '`HandleInputStart`: The timestamp of the dispatch of the input events to the
     application.'
   id: totrans-375
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`HandleInputStart`：将输入事件分派到应用程序的时间戳。'
 - en: '`AnimationStart`: The timestamp at which the animation started.'
   id: totrans-376
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`AnimationStart`：动画开始的时间戳。'
 - en: '`PerformTrasversalsStart`: The timestamp at which `DrawStart` is subtracted
     to obtain the layout and measure timing.'
   id: totrans-377
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PerformTrasversalsStart`：通过从`DrawStart`减去来获得布局和测量时序的时间戳。'
 - en: '`DrawStart`: The timestamp at which the drawing started.'
   id: totrans-378
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`DrawStart`：开始绘图的时间戳。'
 - en: '`SyncQueued`: The timestamp at which a sync request has been sent to `RenderThread`.'
   id: totrans-379
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SyncQueued`：发送到`RenderThread`的同步请求的时间戳。'
 - en: '`SyncStart`: The timestamp at which the drawing sync has started.'
   id: totrans-380
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SyncStart`：绘图同步开始的时间戳。'
 - en: '`IssueDrawCommandsStart`: The timestamp at which the drawing operations are
     started by the GPU.'
   id: totrans-381
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`IssueDrawCommandsStart`：GPU开始绘图操作的时间戳。'
 - en: '`SwapBuffers`: The time at which the front and back buffers are swapped.'
   id: totrans-382
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`SwapBuffers`：前后缓冲区交换的时间。'
 - en: '`FrameCompleted`: The time at which the frame has been completed.'
   id: totrans-383
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`FrameCompleted`：帧完成的时间。'
 - en: This data reports timestamps, so the timings need to be calculated by subtracting
     two timestamps. The results can show us important information about rendering
     performance. For example, if `IntendedVsync` is different from `Vsync`, then a
@@ -2362,11 +2731,13 @@
   id: totrans-384
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些数据报告时间戳，因此需要通过减去两个时间戳来计算时序。结果可以向我们展示有关渲染性能的重要信息。例如，如果`IntendedVsync`与`Vsync`不同，则表示错过了一个帧，可能会出现卡顿。
 - en: 'This new `dumbsys` command can be executed by running the following on the
     Terminal:'
   id: totrans-385
   prefs: []
   type: TYPE_NORMAL
+  zh: 可以通过在终端运行以下命令来执行这个新的`dumbsys`命令：
 - en: '[PRE27]'
   id: totrans-386
   prefs: []
@@ -2377,6 +2748,7 @@
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Systrace
 - en: 'The Systrace tool is helpful to analyze rendering execution timings. It''s
     part of the Android Device Monitor and it''s accessible by selecting the related
     icon inside the **Devices** tab. After that, a dialog with **Systrace** options
@@ -2384,20 +2756,24 @@
   id: totrans-388
   prefs: []
   type: TYPE_NORMAL
+  zh: Systrace工具有助于分析渲染执行时序。它是Android Device Monitor的一部分，可以通过选择**设备**标签内的相关图标来访问。之后，将显示带有**Systrace**选项的对话框，如*图24*所示：
 - en: '![Systrace](img/8951_03_24.jpg)'
   id: totrans-389
   prefs: []
   type: TYPE_IMG
+  zh: '![Systrace](img/8951_03_24.jpg)'
 - en: 'Figure 24: Systrace options'
   id: totrans-390
   prefs: []
   type: TYPE_NORMAL
+  zh: 图24：Systrace选项
 - en: This tool collects information from all the processes on the device to be traced
     and saves the trace into an HTML file, where a graphical UI highlights observed
     problems, providing important information about how to fix them.
   id: totrans-391
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个工具从设备上所有要跟踪的进程收集信息，并将跟踪保存到一个HTML文件中，图形用户界面突出显示观察到的的问题，提供关于如何修复的重要信息。
 - en: 'The result is something like what is in *Figure 25*. The perspective is divided
     into three main views: the upper side contains the trace itself, the lower one
     contains the detail of the highlighted object on the other part, while the right
@@ -2410,72 +2786,88 @@
   id: totrans-392
   prefs: []
   type: TYPE_NORMAL
+  zh: 结果类似于*图25*中的内容。视角分为三个主要视图：上部包含追踪本身，下部包含另一部分高亮对象的详细信息，而右侧视图，称为**警报区域**，包含当前追踪中报告的警报摘要。上部主要描述了关于内核的详细信息，包含所有CPU信息；关于**SurfaceFlinger**，即Android合成器进程；然后是收集信息期间每个活动进程的详细信息，即使该进程是系统进程。每个进程都包含评估期间每个运行线程的详细信息：
 - en: '![Systrace](img/8951_03_25.jpg)'
   id: totrans-393
   prefs: []
   type: TYPE_IMG
+  zh: '![Systrace](img/8951_03_25.jpg)'
 - en: 'Figure 25: Systrace example'
   id: totrans-394
   prefs: []
   type: TYPE_NORMAL
+  zh: 图25：Systrace示例
 - en: 'Let''s understand how to analyze the trace: every drawn frame of a single process
     is indicated in the **Frames** row with a circled **F**, as in *Figure 26*:'
   id: totrans-395
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们了解如何分析追踪：每个单一进程的每个绘制帧在**Frames**行中以带圆圈的**F**表示，如图26所示：
 - en: Green frames indicate there were no problems for them
   id: totrans-396
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 绿色边框表示它们没有问题
 - en: Yellow and red frames indicate the drawing time exceeded the 16 ms target, producing
     a lag:![Systrace](img/8951_03_26.jpg)
   id: totrans-397
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 黄色和红色边框表示绘图时间超过了16 ms的目标，产生了滞后：![Systrace](img/8951_03_26.jpg)
 - en: 'Figure 26: Frame details'
   id: totrans-398
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 图26：帧详情
 - en: 'Every wrong **F** is selectable to see a detailed description of the event.
     The following is an example of what Systrace reports for a red frame:'
   id: totrans-399
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个错误的**F**都可以选择查看事件的详细描述。以下是Systrace针对红色帧报告的一个示例：
 - en: '| Alert | Scheduling delay |'
   id: totrans-400
   prefs: []
   type: TYPE_TB
+  zh: '| 警报 | 调度延迟 |'
 - en: '| --- | --- |'
   id: totrans-401
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- |'
 - en: '| Running | 6.401 ms |'
   id: totrans-402
   prefs: []
   type: TYPE_TB
+  zh: '| 运行 | 6.401 ms |'
 - en: '| Not scheduled, but runnable | 16.546 ms |'
   id: totrans-403
   prefs: []
   type: TYPE_TB
+  zh: '| 未调度，但可运行 | 16.546 ms |'
 - en: '| Uninterruptible Sleep &#124; Waking | 19.402 ms |'
   id: totrans-404
   prefs: []
   type: TYPE_TB
+  zh: '| 不可中断睡眠 &#124; 唤醒 | 19.402 ms |'
 - en: '| Sleeping | 27.143 ms |'
   id: totrans-405
   prefs: []
   type: TYPE_TB
+  zh: '| 休眠 | 27.143 ms |'
 - en: '| Blocking I/O delay | 1.165 ms |'
   id: totrans-406
   prefs: []
   type: TYPE_TB
+  zh: '| 阻塞I/O延迟 | 1.165 ms |'
 - en: '| Frame |   |'
   id: totrans-407
   prefs: []
   type: TYPE_TB
+  zh: '| 帧 |   |'
 - en: '| Description | Work to produce this frame was descheduled for several milliseconds,
     contributing to jank. Ensure that code on the UI thread doesn''t block work being
     done on other threads, and that background threads (doing for example, network
@@ -2486,6 +2878,7 @@
   id: totrans-408
   prefs: []
   type: TYPE_TB
+  zh: '| 描述 | 制作此帧的工作被暂停了几毫秒，导致出现卡顿。确保UI线程上的代码不会阻塞其他线程正在进行的工作，并且后台线程（例如，进行网络或位图加载）应以`android.os.Process#THREAD_PRIORITY_BACKGROUND`或更低的优先级运行，这样它们就不太可能中断UI线程。这些后台线程在内核进程下的调度部分应显示优先级编号为130或更高。|'
 - en: 'As mentioned, this tool gets information about every process and thread running
     on the device, but if we want to detail a limited portion of the execution of
     our application to understand what work it is doing at a certain time, we can
@@ -2495,6 +2888,8 @@
   id: totrans-409
   prefs: []
   type: TYPE_NORMAL
+  zh: 如所述，此工具获取设备上每个进程和线程的信息，但如果我们想详细查看应用程序执行的部分以了解其在特定时间正在执行的工作，我们可以使用API告诉系统从哪里开始和结束追踪。这个API可以从Android
+    Jelly Bean（API级别18）开始使用，基于`Trace`类。只需调用静态方法开始和结束追踪，如下所示：
 - en: '[PRE28]'
   id: totrans-410
   prefs: []
@@ -2505,16 +2900,19 @@
   id: totrans-411
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样，新的追踪将包含一个带有你的部分名称及其详细信息的全新行。
 - en: Remember to call the `Trace.beginSection()` and `Trace.endSection()` methods
     on the same thread.
   id: totrans-412
   prefs: []
   type: TYPE_NORMAL
+  zh: 记得在同一线程上调用`Trace.beginSection()`和`Trace.endSection()`方法。
 - en: Summary
   id: totrans-413
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 摘要
 - en: In the contemporary idea of mobile devices, an application is the main way to
     let the user access our remote services and thus it should be the main means of
     obtaining them. Then, the way our users perceive our application is the fundamental
@@ -2524,6 +2922,7 @@
   id: totrans-414
   prefs: []
   type: TYPE_NORMAL
+  zh: 在当代移动设备的理念中，应用程序是让用户访问我们远程服务的主要方式，因此它应该是获取这些服务的最主要手段。那么，用户对我们的应用程序的感知是成功的基础，它的用户体验和用户界面是衡量这一点的关键指标。因此，确保我们的应用程序渲染过程中没有延迟是非常重要的。
 - en: What we have done in this chapter is to understand how a device renders our
     applications, defining the 16 ms per frame target and overviewing hardware acceleration
     as the major performance rendering improvement in the Android system. Then we
@@ -2536,3 +2935,4 @@
   id: totrans-415
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们所做的是了解设备如何渲染我们的应用程序，定义了每帧16毫秒的目标，并概述了硬件加速作为Android系统中主要的性能渲染改进。然后我们分析了开发者在构建应用程序UI时可能犯的主要错误，更详细地探讨了如何通过扁平化视图层次结构、在`listview`中重用行视图以及定义开发自定义视图和布局的最佳实践来提高渲染速度。最后，我们介绍了平台提供的帮助我们发现改进优化和衡量应用渲染性能的有用工具。
