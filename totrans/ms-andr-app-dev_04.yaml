@@ -1,339 +1,479 @@
 - en: Chapter 4. Concurrency and Software Design Patterns
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第四章. 并发与软件设计模式
 - en: As a developer, you not only have to write code that works, but also to use
     existing solutions whenever possible so that you can maintain your code better
     in the future. If other developers ever have to work on your project, they will
     quickly understand what you are doing. We can achieve this thanks to software
     design patterns.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为开发者，你不仅要编写能工作的代码，而且要尽可能使用现有的解决方案，以便将来能更好地维护你的代码。如果其他开发者需要在你项目中工作，他们会很快理解你的做法。我们能够实现这一点，要归功于软件设计模式。
 - en: In order to understand the patterns correctly, we need a basic overview of how
     concurrency works in Android. We will clarify what a UI thread is and talk about
     the different mechanisms used to delay events in a thread.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了正确理解这些模式，我们需要了解Android中并发是如何工作的基本概述。我们将阐明UI线程是什么，并讨论在线程中延迟事件的不同机制。
 - en: We will cover the most commonly used patterns in Android, which will help us
     further understand Android features and development techniques and become better
     developers.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将介绍Android中最常用的模式，这将帮助我们进一步理解Android功能和开发技术，并成为更好的开发者。
 - en: Concurrency
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 并发
 - en: Handlers and threads
+  id: totrans-5
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 处理器和线程
 - en: AsyncTask
+  id: totrans-6
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: AsyncTask
 - en: Service
+  id: totrans-7
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Service
 - en: IntentService
+  id: totrans-8
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: IntentService
 - en: Loader
+  id: totrans-9
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Loader
 - en: Patterns in Android
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Android中的模式
 - en: Singleton
+  id: totrans-11
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 单例模式
 - en: Adapter and holder
+  id: totrans-12
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 适配器和持有者模式
 - en: Observer
+  id: totrans-13
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 观察者模式
 - en: Concurrency in Android
+  id: totrans-14
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Android中的并发
 - en: 'If you are an Android user, you are probably aware of ANR messages. It might
     not ring a bell for you, so take a look at the following image:'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你是一个Android用户，你可能对ANR消息有所了解。这可能不会让你立刻明白，所以请看以下图片：
 - en: '![Concurrency in Android](img/4887_04_01.jpg)'
+  id: totrans-16
   prefs: []
   type: TYPE_IMG
+  zh: '![Android中的并发](img/4887_04_01.jpg)'
 - en: '**Activity Not Responding** (**ANR**) happens when there is code running in
     the UI or main thread that blocks user interaction for more than 5 seconds.'
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 当UI或主线程中的代码运行时间超过5秒，阻塞用户交互时，就会发生**应用无响应**（**ANR**）。
 - en: In Android, an application runs a single thread, called the User Interface thread.
     We will explain what a thread is in a way that even readers with no programming
     background will understand. We can visualize a thread as a column of instructions
     or messages executed by the CPU. These instructions come from different places;
     they come from our application as well as the OS. This thread is used to handle
     the response from the user, lifecycle methods, and system callbacks.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android中，一个应用程序运行一个单一的线程，称为用户界面线程。我们将解释线程是什么，即使是没有编程背景的读者也能理解。我们可以将线程视为由CPU执行的指令或消息列。这些指令来自不同的地方；它们来自我们的应用程序以及操作系统。这个线程用于处理用户的响应、生命周期方法和系统回调。
 - en: The CPU processes messages sequentially, one after another; if it's busy, the
     message will wait in a queue to be executed. Therefore, if we perform long operations
     in our application and send many messages to the CPU, we will not let UI messages
     be executed, and this will result in the mobile not responding for the user.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: CPU逐个顺序处理消息；如果它很忙，消息将在队列中等待执行。因此，如果我们在应用程序中执行长时间的操作并向CPU发送许多消息，我们将不会让UI消息得到执行，这将导致用户感觉到手机无响应。
 - en: '![Concurrency in Android](img/4887_04_02.jpg)'
+  id: totrans-20
   prefs: []
   type: TYPE_IMG
+  zh: '![Android中的并发](img/4887_04_02.jpg)'
 - en: 'The solution to this problem seems obvious: if one thread isn''t enough, we
     can use more than one. For instance, if we make a network request, this will be
     done in another thread, and when it finishes, it will communicate with the main
     thread to display the data that was requested.'
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个问题的解决方案似乎很明显：如果一个线程不够用，我们可以使用多个。例如，如果我们发起一个网络请求，这个请求将在另一个线程中完成，并且当它结束时，会与主线程通信以显示所请求的数据。
 - en: Only the main or UI thread can access the UI; so, if we perform any background
     calculations in another thread, we have to tell the main thread to display the
     result of these calculations because we can't do it directly from there.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 只有主线程或UI线程可以访问UI；因此，如果我们再另一个线程中进行任何后台计算，我们必须告诉主线程显示这些计算的结果，因为我们不能直接从那里做。
 - en: Handlers and threads
+  id: totrans-23
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 处理器和线程
 - en: The messages that we have described previously run in a queue called `MessageQueue`,
     which is unique to each thread. A handler can send messages to this queue. When
     we create a handler, it is associated with the `MessageQueue` of the thread where
     it is created.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们之前描述的消息在一个称为`MessageQueue`的队列中运行，这个队列对于每个线程是唯一的。处理器可以发送消息到这个队列。当我们创建一个处理器时，它与创建它的线程的`MessageQueue`相关联。
 - en: 'A handler is used for two situations:'
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 处理器用于两种情况：
 - en: Sending a delayed message to the same thread
+  id: totrans-26
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 向同一线程发送延迟消息
 - en: Sending a message to another thread
+  id: totrans-27
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 向另一个线程发送消息
 - en: 'This is why, in our `SplashActivity`, we will use the following code:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 这就是为什么在我们的`SplashActivity`中，我们将使用以下代码：
 - en: '[PRE0]'
+  id: totrans-29
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: Tip
+  id: totrans-30
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: When you create a new `Handler()` method, ensure that you import the `Android.OS`
     handler.
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你创建一个新的`Handler()`方法时，确保导入`Android.OS`处理器。
 - en: Here, we used the `postDelayed(Runnable, time)` method to send a message with
     a delayed time. In this case, the message is a runnable object that represents
     a command than can be executed.
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们使用了`postDelayed(Runnable, time)`方法来发送一个延迟的消息。在这种情况下，消息是一个可运行对象，代表可以执行的命令。
 - en: When there is a method inside the `runOnUIThread()` activity that allows us
     to send a runnable object to the UI thread, you don't need to create a handler
     to communicate with it. This is very useful when we have the context of the activity
     and want to run something on the UI, for example posting updates to the UI from
     a task that's being executed in the background.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 当`runOnUIThread()`活动内部有一个方法允许我们向UI线程发送可运行对象时，你就不需要创建一个处理器来与它通信。当我们有活动的上下文并且想在UI上运行某些内容时，这非常有用，例如从在后台执行的任务中向UI发布更新。
 - en: 'If we look at the Android source code of the method, we can see that it simply
     uses a handler to post the runnable object in the UI thread:'
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们查看Android中该方法的源代码，可以看到它只是简单地使用处理器在UI线程中发布可运行对象：
 - en: '[PRE1]'
+  id: totrans-35
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Usually, threads are manually created when we want to perform a long task in
     the background and want to manage parallel thread executions. Threads have a `run()`
     method where the instructions are executed and must be started after its creation
     in order to start executing `run()`:'
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常，当我们想要在后台执行一个长时间的任务并希望管理并行线程的执行时，会手动创建线程。线程有一个`run()`方法，其中包含要执行的指令，并且必须在创建后启动以执行`run()`：
 - en: '[PRE2]'
+  id: totrans-37
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: The drawback of creating threads and handlers to perform background tasks is
     its manual handling, and if we have many of them, we could easily end up with
     an application that is impossible to read. Android has other mechanisms to perform
     tasks, such as `AsyncTask`.
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建线程和处理器以执行后台任务的缺点是它的手动处理，如果我们有多个任务，很容易导致应用程序的可读性变得极差。Android还有其他机制来执行任务，如`AsyncTask`。
 - en: Introducing AsyncTasks
+  id: totrans-39
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 介绍AsyncTasks
 - en: This is probably something you saw at the beginner level, but we will take a
     look at it from the concurrency perspective. An `Asynctask` is based on a thread
     and a handler and is meant to be an easy way to perform a job in the background
     and post UI updates.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 这可能是你在初学阶段就已经了解的内容，但我们将从并发性的角度来审视它。`Asynctask`是基于线程和处理器的一个类，旨在提供一种在后台执行任务并更新UI的简便方法。
 - en: 'An `AsyncTask` needs to be subclassed to be used, and it has four methods that
     can be overridden: `onPreExecute`, `doInBackground`, `onProgressUpdate`, and `onPostExecute`.'
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使用`AsyncTask`，需要对其进行子类化，它有四个可以被重写的方法：`onPreExecute`、`doInBackground`、`onProgressUpdate`和`onPostExecute`。
 - en: The `OnPreExecute` method is called before doing any work in the background;
     this means that it's still on the UI thread and is used to initialize variables
     and progress before starting the task.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: '`OnPreExecute`方法是在后台执行任何工作之前被调用的；这意味着它仍然在UI线程中，用于在开始任务前初始化变量和进度。'
 - en: The `doInBackground` method is executed in the background thread. Here, you
     can call `onProgressUpdate`, which posts an update to the UI thread, for instance,
     by increasing the value of `ProgressBar` to display the progress of the task.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: '`doInBackground`方法在后台线程中执行。在这里，你可以调用`onProgressUpdate`，它向UI线程发布一个更新，例如，通过增加`ProgressBar`的值来显示任务的进度。'
 - en: The last method, `onPostExecute`, is called when the background task is finished
     and is running on the UI thread.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后一个方法`onPostExecute`是在后台任务完成且在UI线程中运行时被调用的。
 - en: 'Let''s consider as an example: an `AsyncTask` that takes *x* seconds to be
     completed in the background, updating the progress every second. The progress
     bar object is sent as a parameter in the constructor, and the number of seconds
     is sent as a parameter in the execute method, which is retrieved in `doInBackground`.
     Note that in the following code, the `<Integer,Integer,Void>` types refer to the
     types of input parameters, progress update, and on-post execute, respectively:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 以一个例子来说明：一个`AsyncTask`在后台需要*x*秒完成，并且每秒更新一次进度。进度条对象作为参数在构造函数中传递，秒数作为参数在`execute`方法中传递，并在`doInBackground`中获取。请注意，在以下代码中，`<Integer,Integer,Void>`类型分别指的是输入参数、进度更新和后执行的类型：
 - en: '[PRE3]'
+  id: totrans-46
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'Having created an `AsyncTask` class, here''s how we can execute it:'
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建了`AsyncTask`类后，以下是执行它的方法：
 - en: '[PRE4]'
+  id: totrans-48
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: If we execute more than one `AsyncTask` at a time, they will run sequentially
     by default in versions from Android 3.0 onward. If we want to run them in parallel,
     we will have to create an executor and call `executeOnExecutor()` with the `THREAD_POOL_EXECUTOR`
     parameter.
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们同时执行多个 `AsyncTask`，从Android 3.0版本开始，默认情况下它们将会按顺序依次运行。如果我们希望它们并行运行，我们需要创建一个执行器，并通过
+    `THREAD_POOL_EXECUTOR` 参数调用 `executeOnExecutor()`。
 - en: As for limitations, we should mention that `AsyncTask` always has to be executed
     from the main thread and that you can't call `execute()` twice in the same object;
     therefore, they cannot loop.
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 至于限制，我们应该提到 `AsyncTask` 必须始终从主线程执行，并且不能在同一个对象中两次调用 `execute()`；因此，它们不能循环执行。
 - en: Understanding services
+  id: totrans-51
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 理解服务
 - en: An `AsyncTask` is ideal while downloading a file or performing any short operation
     where you want to notify the UI when the task is finished. However, there are
     situations in Android where you need to perform a very long task that might not
     need UI interaction. For instance, you can have an application that opens a socket
     (a direct channel) with the server to stream audio for a radio listening app.
+  id: totrans-52
   prefs: []
   type: TYPE_NORMAL
+  zh: 当下载文件或执行任何需要任务完成时通知UI的短操作时，`AsyncTask` 是理想的。然而，在Android中，有时需要执行非常长时间的任务，这些任务可能不需要UI交互。例如，你可以有一个应用，它与服务器打开一个套接字（直接通道），用于收听广播应用中的音频流。
 - en: A service will run even if the app is not on the screen; it runs in the background
     but uses the main thread by default. Therefore, if we want to perform long tasks,
     we need to create a thread inside the service. It has to be declared in the manifest,
     and it can also be used from another application if we declare it public.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 即使应用不在屏幕上显示，服务也会运行；它默认在后台运行，但使用主线程。因此，如果我们想要执行长时间的任务，我们需要在服务内创建一个线程。它必须在清单中声明，如果我们将其声明为公开，也可以从另一个应用中使用。
 - en: As opposed to `AsyncTask`, services can be triggered from any thread; they are
     triggered with the `onStartService()` method and stopped with `onStopService()`.
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: 与 `AsyncTask` 相比，服务可以从任何线程触发；它们通过 `onStartService()` 方法触发，并通过 `onStopService()`
+    停止。
 - en: Optionally, services could be bound to a component; once you bind the components,
     `onBind()` is called. When binding takes place, we have an interface available
     to the component to interact with the service.
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 可选地，服务可以绑定到一个组件；一旦绑定组件，就会调用 `onBind()`。当绑定发生时，我们有一个接口供组件与服务交互。
 - en: A type of service – IntentService
+  id: totrans-56
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 一种服务类型 —— IntentService
 - en: '`IntentService` is a subclass of `services` that can be triggered from an intent.
     It creates a thread and includes callbacks to know when the task is finished.'
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: '`IntentService` 是 `services` 的一个子类，可以从一个意图触发。它创建一个线程并包含回调，以了解任务何时完成。'
 - en: The idea behind `IntentService` is that if you don't need to run a task in parallel,
     it is easier to implement a service that receives intents and manages them sequentially
     with a notification when the job is done.
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: '`IntentService` 的背后的想法是，如果你不需要并行运行任务，实现一个按顺序接收意图并完成任务后通知的服务更容易。'
 - en: Services run constantly as we call `onStart`; however, `IntentService` is created
     but runs in small intervals, only from when it receives the intent and until it
     finishes the tasks.
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 当我们调用 `onStart` 时，服务会持续运行；然而，`IntentService` 被创建后，只会在接收到意图并完成任务时，在短时间内运行。
 - en: As a real example, we can think of an application that needs to perform short
     tasks in the background when the app is not on the screen. This could be the case
     of a newsreader app that stores the news in your device to give you offline access
     to it. It could be an app from a newspaper that publishes articles daily, allowing
     users to read them when they are in a plane or in commute on a train without a
     network connection.
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 以一个实际例子来说，我们可以考虑一个应用在屏幕不在显示时，在后台执行短任务的需求。比如一个新闻阅读应用，将新闻存储在您的设备上，以便您在没有网络的情况下也能离线阅读。这可能是来自一个每天发布文章的报纸的应用，允许用户在没有网络连接的情况下，如在飞机上或火车通勤时阅读文章。
 - en: The idea would be that when the article is published, users receive a push notification
     while the app is in the background. This notification will trigger an intent to
     download the article so that without any extra user interaction, the article is
     there the next time they open the app.
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个想法是，当文章发布时，应用在后台运行时用户会收到推送通知。这个通知将触发一个下载文章的意图，这样用户下次打开应用时，无需任何额外操作，文章就已经在那里了。
 - en: Downloading the article is a small and repetitive task that needs to be done
     when the app is in the background, in a thread, and without the need to be in
     parallel, which is the perfect scenario for `IntentService`.
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 下载文章是一个小而重复的任务，需要在应用在后台、在线程中运行时完成，无需并行处理，这正是`IntentService`的理想场景。
 - en: Introducing loaders
+  id: totrans-63
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 介绍加载器
 - en: To finish with the concurrency section, we will have a quick overview of the
     `Loader` class. The purpose of a loader is to make it easier to asynchronously
     load data in an activity and, therefore, in a fragment. From Android 3.0 onward,
     every activity has `LoaderManager` to manage the loaders used in it. In an application
     based on fragment navigations, it is possible to perform background operations
     at the activity level even when you switch between fragments.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了结束并发部分，我们将快速概览`Loader`类。加载器的目的是更容易在活动中异步加载数据，因此在片段中也是如此。从Android 3.0开始，每个活动都有`LoaderManager`来管理在其中使用的加载器。在基于片段导航的应用程序中，即使在你切换片段时，也可以在活动级别执行后台操作。
 - en: Loaders load data from a source; when this source changes, it automatically
     refreshes the information, which is why loaders are perfect to use with a database.
     For instance, once we connect the loader to a database, this database can be modified,
     and the change will be captured by the loader. This will allow us to refresh the
     UI, instantly reflecting the changes to the user.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 加载器从数据源加载数据；当这个数据源发生变化时，它会自动刷新信息，这就是为什么加载器与数据库一起使用是完美的。例如，一旦我们将加载器连接到数据库，这个数据库就可以被修改，而加载器将捕获这些更改。这将允许我们立即刷新UI，让用户看到这些变化。
 - en: In [Chapter 8](ch08.html "Chapter 8. Databases and Loaders"), *Databases* *and
     Loaders*, we will implement `CursorLoader` to query the database that we will
     create in `MasteringAndroidApp`.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[第8章](ch08.html "第8章. 数据库和加载器")《*数据库* *和加载器》中，我们将实现`CursorLoader`来查询我们在`MasteringAndroidApp`中创建的数据库。
 - en: The importance of patterns
+  id: totrans-67
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 模式的重要性
 - en: When a software developer has to develop a feature or a component with a certain
     functionality, it can usually be done in different ways; it can be done with different
     code or with a different structure. It is very likely that the same problem has
     been solved by other developers so many times that the solution is abstracted
     from particular implementations and transformed into a pattern. Rather than invent
     the wheel again, it is preferable to know and implement these patterns.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 当软件开发者需要开发具有特定功能特性的功能或组件时，通常可以用不同的方法完成；可以用不同的代码或不同的结构来完成。很可能同样的问题已经被其他开发者解决了无数次，以至于解决方案从具体实现中抽象出来，变成了一个模式。与其重新发明轮子，不如了解并实现这些模式。
 - en: When developing on Android, we use patterns every day even if we aren't aware
     of it. Most of the time, we use implementations of the patterns built in Android.
     For instance, when we want to perform a click on a button and set `OnClickListener`—in
@@ -341,282 +481,400 @@
     implementation. If we create a popup, `AlertDialog`, we use `AlertDialog.Builder`,
     which uses the `Builder` pattern. There are many examples, but what we want is
     to be able to implement these solutions to our own problems.
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android开发中，我们每天都在使用模式，即使我们没有意识到。大多数时候，我们使用的是Android内置的模式实现。例如，当我们想要执行按钮点击并设置`OnClickListener`时——换句话说，等待`onClick()`方法被调用——我们使用的是观察者模式的实现。如果我们创建一个弹出窗口`AlertDialog`，我们使用的是`AlertDialog.Builder`，它使用了构建器模式。这样的例子有很多，但我们希望的是能够将这些解决方案应用到我们自己的问题中。
 - en: 'There are different types of patterns grouped in four categories, and these
     are some examples of the ones that we find while developing Android apps:'
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 有不同类型的模式分为四类，以下是在开发Android应用时我们可能会遇到的一些例子：
 - en: Creation
+  id: totrans-71
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建型
 - en: Singleton
+  id: totrans-72
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 单例模式
 - en: Builder
+  id: totrans-73
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 构建器模式
 - en: Factory method
+  id: totrans-74
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 工厂方法模式
 - en: Behavioral
+  id: totrans-75
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 行为型
 - en: Observer
+  id: totrans-76
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 观察者模式
 - en: Strategy
+  id: totrans-77
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 策略模式
 - en: Iterator
+  id: totrans-78
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 迭代器模式
 - en: Structural
+  id: totrans-79
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 结构型
 - en: Adapter
+  id: totrans-80
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 适配器模式
 - en: Façade
+  id: totrans-81
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 门面模式
 - en: Decorator
+  id: totrans-82
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 装饰器模式
 - en: Concurrency
+  id: totrans-83
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 并发
 - en: Lock
+  id: totrans-84
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 锁
 - en: Scheduler
+  id: totrans-85
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 调度器
 - en: Read-write lock
+  id: totrans-86
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 读写锁
 - en: To complete `MasteringAndroidApp`, we have to implement patterns from the first
     three groups. With respect to the fourth group (concurrency), we need to have
     an idea of concurrency in Android, but we will not implement a concurrency pattern
     ourselves.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了完成`MasteringAndroidApp`，我们需要实现前三组中的模式。关于第四组（并发），我们需要了解Android中的并发概念，但我们不会自己实现一个并发模式。
 - en: Tip
+  id: totrans-88
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 小贴士
 - en: Patterns are usually represented by UML diagrams.
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 模式通常由UML图表示。
 - en: According to Wikipedia ([http://en.wikipedia.org/wiki/Class_diagram](http://en.wikipedia.org/wiki/Class_diagram)),
     "*in software engineering, a class diagram in the Unified Modeling Language (UML)
     is a type of static structure diagram that describes the structure of a system
     by showing the system's classes, their attributes, operations (or methods), and
     the relationships among objects*".
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据维基百科（[http://en.wikipedia.org/wiki/Class_diagram](http://en.wikipedia.org/wiki/Class_diagram)），“*在软件工程中，统一建模语言（UML）中的类图是一种静态结构图，通过显示系统的类，它们的属性，操作（或方法）以及对象之间的关系来描述系统的结构*”。
 - en: The Singleton pattern
+  id: totrans-91
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 单例模式
 - en: The software design pattern, Singleton, restricts the creation of an object
     to a single instance. The idea is to access this single object globally.
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 软件设计模式中的单例模式（Singleton）限制了对象的创建，只允许有一个实例。其思想是全局访问这个单一对象。
 - en: 'This pattern is implemented by creating the object if has not been created
     before or returning the existing instance if created. Following is the UML diagram:'
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 该模式的实现是，如果之前没有创建对象，则创建对象，如果已创建，则返回现有实例。以下是UML图：
 - en: '![The Singleton pattern](img/B04887_04_03.jpg)'
+  id: totrans-94
   prefs: []
   type: TYPE_IMG
+  zh: '![单例模式](img/B04887_04_03.jpg)'
 - en: On certain occasions, we want an object to be globally accessible, and we want
     it to be unique in our app. For instance, while using Volley, we want to maintain
     a unique request queue to have all the requests in the same queue, and we want
     it to be accessed globally because we will need to add a request from any fragment
     or activity.
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 在某些情况下，我们希望一个对象能够全局访问，并且希望它在我们的应用中是唯一的。例如，在使用Volley时，我们希望保持一个唯一的请求队列，以使所有请求都在同一个队列中，并且我们希望它能够全局访问，因为我们需要从任何片段或活动中添加请求。
 - en: 'Here is a basic example of a singleton implementation:'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个单例实现的基本示例：
 - en: '[PRE5]'
+  id: totrans-97
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: To understand the implementation, remember that in Java, a static variable is
     associated with the class and not with the object. In the same way, a static method
     can be called without creating an instance of the class.
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了理解实现，请记住在Java中，静态变量与类相关联，而不是与对象相关。同样，静态方法可以在不创建类实例的情况下调用。
 - en: Having a static method means that it can be called from anywhere in our app.
     We can call `MySingleton.getInstance()`, and it will always return the same instance.
     The first time, it will create it and return it; the subsequent times, it will
     return the one created.
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: 拥有一个静态方法意味着它可以在我们应用的任何地方被调用。我们可以调用`MySingleton.getInstance()`，它总是返回同一个实例。第一次调用时，它会创建并返回它；之后的调用，它会返回已创建的实例。
 - en: There is a downside to using singleton and testing frameworks; we will talk
     about this in [Chapter 11](ch11.html "Chapter 11. Debugging and Testing on Android"),
     *Debugging and Testing on Android*.
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用单例和测试框架有一个缺点；我们将在[第11章](ch11.html "第11章. 安卓上的调试与测试")，*安卓上的调试与测试*中讨论这个问题。
 - en: Singleton in the Application class
+  id: totrans-101
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 应用类中的单例
 - en: We can adapt a Singleton implementation to Android. Given that the `onCreate`
     method in the `Application` class is called only once when we open our app and
     that the `Application` object won't be destroyed, we can implement the `getInstance()`
     method in our application.
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以将单例实现适配到Android。考虑到在`Application`类中的`onCreate`方法在我们打开应用时只被调用一次，且`Application`对象不会被销毁，我们可以在应用中实现`getInstance()`方法。
 - en: 'Upon applying these changes, our application class will look similar to the
     following:'
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 应用这些更改后，我们的应用类将类似于以下结构：
 - en: '[PRE6]'
+  id: totrans-104
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Now, I can call `MAAplication.getInstance()` from anywhere in the app and create
     member variables in the application class that can be accessed globally via the
     singleton `MAAplication` object. For instance, in the case of Volley, I can create
     `RequestQueue` in `OnCreate()` and then retrieve it at any time from the `MAAplication`
     object. Execute the following code:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我可以在应用的任何地方调用`MAAplication.getInstance()`，并在应用类中创建可以通过单例`MAAplication`对象全局访问的成员变量。例如，在Volley的情况下，我可以在`OnCreate()`中创建`RequestQueue`，然后随时从`MAAplication`对象中获取它。执行以下代码：
 - en: '[PRE7]'
+  id: totrans-106
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Following this approach, we have one singleton, which is our `Application` class;
     the rest of the globally accessible objects are member variables. The other option
     is to create a new singleton class to store the volley requests queue and one
     new request singleton for every globally accessed object needed.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 采用这种方法，我们有一个单例，即我们的`Application`类；其余的全局可访问对象都是成员变量。另一个选项是创建一个新的单例类来存储Volley请求队列，并为每个需要全局访问的对象创建一个新的请求单例。
 - en: Tip
+  id: totrans-108
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Don't use this approach to persist data in the `Application` class. For example,
     if we go to the background by clicking on the home button, Android might need
     memory after a while and will kill the app. So, the next time you open the app,
     a new instance will be created even if it looks as though we are returning to
     the previous instance. This is fine if you initialize all the variables in `onCreate`
     again and don't modify their state later. Avoid having setters to ensure this.
+  id: totrans-109
   prefs: []
   type: TYPE_NORMAL
+  zh: 不要在`Application`类中使用此方法来持久化数据。例如，如果我们通过点击主页按钮进入后台，经过一段时间后，Android可能需要内存，并会杀死该应用。因此，下次打开应用时，即使看起来像是返回到上一个实例，实际上会创建一个新的实例。如果你在`onCreate`中重新初始化所有变量，并且后来不改变它们的状态，这样做是没问题的。为了避免这个问题，请避免使用setter方法。
 - en: The Observer pattern
+  id: totrans-110
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 观察者模式
 - en: This pattern is widely used in Android. Most of the network libraries that we
     discussed implement this pattern, and if you are an Android developer, you have
     surely used it plenty of times—we need to implement it even to detect a click
     on a button.
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 这种模式在Android中被广泛使用。我们讨论的大多数网络库都实现了这种模式，如果你是Android开发者，你肯定已经多次使用过它——我们需要实现它，甚至是为了检测按钮的点击。
 - en: 'The observer pattern is based on an object, the observer, which registers other
     objects to notify them of a state change; here, the objects listening to the state
     changes are the *observers*. This pattern can be used to create a publish/subscribe
     system:'
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 观察者模式基于一个对象，即观察者，它注册其他对象来通知它们状态变化；在这里，监听状态变化的对象是*观察者*。这种模式可以用来创建一个发布/订阅系统：
 - en: '![The Observer pattern](img/B04887_04_04.jpg)'
+  id: totrans-113
   prefs: []
   type: TYPE_IMG
+  zh: '![观察者模式](img/B04887_04_04.jpg)'
 - en: 'The following is an implementation of a pattern that registers multiple observes:'
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是一个注册多个观察者的模式的实现：
 - en: '[PRE8]'
+  id: totrans-115
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: The observer, as you will notice, can be any object that implements the interface—`ObserverInterface`.
     This interface is defined in the observed object.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 你会注意到，观察者可以是任何实现接口——`ObserverInterface`的对象。这个接口在观察对象中定义。
 - en: If we compare this to the way that we handle a click on a button in Android,
     we perform `myButton.setOnClickListener(observer)`. Here, we add an observer that
     waits for the click; this observer implements the `OnClick()` method, which is
     the method that notifies in our case.
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们将这个与在Android中处理按钮点击的方式进行比较，我们会执行`myButton.setOnClickListener(observer)`。在这里，我们添加了一个等待点击的观察者；这个观察者实现了`OnClick()`方法，这是我们案例中通知的方法。
 - en: 'Looking at Volley, when we create a network request, we have to specify two
     listeners as a parameter: `Response.Listener` and `Response`. `ErrorListener`,
     which call `onResponse()` and `onErrorResponse()`, respectively. This is a clear
     implementation of the observer pattern.'
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Volley中，当我们创建一个网络请求时，我们必须指定两个作为参数的监听器：`Response.Listener`和`Response.ErrorListener`。它们分别调用`onResponse()`和`onErrorResponse()`。这是观察者模式的一个清晰实现。
 - en: We will implement an example of a variant of the observer pattern, a publish/subscribe
     pattern, in [Chapter 6](ch06.html "Chapter 6. CardView and Material Design"),
     *CardView and Material Design*.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将在[第6章](ch06.html "第6章. CardView和材料设计") *CardView和材料设计*中实现观察者模式的一个变体，即发布/订阅模式的一个示例。
 - en: Introducing the Adapter pattern
+  id: totrans-120
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 介绍适配器模式
 - en: The **Adapter** is an element that we use in Android while creating `ListView`
     or `ViewPager`, but it is also a well-known design pattern. We will take a look
     at the definition of both and their relationship.
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: '**适配器**是在创建`ListView`或`ViewPager`时在Android中使用的元素，但它也是一个著名的设计模式。我们将看看两者的定义及其关系。'
 - en: On one hand, an Adapter as a design pattern is one that acts as a bridge between
     two incompatible interfaces. It allows two different interfaces to work together.
     It's the same concept as a real-world adapter, such as an SD card to micro SD
     card adapter, which allows two incompatible systems to work together. As the diagram
     shows, the adapter is called with the new required method, but internally, it
     calls the old method from the *adaptee*.
+  id: totrans-122
   prefs: []
   type: TYPE_NORMAL
+  zh: 一方面，适配器作为设计模式，是介于两个不兼容接口之间的桥梁。它允许两个不同的接口一起工作。这就像现实世界中的适配器，比如SD卡到micro SD卡的适配器，它允许两个不兼容的系统协同工作。如图所示，适配器被调用新的所需方法，但在内部，它调用来自*被适配者*的旧方法。
 - en: '![Introducing the Adapter pattern](img/4887_04_05.jpg)'
+  id: totrans-123
   prefs: []
   type: TYPE_IMG
+  zh: '![介绍适配器模式](img/4887_04_05.jpg)'
 - en: On the other hand, an Adapter from `android.widget.Adapter` is an object that
     we use to create the view for every row on a list or for every page in a view
     pager. Therefore, it adapts the data, a set of elements, and a set of views.
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 另一方面，来自`android.widget.Adapter`的适配器是一个对象，我们用它为列表的每一行或视图翻页的每一页创建视图。因此，它适配了一组数据和一组视图。
 - en: To implement an adapter, we have to extend `BaseAdapter` and override the `getView()`
     and `getCount()` methods. With these two methods, the adapter will know how many
     views it has to create and how the views are created.
+  id: totrans-125
   prefs: []
   type: TYPE_NORMAL
+  zh: 要实现一个适配器，我们必须扩展`BaseAdapter`并重写`getView()`和`getCount()`方法。通过这两个方法，适配器将知道它必须创建多少个视图以及如何创建这些视图。
 - en: We will go further into this topic in the next chapter while working with `ListViews`,
     and we will talk about the `ViewHolder` pattern, which is a particular pattern
     used in Android while working with Adapters and lists.
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将在下一章更深入地探讨这个主题，同时会涉及到`ListViews`的使用，并讨论`ViewHolder`模式，这是在Android中处理适配器和列表时经常使用的一种特定模式。
 - en: Summary
+  id: totrans-127
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: At the end of this chapter, you should be able to understand concurrency in
     Android and all the different mechanisms to work with it. You should know that
     there is a main thread where the UI is updated and that we can create background
@@ -624,11 +882,15 @@
     the app perform a task in the background (in other words, not on the screen) and
     having the app perform tasks in a background thread. You should also know the
     importance of software design patterns and be able to implement some of them.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章结束时，你应该能够理解Android中的并发性以及与之相关的所有不同机制。你应该知道有一个主线程用于更新UI，我们可以创建后台线程来执行其他任务。你还必须了解应用程序在后台（换句话说，不在屏幕上）执行任务与在后台线程中执行任务的区别。你也应该知道软件设计模式的重要性，并能够实现其中的一些。
 - en: In the next chapter, we will take a look at how to work with list views, we
     will implement an adapter, and we will discover a new pattern, `ViewHolder`, which
     will be the key to understanding the difference between `ListView` and `RecyclerView`
     introduced in Android Lollipop.
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将看看如何使用列表视图，我们将实现一个适配器，并发现一种新模式`ViewHolder`，它将是理解在Android Lollipop中引入的`ListView`和`RecyclerView`之间区别的关键。
