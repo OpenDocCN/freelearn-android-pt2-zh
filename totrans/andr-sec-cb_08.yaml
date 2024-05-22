@@ -1,34 +1,50 @@
 - en: Chapter 8. Native Exploitation and Analysis
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第8章. 本地利用与分析
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Inspecting file permissions
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 检查文件权限
 - en: Cross-compiling native executables
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 跨编译本地可执行文件
 - en: Exploitation of race condition vulnerabilities
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 竞争条件漏洞的利用
 - en: Stack memory corruption exploitation
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 栈内存破坏利用
 - en: Automated native Android fuzzing
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 自动化本地Android模糊测试
 - en: Introduction
+  id: totrans-7
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: So far we've covered most of the high-level aspects of applications on the Android
     platform; this chapter focuses on the some of the native aspects—everything supporting
     the application layer components. The native aspects include the system daemons,
@@ -37,16 +53,20 @@
     of the Android system may cause security vulnerabilities and enable privilege
     escalation on Android devices—especially smartphones—and thus they cannot be looked
     over in a complete security review of an Android system.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们已经涵盖了Android平台上应用程序的大多数高级方面；本章关注一些本地方面——支持应用层组件的所有内容。本地方面包括系统守护进程、为系统架构编译的二进制可执行文件，以及文件系统和设备级配置的组件。Android系统的这些方面任何一方面可能导致安全漏洞并使Android设备——尤其是智能手机——上的权限提升，因此在Android系统的完整安全审查中不能被忽视。
 - en: This chapter also covers how to pick up some basic memory corruption exploitation
     flaws. However, please note that this chapter does not cover all of the known
     memory exploitation styles and techniques. But what is covered is enough to allow
     you to learn how to implement most of the others on your own. This chapter also
     includes good articles and sources of information on other techniques for those
     who would like to go all the way down the rabbit hole.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章节还涵盖了如何捡起一些基本的内存破坏利用缺陷。然而，请注意，本章并不包括所有已知的内存利用风格和技术。但所涵盖的内容足以使你能够自学大部分其他技术。对于想要深入兔子洞的人来说，这一章还包括了关于其他技术的好文章和信息来源。
 - en: Why study native exploitation techniques? Well, how else would you root your
     phone? Root exploits usually work by abusing natively based vulnerabilities in
     Android devices that allow privileges to be escalated enough to allow persistent
@@ -57,12 +77,16 @@
     mobile phone is a bad idea! And therefore, any mobile security auditor worth their
     salt should be able to identify any potential vulnerabilities that may enable
     such exploitation.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 为什么要研究本地利用技术？嗯，你还有什么其他方法可以获取手机的根权限呢？根利用通常是通过滥用Android设备中的本地漏洞来工作的，这些漏洞允许权限提升到足以允许对Android设备上的根（或超级用户）账户持久访问。自然地，这些漏洞可能表现为对Android设备无拘束定制的门户，但它们也为恶意软件和远程攻击者打开了大门；不难看出，允许某人获取你手机上超级用户权限的漏洞是个坏主意！因此，任何称职的移动安全审计师都应该能够识别可能导致此类利用的任何潜在漏洞。
 - en: Inspecting file permissions
+  id: totrans-11
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 检查文件权限
 - en: One of the most commonly exploited ways to escalate privileges from within a
     local context is to abuse discrepancies and inadequacies in the way filesystem
     permissions—or access rights—are set up in an operating system. There are countless
@@ -71,123 +95,168 @@
     binary, such as `su` or `symlink`, or the race condition attack on a file that
     is globally readable and written to by a superuser-owned application; for example,
     pulse audio CVE-2009-1894.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本地环境中提升权限的最常见利用方式之一是滥用操作系统中文件系统权限设置的方式——或者说访问权限——的不一致和不完善。有无数的漏洞和权限提升攻击方法滥用文件权限的实例，无论是全局可执行易受攻击的二进制文件上的`setuid`标志，如`su`或`symlink`，还是对由超级用户拥有的应用程序可全局读取和写入的文件的竞争条件攻击；例如，pulse
+    audio CVE-2009-1894。
 - en: Being able to clearly identify any potential entry points presented by the filesystem
     is a good place to start defining the Android native attack surface. The walkthrough
     in this section details a few methods you can use to find dangerous or potential
     files that possibly enable exploitation while interacting with the device through
     an ADB shell.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 能够清楚地识别文件系统呈现的任何潜在入口点是定义Android原生攻击面的良好起点。本节中的演练详细介绍了几种方法，你可以使用这些方法通过ADB shell与设备交互时找到可能启用利用的危险或潜在文件。
 - en: 'Seeing that the following tutorial is focused on detailing ways to find files
     with inadequate or discrepant permissions, a fundamental skill you require in
     order to understand why certain commands are executed would be to understand how
     Linux- or Unix-based operating systems define file permissions. A quick side note:
     it''s common in some Linux circles to talk about file and directory permissions
     as access rights; here, these terms will be used interchangeably.'
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 鉴于以下教程主要详细介绍了寻找权限不足或权限不一致的文件的方法，为了理解为什么执行某些命令，你需要掌握的一个基本技能是了解基于Linux或Unix的操作系统如何定义文件权限。顺便一提：在某些Linux圈子中，将文件和目录权限称为访问权限是很常见的；在这里，这些术语将互换使用。
 - en: 'Linux- or Unix-based operating systems'' file permissions are defined in terms
     of the following:'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 基于Linux或Unix的操作系统定义文件权限时涉及以下内容：
 - en: The likely users (abbreviated as `o`) of the file that don't fall into the other
     user categories
+  id: totrans-16
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 文件的潜在用户（简称`o`），这些用户不属于其他用户类别。
 - en: The owner of the file (abbreviated as `u`)
+  id: totrans-17
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 文件的所有者（简称`u`）
 - en: The access control enforced on the group of users that the owner of file belongs
     to (abbreviated as `g`)
+  id: totrans-18
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 对文件所有者所属用户组的访问控制（简称`g`）
 - en: Categorizing users in this way allows mutual exclusivity, enabling a user to
     fine-tune who has access to the file. This means specification of access rights
     can be done with respect to the file and every likely user.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 以这种方式对用户进行分类允许互斥性，使用户能够精细调整谁可以访问文件。这意味着可以根据文件和每个可能用户来指定访问权限。
 - en: 'For each collection of users (group, other users, and the owner), five attributes
     of access control are defined, namely:'
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于每组用户（组、其他用户和所有者），定义了五个访问控制属性，分别为：
 - en: The Read ability (**r**) of the file; who is allowed to actually read the contents
     of the file.
+  id: totrans-21
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 文件的读取能力（**r**）；决定哪些用户可以实际读取文件内容。
 - en: The Write ability (**w**) of the file; this controls who is allowed to augment
     or modify the contents of the file.
+  id: totrans-22
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 文件的写入能力（**w**）；控制谁被允许增加或修改文件内容。
 - en: The Execute ability (**x**) of the file; whether a given collection of users
     is allowed to execute the instructions of the file.
+  id: totrans-23
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 文件的执行能力（**x**）；决定给定用户组是否被允许执行文件的指令。
 - en: The Set Group ID ability (**s**); should the file be executable; this defines
     how the user's permissions are augmented according to its group permissions. This
     permission may allow a low-privileged user to escalate their privileges in order
     to perform certain tasks; for example, substitute a user who escalates the privileges
     of any user to root or any user it desires—given that the authentication succeeds,
     of course!
+  id: totrans-24
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设置组ID的能力（**s**）；如果文件可执行，这定义了根据其组权限如何增加用户的权限。此权限可能允许低权限用户提升其权限以执行某些任务；例如，替换一个将任何用户的权限提升到root或它所希望的用户权限的用户——当然是在认证成功的情况下！
 - en: The Set User ID ability (**s**); this determines whether the user ID of the
     file owner, and therefore all the access rights that go along with it, can be
     transmitted to the executing process.
+  id: totrans-25
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 设置用户ID的能力（**s**）；这决定了文件所有者的用户ID以及随之而来的所有访问权限是否可以传递给执行进程。
 - en: Each of these are defined in terms of either mnemonics—using abbreviations—or
     as the literal bitwise values encoded in octal format. For first timers, this
     may be a confusing description, which is why this section includes a small table
     that defines the values, both in binary and octal (numbers in base 8).
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 每个这些属性都可以用助记符（使用缩写）或以八进制格式编码的逐位的字面值来定义。对于初学者来说，这可能是一个令人困惑的描述，这就是为什么本节包含了一个小表格，定义了二进制和八进制（基数为8的数字）的值。
 - en: 'Why base 8? Well, because base 8 in binary allows space for three bits, each
     one describing the Boolean value of each of the attributes; `1` for on (or true)
     and `0` for off (or false):'
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 为什么是基数为8？因为二进制中的基数为8允许三个位的空间，每个位描述每个属性的布尔值；`1`表示开启（或真）和`0`表示关闭（或假）：
 - en: '| Description | Binary value | Decimal value |'
+  id: totrans-28
   prefs: []
   type: TYPE_TB
+  zh: '| 描述 | 二进制值 | 十进制值 |'
 - en: '| --- | --- | --- |'
+  id: totrans-29
   prefs: []
   type: TYPE_TB
 - en: '| Read | 100 | 4 |'
+  id: totrans-30
   prefs: []
   type: TYPE_TB
 - en: '| Write | 010 | 2 |'
+  id: totrans-31
   prefs: []
   type: TYPE_TB
 - en: '| Execute | 001 | 1 |'
+  id: totrans-32
   prefs: []
   type: TYPE_TB
 - en: 'These are combined by adding the binary values. Here is a table that describes
     that:'
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
 - en: '| Description | Read | Write | Execute |'
+  id: totrans-34
   prefs: []
   type: TYPE_TB
 - en: '| --- | --- | --- | --- |'
+  id: totrans-35
   prefs: []
   type: TYPE_TB
 - en: '| Read | 100 | 4 | 110 | 6 | 101 | 5 |'
+  id: totrans-36
   prefs: []
   type: TYPE_TB
 - en: '| Write |   | 010 | 2 | 011 | 3 |'
+  id: totrans-37
   prefs: []
   type: TYPE_TB
 - en: '| Execute |   | 001 | 1 |'
+  id: totrans-38
   prefs: []
   type: TYPE_TB
 - en: These are specified for each collection of users; this means the permission
@@ -195,314 +264,452 @@
     the file owner, the group, and other users—commonly referred to as "the world".
     The permission bits also include an extra bit for the definition of `setuid`,
     `setguid`, and the **sticky** bit.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
 - en: The sticky bit is an access right that allows only the owner of a file or directory
     to delete or rename a file or directory. When specified, it appears as a `T` symbol
     in the access right bits displayed by the `ls` command.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
 - en: 'The structure looks as follows:'
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
 - en: '| Owner | Group | Other |'
+  id: totrans-42
   prefs: []
   type: TYPE_TB
 - en: '| --- | --- | --- |'
+  id: totrans-43
   prefs: []
   type: TYPE_TB
 - en: '| r | w | x | r | w | x | r | w | x |'
+  id: totrans-44
   prefs: []
   type: TYPE_TB
 - en: That's pretty much it as far as the basics of file access rights go; if you've
     followed the previous paragraphs carefully, you should have enough to spot the
     most fundamental flaws when it comes to Android's native access rights.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
 - en: In order to properly appreciate the discrepancies that vendors add to device
     builds, you will need to know a little bit about what the "default" or standard
     Android filesystem looks like in terms of its structure and access permissions
     setup.
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
 - en: '![Inspecting file permissions](img/00159.jpeg)'
+  id: totrans-47
   prefs: []
   type: TYPE_IMG
 - en: Here's the summary of the default or standard filesystem folders and their purposes
     according to the Linux filesystem hierarchy standard and the `init.rc` scripts
     on Jelly Bean. References for the `init.rc` scripts of other platforms are given
     in the *See also* section of the next tutorial Inspecting System Configurations.
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
 - en: '| Folder | Purpose |'
+  id: totrans-49
   prefs: []
   type: TYPE_TB
 - en: '| --- | --- |'
+  id: totrans-50
   prefs: []
   type: TYPE_TB
 - en: '| `/acct` | The `cgroup` mount point—accounting and monitoring of CPU resources
     |'
+  id: totrans-51
   prefs: []
   type: TYPE_TB
 - en: '| `/cache` | Temporary storage for downloads in progress and also used for
     nonessential data |'
+  id: totrans-52
   prefs: []
   type: TYPE_TB
 - en: '| `/data` | Directory containing apps and other application-specific storage
     |'
+  id: totrans-53
   prefs: []
   type: TYPE_TB
 - en: '| `/dev` | Device nodes, as in a classic Linux system, though not used as prolifically
     for device and hardware driver access |'
+  id: totrans-54
   prefs: []
   type: TYPE_TB
 - en: '| `/etc` | A symbolic link to `/system/etc/` contains configuration scripts,
     some of which are launched at startup during the bootstrapping process |'
+  id: totrans-55
   prefs: []
   type: TYPE_TB
 - en: '| `/mnt` | A temporary mount point, akin to many other traditional Linux systems
     |'
+  id: totrans-56
   prefs: []
   type: TYPE_TB
 - en: '| `/proc` | Contains data structures and information about a process, as in
     traditional Linux- or Unix-based systems |'
+  id: totrans-57
   prefs: []
   type: TYPE_TB
 - en: '| `/root` | Typically an empty directory, but akin to the root users home directory
     as on many Linux/Unix systems |'
+  id: totrans-58
   prefs: []
   type: TYPE_TB
 - en: '| `/sbin` | A folder containing important utilities for system administrative
     tasks |'
+  id: totrans-59
   prefs: []
   type: TYPE_TB
 - en: '| `/sdcard` | Mount point for the external SD cards |'
+  id: totrans-60
   prefs: []
   type: TYPE_TB
 - en: '| `/sys` | Mount point for `sysfs`, holds exported kernel data structures |'
+  id: totrans-61
   prefs: []
   type: TYPE_TB
 - en: '| `/system` | Immutable (read-only) binaries and scripts generated during the
     system build; on many Android systems, this also holds system-owned applications
     |'
+  id: totrans-62
   prefs: []
   type: TYPE_TB
+  zh: '| `/system` | 在系统构建期间生成的不可变（只读）二进制文件和脚本；在许多Android系统中，这也包含系统拥有的应用程序 |'
 - en: '| `/vendor` | A directory set aside for vendor-specific augmentations to the
     device, including binaries, applications, and configuration scripts |'
+  id: totrans-63
   prefs: []
   type: TYPE_TB
+  zh: '| `/vendor` | 为设备特定的增强保留的目录，包括二进制文件、应用程序和配置脚本 |'
 - en: '| `/init` | The `init` binary executed during the bootstrapping process after
     the kernel has been loaded |'
+  id: totrans-64
   prefs: []
   type: TYPE_TB
+  zh: '| `/init` | 在引导过程中，内核加载后执行的`init`二进制文件 |'
 - en: '| `/init.rc` | The configuration script for the `init` binary |'
+  id: totrans-65
   prefs: []
   type: TYPE_TB
+  zh: '| `/init.rc` | `init`二进制文件的配置脚本 |'
 - en: '| `/init[device_name].rc` | The device-specific configuration script |'
+  id: totrans-66
   prefs: []
   type: TYPE_TB
+  zh: '| `/init[device_name].rc` | 设备特定的配置脚本 |'
 - en: '| `/ueventd.rc` | The `uevent` daemon configuration script |'
+  id: totrans-67
   prefs: []
   type: TYPE_TB
+  zh: '| `/ueventd.rc` | `uevent`守护进程的配置脚本 |'
 - en: '| `/uevent[device_name].rc` | The device-specific configuration script for
     the `uevent` daemon |'
+  id: totrans-68
   prefs: []
   type: TYPE_TB
+  zh: '| `/uevent[device_name].rc` | `uevent`守护进程的设备特定配置脚本 |'
 - en: '| `/default.prop` | The configuration file containing global properties for
     the system, including device names |'
+  id: totrans-69
   prefs: []
   type: TYPE_TB
+  zh: '| `/default.prop` | 包含系统全局属性的配置文件，包括设备名称 |'
 - en: '| `/config` | The mount point for `configfs` |'
+  id: totrans-70
   prefs: []
   type: TYPE_TB
+  zh: '| `/config` | `configfs`的挂载点 |'
 - en: '| `/storage` | The added directory for 4.1 devices and up; used as a mount
     point for external storage |'
+  id: totrans-71
   prefs: []
   type: TYPE_TB
+  zh: '| `/storage` | 从4.1设备开始的添加目录；用作外部存储的挂载点 |'
 - en: '| `/charger` | A native standalone application that displays the battery''s
     charge progress |'
+  id: totrans-72
   prefs: []
   type: TYPE_TB
+  zh: '| `/charger` | 一个本地独立应用程序，显示电池充电进度 |'
 - en: Please keep in mind that the vendor builds of the devices may differ; take these
     to be the most basic, untouched filesystem layouts and purposes. Often, vendors
     also make mistakes in their usage of some of these file paths and go against their
     intended purpose, so keep an eye on the purpose of these folders and the default
     access rights.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 请记住，设备制造商的版本可能会有所不同；将这些视为最基本的、未修改的文件系统布局和目的。通常，制造商在使用其中一些文件路径时也会犯错误，违背了它们的预期用途，因此要关注这些文件夹的目的和默认访问权限。
 - en: This section doesn't go into full detail with the filesystem layout; however,
     there are some good sources on the semantics, layout, and conventions for Android
     and Linux filesystems in the *See also* section.
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 本节不会详细介绍文件系统布局；然而，在*另请参阅*部分有一些关于Android和Linux文件系统的语义、布局和约定的好资源。
 - en: Let's look at how to hunt for interesting file- or directory-based targets on
     an Android system. The following walkthrough assumes you have ADB shell permission
     on the device being assessed.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看如何在Android系统上寻找有趣的基于文件或目录的目标。以下演练假设你在被评估的设备上拥有ADB shell权限。
 - en: Getting ready
+  id: totrans-76
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: In order to use the commands mentioned in the following example, you will need
     to be able to either install the `find` binary or Busybox for Android; the instructions
     for installation can be found at [http://www.busybox.net/](http://www.busybox.net/)
     and in the *Setting up Busybox* section of the *Automated native Android fuzzing*
     recipe at the end of this chapter.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了使用以下示例中提到的命令，你需要能够安装`find`二进制文件或Android的Busybox；安装说明可以在[http://www.busybox.net/](http://www.busybox.net/)以及本章末尾的*设置Busybox*部分找到，该部分位于*自动化原生Android模糊测试*菜谱中。
 - en: How to do it...
+  id: totrans-78
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To search for files with respect to their access rights, you can find a list
     of readable files by executing the following command in your ADB shell; firstly,
     for world readable, this command does the trick:'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 若要根据文件的访问权限搜索文件，你可以在ADB shell中执行以下命令来查找可读文件；首先，对于全世界可读的文件，这个命令可以解决问题：
 - en: '[PRE0]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'See the following screenshot for the sample output:'
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 请查看以下截图以获取示例输出：
 - en: '![How to do it...](img/00160.jpeg)'
+  id: totrans-82
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00160.jpeg)'
 - en: The previous screenshot—and the subsequent ones in this section—were taken from
     a rooted Samsung Galaxy S3\. Here the command-line instruction included a redirect
     to `/dev/null` in order to omit the erroneous output caused by permission denial.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 上述截图——以及本节后续的截图——来自一个已获得root权限的三星Galaxy S3。这里，命令行指令包含了一个重定向到`/dev/null`的操作，以省略因权限拒绝引起的错误输出。
 - en: Tip
+  id: totrans-84
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Just a little caveat for non-Linux/Unix users**'
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: '**对于非Linux/Unix用户的一个小警告**'
 - en: '`/dev/null` acts like a sort of "blackhole" for output, allowing Linux/Unix
     users to use it as a place to put output they are not interesting in seeing. As
     an added benefit, it also returns a value to let you know whether the write operation
     succeeded.'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: '`/dev/null` 对于输出来说就像一个“黑洞”，允许 Linux/Unix 用户将其作为一个放置不希望看到的输出的地方。作为一个额外的好处，它还会返回一个值，让您知道写入操作是否成功。'
 - en: 'Moving on, if you''re looking for world writable files, you can find them using
     the following arguments:'
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，如果您在寻找全局可写文件，可以使用以下参数找到它们：
 - en: '[PRE1]'
+  id: totrans-88
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'See the following screenshot for the sample output:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看以下截图以获取示例输出：
 - en: '![How to do it...](img/00161.jpeg)'
+  id: totrans-90
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00161.jpeg)'
 - en: 'And for files that have executable permission set for all users:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于对所有用户设置了可执行权限的文件：
 - en: '[PRE2]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: You aren't explicitly required to use the octal format; the `find` command also
     understands the popular shorthands for user collections and permissions.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 您并非必须使用八进制格式；`find` 命令也理解用户集合和权限的常用简写。
 - en: 'For instance, to find files readable to everyone outside of the owner''s group,
     you specify permissions this way:'
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，要查找除了所有者组之外所有人可读的文件，您可以这样指定权限：
 - en: '[PRE3]'
+  id: totrans-95
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'See the following screenshot for the sample output:'
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看以下截图以获取示例输出：
 - en: '![How to do it...](img/00162.jpeg)'
+  id: totrans-97
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00162.jpeg)'
 - en: 'The previous specifications will ensure only exact matches; this means files
     returned must have only the bits specified. If you''re looking for files with
     at least the specified bits set and any of the other bits—which you will probably
     be doing most of the time—you can specify the permissions by including a `-` symbol
     as a prefix as in the preceding example. For the octal mode, this will work as
     follows:'
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前的规格将确保只有完全匹配的文件；这意味着返回的文件必须只具有指定的位。如果您寻找至少设置了指定位以及任何其他位的文件——您可能大多数时间都会这样做——您可以通过在前面示例中包含
+    `-` 符号作为前缀来指定权限。对于八进制模式，这将按以下方式工作：
 - en: '[PRE4]'
+  id: totrans-99
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'See the following screenshot for the sample output:'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看以下截图以获取示例输出：
 - en: '![How to do it...](img/00163.jpeg)'
+  id: totrans-101
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00163.jpeg)'
 - en: This will at least match files that have read bits set for all user collections,
     which means the 445, 566, 777, and so on permission bits will be matched. And
     the 344, 424, 222, and so on would not be matched.
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 这至少会匹配所有用户集合设置了读位的文件，这意味着将匹配 445、566、777 等权限位。而 344、424、222 等则不会匹配。
 - en: 'A couple of really useful access right patterns you would probably be interested
     in looking for include finding executable files with `setuid`:'
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 您可能感兴趣的几个非常实用的访问权限模式包括查找具有 `setuid` 的可执行文件：
 - en: '[PRE5]'
+  id: totrans-104
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'See the following screenshot for the sample output:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看以下截图以获取示例输出：
 - en: '![How to do it...](img/00164.jpeg)'
+  id: totrans-106
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00164.jpeg)'
 - en: In the previous screenshot, we see that the `su` binary was found using the
     preceding command. If you ever find this binary on an Android device, it's always
     a strong indication that the device has been rooted.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的截图中，我们看到使用前面的命令找到了 `su` 二进制文件。如果您在 Android 设备上找到这个二进制文件，这总是表明设备已经被root。
 - en: 'You can also find files with `setguid` and execute permissions for all:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 您还可以查找对所有用户具有 `setguid` 和执行权限的文件：
 - en: '[PRE6]'
+  id: totrans-109
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'See the following screenshot for the sample output:'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看以下截图以获取示例输出：
 - en: '![How to do it...](img/00165.jpeg)'
+  id: totrans-111
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00165.jpeg)'
 - en: 'The `find` command also allows you to specify users as part of the search criteria;
     for instance:'
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: '`find` 命令还允许您将用户作为搜索条件的一部分；例如：'
 - en: 'You could list all the files that belong to the root user as follows:'
+  id: totrans-113
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 您可以如下列出属于 root 用户的所有文件：
 - en: '[PRE7]'
+  id: totrans-114
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'You could list all the files for the system user as follows:'
+  id: totrans-115
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 您可以如下列出所有系统用户的文件：
 - en: '[PRE8]'
+  id: totrans-116
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'You can also list files according to the group ID setting as follows:'
+  id: totrans-117
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 您也可以根据组 ID 设置来列出文件，如下所示：
 - en: '[PRE9]'
+  id: totrans-118
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: You may want to get an idea of how much each user—or rather, application—on
     your Android system has access to, and to do this you may want to build a list
     of user IDs—or, more importantly, UIDs for applications. The easiest way to do
@@ -514,203 +721,303 @@
     you so choose, you could fire off a couple of searches to the XDA developers site
     to look for a method to root your phone. The XDA developer's site is available
     at [http://www.xda-developers.com/](http://www.xda-developers.com/).
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能想要了解你的Android系统上的每个用户——或者更确切地说，是每个应用——可以访问多少内容，为此你可能想要构建一个用户ID的列表——或者更重要的是，应用的UID。最简单的方法是转储
+    `/data/data` 目录中文件的访问权限，因为它包含了大多数安装在Android设备上的应用的数据。然而，要从ADB shell访问这个列表，你需要有root或系统账户的访问权限，或者任何具有等效权限的账户；这在模拟器上很容易获得——它会自动授权。另外，如果你选择这样做，你可以向XDA开发者网站发起几个搜索，寻找root手机的方法。XDA开发者网站可以在
+    [http://www.xda-developers.com/](http://www.xda-developers.com/) 找到。
 - en: There are both good and bad things about rooting your phone; in this case, it
     allows you to inspect the filesystem and access rights in more detail. However,
     on the other hand, if access to root privileges are not managed properly, it can
     expose your phone to a number of very devastating attacks! So be stingy with your
     root permissions and only temporarily root phones when they need to be rooted.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 对手机进行root操作有好有坏；在这种情况下，它允许你更详细地检查文件系统和访问权限。然而，另一方面，如果root权限的访问没有得到妥善管理，它可能会让你的手机面临许多非常严重的攻击！因此要吝啬你的root权限，并且只在需要时临时root手机。
 - en: 'Moving on, if you list all of the files in the `/data/data` directory, you
     should see the following; this is taken from a Samsung Galaxy S3:'
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，如果你列出 `/data/data` 目录中的所有文件，你应该会看到以下内容；这是从三星Galaxy S3中获取的：
 - en: '![How to do it...](img/00166.jpeg)'
+  id: totrans-122
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00166.jpeg)'
 - en: You may notice the odd naming convention for each app, namely `u[number]_a[number]`,
     which means to say `u[profile number]` for the user profile the app is installed
     on—since some Android versions support multiple user profiles, namely everything
     from Jelly Bean and later—and `a[number]`, which is the application ID.
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能注意到了每个应用的命名约定很奇怪，即 `u[number]_a[number]`，这表示的是应用安装的用户配置文件的 `u[配置文件编号]` ——因为某些Android版本支持多个用户配置文件，从Jelly
+    Bean及其之后的版本开始——以及 `a[number]`，它是应用程序ID。
 - en: 'You can use the application ID to construct the actual system user ID (UID)
     for the app by adding this number to `10000`; for instance, for the Mozilla installation
     that has a username of `u0_a170`, the corresponding UID will be `10170`. To find
     all of the files that have this UID as its owner, you would then execute this
     command:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以使用应用程序ID通过加上这个数字到 `10000` 来构建应用的实际系统用户ID（UID）；例如，对于用户名为 `u0_a170` 的Mozilla安装，相应的UID将是
+    `10170`。要找到所有拥有这个UID作为所有者的文件，你接下来会执行这个命令：
 - en: '[PRE10]'
+  id: totrans-125
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'See the following screenshot for the sample output:'
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是样本输出的截图：
 - en: '![How to do it...](img/00167.jpeg)'
+  id: totrans-127
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00167.jpeg)'
 - en: You can find other usernames by checking out the `Android_filesystem_config.h`
     file referenced in the *See also* section of this recipe.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以通过查看本食谱 *另请参阅* 部分提到的 `Android_filesystem_config.h` 文件来找到其他用户名。
 - en: There's more...
+  id: totrans-129
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有很多...
 - en: A command that can make the output of the `find` command a little more useful
     is `stat`. This command displays properties of the file and allows you to specify
     the format in which you'd like these details to be displayed. The `stat` command
     has a myriad of features and makes hunting for incorrectly "permissioned" files
     a much more informative experience than just calling `ls –al` via the `find –exec`
     command.
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 可以使 `find` 命令输出更有用的一个命令是 `stat`。这个命令显示文件属性，并允许你指定这些详情的显示格式。`stat` 命令具有众多功能，使得查找权限设置错误的文件比仅仅通过
+    `find –exec` 命令调用 `ls –al` 要更加具有信息量。
 - en: 'You can use `stat` with `find` as follows:'
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以将 `stat` 与 `find` 一起使用如下：
 - en: '[PRE11]'
+  id: totrans-132
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'For instance, if you''d like to display the following:'
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 例如，如果你想显示以下内容：
 - en: '`%A`: The access rights in human-readable format'
+  id: totrans-134
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`%A`：以人类可读格式显示的访问权限'
 - en: '`%u`: The user ID of the file owner'
+  id: totrans-135
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`%u`：文件所有者的用户ID'
 - en: '`%g`: The group ID of the file owner'
+  id: totrans-136
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`%g`：文件所有者的组ID'
 - en: '`%f`: The file mode in raw hex'
+  id: totrans-137
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`%f`：文件的原始十六进制模式'
 - en: '`%N`: The quoted file name with dereference if it''s a symbolic link'
+  id: totrans-138
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`%N`：带有引用的文件名，如果是符号链接则解引用'
 - en: 'You can do so by executing the following command:'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以通过执行以下命令来完成此操作：
 - en: '[PRE12]'
+  id: totrans-140
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'This command produces output as follows—here the example uses `-0666` as an
     example permission mode:'
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 此命令生成的输出如下——这里示例使用 `-0666` 作为示例权限模式：
 - en: '![There''s more...](img/00168.jpeg)'
+  id: totrans-142
   prefs: []
   type: TYPE_IMG
+  zh: '![还有更多...](img/00168.jpeg)'
 - en: See also
+  id: totrans-143
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Vulnerability Summary for CVE-2009-1894* article at [http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-1894](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-1894)
+  id: totrans-144
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在 [http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-1894](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-1894)
+    的 *CVE-2009-1894漏洞摘要* 文章
 - en: The `Android_filesystem_config.h` file in the Android Git Repository at [https://android.googlesource.com/platform/system/core/+/android-4.4.2_r1/include/private/android_filesystem_config.h](https://android.googlesource.com/platform/system/core/+/android-4.4.2_r1/include/private/android_filesystem_config.h)
+  id: totrans-145
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android Git仓库中的 `Android_filesystem_config.h` 文件，位于 [https://android.googlesource.com/platform/system/core/+/android-4.4.2_r1/include/private/android_filesystem_config.h](https://android.googlesource.com/platform/system/core/+/android-4.4.2_r1/include/private/android_filesystem_config.h)
 - en: The *Filesystem Hierarchy Standard* in the Linux documentation project at [http://www.tldp.org/HOWTO/HighQuality-Apps-HOWTO/fhs.html](http://www.tldp.org/HOWTO/HighQuality-Apps-HOWTO/fhs.html)
+  id: totrans-146
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: Linux文档项目中的*文件系统层次标准*，在 [http://www.tldp.org/HOWTO/HighQuality-Apps-HOWTO/fhs.html](http://www.tldp.org/HOWTO/HighQuality-Apps-HOWTO/fhs.html)
 - en: The *Filesystem Hierarch Standard* guide by the Filesystem Hierarchy Group at
     [http://www.pathname.com/fhs/pub/fhs-2.3.pdf](http://www.pathname.com/fhs/pub/fhs-2.3.pdf)
+  id: totrans-147
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 文件系统层次结构组在 [http://www.pathname.com/fhs/pub/fhs-2.3.pdf](http://www.pathname.com/fhs/pub/fhs-2.3.pdf)
+    的*文件系统层次标准*指南
 - en: '*Embedded Android*, *O''Reilly*, March 2013, by *Karim Yaghmour*'
+  id: totrans-148
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*嵌入式Android*，*O''Reilly*，2013年3月，作者 *Karim Yaghmour*'
 - en: Cross-compiling native executables
+  id: totrans-149
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 跨编译本地可执行文件
 - en: Before we can start smashing stacks and hijacking instruction pointers on Android
     devices, we need a way to prepare some sample vulnerable applications. To do this,
     we need to be able to compile native executables and to do that we need to use
     some of the awesome applications packaged into the Android native development
     kit.
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们能够在Android设备上开始破坏堆栈和劫持指令指针之前，我们需要一种方法来准备一些易受攻击的示例应用程序。为此，我们需要能够编译本地可执行文件，而要做到这一点，我们需要使用Android本地开发工具包中的一些优秀应用程序。
 - en: How to do it...
+  id: totrans-151
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To cross-compile your own native Android components, you need to do the following:'
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 要跨编译你自己的本地Android组件，你需要执行以下操作：
 - en: Prepare a directory to develop your code. All this requires is that you make
     a directory named whatever you'd like to name your "module"; for example, you
     could call the directory `buffer-overflow`, as I do in the example here. Once
     you've created that directory, you then need to make a subdirectory called `jni/`.
     It's imperative that you name it this because the compilation scripts in the NDK
     will specifically look for this directory.
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 准备一个目录来开发你的代码。你需要做的就是创建一个你想命名为“模块”名称的目录，例如，你可以像我在这里的示例中一样，将目录命名为 `buffer-overflow`。创建该目录后，你还需要创建一个名为
+    `jni/` 的子目录。你必须这样命名它，因为NDK中的编译脚本会特别寻找这个目录。
 - en: 'Once you have your directories, you can create an `Android.mk` file. Create
     this file inside your `jni` directory. The `Android.mk` file is basically a Make
     file that prepares some of the properties of your compilation; here''s what it
     should contain:'
+  id: totrans-154
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 一旦你有了这些目录，你就可以创建一个 `Android.mk` 文件。在你的 `jni` 目录中创建这个文件。`Android.mk` 文件基本上是一个Make文件，它准备了一些你编译的属性；以下是它应该包含的内容：
 - en: '[PRE13]'
+  id: totrans-155
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Once you have both your required `jni` directory structure and `Android.mk`
     set up properly, you can start writing some C code; here''s an example you can
     use:'
+  id: totrans-156
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 一旦你正确设置了所需的 `jni` 目录结构和 `Android.mk`，你就可以开始编写一些C代码了；以下是一个你可以使用的示例：
 - en: '[PRE14]'
+  id: totrans-157
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: Please make sure this file appears in the `jni` directory along with the `Android.mk`
     file.
+  id: totrans-158
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 请确保此文件与 `jni` 目录中的 `Android.mk` 文件一起出现。
 - en: 'Here''s the fun part; you can now compile your code. You can do this by invoking
     the NDK build script, which surprisingly is done by executing the following command:'
+  id: totrans-159
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在是乐趣的一部分；你现在可以编译你的代码了。你可以通过调用NDK构建脚本来完成这个操作，令人惊讶的是，这是通过执行以下命令完成的：
 - en: '[PRE15]'
+  id: totrans-160
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: Here, `[path-to-ndk]` is the path of your Android NDK.
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在这里，`[path-to-ndk]` 是你的Android NDK的路径。
 - en: 'If all goes well, you should see output similar to the following:'
+  id: totrans-162
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果一切顺利，你应该看到类似以下的输出：
 - en: '![How to do it...](img/00169.jpeg)'
+  id: totrans-163
   prefs: []
   type: TYPE_IMG
+  zh: '![如何操作...](img/00169.jpeg)'
 - en: There's more...
+  id: totrans-164
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: Just compiling is not enough; we need to be able to modify the way normal executables
     are compiled so that we can exploit and study certain vulnerabilities. The protection
     we will remove here is something that protects the function stack from being corrupted
@@ -718,81 +1025,115 @@
     it will be useful to detail how this protection actually works and show you the
     difference when the protection is removed. Brace yourself—ARMv7 assembler code
     is coming!
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 只编译是不够的；我们需要能够修改正常可执行文件的编译方式，这样我们才能利用并研究某些漏洞。我们将在这里移除的保护措施是一种保护函数栈不被以允许被利用的方式破坏的保护——大多数利用。在移除这保护之前，详细说明这种保护是如何实际工作的，并展示移除保护后的差异将是有用的。做好心理准备——ARMv7汇编代码即将到来！
 - en: So we can dump the assembler code for this executable using the **objdump**
     tool that comes bundled with the NDK; naturally you would expect the standard
     `objdump` tool that comes bundled with any run-of-the-mill Linux or Unix distribution
     to work fine, but these executables are cross-compiled specifically for embedded
     ARM devices. This means the endianness may be different; the structure of the
     executable may also be one that a normal `objdump` doesn't understand.
+  id: totrans-166
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以使用随NDK捆绑的**objdump**工具来转储这个可执行文件的反汇编代码；自然你会期望任何普通的Linux或Unix发行版中捆绑的标准`objdump`工具都能正常工作，但这些可执行文件是专门为嵌入式ARM设备交叉编译的。这意味着字节序可能不同；可执行文件的结构也可能是普通`objdump`无法理解的。
 - en: To make sure we can use the correct `objdump` tool, the Android guys made sure
     versions that are compatible with ARM executables come packaged with the NDK.
     You should find it under the `/toolchains/arm-linux-androideabi-[version]/prebuilt/linux-x86-64/bin/`
     path of the NDK; you could use any one of the `arm-linux-androideabi` versions,
     though it's always simpler to try to stick to the latest version.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了确保我们可以使用正确的`objdump`工具，Android团队确保了与ARM可执行文件兼容的版本随NDK一起打包。你应在NDK的`/toolchains/arm-linux-androideabi-[version]/prebuilt/linux-x86-64/bin/`路径下找到它；尽管你可以使用任何`arm-linux-androideabi`版本，但坚持使用最新版本总是更简单。
 - en: The `objdump` binary will be named something like `arm-linux-androideabi-objdump`
     inside the aforementioned folder.
+  id: totrans-168
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前述文件夹中的`objdump`二进制文件将被命名为类似`arm-linux-androideabi-objdump`的名字。
 - en: 'To use it, all you need to do is point it at the binary in the root of the
     `/buffer-overflow/obj/local/armeabi/` directory, which should appear in your `jni`
     directory and execute this command:'
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使用它，你需要做的就是指向`/buffer-overflow/obj/local/armeabi/`目录根部的二进制文件，这个文件应该出现在你的`jni`目录中，并执行以下命令：
 - en: '[PRE16]'
+  id: totrans-170
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'For our example, the command will look something like this:'
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于我们的示例，命令看起来会像这样：
 - en: '[PRE17]'
+  id: totrans-172
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: This will produce quite a bit of output; what we are interested in are the functions
     compiled around the "vulnerable" function. I've piped the output into `less`,
     which allows us to scroll and search through the text; what you should do next
     is press the `/` character while `less` is open with the `objdump` output and
     type in `<vulnerable>` and then press *Enter*.
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将产生相当多的输出；我们感兴趣的是围绕"脆弱"函数编译的函数。我将输出重定向到`less`，这样我们就可以滚动和搜索文本；接下来你应该在`less`打开`objdump`输出时按下`/`字符，并输入`<vulnerable>`，然后按*回车*。
 - en: 'If you''ve done this properly, your screen should display the following output:'
+  id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你正确完成了这些步骤，你的屏幕应该会显示以下输出：
 - en: '[PRE18]'
+  id: totrans-175
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Tip
+  id: totrans-176
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Just a little tip**'
+  id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: '**只是一个小提示**'
 - en: In the preceding `objdump` output, the far-left column shows the offsets of
     the instructions; the column after that, delimited by the `:` character, holds
     the actual hex representation of the code; and the column after that shows the
     human-readable mnemonics for the associated assembler instructions.
+  id: totrans-178
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上述`objdump`输出中，最左边的列显示了指令的偏移量；紧随其后的由`:`字符分隔的列，保存了代码的实际十六进制表示；再往后的列显示了相关汇编指令的人类可读助记符。
 - en: Pay attention to the emboldened code in the previous `objdump` output. The instruction
     at the `8526` offset loads the contents of memory found `0x40` addresses away
     from the current value in the program counter (`pc`) register; this address holds
     a special value called the **stack canary** .
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意之前`objdump`输出中加粗的代码。位于`8526`偏移的指令加载了从程序计数器（`pc`）寄存器当前值起`0x40`地址偏移处内存中的内容；这个地址保存了一个特殊的值，称为**栈金丝雀**。
 - en: Tip
+  id: totrans-180
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: It's commonly termed as a canary because of how actual canaries were used by
     miners to make sure mine shafts were safe to explore.
+  id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: 这通常被称为金丝雀，因为实际的金丝雀曾被矿工用来确保矿井通道是安全的可供探索。
 - en: This value is placed on the stack between the local variables and the saved
     instruction and base pointer; this is done so that if an attacker or erroneous
     instructions were to corrupt the stack far enough to influence the values saved
@@ -801,8 +1142,10 @@
     a cryptographically secure—supposedly so—pseudorandom number generator, and it's
     stuck in the memory of the program during runtime to avoid reliably predicting
     this value.
+  id: totrans-182
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个值被放置在堆栈上，介于局部变量和已保存的指令及基指针之间；这样做是为了如果攻击者或错误指令足以破坏堆栈，影响到那里保存的值，那么它也将需要破坏或更改堆栈守护者，这意味着程序能够检查这个值是否发生了变化。这个值来自一个加密安全（据称是）的伪随机数生成器，并在程序运行时存储在内存中，以避免可靠地预测这个值。
 - en: Moving on, we see that the instructions at offsets `852c-8530` stick the stack
     canary in the `r3` and `r4` registers. The following instruction at offset `8532`
     makes sure the stack canary is placed on the stack before the dangerous `strcpy`
@@ -815,149 +1158,211 @@
     the program to abort and not exit normally. So, in summary, it grabs the stack
     canary from some offset in the file, places it in a register and another copy
     on the stack, and checks for any changes before exiting.
+  id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: 接下来，我们看到位于偏移量`852c-8530`的指令将堆栈守护者放入`r3`和`r4`寄存器中。偏移量`8532`的后续指令确保在危险的`strcpy`调用（位于偏移量`8534`）之前将堆栈守护者放置在堆栈上。到目前为止，所有代码完成的工作只是在`strcpy`调用之后将值放在堆栈上——实际上是靠近`printf`函数。从偏移量`8542`到`8544`，从寄存器`r4`和堆栈上放置的位置获取堆栈守护者的值，加载到`r2`和`r3`寄存器中，然后在偏移量`8546`进行比较。如果它们不匹配，我们看到位于`854a`的指令将被执行，这将基本上导致程序中断，而不是正常退出。所以，总结一下，它从文件中的某个偏移量获取堆栈守护者，将其放入寄存器和堆栈上的另一个副本，并在退出前检查是否有任何变化。
 - en: One thing you may notice is that though this prevents the saved instruction
     pointer from being corrupted it does not protect the local variables at all! It
     is still possible to maliciously corrupt the other variables on the stack depending
     on their layout in memory—where they appear in relation to the canary and the
     other stack buffers. This could in some very special circumstances still be abused
     to maliciously influence the behavior of a process.
+  id: totrans-184
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能会注意到，尽管这防止了已保存的指令指针被破坏，但它根本没有保护局部变量！根据它们在内存中的布局——它们与守护者和堆栈上的其他缓冲区的关系位置——仍然有可能恶意地破坏堆栈上的其他变量。在某些特殊情况下，这仍然可能被滥用，恶意地影响进程的行为。
 - en: So now how do we remove this annoying protection such that we can smash some
     stack properly and gain the ability to control the instruction pointer? Well,
     seeing that stack canaries are a compiler-based protection—meaning that it's something
     the executable compiler enforces—we should be able to modify the way NDK executables
     are compiled so that stack protection is not enforced.
+  id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: 那么现在我们如何移除这个烦人的保护措施，以便我们可以正确地破坏堆栈并获得控制指令指针的能力呢？由于堆栈守护者是编译器级别的保护措施——这意味着它是可执行编译器强制实施的——我们应该能够修改NDK可执行文件的编译方式，使得堆栈保护不被强制执行。
 - en: Though this may seldom be a practical situation for the binaries on the Android
     system, it is still something that may very well happen. We are removing this
     protection in order to simulate a stack-based overflow vulnerability.
+  id: totrans-186
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管这在Android系统上的二进制文件中可能很少是实际情况，但这仍然是非常可能发生的事情。我们移除这个保护是为了模拟基于堆栈的溢出漏洞。
 - en: 'To remove the protection, you''ll need to change some of the GCC compiler extensions
     that the NDK uses. To do this, you''ll need to:'
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 要移除保护，你需要更改NDK使用的一些GCC编译器扩展。为此，你需要：
 - en: Navigate to the `/toolchains/arm-linux-Androideabi-4.9/` directory and locate
     a file called `setup.mk`. Please note, your NDK may use a different version of
     `arm-linux-androideabi`. If the following steps don't work or have the desired
     effect, you should try removing the stack protection:![There's more...](img/00170.jpeg)
+  id: totrans-188
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 导航到`/toolchains/arm-linux-Androideabi-4.9/`目录，找到一个名为`setup.mk`的文件。请注意，你的NDK可能使用不同版本的`arm-linux-androideabi`。如果以下步骤不起作用或没有达到预期效果，你应该尝试移除栈保护：![还有更多...](img/00170.jpeg)
 - en: 'The next thing you may want to do is back up the `setup.mk` file. We''re about
     to change the default compilation configuration for the NDK, so it''s always good
     to back it up. You can create a makeshift back up by copying the script to another
     file named slightly differently. For instance, you can back up the `setup.mk`
     file by executing this command:'
+  id: totrans-189
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来你可能想要备份`setup.mk`文件。我们即将更改NDK的默认编译配置，因此备份总是好的。你可以通过将脚本复制到另一个名称略有不同的文件来创建一个临时的备份。例如，你可以通过执行以下命令备份`setup.mk`文件：
 - en: '[PRE19]'
+  id: totrans-190
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: '![There''s more...](img/00171.jpeg)'
+  id: totrans-191
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![还有更多...](img/00171.jpeg)'
 - en: After backing it up, you should open the `setup.mk` file in your favorite text
     editor and remove the flags, specifically the one containing the `-fstack-protector`
     switch; see the following screenshots for more clarity:![There's more...](img/00172.jpeg)
+  id: totrans-192
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 备份之后，你应该在你喜欢的文本编辑器中打开`setup.mk`文件，并移除标志，特别是包含`-fstack-protector`切换的那一个；查看以下截图以获得更清晰的信息：![还有更多...](img/00172.jpeg)
 - en: 'After removing the specified flag, your `setup.mk` file should look something
     like this:'
+  id: totrans-193
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 移除指定标志后，你的`setup.mk`文件应该看起来像这样：
 - en: '![There''s more...](img/00173.jpeg)'
+  id: totrans-194
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![还有更多...](img/00173.jpeg)'
 - en: 'Once you''ve done that, you can use the `ndk-build` script to compile a fresh
     copy of your executable and then pass it to `androideabi-objdump`. Without stack
     protection, your code should look like this:'
+  id: totrans-195
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 完成上述操作后，你可以使用`ndk-build`脚本编译你的可执行文件的全新副本，然后将其传递给`androideabi-objdump`。在没有栈保护的情况下，你的代码应该看起来像这样：
 - en: '[PRE20]'
+  id: totrans-196
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: Notice how there are none of the instructions that were in the previous version
     of the executable. This is because the `-fstack-protector` compiler flag that
     we removed tells GCC to autonomously look for any instance of any function that
     may potentially corrupt the function stack.
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 注意到与前一个可执行文件版本中的指令没有任何关联。这是因为我们移除的`-fstack-protector`编译器标志告诉GCC自主寻找可能潜在破坏函数栈的任何函数实例。
 - en: See also
+  id: totrans-198
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *ARM and Thumb Instruction Set Quick Reference Card* document by ARM infocenter
     at [http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf)
+  id: totrans-199
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: ARM信息中心提供的《*ARM and Thumb Instruction Set Quick Reference Card*》可以在[http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf)找到
 - en: The *ARM Instruction Set* document at [http://simplemachines.it/doc/arm_inst.pdf](http://simplemachines.it/doc/arm_inst.pdf)
+  id: totrans-200
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 《*ARM Instruction Set*》文档可以在[http://simplemachines.it/doc/arm_inst.pdf](http://simplemachines.it/doc/arm_inst.pdf)找到
 - en: The *ARM v7-M Architecture Reference Manual* document by the department of Electrical
     Engineering and Computer Science, University of Michigan at [http://web.eecs.umich.edu/~prabal/teaching/eecs373-f10/readings/ARMv7-M_ARM.pdf](http://web.eecs.umich.edu/~prabal/teaching/eecs373-f10/readings/ARMv7-M_ARM.pdf)
+  id: totrans-201
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 密歇根大学电气工程与计算机科学系提供的《*ARM v7-M Architecture Reference Manual*》可以在[http://web.eecs.umich.edu/~prabal/teaching/eecs373-f10/readings/ARMv7-M_ARM.pdf](http://web.eecs.umich.edu/~prabal/teaching/eecs373-f10/readings/ARMv7-M_ARM.pdf)找到
 - en: '*Exploiting Arm Linux Systems, An Introduction* by *Emanuele Acri* at [http://www.exploit-db.com/wp-content/themes/exploit/docs/16151.pdf](http://www.exploit-db.com/wp-content/themes/exploit/docs/16151.pdf)'
+  id: totrans-202
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*Emanuele Acri*所著的《*Exploiting Arm Linux Systems, An Introduction*》可以在[http://www.exploit-db.com/wp-content/themes/exploit/docs/16151.pdf](http://www.exploit-db.com/wp-content/themes/exploit/docs/16151.pdf)找到'
 - en: The *Procedure Standard for the ARM Architecture* document at [http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/IHI0042E_aapcs.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/IHI0042E_aapcs.pdf)
+  id: totrans-203
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 可以在[http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/IHI0042E_aapcs.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/IHI0042E_aapcs.pdf)找到《*ARM
+    Architecture的Procedure Standard*》文档
 - en: The *ARM Instruction Set* document at [http://bear.ces.cwru.edu/eecs_382/ARM7-TDMI-manual-pt2.pdf](http://bear.ces.cwru.edu/eecs_382/ARM7-TDMI-manual-pt2.pdf)
+  id: totrans-204
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 《*ARM Instruction Set*》文档可以在[http://bear.ces.cwru.edu/eecs_382/ARM7-TDMI-manual-pt2.pdf](http://bear.ces.cwru.edu/eecs_382/ARM7-TDMI-manual-pt2.pdf)找到
 - en: The *ARM Developer Suite Version 1.2 Assembler Guide* document by ARM infocenter
     at [http://infocenter.arm.com/help/topic/com.arm.doc.dui0068b/DUI0068.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.dui0068b/DUI0068.pdf)
+  id: totrans-205
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: ARM信息中心提供的*ARM开发者套件1.2版汇编指南*文档，位于[http://infocenter.arm.com/help/topic/com.arm.doc.dui0068b/DUI0068.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.dui0068b/DUI0068.pdf)
 - en: '*The DLMalloc Implementation library* at the Android Platform Bionic GitHub
     page at [https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c](https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c)'
+  id: totrans-206
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 位于[https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c](https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c)的Android平台Bionic
+    GitHub页面上的*DLMalloc实现库*
 - en: The `ok_magic` call in the DLMalloc implementation at the Android Platform Bionic
     GitHub page at [https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c#L4715](https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c#L4715)
+  id: totrans-207
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 位于[https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c#L4715](https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c#L4715)的Android平台Bionic
+    GitHub页面中DLMalloc实现中的`ok_magic`调用
 - en: The *Bionic* source code at the Android Source code repository at [https://android.googlesource.com/platform/bionic/](https://android.googlesource.com/platform/bionic/)
+  id: totrans-208
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 位于[https://android.googlesource.com/platform/bionic/](https://android.googlesource.com/platform/bionic/)的Android源代码仓库中的*Bionic*源代码
 - en: '`DLMalloc.c`, Android Platform Bionic `jb-mr0-release` at the Android Official
     GitHub repository at [https://android.googlesource.com/platform/bionic/+/jb-mr0-release/libc/bionic/dlmalloc.c](https://android.googlesource.com/platform/bionic/+/jb-mr0-release/libc/bionic/dlmalloc.c)'
+  id: totrans-209
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 位于[https://android.googlesource.com/platform/bionic/+/jb-mr0-release/libc/bionic/dlmalloc.c](https://android.googlesource.com/platform/bionic/+/jb-mr0-release/libc/bionic/dlmalloc.c)的Android官方GitHub仓库中的`DLMalloc.c`，Android平台Bionic
+    `jb-mr0-release`
 - en: Exploitation of race condition vulnerabilities
+  id: totrans-210
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 利用竞态条件漏洞的攻击行为。
 - en: Race conditions have caused quite a few issues and privilege escalation attacks
     on the Android platform; many of them allowing malicious attackers to gain root
     privileges.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 竞态条件在Android平台上引起了很多问题和权限提升攻击；其中许多允许恶意攻击者获得root权限。
 - en: Essentially, race conditions are caused by the lack of enforced mutual exclusion
     when a process on a multithreaded (a platform where more than one process is allowed
     to run concurrently) system that uses preemptive process scheduling. Preemptive
@@ -975,19 +1380,25 @@
     file listing the valid usernames; should this process not accommodate the preemptive
     scheduler, it may only access the file after a malicious user has corrupted it
     by adding his/her username to the list, allowing them to be authenticated.
+  id: totrans-212
   prefs: []
   type: TYPE_NORMAL
+  zh: 基本上，竞态条件是由多线程（允许多个进程同时运行的平台）系统在采用抢占式进程调度时缺乏强制互斥所引起的。抢占式调度允许任务调度器预先中断线程或正在运行的进程，这意味着不需要首先等待任务准备好被中断。这使得竞态条件成为可能，因为通常开发者没有使应用程序以能够适应来自进程调度器的任意和不可预测的中断的方式运行；结果是，依赖访问可能共享的资源（如文件、环境变量或共享内存中的数据结构）的进程总是在“竞速”，以获取这些资源的首次和独占访问权。攻击者通过首先获取这些资源并加以篡改，以这种方式滥用这种情况，从而可能导致进程操作受损或允许他们恶意影响进程的行为。一个简单的例子是，一个程序检查正在验证身份的用户是否在给定文件中的有效用户名列表中；如果此进程不能适应抢占式调度器，它可能只能在恶意用户通过将自己的用户名添加到列表中篡改文件之后访问该文件，从而允许他们被验证。
 - en: In this walkthrough, I will detail some basic race condition vulnerabilities
     and discuss other potential causes; I will also detail exploitation of a few of
     the most basic race condition vulnerabilities. The walkthrough ends with references
     and useful sources of information on past Android-based race condition vulnerabilities;
     most of them reported in the year of this writing.
+  id: totrans-213
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本演练中，我将详细说明一些基本的竞态条件漏洞，并讨论其他潜在原因；我还将详细说明一些最基本的竞态条件漏洞的利用方法。演练最后会提供有关过去基于Android的竞态条件漏洞的参考资料和有用信息来源；其中大部分是在撰写本文那年报告的。
 - en: 'Exploitation of race condition vulnerabilities depends on a few factors, namely
     an attacker must at least be able to:'
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 竞态条件漏洞的利用取决于几个因素，攻击者至少必须能够做到以下几点：
 - en: '**Gain access to the resources a vulnerable process is racing for access to**:
     Just having a process that doesn''t enforce mutual exclusion for its external
     resources but leaves the attacker with no method of access to these same resources
@@ -995,49 +1406,65 @@
     single nonmutual exclusive access a process makes would be exploitable. This includes
     every time a process dereferences a pointer in memory without checking out a semaphore
     or spin lock, which could happen billions of times!'
+  id: totrans-215
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**获取易受攻击进程正在争夺访问的资源**: 如果一个进程没有对其外部资源实施互斥访问，但攻击者又无法访问这些相同资源，那么这种情况下的利用潜力并不大。如果不是这样，那么每个进程进行的每一次非互斥访问都将是可以被利用的。这包括每次进程在未经信号量或自旋锁检查的情况下取消对内存中指针的引用，这种情况可能发生数十亿次！'
 - en: '**Influence these resources maliciously**: It wouldn''t help much if a process
     doesn''t exclusively access its resources in the context in which an attack cannot
     augment or maliciously modify the resources. For instance, if a process accesses
     shared memory or a file that an attacker only has read access to—unless of course
     this causes the vulnerable process to crash, given the semantic priority of the
     process; for example, an anti-virus program, IDS, or firewall.'
+  id: totrans-216
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**恶意影响这些资源**: 如果进程在攻击无法增加或恶意修改资源的环境中不独占地访问其资源，那么这样做不会有太大帮助。例如，如果一个进程访问攻击者只能读取的共享内存或文件，除非这会导致易受攻击的进程崩溃，考虑到进程的语义优先级；例如，防病毒程序、入侵检测系统或防火墙。'
 - en: '**Time of use / time of check window size** (**TOU/TOC**): This is essentially
     the time difference, or more effectively the likelihood of scheduler interrupts,
     between the time an application checks for access to a resource and actually accesses
     the resource. The exploitability of a race condition depends heavily on this time
     difference because exploits will essentially race for access in this time frame
     in order to maliciously affect the resource.'
+  id: totrans-217
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**使用时/检查时窗口大小** (**TOU/TOC**): 这本质上是应用程序检查资源访问权限和实际访问资源之间的时间差，或者更确切地说，是调度器中断的可能性。竞态条件的可利用性很大程度上取决于这个时间差，因为利用行为本质上是在这个时间框架内争夺访问权限，以恶意影响资源。'
 - en: Taking these conditions into account, let's look at some constructed examples
     of race condition vulnerabilities and how to exploit them on Android.
+  id: totrans-218
   prefs: []
   type: TYPE_NORMAL
+  zh: 考虑到这些条件，让我们看看一些构建的竞态条件漏洞示例以及如何在Android上利用它们。
 - en: Getting ready
+  id: totrans-219
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Before we start exploiting race conditions, we need to prepare an example.
     Here''s how you do that:'
+  id: totrans-220
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们开始利用竞态条件之前，我们需要准备一个示例。以下是操作方法：
 - en: 'We''re going to prepare to an embedded ARM Android platform—the Jelly Bean
     emulator in this example—that causes race condition vulnerability. The following
     code details the behavior of a vulnerable process:'
+  id: totrans-221
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们将准备一个嵌入式ARM Android平台——在此示例中为Jelly Bean模拟器——这可能会导致竞态条件漏洞。以下代码详细描述了一个易受攻击进程的行为：
 - en: '[PRE21]'
+  id: totrans-222
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: Compile this by following the same process as detailed in the *Cross-compiling
     native executables* recipe and deploy it to your Android device. Try deploying
     it to a partition or folder that's been mounted as executable and readable by
@@ -1048,95 +1475,133 @@
     permissions, as in other recipes. Please note this may cause the NDK to throw
     out a couple of warnings, but as long as everything compiles to an executable,
     you're good to go!
+  id: totrans-223
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 按照在*交叉编译本地可执行文件*一节中详细描述的相同过程编译此文件，并将其部署到您的安卓设备上。尝试将其部署到作为可执行文件和任何安卓系统用户可读的分区或文件夹中（如何操作请参考[第1章](part0014_split_000.html#page
+    "第1章. 安卓开发工具")，*安卓开发工具*中的*复制文件到/从AVD中*一节）。在本节中，我们使用作为`/system`的已挂载分区，该分区在其他菜谱中以读写权限重新挂载。请注意，这可能会导致NDK发出一些警告，但只要一切编译成可执行文件，就可以继续操作！
 - en: You'll also need to put the `commands.txt` file in the directory mentioned in
     the code, namely `/data/race-condition/command.txt`. This requires making a race
     condition folder in the `/data` path. A good example of how to do this can be
     found in the *Inspecting network traffic* recipe in [Chapter 4](part0045_split_000.html#page
     "Chapter 4. Exploiting Applications"), *Exploiting Applications*, since we needed
     to create a similar setup for `TCPdump`.
+  id: totrans-224
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 您还需要将`commands.txt`文件放在代码中提到的目录中，即`/data/race-condition/command.txt`。这需要在`/data`路径中创建一个竞争条件文件夹。关于如何做到这一点的良好示例可以在[第4章](part0045_split_000.html#page
+    "第4章. 利用应用程序")，*利用应用程序*中的*检查网络流量*一节中找到，因为我们需要为`TCPdump`创建类似的设置。
 - en: 'You will need to set the `setuid` permission for this executable on the Android
     device; you can do this by executing the following command after deploying it
     to the device:'
+  id: totrans-225
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 您需要在安卓设备上为这个可执行文件设置`setuid`权限；您可以在将其部署到设备后执行以下命令来完成此操作：
 - en: '[PRE22]'
+  id: totrans-226
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: This command also makes sure any user on the system has execute permissions.
     Please be aware that you will need root permissions to perform this command. We
     are simulating the effect of a `setuid` binary and how it can cause arbitrary
     code execution.
+  id: totrans-227
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这个命令还确保系统上的任何用户都有执行权限。请注意，您需要root权限才能执行此命令。我们正在模拟`setuid`二进制文件的效果以及它可能导致的任意代码执行。
 - en: We have everything set up for exploitation; we can move onto detailing this
     exploitation now.
+  id: totrans-228
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们已经为利用做好了一切设置；现在可以详细说明这种利用方法了。
 - en: How to do it...
+  id: totrans-229
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To exploit the vulnerable binary, you will need to do the following:'
+  id: totrans-230
   prefs: []
   type: TYPE_NORMAL
+  zh: 要利用这个有漏洞的二进制文件，您需要执行以下操作：
 - en: Run the ADB shell into the Android device; if you're using an emulator or a
     rooted device, you should be able to use `su` to assume another application's
     access rights.
+  id: totrans-231
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 运行ADB shell进入安卓设备；如果您使用的是模拟器或已获得root权限的设备，您应该可以使用`su`来获取另一个应用程序的访问权限。
 - en: 'Try accessing some root-owned folders and files that don''t have execute, read,
     or write permission set for your user. Here I''ve chosen user `10170` as an example,
     and you should see the `Permission denied` messages being thrown around when you
     try to access the `/cache/` directory:'
+  id: totrans-232
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 尝试访问一些对您的用户没有设置执行、读取或写入权限的root拥有的文件夹和文件。这里我选择用户`10170`作为示例，当您尝试访问`/cache/`目录时，您应该会看到抛出的`Permission
+    denied`消息：
 - en: '![How to do it...](img/00174.jpeg)'
+  id: totrans-233
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00174.jpeg)'
 - en: 'Let''s exploit the `race-condition` binary. We do this by augmenting the `commands.txt`
     file with another command, namely `/system/bin/sh`, which will open a shell for
     us. You can do this by executing the following command:'
+  id: totrans-234
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让我们利用`race-condition`二进制文件。我们通过在`commands.txt`文件中添加另一个命令来实现，即`/system/bin/sh`，这将为我们打开一个shell。您可以通过执行以下命令来完成此操作：
 - en: '[PRE23]'
+  id: totrans-235
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: The `/system/bin/sh` command should now be the last entry in the `commands.txt`
     file, this means, if we hope to select it from the menu we need to choose option
     5.
+  id: totrans-236
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`/system/bin/sh`命令现在应该是`commands.txt`文件中的最后一个条目，这意味着，如果我们希望通过菜单选择它，需要选择选项5。'
 - en: '![How to do it...](img/00175.jpeg)'
+  id: totrans-237
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00175.jpeg)'
 - en: Execute `race-condition` on the Android device and supply `5` as an option.
     The vulnerable binary would then execute the `sh` command and give you root permissions.
+  id: totrans-238
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在安卓设备上执行`race-condition`，并输入`5`作为选项。有漏洞的二进制文件将执行`sh`命令，并赋予您root权限。
 - en: Test your root access by trying to change the directory to `/cache`. If you're
     running a Jelly Bean or later version of Android, you should not see any `Permission
     denial` messages, which means you've just escalated your privileges to root!![How
     to do it...](img/00176.jpeg)
+  id: totrans-239
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过尝试将目录更改为`/cache`来测试你的root访问权限。如果你运行的是Jelly Bean或更高版本的Android，你不应该看到任何`Permission
+    denial`消息，这意味着你刚刚将自己的权限提升到了root！！[如何操作...](img/00176.jpeg)
 - en: The preceding example is designed to detail the most basic concepts in race
     conditions, namely when an application accesses a file that any other process
     can augment and uses it to perform actions as the root user. There are more intricate
@@ -1147,32 +1612,46 @@
     but is incapable of determining the authenticity of the link target, which means
     the link can be redirected maliciously. For more modern examples of race condition
     vulnerabilities, check out the links in the *See also* section.
+  id: totrans-240
   prefs: []
   type: TYPE_NORMAL
+  zh: 前面的例子旨在详细说明竞态条件的基本概念，即当一个应用程序访问任何其他进程都可以修改的文件，并将其用于以root用户身份执行操作时。还有更复杂和微妙的情形会导致竞态条件，一个常见被利用的情况涉及到符号链接。这些漏洞源于应用程序无法区分文件和符号链接，这使得攻击者可以通过精心构造的符号链接来修改文件，或者当一个文件读取符号或硬链接但不能确定链接目标的真实性时，这意味着链接可以被恶意重定向。要了解关于竞态条件漏洞的更现代的例子，请查看*另请参阅*部分中的链接。
 - en: See also
+  id: totrans-241
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *Vulnerability Summary for CVE-2013-1727* article at [http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1727&cid=8](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1727&cid=8)
+  id: totrans-242
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[CVE-2013-1727漏洞概述](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1727&cid=8)一文'
 - en: The *Vulnerability Summary for CVE-2013-1731* article at [http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1731&cid=8](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1731&cid=8)
+  id: totrans-243
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[CVE-2013-1731漏洞概述](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1731&cid=8)一文'
 - en: The *Sprite Software Android Race Condition* article by *Justin Case* at [http://packetstormsecurity.com/files/122145/Sprite-Software-Android-Race-Condition.html](http://packetstormsecurity.com/files/122145/Sprite-Software-Android-Race-Condition.html)
+  id: totrans-244
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*Justin Case*撰写的[*Sprite Software Android竞态条件*](http://packetstormsecurity.com/files/122145/Sprite-Software-Android-Race-Condition.html)文章'
 - en: The *Race Condition Exploits* article by *Prabhaker Mateti* at [http://cecs.wright.edu/~pmateti/InternetSecurity/Lectures/RaceConditions/index.html](http://cecs.wright.edu/~pmateti/InternetSecurity/Lectures/RaceConditions/index.html)
+  id: totrans-245
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*Prabhaker Mateti*撰写的[*竞态条件利用*](http://cecs.wright.edu/~pmateti/InternetSecurity/Lectures/RaceConditions/index.html)文章'
 - en: Stack memory corruption exploitation
+  id: totrans-246
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 栈内存损坏利用
 - en: Stack memory exploitation may not be the most likely source of Android bugs
     and security vulnerabilities, though it is still possible for these kinds of memory
     corruption bugs to affect native Android executables even in the midst of protections
@@ -1182,216 +1661,299 @@
     great reason—besides its direct relevance to security research—to include a discussion
     and walkthrough on stack-based exploitation is because it provides a great gateway
     into more advanced exploitation techniques.
+  id: totrans-247
   prefs: []
   type: TYPE_NORMAL
+  zh: 栈内存利用可能不是Android错误和安全漏洞的最常见来源，尽管这类内存损坏错误仍然有可能影响到即使拥有ASLR、StackGuard和SE Linux等保护措施的原生Android可执行文件。此外，大部分Android市场份额由那些对栈和其他基于内存的利用没有强有力保护的设备组成，尤其是2.3.3版本的Gingerbread设备。除了与安全研究的直接相关性之外，包括基于栈的利用讨论和演练的另一个重要原因是它为更高级的利用技术提供了很好的入口。
 - en: In this section we will detail how to exploit a common stack-based memory corruption
     flaw to take control of the flow of execution.
+  id: totrans-248
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本节中，我们将详细说明如何利用常见的基于栈的内存损坏漏洞来控制执行流程。
 - en: Getting ready
+  id: totrans-249
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: 'Before we start, you''ll need to prepare a vulnerable executable; here''s how
     you do it:'
+  id: totrans-250
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始之前，你需要准备一个易受攻击的可执行文件；以下是操作方法：
 - en: Create a directory with the usual `jni` folder and the same naming convention
     as in the previous recipes. If you need a recap, see the *Cross-compiling native
     executables* recipe in this chapter.
+  id: totrans-251
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个包含通常的`jni`文件夹和与之前菜谱相同命名约定的目录。如果你需要回顾，请查看本章中的*跨编译本地可执行文件*的菜谱。
 - en: 'Write this code into a `.c` file in the `jni` folder:'
+  id: totrans-252
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹中写这段代码到一个`.c`文件中：
 - en: '[PRE24]'
+  id: totrans-253
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: This code is strikingly similar to the previous example. In fact you may even
     edit the previous example code, since it differs in only a few lines.
+  id: totrans-254
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这个代码与之前的例子惊人地相似。实际上，你可以编辑之前的示例代码，因为它只在几行代码上有所不同。
 - en: Compile the code using the `ndk-build` script as before.
+  id: totrans-255
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用之前的`ndk-build`脚本编译代码。
 - en: Deploy the code to an Android device or emulator; for the following example,
     I used an emulated Android 4.2.2 device.
+  id: totrans-256
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将代码部署到Android设备或模拟器上；在以下示例中，我使用了模拟的Android 4.2.2设备。
 - en: Once you've got your code all set up, you can move on to pushing the binary
     onto your emulator or device—if you're up for the challenge.
+  id: totrans-257
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你设置好代码后，可以继续将二进制文件推送到你的模拟器或设备上——如果你愿意接受挑战的话。
 - en: How to do it...
+  id: totrans-258
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'To exploit the stack-based buffer overflow, you could do the following:'
+  id: totrans-259
   prefs: []
   type: TYPE_NORMAL
+  zh: 要利用基于栈的缓冲区溢出，你可以执行以下操作：
 - en: Launch the application on your emulator a couple of times, each time giving
     it a bigger input until it fails to exit the execution gracefully and your Android
     system reports a segmentation fault.
+  id: totrans-260
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在你的模拟器上多次启动应用程序，每次都提供更大的输入，直到它无法正常退出执行，你的Android系统报告段错误。
 - en: 'Try to remember how many input characters you gave the application because
     you''ll need to give it the same number to trigger the crash using `gdbserver`.
     Here''s a screenshot of what a normal run of the executable looks like:'
+  id: totrans-261
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 尝试记住你给应用程序输入了多少个字符，因为你需要使用`gdbserver`给出相同的数量来触发崩溃。以下是可执行文件正常运行的截图：
 - en: '![How to do it...](img/00177.jpeg)'
+  id: totrans-262
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00177.jpeg)'
 - en: You should see the GDB output `exited normally`, indicating that the return
     code of the process was the same and nothing interrupted or forced it to stop.
+  id: totrans-263
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你应该看到GDB输出`exited normally`，这表明进程的返回码相同，没有中断或强制它停止。
 - en: 'Once too much input is given to the application, it exits with a segmentation
     fault, which looks like this in GDB:'
+  id: totrans-264
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 当输入过多时，应用程序会以段错误退出，这在GDB中看起来像这样：
 - en: '![How to do it...](img/00178.jpeg)'
+  id: totrans-265
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00178.jpeg)'
 - en: Launch the application in `gdbserver`, giving it an "unsafe" amount of input,
     namely an amount of input that will crash it. For our code that should be anything
     above 14 to 16 characters. In this example, I've entered around 16 characters
     to make sure I overwrite the correct portion of memory.
+  id: totrans-266
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`gdbserver`中启动应用程序，提供一个“不安全”的输入量，即会导致崩溃的输入量。对于我们的代码，这应该是超过14到16个字符的任何输入。在这个例子中，我输入了大约16个字符，以确保我覆盖了正确的内存部分。
 - en: Run `androideabi-gdb` and connect to the remote process. If you need a recap
     on how to do this, see the *Debugging the Android processes using the GDB server*
     recipe in [Chapter 6](part0066_split_000.html#page "Chapter 6. Reverse Engineering
     Applications"), *Reverse Engineering Applications*.
+  id: totrans-267
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 运行`androideabi-gdb`并连接到远程进程。如果你需要回顾如何进行这一步，请查看[第6章](part0066_split_000.html#page
+    "Chapter 6. Reverse Engineering Applications")中*使用GDB服务器调试Android进程*的菜谱，*逆向工程应用*。
 - en: Set a couple of breakpoints using GDB. Set a breakpoint just before `blx` to
     `strcpy` and another after, as in the following screenshot:![How to do it...](img/00179.jpeg)
+  id: totrans-268
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用GDB设置几个断点。在`blx`到`strcpy`之前设置一个断点，再在之后设置一个，如下截图所示：![如何操作...](img/00179.jpeg)
 - en: Tip
+  id: totrans-269
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: You set breakpoints using the `break` command or `b` as a shorthand, and giving
     it either an offset for a line of code or a pointer to an address that holds an
     instruction; hence the `*` character before the memory value.
+  id: totrans-270
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你可以使用`break`命令或简写为`b`来设置断点，并给出代码行的偏移量或指向持有指令的地址的指针；因此，在内存值前有`*`字符。
 - en: Once your breakpoints are set, re-run the application via `gdbsever` and reconnect
     to it using the Android GDB. Step through each breakpoint as explained later.
     All you need to do is type in `continue` in the GDB prompt, or `c` as shorthand.
     GDB will continue the execution of the program until a breakpoint is reached.
+  id: totrans-271
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 当你设置好断点后，通过`gdbsever`重新运行应用程序，并使用Android GDB重新连接。按照后面解释的内容，逐步执行每个断点。你需要在GDB提示符中输入`continue`，或者简写为`c`。GDB将继续执行程序，直到达到断点。
 - en: 'The first breakpoint you reach should be the one before the `strcpy` call;
     we set a breakpoint here so that you could see how the stack changes before and
     after the `strcpy` call. It''s crucial to understand this so you can work out
     how much data to give the application before you start overwriting the return
     addresses. This is shown in the following screenshot:'
+  id: totrans-272
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你应该首先到达的是`strcpy`调用之前的断点；我们在这里设置一个断点，以便你可以看到`strcpy`调用前后堆栈的变化。理解这一点至关重要，这样你才能在开始覆盖返回地址之前计算出要给应用程序多少数据。以下屏幕截图显示了这一点：
 - en: '![How to do it...](img/00180.jpeg)'
+  id: totrans-273
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00180.jpeg)'
 - en: This is a snapshot of the stack for the `vulnerable` function before the call
     to `strcpy`; nothing much has happened yet except that some space has been prepared
     for the local variables. Once the first breakpoint is reached, you should inspect
     the stack by printing some of its memory contents.
+  id: totrans-274
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这是`vulnerable`函数在调用`strcpy`之前堆栈的快照；除了为局部变量准备了一些空间外，还没有发生太多事情。一旦到达第一个断点，你应该通过打印一些内存内容来检查堆栈。
 - en: 'In the following example, this is shown by executing this `x` command in GDB:'
+  id: totrans-275
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在以下示例中，通过在GDB中执行这个`x`命令来展示：
 - en: '[PRE25]'
+  id: totrans-276
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'This command tells GDB to print 32 hexadecimal words from the memory address
     contained in the `sp` (Stack Pointer) register; here''s what you should see:'
+  id: totrans-277
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这个命令告诉GDB打印出`sp`（堆栈指针）寄存器中包含的内存地址的32个十六进制字；以下是您应该看到的内容：
 - en: '![How to do it...](img/00181.jpeg)'
+  id: totrans-278
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作...](img/00181.jpeg)'
 - en: 'You''ll notice that a couple of values are highlighted; these values were passed
     to the stack by an instruction in the function prologue, which is the following
     instruction:'
+  id: totrans-279
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你会注意到有几个值被突出显示；这些值是由函数序言中的指令传递到堆栈的，该指令如下：
 - en: '[PRE26]'
+  id: totrans-280
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: Tip
+  id: totrans-281
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The `push` instruction—as used in the previous command—makes sure the register
     values of the calling function are preserved. This instruction helps ensure that
     when the function executing returns control back to the function that called it,
     the stack is returned to its original state.
+  id: totrans-282
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 之前命令中使用的`push`指令确保了调用函数的寄存器值被保留。这条指令有助于确保当执行的函数将控制权返回给调用它的函数时，堆栈能恢复到原始状态。
 - en: One of the values used in the `push` instruction is `lr` or link register. The
     link register usually holds the return address of the current function. Here,
     the `lr` register holds the value `0x000084f5`. We are going to try to overwrite
     it with one of our own later; and in a few minutes, you should see how our input
     has changed this value, so try to remember it for the time being.
+  id: totrans-283
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`push`指令中使用的值之一是`lr`或链接寄存器。链接寄存器通常保存当前函数的返回地址。在这里，`lr`寄存器保存的值是`0x000084f5`。我们稍后会尝试用我们自己的值覆盖它；几分钟内，你应该能看到我们的输入是如何改变这个值的，所以暂时请记住它。'
 - en: 'You want to do this because of an instruction further down in the `vulnerable`
     function, namely the following:'
+  id: totrans-284
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 你想要这么做是因为在`vulnerable`函数中更下面的指令，具体如下：
 - en: '[PRE27]'
+  id: totrans-285
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: This instruction moves the saved `lr` value straight into the program counter
     register; which causes execution to continue at the address saved in the `lr`
     register. If we can overwrite the saved `lr` value, we can effectively control
     where the execution is branched at the end for the `vulnerable` function. The
     next step covers how to calculate exactly and what to enter into the program in
     order to make sure you control the execution as mentioned.
+  id: totrans-286
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这条指令将保存的`lr`值直接移动到程序计数器寄存器中；这导致执行在保存在`lr`寄存器中的地址继续。如果我们能覆盖保存的`lr`值，我们实际上可以在`vulnerable`函数末尾控制执行分支的位置。下一步将介绍如何精确计算以及输入程序中的内容，以确保你如前所述控制执行。
 - en: Continue to the next breakpoint. Once GDB hits this breakpoint, `strcpy` should
     have written your input to the stack. Inspecting the stack at this point should
     yield the following output:![How to do it...](img/00182.jpeg)
+  id: totrans-287
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 继续到下一个断点。一旦GDB达到这个断点，`strcpy`应该已经将你的输入写入堆栈。此时检查堆栈应该得到以下输出：![如何操作...](img/00182.jpeg)
 - en: 'You should notice that the value `0x000084f5` changed to `0x00008400`; they''re
     quite similar because when `strcpy` wrote our input into the buffer, it partly
     overwrote the saved `lr` value with the `NULL` byte that follows our string; this
@@ -1400,64 +1962,78 @@
     overwrite the 2 bytes of return address, we need to add 2 bytes of input—accommodating
     the `NULL` byte—with the last 4 bytes being the new return address. Here''s how
     it works:'
+  id: totrans-288
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'Before the `strcpy` call, the stack had this structure:'
+  id: totrans-289
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '| Uninteresting stack contents | Input Buffer field | Saved lr value |'
+  id: totrans-290
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| --- | --- | --- |'
+  id: totrans-291
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| 0xbee6fc75 | 0xbee6fb44 | 0xbee6fb50 | 0x00000000 | 0x000084ed | 0x00000
     | 0x84 | 0xF5 |'
+  id: totrans-292
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: 'After the `strcpy` call with the 16 bytes of input, the stack had the following
     structure:'
+  id: totrans-293
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '| Uninteresting stack contents | Input Buffer field | Saved lr value |'
+  id: totrans-294
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| --- | --- | --- |'
+  id: totrans-295
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| …0xbee6fc75 | 16 chars | 0x00000 | 0x84 | 0x00 |'
+  id: totrans-296
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: 'The bold `0x00` value is the `NULL` byte from our input; based on this we would
     want to input 16 chars plus 2 chars for the new return address, which would look
     like this:'
+  id: totrans-297
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '| Uninteresting stack contents | Input Buffer field | Saved lr value |'
+  id: totrans-298
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| --- | --- | --- |'
+  id: totrans-299
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| …0xbee6fc75 | [16 chars] | 0x00000 | 0x?? | 0x?? |'
+  id: totrans-300
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: Here, the `0x??` characters indicate the extra input chars we give the `strcpy`
     call to overwrite the return address; again we see the `0x00` character after
     the extra input chars.
+  id: totrans-301
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1466,48 +2042,61 @@
     way to check if you''ve successfully redirected execution. Here''s how you can
     grab an example address to redirect execution flow to. Disassemble the main section
     by executing the following command in the GDB shell:'
+  id: totrans-302
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE28]'
+  id: totrans-303
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'This will yield the following output:'
+  id: totrans-304
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE29]'
+  id: totrans-305
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'The `blx` instruction at `0x000084f8` is clearly the call to `printf` so, if
     we want to skip over it, we would need to grab the address of the instruction
     just following it, which is `0x000084fc`. More specifically, we would give the
     following as input to our program:'
+  id: totrans-306
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '`[16 padding chars] \xfc\x84`'
+  id: totrans-307
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: The bytes that specify the return address are given in reverse order because
     of the endianness of the architecture.
+  id: totrans-308
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'Relaunch the application using the GDB server, this time giving it the following
     input:'
+  id: totrans-309
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE30]'
+  id: totrans-310
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: If all goes well, you should not see the application print the `"you lose"`
     message and just exit instead.
+  id: totrans-311
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1518,37 +2107,45 @@
     also* section. For good sources on general memory corruption attacks, see the
     *Memory Corruption Attacks, The (almost) Complete History* as well as the *Smashing
     the Stack for fun and Profit* links in the *See also* section.
+  id: totrans-312
   prefs: []
   type: TYPE_NORMAL
 - en: See also
+  id: totrans-313
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: '*A short Guide on ARM Exploitation* at [http://www.exploit-db.com/wp-content/themes/exploit/docs/24493.pdf](http://www.exploit-db.com/wp-content/themes/exploit/docs/24493.pdf)'
+  id: totrans-314
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Smashing the Stack for fun and Profit* article by *Aleph One* at [http://www.phrack.org/issues.html?issue=49&id=14#article](http://www.phrack.org/issues.html?issue=49&id=14#article)
+  id: totrans-315
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Memory Corruption Attacks, The (almost) Complete History* guide, Thinkst
     Security 2010, by *Haroon Meer*, at [http://thinkst.com/stuff/bh10/BlackHat-USA-2010-Meer-History-of-Memory-Corruption-Attacks-wp.pdf](http://thinkst.com/stuff/bh10/BlackHat-USA-2010-Meer-History-of-Memory-Corruption-Attacks-wp.pdf)
+  id: totrans-316
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Return-Oriented Programming without Returns* guide by *Stephen Checkoway*,
     *Lucas Davi*, *Alexandra Dmitrienko*, *Ahmad-Reza Sadeghi*, *Hovav Shacham*, and
     *Marcel Winandy* at [http://cseweb.ucsd.edu/~hovav/dist/noret-ccs.pdf](http://cseweb.ucsd.edu/~hovav/dist/noret-ccs.pdf)
+  id: totrans-317
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Return-Oriented Programming without Returns on ARM* guide by *Lucas Davi*,
     *Alexandra Dmitrienko*, *Ahmad-Reza Sadeghi*, and *Marcel Winandy* at [http://www.informatik.tu-darmstadt.de/fileadmin/user_upload/Group_TRUST/PubsPDF/ROP-without-Returns-on-ARM.pdf](http://www.informatik.tu-darmstadt.de/fileadmin/user_upload/Group_TRUST/PubsPDF/ROP-without-Returns-on-ARM.pdf)
+  id: totrans-318
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Automated native Android fuzzing
+  id: totrans-319
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -1557,6 +2154,7 @@
     against malformed and possibly malicious input, and helps determine whether there
     are any easily exploitable entry points on a system. It's also a great way to
     automate security testing.
+  id: totrans-320
   prefs: []
   type: TYPE_NORMAL
 - en: Android is no different from any other system and has a myriad of interesting
@@ -1565,131 +2163,163 @@
     or system utility that doesn't properly handle any given input or respond in a
     secure way to certain situations. Fuzzing is a great way to find these situations
     and possible root exploits on an Android device.
+  id: totrans-321
   prefs: []
   type: TYPE_NORMAL
 - en: What I'm going to cover here is how to port a fuzz test generator called **Radamsa**
     to the Android platform, and also install some utilities that will help you to
     script some robust fuzzing scripts that use Radamsa.
+  id: totrans-322
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-323
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'Before we can start porting, you will need to grab a copy of the Radamsa fuzzer;
     here''s how you do that:'
+  id: totrans-324
   prefs: []
   type: TYPE_NORMAL
 - en: 'Make sure you have either **CURL** or **Wget** installed on your Linux machines.
     Wget will work fine, but sticking to the recommendation on the Radamsa site, you
     can install the prerequisites by executing the following command from your Ubuntu
     machines:'
+  id: totrans-325
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE31]'
+  id: totrans-326
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Running this command should produce an output similar to the following screenshot:'
+  id: totrans-327
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![Getting ready](img/00183.jpeg)'
+  id: totrans-328
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'Once they''ve been downloaded, you can grab your copy of the Radamsa source
     code as follows:'
+  id: totrans-329
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE32]'
+  id: totrans-330
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'Running this command should produce an output similar to the following screenshot:'
+  id: totrans-331
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![Getting ready](img/00184.jpeg)'
+  id: totrans-332
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'You should then extract the Radamsa source by executing this command:'
+  id: totrans-333
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE33]'
+  id: totrans-334
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'If you''ve executed this command correctly, your output should be similar to
     the following screenshot:'
+  id: totrans-335
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![Getting ready](img/00185.jpeg)'
+  id: totrans-336
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'Your directory should look something like the following when you''re done:'
+  id: totrans-337
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![Getting ready](img/00186.jpeg)'
+  id: totrans-338
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: Everything is set up now; we can begin setting up the `jni` directory structure
     and compiling Radamsa for Android.
+  id: totrans-339
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: How to do it...
+  id: totrans-340
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'To cross-compile Radamsa for Android, you should do the following:'
+  id: totrans-341
   prefs: []
   type: TYPE_NORMAL
 - en: You should have a directory called `radamsa-0.3` after unpacking the Radamsa
     source inside this directory; you should create a directory called `jni`, just
     as we've done in the *Cross-compiling native executables* recipe.
+  id: totrans-342
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Make a copy of the `Android.mk` file you used for the buffer overflow recipe
     and stick it inside the `jni` directory; your directory should look similar to
     the following screenshot:![How to do it...](img/00187.jpeg)
+  id: totrans-343
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Copy the `radamsa.c` file, which contains the Radamsa source, into the `jni`
     directory as in the following screenshot:![How to do it...](img/00188.jpeg)
+  id: totrans-344
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Grab a copy of the `Android.mk` file and stick it inside the `jni` folder.
+  id: totrans-345
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'Copying your `Android.mk` file should be similar to the demonstration shown
     in the following screenshot:'
+  id: totrans-346
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00189.jpeg)'
+  id: totrans-347
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: Edit the `Android.mk` file you copied in the previous step so that it looks
     like the following:![How to do it...](img/00190.jpeg)
+  id: totrans-348
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Once you're done setting up the `Android.mk` file, you can execute the `ndk-build`
     command; you should get the following output:![How to do it...](img/00191.jpeg)
+  id: totrans-349
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
@@ -1697,84 +2327,103 @@
     the error. It is, in actual fact, one issue cascading through the rest of the
     code, namely `typedef`, which aliases an unsigned long into something called `in_addr_t`;
     in the next step, we will fix this issue to get Radamsa compiled successfully.
+  id: totrans-350
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: Open the `radamsa.c` file in your favorite code editor—preferably one that displays
     line numbers. Scroll down to line number `3222`; you should see the following
     code if you're using the vim text editor:![How to do it...](img/00192.jpeg)
+  id: totrans-351
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: In line `3222` of the `radamsa.c` code, replace the `in_addr_t` type name to
     an unsigned long. The code should look something like this when you've changed
     it correctly:![How to do it...](img/00193.jpeg)
+  id: totrans-352
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: You should also remove the `typedef` command in line `2686`; before editing
     the line, it should look like the following:![How to do it...](img/00194.jpeg)
+  id: totrans-353
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'After commenting it out, it should look something like the following:'
+  id: totrans-354
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00195.jpeg)'
+  id: totrans-355
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: After you're done editing the `radamsa.c` source so it pleases the NDK GCC compiler,
     you can run the `ndk-build` script. If you've done everything correctly, your
     output should look something like this:![How to do it...](img/00196.jpeg)
+  id: totrans-356
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: After successfully building the executable you can then push it to an Android
     emulator as follows—assuming you have one set up already, and you've remounted
     the system partition as writeable:![How to do it...](img/00197.jpeg)
+  id: totrans-357
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'Once you''ve pushed the Radamsa executable, you can test it by executing this
     command on your Android emulator:'
+  id: totrans-358
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE34]'
+  id: totrans-359
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'This should generate the following output:'
+  id: totrans-360
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00198.jpeg)'
+  id: totrans-361
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'You can run Radamsa on some test input to make sure everything is working fine.
     As an example, see how Radamsa was run using the following command to make sure
     everything was sane and in working condition:'
+  id: totrans-362
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE35]'
+  id: totrans-363
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Running this command should produce an output similar to the following screenshot:'
+  id: totrans-364
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it...](img/00199.jpeg)'
+  id: totrans-365
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: And that's it! Radamsa is up and running on Android. The next section talks
     about setting up a simple fuzzing script and pointing it at dexdump to try and
     generate some crashes and hopefully find some exploitable vulnerabilities.
+  id: totrans-366
   prefs: []
   type: TYPE_NORMAL
 - en: If you're going to be doing some fuzzing, you will eventually need to do some
@@ -1782,96 +2431,119 @@
     data that causes interesting behavior. Unfortunately, Android platforms don't
     come packaged with all the utilities that make bash scripting powerful; they don't
     even come with a bash shell application, mostly because it's not needed.
+  id: totrans-367
   prefs: []
   type: TYPE_NORMAL
 - en: We could use the `sh` shell do to our scripting, but bash is a little more powerful
     and robust and generally most people are more accustomed to bash scripting. Because
     of this, the following section of this recipe explains how to get Busybox running
     on an Android platform.
+  id: totrans-368
   prefs: []
   type: TYPE_NORMAL
 - en: Setting up Busybox
+  id: totrans-369
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
 - en: 'To get Busybox utilities (a package of useful terminal applications) on Android,
     you need to do the following:'
+  id: totrans-370
   prefs: []
   type: TYPE_NORMAL
 - en: Grab a copy of the Android port from [http://benno.id.au/Android/busybox](http://benno.id.au/Android/busybox);
     in the example, we used `wget` to do this:![Setting up Busybox](img/00200.jpeg)
+  id: totrans-371
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: What you need to do then is prepare a `busybox` directory on your Android emulator—assuming
     you have one already set up and ready to go.
+  id: totrans-372
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: For this example, the `busybox` directory was made in the `/data/` folder; since
     it's writable and executable, any folder on a partition mounted with write, read,
     and execute permissions should work well.
+  id: totrans-373
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![Setting up Busybox](img/00201.jpeg)'
+  id: totrans-374
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'Once you''ve made a dedicated directory for Busybox, you can push it to the
     emulator using this command:'
+  id: totrans-375
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE36]'
+  id: totrans-376
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'You should be doing something similar to the following screenshot:'
+  id: totrans-377
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![Setting up Busybox](img/00202.jpeg)'
+  id: totrans-378
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'Once you''ve pushed a copy of the `busybox` binary to your emulator, you can
     install the binaries by executing the following command on your emulator:'
+  id: totrans-379
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE37]'
+  id: totrans-380
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'Here''s an example from a Samsung Galaxy S3 smartphone:'
+  id: totrans-381
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![Setting up Busybox](img/00203.jpeg)'
+  id: totrans-382
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'After executing this command, your `busybox` folder should look something like
     the following:'
+  id: totrans-383
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![Setting up Busybox](img/00204.jpeg)'
+  id: totrans-384
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: Fuzzing dexdump
+  id: totrans-385
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
 - en: Now that you've got your test case generator up and running and the Busybox
     utilities installed, you can start generating some crashes!
+  id: totrans-386
   prefs: []
   type: TYPE_NORMAL
 - en: 'In this example, we will see how to set up a simple script to do some "dumb"
     fuzz testing against dexdump, a utility that dissects an Android DEX file and
     prints its contents:'
+  id: totrans-387
   prefs: []
   type: TYPE_NORMAL
 - en: Before we start, you will need a sample DEX file; you can either get one by
@@ -1880,6 +2552,7 @@
     you'd like to generate this file, see the *Compiling from Java to DEX* recipe
     in [Chapter 6](part0066_split_000.html#page "Chapter 6. Reverse Engineering Applications"),
     *Reverse Engineering Applications*.
+  id: totrans-388
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
@@ -1888,30 +2561,39 @@
     them and copy the interesting ones should they cause any crashes; the `/data/`
     directory once again is a great place to do this, though it would be good to consider
     emulating an SD card and saving your data there.
+  id: totrans-389
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'Inside your fuzzing directory—the one created in the previous step—create a
     bash script that contains the following code:'
+  id: totrans-390
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE38]'
+  id: totrans-391
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'Run the script in bash by executing the following command on your emulator:'
+  id: totrans-392
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE39]'
+  id: totrans-393
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: And now you're fuzzing!
+  id: totrans-394
   prefs: []
   type: TYPE_NORMAL
 - en: How it works...
+  id: totrans-395
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -1920,17 +2602,22 @@
     did is already explained in the *Cross-compiling native executables* recipe. Things
     get interesting when the NDK build script fails to compile Radamsa because of
     a type definition; here''s what it looked like:'
+  id: totrans-396
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE40]'
+  id: totrans-397
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: This causes the build script to fail because the GCC compiler used by the NDK
     build script—namely one that was built to support the ARM Application Binary Interface—failed
     to recognize the effect of the type definition.
+  id: totrans-398
   prefs: []
   type: TYPE_NORMAL
 - en: Tip
+  id: totrans-399
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
@@ -1939,71 +2626,90 @@
     was resolved by removing the need for `typedef` by replacing the mentioning of
     the `in_addr_t` alias with the full variable type of unsigned long and commenting
     out the `typedef` statement.
+  id: totrans-400
   prefs: []
   type: TYPE_NORMAL
 - en: Once this issue was resolved, Radamsa could compile successfully and be deployed
     to an Android device.
+  id: totrans-401
   prefs: []
   type: TYPE_NORMAL
 - en: Then we wrote a makeshift fuzzing script to the target dexdump. To make sure
     you guys understand exactly what you're doing in this recipe, it's important we
     detail what the bash script does.
+  id: totrans-402
   prefs: []
   type: TYPE_NORMAL
 - en: The first few instructions make sure we have some useful mnemonics to help us
     refer to the arguments passed to the script. These instructions—appearing after
     the `#!/bin/bash` instruction—simply assign values to some variable names.
+  id: totrans-403
   prefs: []
   type: TYPE_NORMAL
 - en: After assigning these values, the script steps into a `for` loop with a sentinel
     value—the value that limits the number of times the `for` loop iterates—which
     will cause the script to iterate forever unless explicitly stopped by the user
     or the operating system.
+  id: totrans-404
   prefs: []
   type: TYPE_NORMAL
 - en: 'Inside the for loop, we see the following line:'
+  id: totrans-405
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE41]'
+  id: totrans-406
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: All this does is grab the file pointed to by the `ROOT` variable and feeds it
     to Radamsa. Radamsa then applies some randomized transformations to the file.
+  id: totrans-407
   prefs: []
   type: TYPE_NORMAL
 - en: After making the requested random transformations to the DEX file, Radamsa redirects
     the output to a file called `fuzz.dex`, which is the "fuzzed" version of the sample
     DEX file.
+  id: totrans-408
   prefs: []
   type: TYPE_NORMAL
 - en: 'Then dexdump is invoked with the fuzzed DEX file as an argument; here''s what
     it looks like:'
+  id: totrans-409
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE42]'
+  id: totrans-410
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: And all output is redirected to `/dev/null`, since we probably won't be interested
     in it. This line of code also redirects all the output from `STDIN` (the standard
     output file) to the `STDERR` file (the standard error output file). This allows
     all the output generated by the program—any that would likely clutter the screen—to
     be redirected to `/dev/null`.
+  id: totrans-411
   prefs: []
   type: TYPE_NORMAL
 - en: 'The next instruction looks like this:'
+  id: totrans-412
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE43]'
+  id: totrans-413
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: This records the exit code of whatever the last command was; in this case, it
     was `dexdump`.
+  id: totrans-414
   prefs: []
   type: TYPE_NORMAL
 - en: The script does this because it will reveal information about how `dexdump`
     exited. If `dexdump` exited execution normally, the return code will be `0`; should
     anything have happened that caused dexdump to exit or halt abnormally—say, like
     a fault due to corrupted input—the exit code will be nonzero.
+  id: totrans-415
   prefs: []
   type: TYPE_NORMAL
 - en: And even more interestingly, if the fault required the operating system to halt
@@ -2015,47 +2721,59 @@
     return codes higher than 127\. For more detail on how exit codes or rather exit
     statuses work, see the *Work the Shell - Understanding Exit Codes* link in the
     *See also* section.
+  id: totrans-416
   prefs: []
   type: TYPE_NORMAL
 - en: 'Moving on, the rest of the code looks like this:'
+  id: totrans-417
   prefs: []
   type: TYPE_NORMAL
 - en: '[PRE44]'
+  id: totrans-418
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: The first instruction of this portion of the code simply helps us keep track
     of which iteration the script is currently executing—by printing the `$c` value.
     It also prints out the return code of the previous run of dexdump and how many
     notable halts have occurred.
+  id: totrans-419
   prefs: []
   type: TYPE_NORMAL
 - en: After printing out the mentioned "status indicators", the script compares the
     value saved in the `RET_CODE` variable's value to `127`; if this value is greater,
     it makes a copy of the sample input that caused this error and increments the
     `WINS` variable by `1` to reflect that another notable error was generated.
+  id: totrans-420
   prefs: []
   type: TYPE_NORMAL
 - en: See also
+  id: totrans-421
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: The *Work the Shell – Understanding Exit Codes* Linux journal at [http://www.linuxjournal.com/article/10844](http://www.linuxjournal.com/article/10844)
+  id: totrans-422
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Radamsa* Google Code at [http://code.google.com/p/ouspg/wiki/Radamsa](http://code.google.com/p/ouspg/wiki/Radamsa)
+  id: totrans-423
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Blab* Google Code at [http://code.google.com/p/ouspg/wiki/Blab](http://code.google.com/p/ouspg/wiki/Blab)
+  id: totrans-424
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Options for Code Generation Conventions* web page at [http://gcc.gnu.org/onlinedocs/gcc/Code-Gen-Options.html](http://gcc.gnu.org/onlinedocs/gcc/Code-Gen-Options.html)
+  id: totrans-425
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: The *Fuzzing with Radamsa and some thoughts about coverage* file at [http://www.cs.tut.fi/tapahtumat/testaus12/kalvot/Wieser_20120606radamsa-coverage.pdf](http://www.cs.tut.fi/tapahtumat/testaus12/kalvot/Wieser_20120606radamsa-coverage.pdf)
+  id: totrans-426
   prefs:
   - PREF_UL
   type: TYPE_NORMAL

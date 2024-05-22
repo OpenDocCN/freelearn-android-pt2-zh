@@ -1,26 +1,38 @@
 - en: Chapter 7. Secure Networking
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第7章. 安全网络
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Validating self-signed SSL certificates
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 验证自签名SSL证书
 - en: Using StrongTrustManager from the OnionKit library
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用OnionKit库中的StrongTrustManager
 - en: SSL pinning
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: SSL固定证书验证
 - en: Introduction
+  id: totrans-5
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: '**Secure Sockets Layer** (**SSL**) is one of the core parts of encrypted communications
     between a client and a server. Its primary deployment has been for web browsers
     to encrypt messages and ascertain a level of trust with a third-party service
@@ -30,8 +42,10 @@
     instances where this validation has been skipped by app developers. This was highlighted
     by the paper, *Why Eve and Mallory Love Android: An Analysis of Android SSL (In)Security*
     ([http://www2.dcsec.uni-hannover.de/files/android/p50-fahl.pdf](http://www2.dcsec.uni-hannover.de/files/android/p50-fahl.pdf)).'
+  id: totrans-6
   prefs: []
   type: TYPE_NORMAL
+  zh: '**安全套接层**（**SSL**）是客户端和服务器之间加密通信的核心部分之一。其主要部署是用在网页浏览器上，以加密消息并确保与第三方服务在进行在线交易（如购买DVD或网上银行）时的信任级别。与网页浏览器不同，安卓应用左上角没有挂锁图标，无法提供视觉提示表明连接是安全的。不幸的是，已经有应用开发者跳过了这一验证的情况。这一点在论文《为什么Eve和Mallory喜欢安卓：安卓SSL（不）安全性分析》([http://www2.dcsec.uni-hannover.de/files/android/p50-fahl.pdf](http://www2.dcsec.uni-hannover.de/files/android/p50-fahl.pdf))中被强调。'
 - en: In this chapter, we are going to look at some of the common pitfalls of using
     SSL on Android, specifically relating to self-signed certifications. The main
     focus is how to make SSL stronger to help guard against some of the vulnerabilities
@@ -39,62 +53,84 @@
     Therefore why not take advantage of additional capabilities compared with web
     browsers by performing extra validation and imposing restrictions of the certificates
     and certificate roots we trust.
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将探讨在安卓上使用SSL的一些常见陷阱，特别是与自签名证书相关的问题。主要焦点是如何使SSL更强大，以帮助防御前一章提到的某些漏洞。毕竟，安卓应用实际上是胖客户端。因此，为什么不利用与网页浏览器相比的额外能力，执行额外的验证，并对我们信任的证书和证书根施加限制。
 - en: Although, out of the scope of this book, the web server's configuration is a
     big factor in effective network security. Common vectors that an app can do little
     about are including a SSL strip, session hijacking, and cross-site request forgery.
     However, these can be mitigated with robust server configuration. To aid in this,
     the SSL labs recently released a best practice document, which is available at
     [https://www.ssllabs.com/downloads/SSL_TLS_Deployment_Best_Practices_1.3.pdf](https://www.ssllabs.com/downloads/SSL_TLS_Deployment_Best_Practices_1.3.pdf).
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管这超出了本书的范围，但网络服务器的配置对有效的网络安全是一个重要因素。应用程序能做得很少的常见攻击方式包括SSL剥离、会话劫持和跨站请求伪造。然而，这些风险可以通过健壮的服务器配置来缓解。为了帮助这一点，SSL实验室最近发布了一份最佳实践文档，可在[https://www.ssllabs.com/downloads/SSL_TLS_Deployment_Best_Practices_1.3.pdf](https://www.ssllabs.com/downloads/SSL_TLS_Deployment_Best_Practices_1.3.pdf)获取。
 - en: Validating self-signed SSL certificates
+  id: totrans-9
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 验证自签名SSL证书
 - en: 'Android supports the use of SSL with standard Android API components, such
     as `HTTPClient` and `URLConnection`. However, if you attempt to connect to a secure
     HTTPS server URL, you may encounter an `SSLHandshakeException`. The common issues
     are:'
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓支持使用SSL与标准的安卓API组件，如`HTTPClient`和`URLConnection`。但是，如果你尝试连接到一个安全的HTTPS服务器URL，可能会遇到`SSLHandshakeException`。常见的问题包括：
 - en: The certificate authority (CA) who issued the server SSL certificate is not
     included in the ~130 CAs that are included as part of the Android system, and
     therefore, is treated as unknown
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 颁发服务器SSL证书的证书机构（CA）没有包括在安卓系统中包含的约130个CA中，因此被视为未知
 - en: The server SSL certificate is self signed
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 服务器SSL证书是自签名的
 - en: The server isn't configured with intermediary SSL certificates
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 服务器没有配置中间SSL证书
 - en: If the server isn't configured with intermediary certificates, it's simply a
     case of installing them to allow the connection code to validate the root of trust.
     However, if the server is using a self-signed certification or a CA-issued certificate
     but the CA isn't trusted by Android, we need to customize the SSL validation.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果服务器没有配置中间证书，只需安装它们，允许连接代码验证信任的根。然而，如果服务器使用自签名证书或由CA颁发的证书，但该CA不被安卓信任，我们需要自定义SSL验证。
 - en: A common practice is to develop and test with servers that have self-signed
     SSL certificates and only use paid CA-signed certificates in the live environment.
     Therefore, this recipe specifically focuses on robustly validating self-signed
     SSL certificates.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常的做法是与拥有自签名SSL证书的服务器进行开发和测试，只在生产环境中使用付费的CA签名证书。因此，本指南特别关注于健壮地验证自签名SSL证书。
 - en: Getting ready
+  id: totrans-16
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: For this recipe, we will be importing the self-signed SSL certificate into the
     app, and to do this, we are going to run some terminal commands. This section
     will cover the tools and commands to download the SSL certificate files on your
     machine.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于本指南，我们将导入自签名的SSL证书到应用中，为此，我们将运行一些终端命令。这一部分将介绍在你的机器上下载SSL证书文件的工具和命令。
 - en: The latest version of the Bouncy Castle library is needed later in this recipe
     to create and import certificates into the truststore. We use Bouncy Castle as
     it is a robust open source cryptology library that Android has built-in support
@@ -103,175 +139,253 @@
     saved it to a local directory called `libs` so the path to reference the `.jar`
     file is `/libs/bcprov-jdk15on-149.jar` (which is the latest version at the time
     of writing this book).
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本指南后面的部分，我们需要用到最新版本的Bouncy Castle库来创建和导入证书到信任库中。我们选择Bouncy Castle，因为这是一个健壮的开源密码学库，Android有内置支持。你可以在[http://www.bouncycastle.org/latest_releases.html](http://www.bouncycastle.org/latest_releases.html)找到`bcprov.jar`文件。下载并保存到当前工作目录。对于这个指南，我们将其保存到了一个名为`libs`的本地目录，所以引用`.jar`文件的路径是`/libs/bcprov-jdk15on-149.jar`（这是本书编写时的最新版本）。
 - en: We will need a self-signed SSL certificate file from the server; if you created
     yours manually or already have it, you can skip the rest of this section and move
     on to the recipe.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们需要从服务器获取一个自签名的SSL证书文件；如果你是手动创建的或已经有了，可以跳过这一部分，继续指南的后续内容。
 - en: 'To create or download an SSL certificate, we will need to take advantage of
     the open source SSL toolkit known as **OpenSSL**:'
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 要创建或下载SSL证书，我们需要利用一个名为**OpenSSL**的开源SSL工具包：
 - en: '**Mac** – Fortunately, OpenSSL has been included on Mac OS X since Version
     10.2.'
+  id: totrans-21
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Mac** – 幸运的是，从Mac OS X 10.2版本开始，OpenSSL就已经包含在内。'
 - en: '**Linux** – Many Linux distributions come with precompiled OpenSSL packages
     installed. If not, download and build the source code from [https://www.openssl.org/source/](https://www.openssl.org/source/)or
     if you are on Ubuntu, it should be a case of `apt-get install openssl`.'
+  id: totrans-22
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Linux** – 许多Linux发行版预装了编译好的OpenSSL软件包。如果没有，可以从[https://www.openssl.org/source/](https://www.openssl.org/source/)下载并构建源代码，或者在Ubuntu上，应该执行`apt-get
+    install openssl`。'
 - en: '**Windows** – Build from source or use a third-party-provided Win32 installer
     from Shining Light Productions ([http://slproweb.com/products/Win32OpenSSL.html](http://slproweb.com/products/Win32OpenSSL.html)).'
+  id: totrans-23
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Windows** – 从源代码构建或使用Shining Light Productions提供的第三方Win32安装程序（[http://slproweb.com/products/Win32OpenSSL.html](http://slproweb.com/products/Win32OpenSSL.html)）。'
 - en: 'To get the certificates from the server in the terminal window, type the following
     command, where `server.domain` is either the IP address or server name:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 在终端窗口中，输入以下命令从服务器获取证书，其中`server.domain`可以是IP地址或服务器名称：
 - en: '[PRE0]'
+  id: totrans-25
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: The certificate details will be displayed in the console output. Copy and paste
     the certificate that is defined, starting with `-----BEGIN CERTIFICATE-----` and
     ending with `-----END CERTIFICATE-----`, into a new file and save it as `mycert.crt`.
     It's important not to include any additional white space or trailing spaces.
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 证书详情将在控制台输出中显示。复制并粘贴以`-----BEGIN CERTIFICATE-----`开始，以`-----END CERTIFICATE-----`结束的证书定义，到一个新文件中，并将其保存为`mycert.crt`。重要的是不要包含任何额外的空白或尾随空格。
 - en: 'The following screenshot shows an example of the `Openssl –showcerts` command
     for `android.com`:'
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的屏幕截图展示了`android.com`的`Openssl –showcerts`命令示例：
 - en: '![Getting ready](img/00158.jpeg)'
+  id: totrans-28
   prefs: []
   type: TYPE_IMG
+  zh: '![准备工作](img/00158.jpeg)'
 - en: 'If you don''t have a server yet and want to create a new self-signed certificate
     to use, we first need to generate a private RSA key using the OpenSSL toolkit.
     Type the following into a terminal window:'
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你还没有服务器，并且想要创建一个新的自签名证书来使用，我们首先需要使用OpenSSL工具包生成一个私有的RSA密钥。在终端窗口中输入以下内容：
 - en: '[PRE1]'
+  id: totrans-30
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'This creates the private key file `my_private_key.pem`. The next step is to
     generate the certificate file using the private key generated in the previous
     step. In the terminal, type:'
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将创建私钥文件`my_private_key.pem`。下一步是使用上一步生成的私钥生成证书文件。在终端中，输入：
 - en: '[PRE2]'
+  id: totrans-32
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Follow the onscreen prompts and fill in the certificate details. Note the common
     name is typically your server IP address or domain name.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 按照屏幕上的提示填写证书详情。请注意，通用名称通常是您的服务器IP地址或域名。
 - en: That's it for getting ready! We should have a certificate file in hand for the
     next section.
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 准备工作就这些！接下来的一节我们应该手头有一个证书文件。
 - en: How to do it...
+  id: totrans-35
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's get started!
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧！
 - en: 'You should have an SSL certificate in CRT/PEM encoded format, which when opened
     in, text editor, looks something like this:'
+  id: totrans-37
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 您应该有一个SSL证书，格式为CRT/PEM编码，在文本编辑器中打开时，看起来像这样：
 - en: '[PRE3]'
+  id: totrans-38
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: For this recipe, we will use the example named `mycert.crt`.
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 对于这个示例，我们将使用名为`mycert.crt`的证书。
 - en: To package the certificates into an app, we create and import the certificates
     into a `.keystore` file that we will refer to as our app's truststore.
+  id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为了将证书打包到应用中，我们创建并导入证书到一个`.keystore`文件，我们将这个文件称为我们应用程序的信任存储。
 - en: 'In a terminal window, set the `CLASSPATH` variable so that the following command
     can access the `bcprov.jar` file:'
+  id: totrans-41
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在终端窗口中，设置`CLASSPATH`变量，以便以下命令可以访问`bcprov.jar`文件：
 - en: '[PRE4]'
+  id: totrans-42
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: The preceding command path of the `bcprov-jdk15on-149.jar` file should match
     the `-providerpath` argument.
+  id: totrans-43
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`bcprov-jdk15on-149.jar`文件的先前命令路径应与`-providerpath`参数相匹配。'
 - en: 'Now, create and import the certificate with the following `keytool` command:'
+  id: totrans-44
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在，使用以下`keytool`命令创建并导入证书：
 - en: '[PRE5]'
+  id: totrans-45
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'You should be prompted to trust the certificate, type `yes`:'
+  id: totrans-46
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 系统会提示您信任该证书，输入`yes`：
 - en: '[PRE6]'
+  id: totrans-47
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: The output file is `customtruststore.bks`, with the public certificate added.
     The truststore is protected with a password, `androidcookbook`, which we will
     reference in the code when we load the truststore in the app. We set the `–storetype`
     argument as `BKS`, which denotes the Bouncy Castle Keystore type, also explaining
     the `.bks` extension. It's possible to import multiple certificates into your
     truststore; for example, development and test servers.
+  id: totrans-48
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 输出文件为`customtruststore.bks`，其中添加了公共证书。信任存储受密码保护，密码为`androidcookbook`，在应用程序中加载信任存储时，我们将在代码中引用此密码。我们将`–storetype`参数设置为`BKS`，表示Bouncy
+    Castle Keystore类型，这也解释了`.bks`扩展名。可以将多个证书导入到信任存储中；例如，开发和测试服务器。
 - en: Tip
+  id: totrans-49
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Difference between keystore and truststore**'
+  id: totrans-50
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '**密钥库与信任存储之间的区别**'
 - en: Although they are the same type of file (`.keystore`), and in fact can be the
     same file, we tend to have separate files. We use the term **truststore** to define
     a set of third-party public certificates you expect to communicate with. Whereas,
     a keystore is for private keys and should be stored in a protected location (that
     is, not in the app).
+  id: totrans-51
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 尽管它们是同一类型的文件（`.keystore`），实际上也可以是同一个文件，但我们倾向于使用不同的文件。我们使用术语**信任存储**来定义一组您预期与之通信的第三方公共证书。而密钥库用于私钥，并且应该存储在受保护的位置（即不在应用程序中）。
 - en: 'Copy the truststore file into the `raw` folder of your Android app; if the
     folder doesn''t exist, create it:'
+  id: totrans-52
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将信任存储文件复制到Android应用程序的`raw`文件夹中；如果该文件夹不存在，请创建它：
 - en: '`/res/raw/customtruststore.bks`'
+  id: totrans-53
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`/res/raw/customtruststore.bks`'
 - en: 'Load the local truststore from the `raw` directory into a `KeyStore` object:'
+  id: totrans-54
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从`raw`目录加载本地信任存储到`KeyStore`对象：
 - en: '[PRE7]'
+  id: totrans-55
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Here, we create an instance of the `KeyStore` class with the type `BKS` (Bouncy
     Castle Keystore) that matches the type we created. Conveniently, there is a `.load()`
     method, which takes the input stream (`InputStream`) of the loaded `.bks` file.
@@ -283,96 +397,138 @@
     URL. However, to make things harder for attackers, it could be a good candidate
     for DexGuard's string encryption as mentioned in [Chapter 5](part0057_split_000.html#page
     "Chapter 5. Protecting Applications"), *Protecting Applications*.
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在这里，我们创建了一个类型为 `BKS`（Bouncy Castle Keystore）的 `KeyStore` 类实例，这与我们创建的类型相匹配。方便的是，有一个
+    `.load()` 方法，它接收已加载的 `.bks` 文件的输入流（`InputStream`）。你会注意到，我们使用的是创建信任存储时使用的同一个密码，用于打开、验证和读取内容。密码的主要用途是验证信任存储的完整性，而不是强制实施安全措施。特别是由于信任存储包含服务器的公钥证书，将其硬编码并不是安全问题，因为证书很容易从
+    URL 访问到。然而，为了使攻击者更难以攻击，这可以作为 DexGuard 字符串加密的一个好选择，如[第5章](part0057_split_000.html#page
+    "第5章 保护应用程序")《保护应用程序》中所述。
 - en: 'Extend `DefaultHttpClient` to use the local truststore:'
+  id: totrans-57
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 扩展 `DefaultHttpClient` 以使用本地信任存储：
 - en: '[PRE8]'
+  id: totrans-58
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: We override the `createClientConnectionManager` method so that we can register
     a new `SSLSocketFactory` interface with our local truststore. For brevity of the
     code samples, here we have caught the exception and printed the error to the system
     log; however, it is recommended to implement appropriate error handling and reduce
     the amount of information logged when using this in live code.
+  id: totrans-59
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们重写了 `createClientConnectionManager` 方法，以便我们可以注册一个新的 `SSLSocketFactory` 接口以及我们的本地信任存储。为了代码示例的简洁，这里我们捕获了异常并将错误打印到系统日志；然而，建议在使用实时代码时实现适当的错误处理并减少日志记录的信息量。
 - en: 'Write a sample HTTP `GET` request using `HttpClient`:'
+  id: totrans-60
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用 `HttpClient` 编写一个示例 HTTP `GET` 请求：
 - en: '[PRE9]'
+  id: totrans-61
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: This shows us how to construct a simple HTTP `GET` request and use the `LocalTrustStoreMyHttpClient`
     class, which doesn't throw `SSLHandshakeException` because the self-signed certificate
     from the server can be successfully verified.
+  id: totrans-62
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这展示了如何构建一个简单的 HTTP `GET` 请求，并使用 `LocalTrustStoreMyHttpClient` 类，该类不会抛出 `SSLHandshakeException`，因为来自服务器的自签名证书可以成功验证。
 - en: Tip
+  id: totrans-63
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Gotcha**'
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: '**注意**'
 - en: We have defined an explicit truststore for all HTTPS requests. Remember, if
     the backend server certificate is changed, the app will cease to trust the connection
     and throw `SecurityException`.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们为所有 HTTPS 请求定义了一个明确的信任存储。请记住，如果后端服务器证书发生更改，应用程序将停止信任连接并抛出 `SecurityException`。
 - en: That concludes this recipe; we can communicate with Internet resources that
     are protected by SSL and signed with our self-signed SSL certificate.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 这就完成了这个方法；我们可以与受 SSL 保护并由我们的自签名 SSL 证书签名的互联网资源进行通信。
 - en: There's more...
+  id: totrans-67
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多内容...
 - en: In general, when dealing with SSL, a common mistake is to catch and hide certificate
     and security exceptions. This is exactly what an attacker is relying on to dupe
     an unsuspecting app user. What you choose to do about SSL errors is subjective
     and depends on the app. However, blocking networking communications is usually
     a good step to ensure that data is not transmitted over a potentially compromised
     channel.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常，在处理 SSL 时，一个常见的错误是捕获并隐藏证书和安全异常。这正是攻击者依赖的做法，以欺骗一个不知情的应用程序用户。关于 SSL 错误，你选择如何处理是主观的，取决于应用程序。然而，阻止网络通信通常是确保数据不会通过可能受损的通道传输的一个好步骤。
 - en: Using self-signed SSL certificates in a live environment
+  id: totrans-69
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 在生产环境中使用自签名 SSL 证书
 - en: It is common for Android application developers to know at compile/build time
     the servers they are commutating with. They may even have control over them. If
     you follow the validation steps noted here, there's no security issue with using
     self-signed certificates in a live environment. The advantage is that you'll insulate
     yourself from certificate authority compromise and save money of SSL certificate
     renewal fees.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓应用程序开发人员通常在编译/构建时就知道他们正在与之通信的服务器。他们甚至可能控制这些服务器。如果你遵循这里提到的验证步骤，那么在生产环境中使用自签名证书是没有安全问题的。优点是，你可以使自己免受证书颁发机构妥协的影响，并节省
+    SSL 证书续费的费用。
 - en: HttpsUrlConnection
+  id: totrans-71
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: HttpsUrlConnection
 - en: 'There''s no additional security benefit, but you may prefer using the `HttpsURLConnection`
     API. For this, we take a slightly different approach and create a custom `TrustManager`
     class, which verifiers our local truststore file:'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用`HttpsURLConnection` API没有额外的安全好处，但你可能更喜欢它。为此，我们采用稍微不同的方法，创建一个自定义的`TrustManager`类，它验证我们的本地信任库文件：
 - en: 'Create a custom `TrustManager` class:'
+  id: totrans-73
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个自定义的`TrustManager`类：
 - en: '[PRE10]'
+  id: totrans-74
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: We implement the `X509TrustManager` interface, and the constructor of our `LocalTrustStoreTrustManager`
     class takes a `KeyStore` object, which we loaded in a previous step defined earlier
     in the recipe. As previously noted, this `KeyStore` object is referred to as our
@@ -382,173 +538,248 @@
     We then keep a reference to this `TrustManager`, which uses our truststore to
     verify whether a certificate from a connection is trusted, rather than using the
     system truststore.
+  id: totrans-75
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们实现了`X509TrustManager`接口，我们`LocalTrustStoreTrustManager`类的构造函数接受一个`KeyStore`对象，这是我们在之前的步骤中加载的。如前所述，这个`KeyStore`对象被称为信任库，因为它包含我们信任的证书。我们使用信任库初始化`TrustManagerFactory`类，然后使用`findX509TrustManager()`方法获取`X509TrustManager`接口的系统特定实现。然后我们保留对这个`TrustManager`的引用，它使用我们的信任库来验证连接中的证书是否可信，而不是使用系统信任库。
 - en: 'Here is an example of an HTTP `GET` request using `HttpsURLConnection` and
     the custom `TrustManager` class created in the previous step:'
+  id: totrans-76
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这是一个使用`HttpsURLConnection`和上一步创建的自定义`TrustManager`类进行HTTP `GET`请求的例子：
 - en: '[PRE11]'
+  id: totrans-77
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: We initialize the `SSLContext` with the `LocalTrustStoreTrustManager` class
     so that when we call `sc.getSocketFactory()`, it will use our `TrustManager` implementation.
     This is set on the `HttpsURLConnection` by overriding the default using `setDefaultSSLSocketFactory()`.
     That's all you need to successfully connect to our self-signed SSL resources with
     `URLConnection`.
+  id: totrans-78
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们使用`LocalTrustStoreTrustManager`类初始化`SSLContext`，这样当我们调用`sc.getSocketFactory()`时，它将使用我们的`TrustManager`实现。通过使用`setDefaultSSLSocketFactory()`覆盖默认设置，将其设置在`HttpsURLConnection`上。这就是你需要成功连接到使用`URLConnection`的自签名SSL资源的全部操作。
 - en: Antipattern – what not to do!
+  id: totrans-79
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 反模式——不应该做的事情！
 - en: This is an antipattern that unfortunately is posted on various forums and message
     boards when developers are trying to work with self-signed certifications or SSL
     certificates signed by an untrusted certification authority.
+  id: totrans-80
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是一个反模式，不幸的是，当开发人员尝试使用自签名证书或由不受信任的证书颁发机构签名的SSL证书时，它被发布在各种论坛和留言板上。
 - en: 'Here, we see an insecure implementation of the `X509TrustManager` interface:'
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们看到`X509TrustManager`接口的不安全实现：
 - en: '[PRE12]'
+  id: totrans-82
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: As you can see from the code, the `checkServerTrusted` method has no validation
     implemented consequently, and all servers are trusted. This leaves HTTPS communications
     exposed to a man-in-the-middle (MITM) attack, which defeats the whole point of
     using certificates.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 从代码中可以看出，`checkServerTrusted`方法没有实现任何验证，因此所有服务器都被信任。这使得HTTPS通信容易受到中间人（MITM）攻击，这完全失去了使用证书的意义。
 - en: See also
+  id: totrans-84
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *SSL pinning* recipe later in this chapter shows a similar approach to enhanced
     validation of the SSL connection
+  id: totrans-85
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 本章后面的“SSL钉扎”部分展示了类似的方法来增强SSL连接的验证。
 - en: The *Security with HTTPS and SSL* page in the Android training documentation
     at [https://developer.android.com/training/articles/security-ssl.html](https://developer.android.com/training/articles/security-ssl.html)
+  id: totrans-86
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Android培训文档中的“使用HTTPS和SSL的安全”页面](https://developer.android.com/training/articles/security-ssl.html)。'
 - en: The Bouncy Castle Java cryptography API at [http://www.bouncycastle.org/latest_releases.html](http://www.bouncycastle.org/latest_releases.html)
+  id: totrans-87
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Bouncy Castle Java加密API](http://www.bouncycastle.org/latest_releases.html)。'
 - en: The *HttpsURLConnection* page in the Android Developers reference guide at [https://developer.android.com/reference/javax/net/ssl/HttpsURLConnection.html](https://developer.android.com/reference/javax/net/ssl/HttpsURLConnection.html)
+  id: totrans-88
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[Android开发者参考指南中的*HttpsURLConnection*页面](https://developer.android.com/reference/javax/net/ssl/HttpsURLConnection.html)。'
 - en: The *SSLSocketFactory* page in the Android Developers reference guide at [https://developer.android.com/reference/javax/net/ssl/SSLSocketFactory.html](https://developer.android.com/reference/javax/net/ssl/SSLSocketFactory.html)
+  id: totrans-89
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Android开发者参考指南中的[*SSLSocketFactory*页面](https://developer.android.com/reference/javax/net/ssl/SSLSocketFactory.html)
 - en: Using StrongTrustManager from the OnionKit library
+  id: totrans-90
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 使用OnionKit库中的StrongTrustManager
 - en: In this recipe, we are going to leverage the great work of the folks at the
     Guardian Project to enhance the validation of SSL connections made by our app.
     Specifically, we are going to make use of `StrongTrustManager`.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个教程中，我们将利用Guardian Project的工作成果，增强我们应用程序对SSL连接的验证。具体来说，我们将使用`StrongTrustManager`。
 - en: Getting ready
+  id: totrans-92
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: OnionKit is distributed as an Android library project. Before we start this
     recipe, download the OnionKit library from the GitHub page ([https://github.com/guardianproject/OnionKit](https://github.com/guardianproject/OnionKit)).
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: OnionKit作为一个Android库项目进行分发。在我们开始这个教程之前，从GitHub页面下载OnionKit库（[https://github.com/guardianproject/OnionKit](https://github.com/guardianproject/OnionKit)）。
 - en: Then, extract and add to your project as you would add any other Android library
     project.
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，像添加其他任何Android库项目一样，提取并添加到你的项目中。
 - en: How to do it...
+  id: totrans-95
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's get started!
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧！
 - en: 'Integrating the `StrongTustManager` class couldn''t be simpler. It is just
     a case of swapping out your `HttpClient` implementation. Hence, change the following
     code:'
+  id: totrans-97
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 集成`StrongTustManager`类再简单不过了。只需替换你的`HttpClient`实现即可。因此，更改以下代码：
 - en: '[PRE13]'
+  id: totrans-98
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'To this:'
+  id: totrans-99
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 修改为以下内容：
 - en: '[PRE14]'
+  id: totrans-100
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: In your code, change the imports from `org.apache.http.*` to `ch.boye.httpclientandroidlib.*`.
     The `HttpGet` and `HttpResponse` objects used by OnionKit are from another library
     called `httpclientandroidlib` (also included in OnionKit). `httpclientandroidlib`
     is a repackaging of `HttpClient` 4.2.3 for Android, which includes updates and
     bug fixes over the standard `HttpClient` library included in Android SDK.
+  id: totrans-101
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在你的代码中，将`org.apache.http.*`的导入改为`ch.boye.httpclientandroidlib.*`。OnionKit使用的`HttpGet`和`HttpResponse`对象来自另一个名为`httpclientandroidlib`的库（也包含在OnionKit中）。`httpclientandroidlib`是针对Android重新打包的`HttpClient`
+    4.2.3版本，它包含了相较于Android SDK中标准`HttpClient`库的更新和错误修复。
 - en: 'Enable the notifications:'
+  id: totrans-102
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启用通知功能：
 - en: '[PRE15]'
+  id: totrans-103
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: This is a useful feature for notifying users that there has been an issue with
     the verification, and also that the Internet resource they are currently connected
     to is unsafe.
+  id: totrans-104
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这是一个有用的功能，它通知用户在验证过程中出现了问题，同时他们当前连接的互联网资源是不安全的。
 - en: 'Enable the full verification of the certificate chain:'
+  id: totrans-105
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启用证书链的完全验证：
 - en: '[PRE16]'
+  id: totrans-106
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: Enabling `verifyChain` ensures when the `TrustManager.checkServerTrusted server(…)`
     method is called while making an HTTPS connection that the whole certificate chain
     is validated. This setting is enabled by default.
+  id: totrans-107
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 启用`verifyChain`可以确保在建立HTTPS连接时调用`TrustManager.checkServerTrusted server(…)`方法时，验证整个证书链。此设置默认启用。
 - en: 'Enable checking for weak cryptographic algorithms:'
+  id: totrans-108
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启用对弱加密算法的检查：
 - en: '[PRE17]'
+  id: totrans-109
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: This checks the certificate chain for instances where an issuer has used an
     MD5 algorithm, which is considered weak and should be avoided. This setting is
     enabled by default.
+  id: totrans-110
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这会检查证书链中是否存在颁发者使用了MD5算法的情况，这种算法被认为是弱算法，应当避免使用。此设置默认启用。
 - en: There's more...
+  id: totrans-111
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: Throughout this chapter, we have used the `HttpClient` API; you might wonder
     why since the `HttpClient` API has been deprecated in Android. To clarify, Google
     deprecated the use of the version of `HttpClient` included in the Android SDK
@@ -556,73 +787,106 @@
     instead. However, as previously noted, OnionKit uses a separate, updated, and
     fixed version of the `HttpClient` API library, and subsequently shouldn't be considered
     deprecated.
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们使用了`HttpClient` API；你可能会想知道为什么，因为`HttpClient` API在Android中已被弃用。为了澄清，谷歌弃用了包含在Android
+    SDK中的`HttpClient`版本，因为存在多个现有错误。谷歌目前建议使用`URLConnection`。但是，如前所述，OnionKit使用一个单独的、更新的、修复过的`HttpClient`
+    API库，因此不应视为已弃用。
 - en: The Orbot and Tor networks
+  id: totrans-113
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: Orbot和Tor网络
 - en: The Tor project is a free implementation of Onion routing, which provides Internet
     anonymity and resistance to traffic surveillance. Orbot is a free Android application
     that provides a proxy specifically for other Android apps to use it.
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: Tor项目是一个免费的Onion路由实现，它提供了互联网匿名和抵抗流量监控的功能。Orbot是一个免费的Android应用程序，它提供了一个专门供其他Android应用使用的代理。
 - en: Another key feature of OnionKit is allowing your app to connect to the Internet
     via the Orbot proxy and therefore have its Internet traffic anonymized.
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: OnionKit 的另一个关键特性是允许你的应用通过 Orbot 代理连接到互联网，从而使其互联网流量匿名化。
 - en: The `OrbotHelper` class helps determine whether the Orbot app is installed and
     running and provides convenient methods to start and use it.
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: '`OrbotHelper` 类有助于确定是否安装并运行了 Orbot 应用，并提供方便的方法来启动和使用它。'
 - en: Pinning and CACert
+  id: totrans-117
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 锁定和 CACert
 - en: The `StrongTrustManager` class does provide some limited certificate pinning
     by restricting the trusted root certificate authorities when used in conjunction
     with another of the Guardian Projects libraries, called **CACert**.
+  id: totrans-118
   prefs: []
   type: TYPE_NORMAL
+  zh: '`StrongTrustManager` 类确实提供了一些有限的证书锁定功能，当与 Guardian Projects 的另一个库 **CACert**
+    结合使用时，通过限制信任的根证书颁发机构。'
 - en: We will discuss SSL pinning in more detail in the next chapter and create our
     own `TrustManager` class to specifically pin our SSL certificate chain that is
     suitable for both CA and self-signed certificates.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将在下一章中详细讨论 SSL 锁定，并创建我们自己的 `TrustManager` 类，专门锁定适合 CA 和自签名证书的 SSL 证书链。
 - en: See also
+  id: totrans-120
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: The *OnionKit for Android* article at [https://guardianproject.info/code/onionkit/](https://guardianproject.info/code/onionkit/)
+  id: totrans-121
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 有关 *OnionKit for Android* 的文章，请访问 [https://guardianproject.info/code/onionkit/](https://guardianproject.info/code/onionkit/)
 - en: 'The *Orbot: Proxy with Tor* Android app at [https://play.google.com/store/apps/details?id=org.torproject.android](https://play.google.com/store/apps/details?id=org.torproject.android)'
+  id: totrans-122
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '有关 *Orbot: Proxy with Tor* Android 应用，请访问 [https://play.google.com/store/apps/details?id=org.torproject.android](https://play.google.com/store/apps/details?id=org.torproject.android)'
 - en: The repackaging of HttpClient 4.2.3 for Android used by the OnionKit project
     ([https://code.google.com/p/httpclientandroidlib/](https://code.google.com/p/httpclientandroidlib/))
+  id: totrans-123
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: OnionKit 项目使用的针对 Android 的 HttpClient 4.2.3 重新打包版本 ([https://code.google.com/p/httpclientandroidlib/](https://code.google.com/p/httpclientandroidlib/))
 - en: The CACert project, which is useful for restricting the trusted root CAs at
     [https://github.com/guardianproject/cacert](https://github.com/guardianproject/cacert)
+  id: totrans-124
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: CACert 项目，对于限制信任的根CA很有用，位于 [https://github.com/guardianproject/cacert](https://github.com/guardianproject/cacert)
 - en: SSL pinning
+  id: totrans-125
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: SSL 锁定
 - en: A certificate authority (CA) is needed to solve the key distribution problem
     in regular network clients, such as web browsers, IM, and e-mail clients. They
     need to communicate with many servers, which the application developers have no
     prior knowledge of. As we have discussed in the previous recipes, it's common
     to know the backend servers or services your app is communicating with, and so
     it is advisable to restrict the other CA roots.
+  id: totrans-126
   prefs: []
   type: TYPE_NORMAL
+  zh: 需要一个证书颁发机构（CA）来解决常规网络客户端中的密钥分发问题，例如网页浏览器、即时通讯和电子邮件客户端。它们需要与许多服务器通信，应用程序开发人员对这些服务器事先并不了解。正如我们在之前的食谱中所讨论的，通常我们知道应用与之通信的后端服务器或服务，因此建议限制其他CA根证书。
 - en: Android currently trusts around 130 CAs, varying slightly between manufacturers
     and versions. It also restricts other CA roots and enhances the security of the
     connection. If one of these CAs were to be compromised, an attacker could use
@@ -630,20 +894,29 @@
     server's domain. In this scenario, the attacker could complete a **MITM** attack
     on our app. This is because the standard HTTPS client validation will recognize
     the new certificates as trusted.
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: Android 目前信任大约 130 个 CA，不同制造商和版本之间略有差异。它还限制其他 CA 根证书，增强连接的安全性。如果这些 CA 中的一个被攻破，攻击者可以使用被攻破
+    CA 的根证书为我们的服务器域名签署和颁发新证书。在这种情况下，攻击者可以针对我们的应用完成 **MITM** 攻击。这是因为标准的 HTTPS 客户端验证会将这些新证书视为可信。
 - en: 'SSL pinning is one way to restrict who is trusted, and is usually approached
     in the following two ways:'
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: SSL 锁定是限制信任对象的一种方式，通常采用以下两种方法之一：
 - en: Certificate pinning
+  id: totrans-129
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 证书锁定
 - en: Public key pinning
+  id: totrans-130
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 公钥锁定
 - en: Much like what we achieved in the *Validating self-signed SSL certificates*
     recipe of this chapter, certificate pinning limits the number of trusted certificates
     to the ones in a local truststore. When using a CA, you would include your server's
@@ -651,47 +924,63 @@
     certificates into your local truststore. This allows the full validation of the
     whole certificate chain; so when a compromised CA signs new certificates, these
     would fail the local truststore verification.
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 就像本章中*验证自签名SSL证书*的食谱一样，证书固定将信任的证书数量限制为本地信任库中的证书。当使用CA时，你会在本地信任库中包含你的服务器SSL证书以及证书的根签名和任何中间证书。这允许对整个证书链进行完全验证；因此，当被破坏的CA签署新证书时，这些证书将无法通过本地信任库的验证。
 - en: Public key pinning follows the same idea but is slightly more difficult to implement.
     There is an additional step of extracting the public key from the SSL certificate
     rather than just bundling the certificate(s) in the app. However, the extra effort
     is worth it because public keys remain consistent between certificate renewals.
     This means there is no need to force users to upgrade the app when the SSL certificate
     has been renewed.
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 公钥固定遵循同样的理念，但实现起来稍微复杂一些。除了在应用中捆绑证书外，还需要从SSL证书中提取公钥的额外步骤。然而，额外的努力是值得的，因为公钥在证书续期之间保持一致。这意味着当SSL证书续期后，无需强制用户升级应用。
 - en: In this recipe, we are going to pin against several certificate public keys
     using [Android.com](http://Android.com) as an example. The recipe consists of
     two distinct parts; the first is a standalone Java utility to process and get
     the public keys from all of the SSL certificates in the chain and convert them
     to SHA1 hashes to embed/pin in your app. We embed SHA1 hashes of the public keys,
     as it is more secure.
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个食谱中，我们将使用[Android.com](http://Android.com)作为示例，针对几个证书公钥进行固定。该食谱由两个不同的部分组成；第一部分是一个独立的Java工具，用于处理并获取链中所有SSL证书的公钥，并将它们转换为SHA1哈希以嵌入/固定在你的应用中。我们嵌入公钥的SHA1哈希，因为这更安全。
 - en: The second part deals with the app code and how to verify the pins at runtime,
     and to decide whether a particular SSL connection is to be trusted.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 第二部分涉及应用代码以及如何在运行时验证固定公钥，并决定是否信任特定的SSL连接。
 - en: How to do it...
+  id: totrans-135
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: Let's get started!
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们开始吧！
 - en: 'We''re going to create a standalone Java file called `CalcPins.java` that we
     will run on the command line to connect and print the SHA1 hashes of the certificate
     public keys. As we are dealing with a certificate signed by CA, there will be
     two or more certificates in the chain. This first step is mostly initiation and
     code to get the arguments to pass to the `fetchAndPrintPinHashs` method:'
+  id: totrans-137
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们将创建一个名为`CalcPins.java`的独立Java文件，在命令行上运行它以连接并打印证书公钥的SHA1哈希。由于我们处理的是由CA签名的证书，链中将有二个或更多证书。这个第一步主要是初始化和获取传递给`fetchAndPrintPinHashs`方法的参数：
 - en: '[PRE18]'
+  id: totrans-138
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'Next, we define the `PublicKeyExtractingTrustManager` class, which actually
     does the extraction of the public keys. The `checkServerTrusted` method will be
     called with the full chain of `X509Certificates`, when the socket connects, which
@@ -699,152 +988,217 @@
     call `cert.getPublicKey().getEncoded();` to get a byte array for each public key.
     We then use the `MessageDigest` class to compute the SHA1 hash of the key. As
     this is a simple console application, we print the SHA1 hash to `System.out`:'
+  id: totrans-139
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来，我们定义`PublicKeyExtractingTrustManager`类，它实际上负责提取公钥。当套接字连接时，将调用`checkServerTrusted`方法，并带上完整的`X509Certificates`链，这在后面的步骤中会展示。我们取得链（`X509Certificate[]`数组），并调用`cert.getPublicKey().getEncoded();`来获取每个公钥的字节数组。然后我们使用`MessageDigest`类来计算密钥的SHA1哈希。由于这是一个简单的控制台应用，我们将SHA1哈希输出到`System.out`：
 - en: '[PRE19]'
+  id: totrans-140
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Then, we write the `bytesToHex()` utility method as follows:'
+  id: totrans-141
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 然后，我们按照以下方式编写`bytesToHex()`工具方法：
 - en: '[PRE20]'
+  id: totrans-142
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: We use a utility method to convert the byte array into upper case hexadecimal
     string before printing to `System.out` so that they can be embedded into our Android
     app.
+  id: totrans-143
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们使用一个工具方法将字节数组转换成大写十六进制字符串，在输出到`System.out`之前，这样它们就可以嵌入到我们的Android应用中。
 - en: 'Finally, we use the host and port that was passed from the `main` method to
     open a `SSLSocket` connection to the host:'
+  id: totrans-144
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，我们使用从`main`方法传递过来的主机和端口来打开到主机的`SSLSocket`连接：
 - en: '[PRE21]'
+  id: totrans-145
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: We initialize the `SSLContext` object with our custom `PublicKeyExtractingTrustManager`
     class, which in turn prints the public key hash of each certification to the console
     ready for embedding in the Android app.
+  id: totrans-146
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们使用自定义的 `PublicKeyExtractingTrustManager` 类初始化 `SSLContext` 对象，该类依次将每个证书的公钥哈希打印到控制台，以便在Android应用中嵌入。
 - en: 'From the terminal window, compile `CalcPins.java` with the `javac` and `run`
     commands using `java` with `hostname:port` as a command-line argument. The sample
     uses `Android.com` as an example host:'
+  id: totrans-147
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从终端窗口，使用 `javac` 编译 `CalcPins.java` 并使用 `java` 带有 `hostname:port` 作为命令行参数运行命令。示例使用
+    `Android.com` 作为示例主机：
 - en: '[PRE22]'
+  id: totrans-148
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: However, you might find it easier to create `CalcPins.java` as a simple Java
     project in your IDE then export it as a runnable `.jar` file.
+  id: totrans-149
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 然而，你可能发现直接在IDE中创建 `CalcPins.java` 作为简单的Java项目，然后将其导出为可运行的 `.jar` 文件会更容易。
 - en: 'A sample terminal command for the runnable `.jar` is as follows:'
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 可运行的 `.jar` 文件的示例终端命令如下：
 - en: '[PRE23]'
+  id: totrans-151
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'If the public key extraction works, you will see the hash''s output. This sample
     output shows the pins of three SSL certificate public keys of the `Android.com`
     host:'
+  id: totrans-152
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果公钥提取成功，你将看到哈希的输出。这个示例输出展示了 `Android.com` 主机的三个SSL证书公钥的pins：
 - en: '[PRE24]'
+  id: totrans-153
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: Now, we move on to the second part of the recipe to verify the SSL connection
     in our Android app project.
+  id: totrans-154
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 现在，我们继续这个方法的第二部分，在Android应用项目中验证SSL连接。
 - en: 'Now that we have the pins, we copy them from the terminal and embed them in
     a `String` array:'
+  id: totrans-155
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在我们有了pins，我们从终端复制它们到一个 `String` 数组中：
 - en: '[PRE25]'
+  id: totrans-156
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Implement a custom `TrustManager` class that validates the pins:'
+  id: totrans-157
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实现一个自定义的 `TrustManager` 类来验证pins：
 - en: '[PRE26]'
+  id: totrans-158
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: The `PubKeyPinningTrustManager` constructor is constructed with the pins array
     to use internally for validation. An instance of `MessageDigest` is also created
     to generate SHA1 hashes of incoming SSL certificate public keys. Note, for this
     example, that we are not implementing the `checkClientTrusted()` or `getAcceptedIssuers()`
     methods; see the *Enhancements* section.
+  id: totrans-159
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`PubKeyPinningTrustManager` 构造函数内部使用pins数组进行验证。同时创建一个 `MessageDigest` 实例来生成传入SSL证书公钥的SHA1哈希。注意，对于这个示例，我们没有实现
+    `checkClientTrusted()` 或 `getAcceptedIssuers()` 方法；请参阅 *增强功能* 部分。'
 - en: 'Validate the certificate:'
+  id: totrans-160
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 验证证书：
 - en: '[PRE27]'
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: We extract the public key and compute the SHA1 hash and then convert to a hexadecimal
     string using the `bytesToHex()` method as noted previously. The validation then
     boils down to a simple `String.isEquals` operation (actually, we use `equalsIgnoreCase`
     just in case there is a case mismatch). If the pin from the certificate does not
     match one of the embedded pins, a `CertificateException` is thrown and the connection
     will not be permitted.
+  id: totrans-162
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们提取公钥并计算SHA1哈希，然后使用前面提到的 `bytesToHex()` 方法将其转换为十六进制字符串。验证过程简化为一个简单的 `String.isEquals`
+    操作（实际上，我们使用 `equalsIgnoreCase` 以防大小写不匹配）。如果证书中的pin与嵌入的pin不匹配，将抛出 `CertificateException`
+    并且不会建立连接。
 - en: 'We can integrate `PubKeyPinningTrustManager` in the same way as the `LocalTrustStoreTrustManager`
     class, discussed earlier in this chapter. Here is an example of this being used
     with `HttpsURLConnection`:'
+  id: totrans-163
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们可以像本章前面讨论的 `LocalTrustStoreTrustManager` 类一样集成 `PubKeyPinningTrustManager`。以下是它与
+    `HttpsURLConnection` 一起使用的示例：
 - en: '[PRE28]'
+  id: totrans-164
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: In conclusion, we extracted the certificate public keys and generated SHA1 hashes
     to embed in our app. Use these at runtime to validate the public keys of the SSL
     certificates of the SSL connection. This not only protects against other CAs being
     compromised, but also makes things more difficult for MITM attackers. The great
     thing is that we are using the industry standard SSL infrastructure, just in a
     stringent way.
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: 总之，我们提取了证书公钥并生成了SHA1哈希值，以便嵌入到我们的应用程序中。在运行时使用这些值来验证SSL连接的SSL证书的公钥。这不仅保护了其他CA被破坏的风险，同时也使MITM攻击者更难以行动。好处在于我们采用的是严格的行业标准SSL基础设施。
 - en: There's more...
+  id: totrans-166
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多...
 - en: It is important to understand where this recipe can be improved and where the
     limitations are.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 了解这个方法的改进之处和限制是非常重要的。
 - en: Enhancements
+  id: totrans-168
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 增强功能
 - en: For maximum security, each time you make a server connection, you should validate
     the SSL pins. However, there is a trade off with performance per connection; therefore,
     you could adapt the previous code to check the first couple of connections per
@@ -853,49 +1207,72 @@
     source library called **AndroidPinning** by *Moxie Marlinspike* has these enhancements
     implemented. You could also change the hash algorithm to a stronger version of
     SHA.
+  id: totrans-169
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了最大程度的安全，每次您建立服务器连接时，都应该验证SSL固定。然而，这会与每个连接的性能产生权衡；因此，您可以将之前的代码调整为每个会话检查最初几次连接。尽管这显然会降低安全性。同时，包括Android的默认信任管理器验证将进一步增加安全性。
 - en: The `validateCertificatePin` method is an ideal candidate for DexGuard's API
     hiding, as mentioned in [Chapter 5](part0057_split_000.html#page "Chapter 5. Protecting
     Applications"), *Protecting Applications*.
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: '`validateCertificatePin`方法非常适合DexGuard的API隐藏，如[第五章](part0057_split_000.html#page
+    "第五章. 保护应用程序") *保护应用程序*中所述。'
 - en: Limitations
+  id: totrans-171
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 限制
 - en: While SSL pinning makes it more difficult for MITM attackers, it's not a 100
     percent solution (not that any security solution is 100 percent). There is an
     interesting library from iSECPartners, which aims to circumvent pinning ([https://github.com/iSECPartners/android-ssl-bypass](https://github.com/iSECPartners/android-ssl-bypass)).
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管SSL固定使得MITM攻击者更加难以攻击，但这并不是一个100%的解决方案（没有哪种安全解决方案是100%的）。iSECPartners提供了一个有趣的库，旨在绕过固定技术（[iSECPartners/android-ssl-bypass](https://github.com/iSECPartners/android-ssl-bypass)）。
 - en: However, the anti-temper recipes noted in [Chapter 5](part0057_split_000.html#page
     "Chapter 5. Protecting Applications"), *Protecting Applications*, could be used
     to mitigate the `.apk` modification and the ability to run on an emulator.
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，如[第五章](part0057_split_000.html#page "第五章. 保护应用程序")所述的防篡改方法可以用来减轻`.apk`修改和运行在模拟器上的能力。
 - en: See also
+  id: totrans-174
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: Learn more about the MITM attack at [https://www.owasp.org/index.php/Man-in-the-middle_attack](https://www.owasp.org/index.php/Man-in-the-middle_attack)
+  id: totrans-175
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 了解更多关于MITM攻击的信息，请访问[MITM攻击](https://www.owasp.org/index.php/Man-in-the-middle_attack)。
 - en: The *OpenSSL command line HowTo* guide is available at [http://www.madboa.com/geek/openssl/](http://www.madboa.com/geek/openssl/)
+  id: totrans-176
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[OpenSSL命令行HowTo指南](http://www.madboa.com/geek/openssl/)可在以下链接找到。'
 - en: The *OWASP Certificate and Public Key Pinning* guide is available at [https://www.owasp.org/index.php/Certificate_and_Public_Key_Pinning](https://www.owasp.org/index.php/Certificate_and_Public_Key_Pinning)
+  id: totrans-177
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[证书和公钥固定指南](https://www.owasp.org/index.php/Certificate_and_Public_Key_Pinning)可在以下链接找到。'
 - en: The AndroidPinning project, an open source pinning library by *Moxie Marlinspike*,
     is available at [https://github.com/moxie0/AndroidPinning](https://github.com/moxie0/AndroidPinning)
+  id: totrans-178
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[AndroidPinning项目](https://github.com/moxie0/AndroidPinning)，一个由*Moxie Marlinspike*创建的开源固定库，也可提供这些增强功能。'
 - en: Google Chrome uses pins, which is explained at [https://www.imperialviolet.org/2011/05/04/pinning.html](https://www.imperialviolet.org/2011/05/04/pinning.html)
+  id: totrans-179
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 谷歌浏览器使用固定技术，这在其[博客](https://www.imperialviolet.org/2011/05/04/pinning.html)中有解释。
