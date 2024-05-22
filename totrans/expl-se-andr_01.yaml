@@ -1,43 +1,61 @@
 - en: Chapter 1. Linux Access Controls
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第1章. Linux访问控制
 - en: Android is an operating system composed of two distinct components. The first
     component is a forked mainline Linux kernel and shares almost everything in common
     with Linux. The second component, which will be discussed later, is the user space
     portion, which is very custom and Android specific. Since the Linux kernel underpins
     this system and is responsible for the majority of access control decisions, it
     is the logical place to begin a detailed look at Android.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: Android是一个由两个不同组件组成的操作系统。第一个组件是分叉的Linux主线内核，几乎与Linux共享所有内容。第二个组件，将在后面讨论，是用户空间部分，这部分非常定制且特定于Android。由于Linux内核支撑这个系统并且负责大多数访问控制决策，所以从逻辑上讲，这是深入研究Android的一个很好的起点。
 - en: 'In this chapter we will:'
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中我们将：
 - en: Examine the basics of Discretionary Access Control
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 检查自主访问控制的基础
 - en: Introduce Linux permissions flags and capabilities
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 介绍Linux权限标志和能力
 - en: Trace syscalls as we validate access policies
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在验证访问策略时跟踪系统调用
 - en: Make the case for more robust access control technology
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 论证更强大的访问控制技术的必要性
 - en: Discuss Android exploits that leverage problems with Discretionary Access Control
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 讨论利用自主访问控制问题的Android漏洞
 - en: Linux's default and familiar access control mechanism is called **Discretionary
     Access Control** (**DAC**). This is just a term that means permissions regarding
     access to an object are at the discretion of its creator/owner.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: Linux的默认且熟悉的访问控制机制称为**自主访问控制**（**DAC**）。这只是一个术语，意味着关于访问对象的权限由其创建者/所有者自行决定。
 - en: In Linux, when a process invokes most system calls, a permission check is performed.
     As an example, a process wishing to open a file would invoke the `open()` syscall.
     When this syscall is invoked, a context switch is performed, and the operating
@@ -47,8 +65,10 @@
     the target file it wishes to obtain the file descriptor to. Either the file descriptor
     or EPERM is returned, dependent on whether the permission checks pass or fail
     respectively.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Linux中，当一个进程调用大多数系统调用时，会执行一个权限检查。例如，希望打开一个文件的进程会调用`open()`系统调用。当调用这个系统调用时，会执行上下文切换，操作系统代码开始执行。操作系统有能力决定是否应该向请求的进程返回文件描述符。在做出这个决定的过程中，操作系统会检查请求进程以及它希望获得文件描述符的目标文件的访问权限。根据权限检查通过或失败，返回的将是文件描述符或EPERM。
 - en: 'Linux maintains data structures in the kernel for managing these permission
     fields, which are accessible from user space, and ones that should be familiar
     to Linux and *NIX users alike. The first set of access control metadata belongs
@@ -56,37 +76,51 @@
     are user and group. In general, we use the term group to mean both primary group
     and possible secondary group(s). You can view these permissions by running the
     `ps` command:'
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: Linux在内核中维护数据结构以管理这些权限字段，这些字段可以从用户空间访问，并且对于Linux和*NIX用户来说应该是熟悉的。第一组访问控制元数据属于进程，构成了其凭据集的一部分。常见的凭据是用户和组。通常，我们使用组这个术语来指代主要组以及可能的次要组。你可以通过运行`ps`命令来查看这些权限：
 - en: '[PRE0]'
+  id: totrans-11
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: As you can see, we have processes running as the users `root` and `bookuser`.
     You can also see that their primary group is only one part of the equation. Processes
     also have a secondary set of groups called supplementary groups. This set might
     be empty, indicated by the dash in the `SUPGRP` field.
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，我们有以`root`和`bookuser`用户身份运行的进程。你还可以看到，他们的主要组只是等式的一部分。进程还有一组辅助组，称为补充组。这个集合可能是空的，由`SUPGRP`字段中的破折号表示。
 - en: The file we wish to open, referred to as the target object, target, or object
     also maintains a set of permissions. The object maintains `USER` and `GROUP`,
     as well as a set of permission bits. In the context of the target object, `USER`
     can be referred to as *owner* or *creator*.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们希望打开的文件，被称为目标对象、目标或对象，同时也维护一组权限。该对象维护`USER`和`GROUP`，以及一组权限位。在目标对象的上下文中，`USER`可以被称为*所有者*或*创建者*。
 - en: '[PRE1]'
+  id: totrans-14
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'If we look at the preceding command''s output, we can see that `hello.txt`
     has a `USER` of `bookuser` and `GROUP` as `bookuser`. We can also see the permission
     bits or flags on the left-hand side of the output. There are seven fields to consider
     as well. Each empty field is denoted with a dash. When printed with `ls`, the
     first fields can get convoluted by semantics. For this reason, let''s use `stat`
     to investigate the file permissions:'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果我们查看前面命令的输出，我们可以看到`hello.txt`的`USER`是`bookuser`，`GROUP`是`bookuser`。我们还可以看到输出左侧的权限位或标志。还有七个字段需要考虑。每个空字段都用破折号表示。当使用`ls`打印时，第一个字段可能会因语义而变得混乱。因此，让我们使用`stat`来调查文件权限：
 - en: '[PRE2]'
+  id: totrans-16
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: The first access line is the most compelling. It contains all the important
     information for the access controls. The second line is just a timestamp letting
     us know when the file was last accessed. As we can see, `USER` or `UID` of the
@@ -107,39 +141,58 @@
     group, `bookuser`, has permission to read from and write to `hello.txt`, and everyone
     else has permission only to read from `hello.txt`." Let's test this with some
     real-world examples.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一行访问信息是最有力的。它包含了所有访问控制的重要信息。第二行只是一个时间戳，告诉我们文件最后被访问的时间。正如我们所见，对象的`USER`或`UID`是`bookuser`，`GROUP`也是`bookuser`。权限标志（`0664/-rw-rw-r--`）标识了两种表示权限标志的方式。第一种是八进制形式`0664`，将每个三标志字段压缩为一个三基数（八进制）数字。第二种是友好形式，`-rw-rw-r--`，等同于八进制形式，但视觉上更容易解读。在任何情况下，我们可以看到最左边的字段是0，我们的其余讨论将忽略它。该字段用于`setuid`和`setgid`功能，这对于本讨论不重要。如果我们把剩下的八进制数字664转换为二进制，我们得到110
+    110 100。这个二进制表示直接关联到友好形式。每个三重映射到读、写和执行权限。通常你会看到这个权限三重表示为`RWX`。第一个三重是给`USER`的权限，第二个是给`GROUP`的权限，第三个是给`OTHERS`的权限。翻译成常规英语就是，“用户`bookuser`有权从`hello.txt`中读取和写入。组`bookuser`有权从`hello.txt`中读取和写入，而其他人只有权从`hello.txt`中读取。”让我们通过一些现实世界的例子来测试这一点。
 - en: Changing permission bits
+  id: totrans-18
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 更改权限位
 - en: 'Let''s test the access controls in the example running processes as user `bookuser`.
     Most processes run in the context of the user that invoked them (excluding `setuid`
     and `getuid` programs), so any command we invoke should inherit our user''s permissions.
     We can view it by issuing:'
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们以`bookuser`用户的身份测试示例运行过程中的访问控制。大多数进程在调用它们的用户的上下文中运行（不包括`setuid`和`getuid`程序），所以任何我们调用的命令都应该继承我们用户的权限。我们可以通过发出以下命令来查看：
 - en: '[PRE3]'
+  id: totrans-20
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: My user, `bookuser`, is `USER bookuser`, `GROUP bookuser` and `SUPGRP sudo`
     and `fuse`.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 我的用户，`bookuser`，是`USER bookuser`，`GROUP bookuser`以及`SUPGRP sudo`和`fuse`。
 - en: 'To test for read access, we can use the `cat` command, which opens the file
     and prints its content to `stdout`:'
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 要测试读取权限，我们可以使用`cat`命令，它打开文件并将其内容打印到`stdout`：
 - en: '[PRE4]'
+  id: totrans-23
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'We can introspect the syscalls executed by running the `strace` command and
     viewing the output:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以通过运行`strace`命令并查看输出来自省执行的系统调用：
 - en: '[PRE5]'
+  id: totrans-25
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: The output can be quite verbose, so I am only showing the relevant parts. We
     can see that `cat` invoked the `open` syscall and obtained the file descriptor
     `3`. We can use that descriptor to find other accesses via other syscalls. Later
@@ -147,192 +200,296 @@
     number of bytes read. If we didn't have permission to read from `hello.txt`, the
     open would fail, and we would never have a valid file descriptor for the file.
     We would additionally see the failure in the `strace` output.
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 输出可能会相当冗长，因此我只展示了相关部分。我们可以看到`cat`调用了`open`系统调用并获得了文件描述符`3`。我们可以使用该描述符通过其他系统调用查找其他访问。稍后我们会看到在文件描述符`3`上发生了一个读取操作，它返回了`365`，即读取的字节数。如果我们没有从`hello.txt`读取的权限，打开操作将会失败，我们也永远不会得到该文件的有效的文件描述符。我们还会在`strace`输出中看到失败的信息。
 - en: Now that read permission is verified, let's try write. One simple way to do
     this is to write a simple program that writes something to the existing file.
     In this case, we will write the line `my new text\n` (refer to `write.c`.)
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然已经验证了读取权限，让我们尝试写入。一个简单的方法是编写一个简单的程序，将内容写入现有文件。在本例中，我们将写入`my new text\n`（参考`write.c`文件）。
 - en: 'Compile the program using the following command:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用以下命令编译程序：
 - en: '[PRE6]'
+  id: totrans-29
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Now run using the newly compiled program:'
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在使用新编译的程序运行：
 - en: '[PRE7]'
+  id: totrans-31
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'On verification, you will see:'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 在验证时，你会看到：
 - en: '[PRE8]'
+  id: totrans-33
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: As you can see, the write succeeded and returned `12`, the number of bytes written
     to `hello.txt`. No errors were reported, so the permissions seem in check so far.
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，写入操作成功，并返回了`12`，即写入到`hello.txt`的字节数。没有报告错误，所以权限似乎到目前为止是检查无误的。
 - en: 'Now let''s attempt to execute `hello.txt` and see what happens. We are expecting
     to see an error. Let''s execute it like a normal command:'
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在尝试执行`hello.txt`，看看会发生什么。我们预期会看到错误。像执行普通命令那样执行它：
 - en: '[PRE9]'
+  id: totrans-36
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'This is exactly what we expected, but let''s invoke it with `strace` to gain
     a deeper understanding of what failed:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 这正是我们所预期的，但让我们用`strace`来更深入地了解究竟哪里出了问题：
 - en: '[PRE10]'
+  id: totrans-38
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: The `execve` system call, which launches processes, failed with `EACCESS`. This
     is just the sort of thing one would hope for when no execute permission is given.
     The Linux access controls worked as expected!
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: '`execve`系统调用，它用于启动进程，由于`EACCESS`错误而失败。这正是当没有执行权限时所希望看到的情况。Linux的访问控制按预期工作！'
 - en: 'Let''s test the access controls in the context of another user. First, we''ll
     create a new user called `testuser` using the `adduser` command:'
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们将在另一个用户的上下文中测试访问控制。首先，我们将使用`adduser`命令创建一个名为`testuser`的新用户：
 - en: '[PRE11]'
+  id: totrans-41
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'Verify the `USER`, `GROUP`, and `SUPGRP` of `testuser`:'
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 验证`testuser`的`USER`、`GROUP`和`SUPGRP`：
 - en: '[PRE12]'
+  id: totrans-43
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: Since the `USER` and `GROUP` do not match any of the permissions on `a.S`, all
     accesses will be subject to the `OTHERS` permissions checks, which if you recall,
     is read only (`0664`).
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于`USER`和`GROUP`与`a.S`上的任何权限都不匹配，所有的访问都将受到`OTHERS`权限检查，正如你所记得的，这是只读的（`0664`）。
 - en: 'Start by temporarily working as `testuser`:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先临时作为`testuser`工作：
 - en: '[PRE13]'
+  id: totrans-46
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: As you can see, we are still in bookuser's home directory, but the current user
     has been changed to `testuser`.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，我们仍然在bookuser的主目录中，但当前用户已经变更为`testuser`。
 - en: 'We will start by testing `read` with the `cat` command:'
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将先用`cat`命令测试`read`：
 - en: '[PRE14]'
+  id: totrans-49
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: Similar to the earlier example, `testuser` can read the data just fine, as expected.
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 与前面的示例类似，正如预期的那样，`testuser`可以顺利地读取数据。
 - en: 'Now let''s move on to write. The expectation is that this will fail without
     appropriate access:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在让我们进行写入测试。预期没有适当的权限这将失败：
 - en: '[PRE15]'
+  id: totrans-52
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'As expected, the syscall operation failed. When we attempt to execute `hello.txt`
     as `testuser`, this should fail as well:'
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 如预期的那样，系统调用操作失败了。当我们尝试以`testuser`的身份执行`hello.txt`时，也应该失败：
 - en: '[PRE16]'
+  id: totrans-54
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Now we need to test the group access permissions. We can do this by adding
     a supplementary group to `testuser`. To do this, we need to exit to `bookuser`,
     who has permissions to execute the `sudo` command:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们需要测试组访问权限。我们可以通过向`testuser`添加一个补充组来实现这一点。为此，我们需要退出到有权限执行`sudo`命令的`bookuser`：
 - en: '[PRE17]'
+  id: totrans-56
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'Now let''s check the groups of `testuser`:'
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在让我们检查`testuser`的组：
 - en: '[PRE18]'
+  id: totrans-58
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'As a result of the previous `usermod` command `testuser` now belongs to two
     groups: `testuser` and `bookuser`. That means when `testuser` accesses a file
     or other object (such as a socket) with the group `bookuser`, the `GROUP` permissions,
     rather than `OTHERS`, will apply to it. In the context of `hello.txt`, `testuser`
     can now read from and write to the file, but not execute it.'
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于之前的`usermod`命令，`testuser`现在属于两个组：`testuser`和`bookuser`。这意味着当`testuser`访问具有`bookuser`组的文件或其他对象（如套接字）时，将应用`GROUP`权限，而不是`OTHERS`。在`hello.txt`的背景下，`testuser`现在可以读取和写入文件，但不能执行它。
 - en: 'Switch to `testuser` by executing the following command:'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过执行以下命令切换到`testuser`：
 - en: '[PRE19]'
+  id: totrans-61
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Test `read` by executing the following command:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过执行以下命令测试`read`：
 - en: '[PRE20]'
+  id: totrans-63
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: As before, `testuser` is able to read the file. The only difference is that
     it can now `read` the file through the access permissions of `OTHERS` and `GROUP`.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 与之前一样，`testuser`能够读取文件。唯一的区别是现在它可以通过`OTHERS`和`GROUP`的访问权限来`read`文件。
 - en: 'Test `write` by executing the following command:'
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过执行以下命令测试`write`：
 - en: '[PRE21]'
+  id: totrans-66
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: This time, `testuser` was able to write the file as well, instead of failing
     with the `EACCESS` permission error shown before.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 这一次，`testuser`不仅能够写入文件，而不是像之前那样遇到`EACCESS`权限错误。
 - en: 'Attempting to execute the file should still fail:'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 尝试执行文件应该仍然会失败：
 - en: '[PRE22]'
+  id: totrans-69
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: These concepts are the foundation of Linux access control permission bits, users
     and groups.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些概念是Linux访问控制权限位、用户和组的基础。
 - en: Changing owners and groups
+  id: totrans-71
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 更改所有者和组
 - en: Using `hello.txt` for exploratory work in the previous sections, we have shown
     how the owner of an object can allow various forms of access by managing the permission
     bits of the object. Changing the permissions is accomplished using the `chmod`
     syscall. Changing the user and/or group is done with the `chown` syscall. In this
     section, we will investigate the details of these operations in action.
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，我们使用`hello.txt`进行探索性工作，展示了对象的所有者如何通过管理对象的权限位来允许各种形式的访问。更改权限是通过使用`chmod`系统调用完成的。更改用户和/或组是通过`chown`系统调用来完成的。在本节中，我们将研究这些操作的具体细节。
 - en: Let's start by granting read and write permissions only to the owner of `hello.txt`
     file, `bookuser`.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们从仅向`hello.txt`文件的所有者`bookuser`授予读和写权限开始。
 - en: '[PRE23]'
+  id: totrans-74
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: As we can see, the file permissions are now set to only allow read and write
     access for `bookuser`. A thorough reader could execute the commands from earlier
     sections in this chapter to verify that permissions work as expected.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 如我们所见，现在文件权限设置为只允许`bookuser`读取和写入。一个细致的读者可以执行本章前面部分提到的命令来验证权限是否按预期工作。
 - en: 'Changing the group can be done in a similar fashion with `chown`. Let''s change
     the group to `testuser`:'
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 更改组也可以通过`chown`以类似的方式进行。让我们将组更改为`testuser`：
 - en: '[PRE24]'
+  id: totrans-77
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'This did not work as we intended, but what is the issue? In Linux, only privileged
     processes can change the `USER` and `GROUP` fields of objects. The initial `USER`
     and `GROUP` fields are set during object creation from the effective `USER` and
@@ -340,19 +497,27 @@
     create objects. Privileged processes come in two forms: those running as the almighty
     `root` and those that have their capabilities set. We will dive into the details
     of capabilities later. For now, let''s focus on the `root`.'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 这并没有按照我们的预期工作，但问题出在哪里呢？在Linux中，只有特权进程可以更改对象的`USER`和`GROUP`字段。在对象创建时，初始的`USER`和`GROUP`字段是从有效的`USER`和`GROUP`中设置的，在尝试执行该进程时会进行检查。只有进程可以创建对象。特权进程有两种形式：作为全能的`root`运行和设置了其功能的进程。我们稍后会详细介绍功能。现在，让我们关注`root`。
 - en: 'Let''s change the user to `root` to ensure executing the `chown` command will
     change the group of that object:'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们切换到`root`用户，以确保执行`chown`命令可以更改该对象的组：
 - en: '[PRE25]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: The case for more
+  id: totrans-81
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 更多情况的考虑
 - en: You can see the `GROUP` (`GID`) is now `testuser`, and things seem reasonably
     secure because in order to change the user and group of an object, you need to
     be privileged. You can only change the permission bits on an object if you own
@@ -365,12 +530,17 @@
     key. This would expose your secret key to all users on the system, which is almost
     certainly something you would never want to happen. The root limitation is partially
     addressed by the capabilities model.
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以看到`GROUP`（`GID`）现在是`testuser`，事情看起来相当安全，因为要更改对象的用户和组，你需要具备特权。只有在你拥有对象时，你才能更改对象的权限位，`root`用户除外。这意味着如果你以`root`身份运行，即使没有权限，你也可以对系统进行任何操作。这种绝对权威就是为什么以root运行的进程遭到成功攻击或错误时可能对系统造成严重损害的原因。此外，非root进程遭到成功攻击也可能通过无意中更改权限位造成损害。例如，假设你的SSH私钥上有一个非预期的`chmod
+    0666`命令。这将使你的密钥对所有系统用户暴露，这几乎肯定是你绝对不希望发生的事情。能力模型部分解决了root的限制。
 - en: Capabilities model
+  id: totrans-83
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 能力模型
 - en: For many operations on Linux, the object permission model doesn't quite fit.
     For instance, changing `UID` and `GID` requires some magical `USER` known as `root`.
     Suppose you have a long running service that needs to utilize some of these capabilities.
@@ -383,8 +553,10 @@
     as the `root` user and have the process change its `UID` and `GID` to something
     not privileged, but retain some smaller set of privileged capabilities to do its
     job? This is exactly what the capabilities model in Linux is.
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Linux上执行许多操作时，对象权限模型并不完全适用。例如，更改`UID`和`GID`需要一种被称为`root`的神奇`USER`。假设你有一个需要利用这些功能的长运行服务。也许这个服务监听内核事件并为你创建设备节点？这样的服务确实存在，它被称为`ueventd`或用户事件守护进程。这个守护进程传统上以`root`身份运行，这意味着如果它被攻破，它可能会从你的主目录读取你的私钥并将其发送给攻击者。这可能是一个极端的例子，但它旨在展示以`root`身份运行进程可能很危险。假设你可以以`root`用户身份启动一个服务，并让进程将其`UID`和`GID`更改为不具备特权的用户，但保留一些较小的特权能力以完成其工作？这正是Linux中的能力模型所做的。
 - en: The capabilities model in Linux is an attempt to break down the set of permissions
     that `root` has into smaller subsets. This way, processes can be confined to the
     set of minimum privileges they need to perform their intended function. This is
@@ -392,24 +564,34 @@
     the amount of damage a successful attack can do. In some instances, it can even
     prevent a successful attack from occurring by blocking an otherwise open attack
     vector.
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: Linux中的能力模型试图将`root`所具有的权限集分解为更小的子集。这样，进程可以被限制在执行预期功能所需的最小权限集中。这就是所谓的最小权限，这是在保护系统时减少成功攻击可能造成的损害的关键理念。在某些情况下，它甚至可以通过阻止其他开放的攻击向量来防止成功攻击的发生。
 - en: 'There are many capabilities. The man page for capabilities is the de facto
     documentation. Let''s take a look at the `CAP_SYS_BOOT` capability:'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 能力有很多种。能力的手册页是事实上的文档。让我们看看`CAP_SYS_BOOT`能力：
 - en: '[PRE26]'
+  id: totrans-87
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'This means a process running with this capability can reboot the system. However,
     that process can''t arbitrarily change `USERS` and `GROUP` as it could if it was
     running as `root` or with `CAP_DAC_READ_SEARCH`. This limits what an attacker
     can do:'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 这意味着具有此能力的进程可以重启系统。但是，该进程不能像以`root`身份运行或具有`CAP_DAC_READ_SEARCH`时那样任意更改`USERS`和`GROUP`。这限制了攻击者可以执行的操作：
 - en: '[PRE27]'
+  id: totrans-89
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: Now suppose the case where our restart process runs with `CAP_CHOWN`. Let's
     say it uses this capability to ensure that when a restart request is received,
     it backs up a file from each user's home directory to a server before restarting.
@@ -424,20 +606,27 @@
     think about the `bind` mounts, however the process doing the `bind` mounts and
     file permissions also runs with some capability, and thus suffers from this granularity
     problem as well.
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在假设我们的重启进程运行时带有`CAP_CHOWN`权限。假设它使用这个功能确保在接收到重启请求时，在重启之前备份每个用户的家目录下的一个文件到服务器。假设这个文件是`~/backup`，权限是0600，`USER`和`GROUP`分别是该家目录的相应用户和组。在这种情况下，我们已经尽可能最小化了权限，但进程仍然可以访问用户的SSH密钥，并且可能由于错误或攻击而上传这些密钥。另一种方法是设置组为`backup`，并以`GROUP
+    backup`运行进程。然而，这也有局限性。假设你想与另一个用户共享这个文件。该用户需要`backup`的辅助组，但现在用户可以读取*所有*备份文件，而不仅仅是预期的那些。一个敏锐的读者可能会考虑到`bind`挂载，然而执行`bind`挂载和文件权限的进程也带有某些权限，因此也受到这个粒度问题的影响。
 - en: The major issue, and the case for another access control system can be summarized
     by one word, *granularity*. The DAC model doesn't have the granularity required
     to safely handle complex access control models or to minimize the amount of damage
     a process can do. This is particularly important on Android, where the entire
     isolation system is dependent on this control, and a rogue root process can compromise
     the whole system.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 主要问题，以及另一个访问控制系统的案例可以用一个词来概括，那就是*粒度*。DAC模型没有足够的粒度来安全处理复杂的访问控制模型，或者最小化一个进程可能造成的损害。这在Android上尤为重要，因为整个隔离系统都依赖于这种控制，一个恶意root进程可能会破坏整个系统。
 - en: Android's use of DAC
+  id: totrans-92
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: Android对DAC的使用
 - en: In the Android sandbox model, every application runs as its own `UID`. This
     means that each app can separate its stored data from one another. The user and
     group are set to the `UID` and `GID` of that application, so no app can access
@@ -450,33 +639,46 @@
     SELinux policy due to app compatibility, but could be closed with SELinux. The
     proper way to share data between applications on Android is via binder, and sharing
     file descriptors. For smaller amounts of data, the provider model suffices.
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android沙盒模型中，每个应用程序都以其自己的`UID`运行。这意味着每个应用都可以将其存储的数据与其他应用隔离开来。用户和组设置为该应用程序的`UID`和`GID`，因此没有应用可以在应用程序显式对其对象执行`chmod`的情况下访问另一个应用程序的私有文件。此外，Android中的应用程序不能拥有权限，因此我们不必担心如`CAP_SYS_PTRACE`这样的权限，即调试另一个应用程序的能力。在Android中，在一个完美的世界里，只有系统组件会运行带权限，应用程序不会意外地对所有用户执行`chmod`操作以读取私有文件。由于应用程序兼容性，当前AOSP
+    SELinux策略没有纠正这个问题，但可以通过SELinux来解决。在Android上，应用程序之间共享数据的正确方式是通过binder和共享文件描述符。对于较小的数据量，提供者模型就足够了。
 - en: Glancing at Android vulnerabilities
+  id: totrans-94
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 浏览Android漏洞
 - en: With our newly found understanding of the DAC permission model and some of its
     limitations, let's look at some Android exploits against it. We will cover only
     a few exploits to understand how the DAC model failed.
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 利用我们对DAC权限模型及其一些局限性的新理解，让我们来看一些针对它的Android攻击方式。我们将仅涵盖一些攻击方式，以了解DAC模型是如何失败的。
 - en: Skype vulnerability
+  id: totrans-96
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Skype漏洞
 - en: CVE-2011-1717 was released in 2011\. In this exploit, the Skype application
     left a SQLite3 database world readable (something analogous to 0666 permissions).
     This database contained usernames and chat logs, and personal data such as name
     and e-mail. An application called Skypwned was able to demonstrate this capability.
     This is an example of how being able to change the permissions on your objects
     could be bad, especially when the case opens `READ` to `OTHERS`.
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: CVE-2011-1717在2011年发布。在这个漏洞中，Skype应用程序留下了一个SQLite3数据库，该数据库可以被全世界读取（类似于0666权限）。这个数据库包含了用户名和聊天日志，以及如姓名和电子邮件等个人数据。一个名为Skypwned的应用程序能够演示这一功能。这是一个改变对象权限可能导致严重后果的例子，特别是在将权限从`READ`开放给`OTHERS`的情况下。
 - en: GingerBreak
+  id: totrans-98
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: GingerBreak
 - en: CVE-2011-1823 showcases a root attack on Android. The volume management daemon
     (vold) on Android is responsible for the mounting and unmounting of the external
     SD card. The daemon listens for messages over a NETLINK socket. The daemon never
@@ -489,12 +691,16 @@
     of arbitrary code. The GingerBreak implementation resulted in an arbitrary user
     gaining root privileges, a textbook privilege execution attack. Once rooted, the
     device's sandboxes were no longer valid.
+  id: totrans-99
   prefs: []
   type: TYPE_NORMAL
+  zh: CVE-2011-1823展示了对Android系统的root攻击。Android上的卷管理守护进程（vold）负责外部SD卡挂载和卸载。该守护进程通过NETLINK套接字监听消息。守护进程从未检查过消息的来源，任何应用都可以打开并创建NETLINK套接字向vold发送消息。攻击者一旦打开NETLINK套接字，就会发送一个精心构造的消息来绕过健全性检查。该检查测试了一个有符号整数的最小界限，但从未检查过它是否为负数。然后它被用来索引一个数组。这种负数访问将导致内存破坏，如果消息恰当，可能导致执行任意代码。GingerBreak的实现使得任意用户获得了root权限，这是一个典型的权限执行攻击。设备一旦被root，沙盒就不再有效。
 - en: Rage against the cage
+  id: totrans-100
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: Rage against the cage
 - en: CVE-2010-EASY is a `setuid` exhaustion via fork bomb attack. It successfully
     attacks the `adb` daemon on Android, which starts life as root and downgrades
     its permissions if root is not needed. This attack keeps `adb` as `root` and returns
@@ -507,12 +713,19 @@
     `adb` service is respawned, and if `RLIMIT_NPROC` is maxed out, `setuid` will
     fail and `adb` will stay running as root. Then, running `adb` shell from a host
     returns a nice root shell to the user.
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: CVE-2010-EASY是通过fork炸弹攻击实现的`setuid`耗尽。它成功攻击了Android上的`adb`守护进程，该进程最初以root权限启动，如果不需要root权限则降级权限。这种攻击使`adb`保持为`root`，并向用户返回一个root
+    shell。在Linux内核2.6中，当运行进程数达到`RLIMIT_NPROC`时，`setuid`系统调用返回错误。`adb`守护进程代码没有检查`setuid`的返回值，这为攻击者留下了一个小的竞争窗口。攻击者需要分叉足够多的进程以达到`RLIMIT_NPROC`，然后杀死守护进程。`adb`守护进程降级到shell
+    `UID`，攻击者以shell `USER`身份运行程序，因此kill命令将成功执行。此时，`adb`服务会被重新启动，如果`RLIMIT_NPROC`已达到最大值，`setuid`将失败，`adb`将保持以root权限运行。然后，从主机运行`adb
+    shell`会向用户返回一个很好的root shell。
 - en: MotoChopper
+  id: totrans-102
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: MotoChopper
 - en: CVE-2013-2596 is a vulnerability in the `mmap` functionality of a Qualcomm video
     driver. Access to the GPU is provided by apps to do advanced graphics rendering
     such as in the case of OpenGL calls. The vulnerability in `mmap` allows the attacker
@@ -521,12 +734,16 @@
     DAC model was not at fault. In reality, outside of patching the code or removing
     direct graphics access, nothing but programming checks of the `mmap` bounds could
     have prevented this attack.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: CVE-2013-2596是高通视频驱动程序`mmap`功能中的一个漏洞。应用程序通过`mmap`访问GPU以进行高级图形渲染，例如OpenGL调用。`mmap`中的漏洞允许攻击者`mmap`内核地址空间，此时攻击者能够直接改变他们的内核凭据结构。这个漏洞是一个例子，其中DAC模型并没有出错。实际上，除了修补代码或移除直接图形访问权限之外，只有对`mmap`边界的编程检查才能防止这种攻击。
 - en: Summary
+  id: totrans-104
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: The DAC model is extremely powerful, but its lack of fine granularity and use
     of an extraordinarily powerful `root` user leaves something to be desired. With
     the increasing sensitivity of mobile handset use, the case to increase the security
@@ -537,5 +754,8 @@
     to provide a new form of access control model. The very first module was called
     SELinux. It is used by Red Hat and others to secure sensitive government systems.
     Thus, a solution was found to enable such access controls for Android.
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: DAC模型非常强大，但其缺乏细粒度控制以及使用异常强大的`root`用户，仍有所不足。随着移动设备使用的敏感性增加，提高系统安全性的需求是有根据的。幸运的是，Android建立在Linux之上，因此受益于一个由众多工程师和研究人员构成的庞大生态系统。自从Linux内核2.6起，一种名为**强制访问控制（MAC）**的新访问控制模型被加入。这是一个框架，通过它可以将模块加载到内核中，以提供一种新的访问控制模型。第一个模块被称为SELinux。它被Red
+    Hat等公司用于保护敏感的政府系统。因此，找到了一个解决方案，以实现对Android的这种访问控制。
