@@ -1,0 +1,825 @@
+- en: Advanced 2D Rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Being able to draw more complex primitives or use a composition of them is
+    critical to making the user experience of our custom view awesome, useful, and
+    special. So far, we''ve been using some drawing and rendering operations on our
+    custom view, but if we check the Android documentation closely, that''s a much
+    reduced set of what Android provides to developers. We have drawn some primitives,
+    saved and restored our `canvas` state, and applied some clipping operations, but
+    that''s only the top thin layer. In this chapter, we''ll see these operations
+    again, but we''ll also see few new drawing operations and how we can use everything
+    together. We''ll cover the following topics in more detail:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing operations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Masking and clipping
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Gradients
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Putting it all together
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing operations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we've just mentioned, we have already seen and used some drawing operations,
+    but that was only the envelope of what's inside. We'll see new drawing operations
+    and how to combine them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Bitmaps
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s start by drawing bitmaps or images. Instead of having a white background,
+    we''ll use an image as background for our custom view. Using the source code from
+    our previous example, we could do some very simple modifications to draw an image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s define a `Bitmap` object that will hold a reference to the image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To start, let''s initialize it with the application icon we already have on
+    our application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`BitmapFactory` provides us several ways to load and decode images.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we have the image loaded, we can draw it on our `onDraw()` method by calling
+    the `drawBitmap(Bitmap bitmap, float left, float top, Paint paint)` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we don't need anything special from our `Paint` object, we've set it to `null`;
+    we'll use it later in this book, but for the moment, just ignore it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If `backgroundBitmap` is `null`, it means that it couldn''t load the image;
+    so, for safety, we should always check. This code will just draw the icon on the
+    top-left corner of our custom view, although we could change its position by setting
+    either different coordinates-here we used `0`,`0`-or applying a transformation
+    to our `canvas` like we did before. For example, we can rotate the image based
+    on the angle selected by the user:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that we've added the center of the image as the pivot point, or otherwise
+    will rotate by its top-left corner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are other ways to draw images; Android has another method for drawing
+    an image from a source `Rect` to a destination `Rect`. The `Rect` object allows
+    us to store four coordinates and use it as a rectangle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The method `drawBitmap(Bitmap bitmap, Rect source, Rect dest, Paint paint)`
+    is very useful for drawing a portion of an image into any other size we want.
+    This method will take care of scaling the selected portion of the image to fill
+    the destination rectangle. For example, we could use the following code if we
+    wanted to draw the right half of the image scaled to the whole custom view size.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s define the background `Bitmap` and two `Rect`; one to hold the
+    source dimensions and other for the destination:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then, let's instantiate them on the class constructor. It's not a good practice
+    to do it on the `onDraw()` method, as we should avoid allocating memory to methods
+    that are called on every frame or every time we draw our custom view. Doing so
+    will trigger additional garbage collector cycles and affect performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: By default, `Rect` initializes the four coordinates to 0 but here, for clarity,
+    we set the top and the left coordinates to 0\. If the image was loaded successfully,
+    we set the right and bottom to the width and height of the image, respectively.
+    As we want to draw only the right half of the image only, we update the left border
+    to half the width of the image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On the `onDraw()` method, we set the right and bottom coordinates of the destination
+    `Rect` to the width and height of the custom view and we draw the image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s check the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/0da5787f-9638-4cf0-846e-56f9a313f84e.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can see it doesn''t abide by the aspect ratio of the image, but let''s solve
+    it by computing the ratio of the smaller dimension, either horizontal or vertical,
+    and scale it by this ration. Then, apply it to the other dimension. We will see
+    the following code after calculating the image ratio:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can also draw a `Bitmap` using a transformation `Matrix`. To do so, we can
+    create a new instance of `Matrix` and apply a transformation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Create an instance on the constructor. Do not create an instance on the `onDraw()`
+    instance, as it will pollute the memory and trigger unnecessary garbage collection,
+    as mentioned earlier:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Please be careful with the matrix operation order; there are also post-operations
+    and pre-operations. Check the matrix class documentation for more information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the `onDraw()` method, just draw `Bitmap` using the `drawBitmap (Bitmap bitmap,
+    Matrix matrix, Paint paint)` method and using the `matrix` we've initialized on
+    our class constructor. In this example, we also used a `null Paint` object to
+    simplify, as we don't need anything specific from the `Paint` object here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Although these are the most common methods to draw a `Bitmap` onto a `Canvas`,
+    there are a few more methods.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Furthermore, check the `Example12-Drawing` folder on the GitHub repository to
+    see the full source code of this example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using the Paint class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've been drawing some primitives until now, but `Canvas` provides us with
+    many more primitive rendering methods. We'll briefly cover some of them, but first,
+    let's first talk about the `Paint` class as we haven't introduced it properly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to the official definition, the `Paint` class holds the style and
+    color information about how to draw primitives, text, and bitmaps. If we check
+    the examples we've been building, we created a `Paint` object on our class constructor
+    or on the `onCreate` method, and we used it to draw primitives later on our `onDraw()`
+    method. As, for instance, if we set our background Paint instance `Style` to `Paint.Style.FILL`,
+    it'll fill the primitive, but we can change it to `Paint.Style.STROKE` if we only
+    want to draw the border or the strokes of the silhouette. We can draw both using
+    `Paint.Style.FILL_AND_STROKE`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To see `Paint.Style.STROKE` in action, we''ll draw a black border on top of
+    our selected colored bar in our custom View. Let''s start by defining a new `Paint`
+    object called `indicatorBorderPaint` and initialize it on our class constructor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: We also defined a constant with the size of the border line and set the stroke
+    width to this size. If we set the width to `0`, Android guaranties it'll use a
+    single pixel to draw the line. As we want to draw a thick black border, this is
+    not our case right now. In addition, we set the stroke `Cap` to `Paint.Cap.BUTT`
+    to avoid the stroke overflowing its path. There are two more Caps we can use,
+    `Paint.Cap.SQUARE` and `Paint.Cap.ROUND`. These last two will end the stroke,
+    respectively, with a circle, rounding the stroke, or a square.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's quickly see the differences between the three Caps and also introduce
+    the `drawLine` primitive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First of all, we create an array with all three Caps, so we can easily iterate
+    between them and create a more compact code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, on our `onDraw()` method, let''s draw a line using each of the Caps using
+    the `drawLine(float startX, float startY, float stopX, float stopY, Paint paint)`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll have a result similar to the following image. As we can see, the line
+    is slightly shorter when using the `Paint.Cap.BUTT` stroke `Cap`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/3682b626-e67f-48b8-aa8b-536408294391.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Also, as we saw before, we set the `AntiAlias` flag to true on the `Paint`
+    object. If this flag is enabled, all operations that support it will smooth the
+    corners of what they are drawing. Let''s compare the differences with this flag
+    enabled and disabled:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/d379d55a-4833-4c1d-b931-374de6124d95.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: On the left, we've the three lines with the `AntiAlias` flag enabled, and on
+    the right, we've the same three lines with the `AntiAlias` flag disabled. We can
+    only appreciate a difference on the rounded edges, but the result is smoother
+    and nicer. Not all operations and primitives support it and might have an impact
+    on performance, so we need to be careful when using this flag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can also draw multiple lines using another method called `drawLine(float[]
+    points, int offset, int count, Paint paint)` or its simpler form `drawLine(float[]
+    points, Paint paint)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This method will draw a single line for each set of the four entries into the
+    array; it would be like calling `drawLine(array[index], array[index + 1], array[index
+    + 2], array[index +3], paint)`, incrementing the index by `4`, and repeating this
+    process until the end of the array.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the first method, we could also specify the amount of lines to draw and from
+    which offset we start inside the array.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s go to the task we had and draw the border:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It''s simply drawing the same arc, but with this new `Paint`. One small detail:
+    as the border width grows centered from where it''s drawing the stroke, we need
+    to reduce the size of the arc by `BORDER_SIZE /2`. Let''s see the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/3f04c547-60cf-4301-b7d6-a3eade43e39f.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We''re missing the inner border, but that''s normal because, if we remember
+    from our previous chapters, that part is there because we''re clipping it out,
+    not because `drawArc` is drawing it that way. We can do a small trick to draw
+    this internal border. We''ll draw another arc with the size of the clipping area,
+    but just the stroke:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we''ve applied the same logic with the border size, but the other way
+    around: we draw the arc slightly bigger instead of smaller.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see the results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/be9fb693-b67d-4b2d-a9e1-855d5230794b.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: We've mentioned earlier in this book, but it's important not to create new `Paint`
+    objects in the `onDraw()` method or basically, in any method that will be called
+    every time a frame is drawn. We might be tempted as, in some cases, it feels convenient;
+    however, avoid the temptation and create the objects in the class constructor
+    or just reuse the objects. We can change the `Paint` class instance properties
+    and reuse it to paint with different colors or with different styles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Find the entire source code of this example in the `Example13-Paint` folder
+    on the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We'll be playing more with the `Paint` object and its properties, but now, let's
+    move to drawing more primitives.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing more primitives
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s start by the simplest drawing operations: `drawColor(int color)`, `drawARGB(int
+    a, int r, int g, int b)`, `drawRGB(int r, int g, int b),` and `drawPaint(Paint
+    paint)`. These will fill the entire `canvas`, taking into account the clipping
+    area.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's move forward to `drawRect()` and `drawRoundRect()`. These two methods
+    are quite simple too, `drawRect()` will draw a rectangle and `drawRoundRect()`
+    will draw a rectangle with rounded borders.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can use both methods directly, specifying the coordinates or using `Rect`.
+    Let's create a simple example that will draw a new random rounded rectangle every
+    time the view is drawn or it’s `onDraw()` method is called.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To start, lets define two `ArrayLists`; one will hold the coordinates and the
+    other will hold the color information of that rectangle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We also declared a `Paint` object that we''ll use to draw all the rounded rectangles.
+    Let''s now initialize them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've set the paint object style to `Paint.Style.FILL` and set the `AntiAlias`
+    flag, but we haven't set the color. We'll do so before drawing each rectangle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s now implement our `onDraw()` method. To start, we''ll add four new random
+    coordinates. As `Math.random()` returns a value from `0` to `1`, we multiply it
+    by the current view width and height to get a proper view coordinate. We also
+    generate a new random color with full opacity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then, we'll loop with all the random points we added and take the `4` of them
+    at the time, assuming the first two will be the starting X and Y and the latter
+    two will be the ending X and Y coordinates of the rectangle. We hardcoded `40`
+    as the angle of the rounded edges. We can play with this value to change the amount
+    of roundness.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ve introduced bitwise operations on colors. We know we can store a color
+    in a 32-bit integer value, and usually, in ARGB format. That gives us 8 bits for
+    each component. Doing bitwise operations, we can easily manipulate colors. For
+    more information on bitwise operations, please refer to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://en.wikipedia.org/wiki/Bitwise_operation](https://en.wikipedia.org/wiki/Bitwise_operation).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To finish, if we have less than `100` rectangles or `400` coordinates in our
+    array, we post an `Invalidate` event delayed by `20` milliseconds. It is only
+    for demonstration purposes and to show that it is adding and drawing more rectangles.
+    The `drawRoundRect()` method can easily be changed by `drawRect()` by just removing
+    the two hardcoded `40`s as the angle of the rounded edges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/bd7c0838-689e-4951-b557-940f215def1a.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: For the full source code, check the `Example14-Primitives-Rect` folder in the
+    GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s continue with other primitives, for example, `drawPoints`. The `drawPoints(float[]
+    points, Paint paint)` method will simply draw a list of points. It will use the
+    stroke width and the stroke `Cap` of the `paint` object. For instance, a quick
+    example that draws few random lines and also draws a point both at the beginning
+    and at the end of each line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s see the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/c54012c6-98f1-4eff-b43d-ce100ae7acf6.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: We're creating the points array here on the `onDraw()` method, but it's done
+    only once.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Check the full source code of this example in the `Example15-Primitives-Points`
+    folder, in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Building on top of the previous example, we can easily introduce the `drawCircle`
+    primitive. Let''s change the code a bit though; instead of generating only pairs
+    of random values, let''s generate three random values. The first two will be the
+    `X` and `Y` coordinate of the circle and the third the circle''s radius. In addition,
+    let''s remove the lines for the sake of clarity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ve also initialized our `paint` object on our class constructor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s see the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/cb2b47d2-cd97-4573-b4aa-3a21886b8c4e.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check the full source code of this example on the `Example16-Primitives-Circles`
+    folder, in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To find out about all the primitives, modes, and methods to draw on a `Canvas`,
+    check the Android documentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Paths can be considered as containers of primitives, lines, curves, and other
+    geometric shapes that, as we already seen, can be used as clipping regions, drawn,
+    or used to draw text on it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To begin, let''s modify our previous example and convert all the circles to
+    a `Path`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: We don't need to store the points, so we declared it as a local variable. We
+    created a `Path` object instead. Now that we have this `Path` with all the circles
+    in it, we can draw it by calling the `drawPath(Path path, Paint paint)` method
+    or use it as a clipping mask.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We added an image to our project and we''ll draw it as a background image,
+    but we''ll apply a clipping mask defined by our `Path` to make things interesting:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s see the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/3d2481dd-8a7f-49c3-b050-5f7b4929fa05.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: To see the full source code of this example, check the `Example17-Paths` folder
+    on the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Checking the Android documentation about Paths, we can see that there are a
+    lot of methods to add primitives to a `Path`, for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`addCircle()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`addRect()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`addRoundRect()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`addPath()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: However, we're not limited to these methods, we can also add lines or displace
+    where our path will start our next element using the `lineTo` or `moveTo` methods,
+    respectively. In the case we want to use relative coordinates, the `Path` class
+    provides us with the methods `rLineTo` and `rMoveTo` that assumes that the given
+    coordinates are relative from the last point of the `Path`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For additional information about `Path` and its methods, check the Android documentation
+    website. We can do so, using the methods `cubicTo` and `quadTo`. A Bezier curve
+    consists of control points that control the shape of the smooth curve. Let's build
+    a quick example by adding control points each time the user taps on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s define two `Paint` objects, one for the Bezier lines and another
+    to draw the control points for reference:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Control points will be drawn as round red dots, while the Bezier lines will
+    be drawn as thinner white lines. As we''re initializing our objects, let''s also
+    define an empty `Path` and a float array to store the points:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, let's override `onTouchEvent()` to add the point where the user tapped
+    the screen and trigger a redraw of our custom view by calling the invalidate method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'On our `onDraw()` method, let''s first check if we have already three points.
+    If that is the case, let''s add a cubic Bezier to our `Path`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `currentIndex` maintains the last index of the point array that has been
+    inserted into the `Path`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s draw the `Path` and the points:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s see the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/7f6bcce8-2242-4eba-887b-629a65ee7777.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: See the full source code of this example on the `Example18-Paths` folder, in
+    the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing text
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Text can be considered a primitive from the point of view of `Canvas` operations,
+    but we''ve put it here on its own section, as it''s quite important. Instead of
+    starting with the simplest example, as we''ve just introduced Paths, we''ll continue
+    our previous example and draw the text on top of the `Path`. To draw the text,
+    we''ll reuse the `Paint` object for the Bezier curve, but we''ll add some text
+    parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This sets the size of the text and also aligns it to the center of the `Path`,
+    so every time we add new points, the text position will adapt to remain at the
+    center. To draw the text, we simply call the `drawTextOnPath()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This was a very quick addition to our code, but if we execute our application,
+    we can see the results with the text over the `Path` lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/0dad2444-d349-4e37-891e-1bcf98d01ac0.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Take into account that we're drawing the same things as we drawn before, but
+    we can freely use the `Path` just as the guide for the text. There is no need
+    to draw it or to draw the control points.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Check the full source code of this example on the `Example19-Text folder`, in
+    the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We've started drawing text on Paths, as we had the example almost built. However,
+    there are more simple methods for drawing text. For instance, we can just draw
+    a text on a specific position of the screen by calling either `canvas.drawText(String
+    text, float x, float y, Paint paint)` or `canvas.drawText(char[] text, float x,
+    float y, Paint paint)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These methods will just do their job, but they will not check if the text fits
+    in the available space and they will definitely not split and wrap the text. To
+    do so, we''ll have to do it ourselves. The `Paint` class provides us with methods
+    to measure text and calculate text boundaries. For example, we created a small
+    helper method that returns the width and height of `String`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ve used the text boundary to get the text height, but we''ve used the `measureText()`
+    method to get the text width. There are some differences on how the size is computed
+    in both methods. Although it''s not currently properly documented on the Android
+    documentation site, there is an old discussion about this on Stack Overflow:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://stackoverflow.com/questions/7549182/android-paint-measuretext-vs-gettextbounds](http://stackoverflow.com/questions/7549182/android-paint-measuretext-vs-gettextbounds).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, we shouldn't implement our own text splitting method. If we want to
+    draw a large text and we know it might need splitting and wrapping, we can use
+    the `StaticLayout` class. In the example here, we'll create a `StaticLayout` with
+    the width of half the view width.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can implement it on our `onLayout()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: In our `onDraw()` method, we draw it centered on the screen. As we know, the
+    layout width was half the view width; we know we have to displace it by a quarter
+    of the width.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here is the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/3ff97fdf-3797-4dc0-a960-57061d606d7d.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check the full source code of this example in the `Example20-Text` folder, in
+    the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Transformations and operations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We already used some `canvas` transformations on our custom view before, but
+    let's revisit the `Canvas` operations we can use. First of all, let's see how
+    we can concatenate these transformations. Once we've used a transformation, any
+    other transformation we use will be concatenated or applied on top of our previous
+    operations. To avoid this behavior, we've to call the `save()` and `restore()`
+    methods we also used before. To see how transformations build on top of each other,
+    let's create a simple example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s create a `paint` object on our constructor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, let''s calculate the rectangle size based on the size of the screen on
+    the `onLayout()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We also stored the starting time, which we will use it for a quick and simple
+    animation afterwards. Now, we''re ready to implement the `onDraw()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've first calculated the `angle` based on the amount of time that passed since
+    the beginning. Animations should always be based on time and not on the amount
+    of frames drawn.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we draw the background, store the `canvas` state by calling `canvas.save()`,
+    and perform a translation to the center of the screen. We'll base all transformations
+    and drawings from the center, instead of the top left corner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, we'll draw 15 rectangles where each one will be increasingly
+    rotated and scaled. As transformations are applied on top of each other, this
+    is very easy to do in a simple `for()` loop. It is important to draw the rectangle
+    from `-rectSize / 2` to `rectSize / 2` instead of `0` to `rectSize`; otherwise,
+    it will be rotating from one angle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Change the code line where we draw the rectangle to `canvas.drawRect(0, 0, rectSize,
+    rectSize, paint)` to see what happens.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is, though, an alternative to this method: we can use pivot points on
+    the transformations. Both `rotate()` and `scale()` methods support two additional
+    `float` parameters that are the pivot point coordinates. If we look at the source
+    code implementation of `scale(float sx, float sy, float px, float py)`, we can
+    see it is simply applying a translation, calling the simple scale method, and
+    applying the opposite translation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using this method, we could have implemented the `onDraw()` method this other
+    way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'See the following screenshot to see how the rectangles are concatenated:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/8235837e-4edc-49f9-9f1e-842f8fe94de8.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: In addition, the source code of this full example can be found in the `Example21-Transformations`
+    folder on the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ve seen some basic operations on matrices, such as `scale()`, `rotate(),`
+    and `translate()`, but `canvas` provides us with some more additional methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`skew`: This applies a skew transformation.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setMatrix`: This lets us compute a transformation matrix and directly sets
+    it to our `canvas`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`concat`: This is similar to the previous case. We can concatenate any matrix
+    to the current one.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Putting it all together
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we've seen many different drawing primitives, clipping operations, and
+    matrix transformations, but the most interesting part is when we combine it all
+    together. In order to build great custom views, we've to use many different kinds
+    of operations and transformations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, having so many operations available is a double-edged sword. We have
+    to be careful when adding this complexity to our custom view, as we can compromise
+    performance quite easily. We should check if we're applying, for example, too
+    many or unnecessary clippings operations or if we aren’t optimizing enough or
+    we aren’t maximizing reuse of clipping and transformation operations. In that
+    case, we might even use the `quickReject()` method from the `canvas` object to
+    quickly discard areas that will fall outside the clipping area.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, we need to keep track of all `save()` and `restore()` we're performing
+    to our `canvas`. Performing additional `restore()` methods, not only means we
+    have an issue with our code, but  is an actual error. If we have to change to
+    different previously saved states, we can use the `restoreToCount()` method together
+    with saving the state number in the call we do to save the state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we've mentioned before, and will mention again in the following chapters,
+    avoid to allocate memory or create new instances of an object, inside the `onDraw()`
+    method; especially remember this remark if at some point you think you have to
+    create a new instance of a `paint` object inside the `onDraw()`. Reuse `paint`
+    objects or initialize them, for instance, on the class constructor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we've seen how to draw more complex graphic primitives, transform
+    them, and use clipping operations while drawing our custom view. Most of the time,
+    these primitives by themselves don't give us too much value but, we've also saw
+    many quick examples of how to put many of them together and create something useful.
+    We didn't cover all the possible methods, operations, or transformations, as it
+    will be a lot of information and will not be useful; it may seem like reading
+    a language dictionary. To stay up to date with all the possible methods and drawing
+    primitives, keep checking the developer's Android documentation and stay aware
+    of the release notes of every new release of Android to check what's new.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll see how to use OpenGL ES to add 3D rendering to our
+    custom view.
+  prefs: []
+  type: TYPE_NORMAL

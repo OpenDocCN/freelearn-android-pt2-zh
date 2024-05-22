@@ -1,0 +1,1511 @@
+- en: Chapter 5. Protecting Applications
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Securing application components
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Protecting components with custom permissions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Protecting content provider paths
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Defending against the SQL-injection attacks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Application signature verification (anti-tamper)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tamper protection by detecting the installer, emulator, and debug flag
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Removing all log messages with ProGuard
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Advanced code obfuscation with DexGuard
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we've seen how to set up and customize an environment to discover and
+    take advantage of vulnerabilities in the Android apps. In this chapter, we are
+    going to discuss several protection techniques to make it more difficult for reverse
+    engineers and attackers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the common mistakes while developing applications is unintentionally
+    leaving application components exposed. We'll focus on how to prevent the components
+    from being exposed and accessible to other apps. We will also see how to restrict
+    access with custom permissions if sharing data is required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Intrusion or tamper detection is the cornerstone of all good defense systems,
+    and to this end, we'll try to detect if an attack is in progress and whether our
+    app is running in a compromised state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rounding up the chapter, we will cover two recipes to make a reverse engineer's
+    job even more difficult. We will see how to use code obfuscation and customize
+    ProGuard configuration to remove all logging messages from the app and hide-sensitive
+    API calls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The topic of protecting data in transit across the network is covered in [Chapter
+    7](part0073_split_000.html#page "Chapter 7. Secure Networking"), *Secure Networking*,
+    and how to keep data safe at rest with encryption is covered in [Chapter 9](part0083_split_000.html#page
+    "Chapter 9. Encryption and Developing Device Administration Policies"), *Encryption
+    and Developing Device Administration Policies*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Securing application components
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Application components can be secured both by making proper use of the `AndroidManifest.xml`
+    file and by forcing permission checks at code level. These two factors of application
+    security make the permissions framework quite flexible and allow you to limit
+    the number of applications accessing your components in quite a granular way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are many measures that you can take to lock down access to your components,
+    but what you should do before anything else is make sure you understand the purpose
+    of your component, why you need to protect it, and what kind of risks your users
+    face should a malicious application start firing off intents to your app and accessing
+    its data. This is called a risk-based approach to security, and it is suggested
+    that you first answer these questions honestly before configuring your `AndroidManifest.xml`
+    file and adding permission checks to your apps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this recipe, I have detailed some of the measures that you can take to protect
+    generic components, whether they are activities, broadcast receivers, content
+    providers, or services.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To start off, we need to review your Android application `AndroidManifest.xml`
+    file. The `android:exported` attribute defines whether a component can be invoked
+    by other applications. If any of your application components do not need to be
+    invoked by other applications or need to be explicitly shielded from interaction
+    with the components on the rest of the Android system—other than components internal
+    to your application—you should add the following attribute to the application
+    component''s XML element:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here the `[component name]` would either be an activity, provider, service,
+    or receiver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Enforcing permissions via the `AndroidManifest.xml` file means different things
+    to each of the application component types. This is because of the various **inter-process
+    communications** (**IPC**) mechanisms that can be used to interact with them.
+    For every application component, the `android:permission` attribute does the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Activity**: Limits the application components which are external to your
+    application that can successfully call `startActivity` or `startActivityForResult`
+    to those with the required permission'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Service**: Limits the external application components that can bind (by calling
+    `bindService()`) or start (by calling `startService()`) the service to those with
+    the specified permission'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Receiver**: Limits the number of external application components that can
+    send broadcasted intents to the receiver with the specified permission'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Provider**: Limits access to data that is made accessible via the content
+    provider'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `android:permission` attribute of each of the component XML elements overrides
+    the `<application>` element's `android:permission` attribute. This means that
+    if you haven't specified any required permissions for your components and have
+    specified one in the `<application>` element, it will apply to all of the components
+    contained in it. Though specifying permissions via the `<application>` element
+    is not something developers do too often because of how it affects the friendliness
+    of the components toward the Android system itself (that is, if you override an
+    activity's required permissions using the `<application>` element), the home launcher
+    will not be able to start your activity. That being said, if you are paranoid
+    enough and don't need any unauthorized interaction to happen with your application
+    or its components, you should make use of the `android:permission` attribute of
+    the `<application>` tag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When you define an `<intent-filter>` element on a component, it will automatically
+    be exported unless you explicitly set `exported="false"`. However, this seemed
+    to be a lesser-known fact, as many developers were inadvertently opening their
+    content providers to other applications. So, Google responded by changing the
+    default behavior for `<provider>` in Android 4.2\. If you set either `android:minSdkVersion`
+    or `android:targetSdkVersion` to `17`, the `exported` attribute on `<provider>`
+    will default to `false`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `<service>` tag in the Android Developers Reference guide at [https://developer.android.com/guide/topics/manifest/service-element.html](https://developer.android.com/guide/topics/manifest/service-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `<receiver>` tag in the Android Developers Reference guide at [https://developer.android.com/guide/topics/manifest/receiver-element.html](https://developer.android.com/guide/topics/manifest/receiver-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `<activity>` tag in the Android Developers Reference guide at [https://developer.android.com/guide/topics/manifest/activity-element.html](https://developer.android.com/guide/topics/manifest/activity-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `<application>` tag in the Android Developers Reference guide at [https://developer.android.com/guide/topics/manifest/application-element.html](https://developer.android.com/guide/topics/manifest/application-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `AndroidManifest.xml` file in the Android Developers Reference guide at
+    [http://developer.android.com/guide/topics/manifest/manifest-intro.html](http://developer.android.com/guide/topics/manifest/manifest-intro.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `Context` class in the Android Developers Reference guide at [http://developer.android.com/reference/android/content/Context.html](http://developer.android.com/reference/android/content/Context.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `Activity` class in the Android Developers Reference guide at [http://developer.android.com/reference/android/app/Activity.html](http://developer.android.com/reference/android/app/Activity.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Protecting components with custom permissions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The Android platform defines a set of default permissions, which are used to
+    secure system services and application components. Largely, these permissions
+    work in the most generic case, but often when sharing bespoke functionality or
+    components between applications it will require a more tailored use of the permissions
+    framework. This is facilitated by defining custom permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This recipe demonstrates how you can define your own custom permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's get started!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before adding any custom permissions, you need to declare string resources
+    for the permission labels. You can do this by editing the `strings.xml` file in
+    your application project folder under `res/values/strings.xml`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Adding normal protection-level custom permissions to your application can be
+    done by adding the following lines to your `AndroidManifest.xml` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We'll cover what the `android:protectionLevel` attribute means in the *How it
+    works…* section.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Making use of this permission works the same as any other permission; you need
+    to add it to the `android:permission` attribute of an application component. For
+    an activity:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Or a content provider:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Or a service:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Or a receiver:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You can also allow other applications to request this permission by adding
+    the `<uses-permission/>` tag to an application''s `AndroidManifest.xml` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Defining a permission group
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Custom permissions can be grouped logically to assign semantic meaning to an
+    application requesting a given permission or a component requiring certain permissions.
+    Grouping permissions is done by defining a permissions group and assigning your
+    permissions to these groups whenever they are defined, as demonstrated previously.
+    Here''s how you define a permission group:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add a string resource for the label of the permission group, as done before.
+    This is done by adding the following line to the `res/values/strings.xml` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then, add the following line to the `AndroidManifest.xml` file of your application:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You will then be able to assign the permissions you define to groups as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The preceding walkthrough demonstrated how to define custom permissions by making
+    use of the `<permission>` element of the `AndroidManifest.xml` file, and how to
+    define a permission group by making use of the `<permission-group>` element of
+    the manifest. Here, we break down and detail the nuances of each of these elements
+    and their attributes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `<permission>` element is pretty easy to understand. Here''s a breakdown
+    of the attributes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`android:name`: This defines the name of the permissions, which is the string
+    value that will be used to reference this permission'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:protectionLevel`: This defines the protection level of the permission
+    and controls whether users will be prompted to grant the permission. We''ve discussed
+    this in a previous chapter, but here''s a recap of the protection levels:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`normal`: This permission is used to define nondangerous permissions, these
+    permissions will not be prompted and may be granted autonomously'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`dangerous`: This permission is used to define permissions that expose the
+    user to considerable fiscal, reputational, and legal risk'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`signature`: This permission is granted autonomously to applications that are
+    signed with the same key as the application that defines them'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`signatureOrSystem`: This permission is automatically granted to any application
+    that forms a part of the system image or is signed with the same key as the application
+    that defines them'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If you are interested in only sharing components across apps that you have developed,
+    use the `signature` permission. Examples of this would be a free app with an unlocker
+    app as a separate paid download, or an app with several optional plugins which
+    wish to share functionality. Dangerous permission will not be granted automatically.
+    On installation, the `android:description` attribute may be displayed to the user
+    for confirmation. This is useful if you want to flag to users when another app
+    can access your app's data. The `normal` permission is automatically granted on
+    install, and it will not be flagged to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `<permission>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/permission-element.html](http://developer.android.com/guide/topics/manifest/permission-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `<uses-permission>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/uses-permission-element.html](http://developer.android.com/guide/topics/manifest/uses-permission-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `<permission-group>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/permission-group-element.html](http://developer.android.com/guide/topics/manifest/permission-group-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `Manifest.permission` class in the Android Developers Reference guide at
+    [https://developer.android.com/reference/android/Manifest.permission.html](https://developer.android.com/reference/android/Manifest.permission.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Protecting content provider paths
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Content providers are probably the most exploited application components, given
+    that they often hold the data most critical to user authentication. They often
+    hold a lot of sensitive data about users and their affinity to SQL-injection attacks
+    and information leakage. This walkthrough will detail some measures that you can
+    take to protect your content providers' general information leakage caused by
+    common errors in how permissions are configured for content providers. We'll also
+    cover guarding database and content providers against SQL-injection attacks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This recipe will discuss how to add certain configurations to your `AndroidManifest.xml`
+    file to protect access to your content provider, down to the URI path level. It
+    also discusses some of the security risks in misusing the grant URI mechanism,
+    so as to not expose too much of your content provider paths to unauthorized or
+    potentially malicious applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Uniform resource identifiers** (**URIs**) are used with content providers
+    to identify specific datasets, for example, `content://com.myprovider.android/email/inbox`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The first step in securing any component is to make sure you've registered the
+    permissions for it properly. Securing a content provider means not only providing
+    permissions for general interaction with the content provider, but also for the
+    related URI paths.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To secure your content provider with a permission that governs both read and
+    write permissions for all of the paths related to your authority, you can add
+    the following `provider` element of your android manifest:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, `[permission name]` is the permission other applications must have in
+    order to read or write to any of the content provider paths. Adding permissions
+    at this level is a really good step to make sure that you have left nothing to
+    chance when it comes to protecting the paths.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Naturally, content providers will have a couple of content paths they want
+    to serve content from. You can add read and write permissions to them as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The preceding `android:writePermission` and `android:readPermission` tags are
+    used to declare that whenever an external application wants to perform any read-related
+    (`query`) or write-related (`update` and `insert`) operations, they must have
+    the specified permissions to do so.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It's a common mistake to think that granting write access implicitly grants
+    read access, too. However, this should not be the default behavior. Android happily
+    follows the best practice and requires permission declaration for both read and
+    write access separately.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Here''s a real-world example of this in action taken from the Android Google
+    Chrome app:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You can also add more granular permissions to each of your paths by making
+    use of the `<path-permission>` element of the `AndroidManifest.xml` schema; here''s
+    how you do that:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You may be wondering what would happen if you were to use both levels of permissions.
+    At the `<provider>` and `<path-permission>` levels, would an application need
+    to have all of the permissions registered at both levels? The answer is no, the
+    path level read, write, and read/write permissions take precedence.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Another thing worth mentioning is the **grant URI** mechanism. You can configure
+    this at the provider level to apply to all paths, or at the path level, which
+    will only affect the related paths. Although, why you would specify permissions
+    at path level and grant URI at provider level a bit odd, since effectively, this
+    would mean no permissions are set! It is fully recommended that developers not
+    make use of the grant URI permission at the provider level at all, and rather
+    use it per path. So, if and only if you need to make sure any application can
+    query, insert, or update on a certain path while still having permissions protecting
+    your other paths, you would do this as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You can also specify a range of paths to grant URI permission for using the
+    `pathPrefix` or `pathPattern` attributes. `pathPrefix` will ensure that the grant
+    URI mechanism will apply to all paths starting with a given prefix. `pathPattern`
+    will ensure that the grant URI mechanism will apply to all paths that match a
+    given pattern. For example:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This will apply grant URI permissions to all the paths starting with the "unsecured"
+    string, for example:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`content://com.myprovider.android/unsecuredstuff`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`content://com.myprovider.android/unsecuredsomemorestuff`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`content://com.myprovider.android/unsecured/files`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`content://com.myprovider.android/unsecured/files/music`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: For the previous example, the grant URI permission would kick in if any of these
+    paths are queried, updated, inserted, or deleted.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `<provider>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/provider-element.html](http://developer.android.com/guide/topics/manifest/provider-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `<path-permission>` tag in the Android Developers Reference guide at [http://developer.android.com/guide/topics/manifest/path-permission-element.html](http://developer.android.com/guide/topics/manifest/path-permission-element.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Defending against the SQL-injection attack
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The previous chapter covered some of the common attacks against content providers,
+    one of them being the infamous SQL-injection attack. This attack leverages the
+    fact that adversaries are capable of supplying SQL statements or SQL-related syntax
+    as part of their selection arguments, projections, or any component of a valid
+    SQL statement. This allows them to extract more information from a content provider
+    than they are not authorized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The best way to make sure adversaries will not be able to inject unsolicited
+    SQL syntax into your queries is to avoid using `SQLiteDatabase.rawQuery()` instead
+    opting for a parameterized statement. Using a compiled statement, such as `SQLiteStatement`,
+    offers both binding and escaping of arguments to defend against SQL-injection
+    attacks. Also, there is a performance benefit due to the fact the database does
+    not need to parse the statement for each execution. An alternative to `SQLiteStatement`
+    is to use the `query`, `insert`, `update`, and `delete` methods on `SQLiteDatabase`
+    as they offer parameterized statements via their use of string arrays.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we describe parameterized statement, we are describing an SQL statement
+    with a question mark where values will be inserted or binded. Here''s an example
+    of parameterized SQL `insert` statement:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here `[table name]` would be the name of the relevant table in which values
+    have to be inserted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'For this example, we are using a simple **Data Access Object** (**DAO**) pattern,
+    where all of the database operations for RSS items are contained within the `RssItemDAO`
+    class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we instantiate `RssItemDAO`, we compile the `insertStatement` object with
+    a parameterized SQL `insert` statement string. This needs to be done only once
+    and can be re-used for multiple inserts:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The order of the columns noted in the `INSERT_SQL` variable is important, as
+    it directly maps to the index when binding values. In the preceding example, `content`
+    maps to index `0`, `link` maps to index `1`, and `title` to index `2`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now, when we come to insert a new `RssItem` object to the database, we bind
+    each of the properties in the order they appear in the statement:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Notice that we call `executeInsert`, a helper method that returns the ID of
+    the newly created row. It's as simple as that to use a `SQLiteStatement` statement.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'This shows how to use `SQLiteDatabase.query` to fetch `RssItems` that match
+    a given search term:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We use `LIKE` and the SQL wildcard syntax to match any part of the text with
+    a title column.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `SQLiteDatabase` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html](https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `SQLiteStatment` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/database/sqlite/SQLiteStatement.html](https://developer.android.com/reference/android/database/sqlite/SQLiteStatement.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Query Parameterization Cheat Sheet* OWASP community page at [https://www.owasp.org/index.php/Query_Parameterization_Cheat_Sheet](https://www.owasp.org/index.php/Query_Parameterization_Cheat_Sheet)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: SQLite expression at [http://www.sqlite.org/lang_expr.html](http://www.sqlite.org/lang_expr.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Application signature verification (anti-tamper)
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the cornerstones of Android security is that all apps must be digitally
+    signed. Application developers sign apps using a private key in the form of a
+    certificate. There's no need to use a certificate authority, and in fact, it's
+    more common to use self-signed certificates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Certificates are usually defined with an expiration date, and the Google Play
+    store requires a validity period ending after October 22, 2033\. This highlights
+    the fact that our app signing key stays consistent throughout the life of the
+    app. One of the primary reasons is to protect and prevent app upgrades unless
+    the signatures of the old and upgraded `.apk` files are identical.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, if this verification already happens, why add a check for signature consistency?
+  prefs: []
+  type: TYPE_NORMAL
+- en: Part of the process of an attacker modifying your application's `.apk` file
+    breaks the digital signature. This means that, if they want to install the `.apk`
+    file on an Android device, it will need to be resigned using a different signing
+    key. There could be various motivations for this, anything from software piracy
+    to malware. Once the attacker has modified your app, they could look to distribute
+    via one of the many alternative apps stores or via more direct approaches, such
+    as e-mail, website, or forum. So, the motivation for this recipe is to protect
+    our app, brand, and users from this potential risk. Fortunately, at runtime, Android
+    apps can query `PackageManager` to find app signatures. This recipe shows how
+    to compare the current app signature against the one you know that it should be.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This recipe uses the Keytool command-line program and assumes you have already
+    created a `.keystore` file that contains your private signing key. If not, you
+    can create your app signing key using the Android tools export wizard in Eclipse,
+    or by using the Keytool program with the following command in a terminal window:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To start with, you need to find your certificate's SHA1 signature/fingerprint.
+    We'll hardcode this into the app and compare against it at runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using Keytool from a terminal window, you can type the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You'll be prompted for your keystore password.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Keytool will now print the details of all of the keys contained in the keystore.
+    Find your app key and under the certificate fingerprints heading, you should see
+    a SHA1 in a hexadecimal format. Here''s a sample SHA1 value of a certificate that
+    uses a sample keystore `71:92:0A:C9:48:6E:08:7D:CB:CF:5C:7F:6F:EC:95:21:35:85:BC:C5`:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00116.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Copy your SHA1 hash from the terminal window into your app, and define it as
+    a static string in your Java `.class` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Remove the colons and you should end up with something like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A quick and easy way to remove the colons is to copy and paste the hash to
+    the following website and press the validate button:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[http://www.string-functions.com/hex-string.aspx](http://www.string-functions.com/hex-string.aspx)'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now, we need to write the code to get the current signature of the `.apk` file
+    at runtime:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We are storing the SHA1 hash of the signature; now, as we have the certificate,
+    we need to generate the SHA1 and convert to the same format (hexadecimal):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We now compare the hash of the certificate we signed, the app that we hardcoded
+    in to the app, and the hash of the current signing certificate. If these are equal,
+    we can be confident that the app has not been signed again:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If all is well and the `.apk` running is a version we have signed, the `validateAppSignature()`
+    method will return `true`. However, if someone has edited the `.apk` file and
+    signed it again, `currentSignature` will not match `CERTIFICATE_SHA1`. So, `validateAppSignature()`
+    will return false.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Remember to either ensure that the hash is stored in upper case, or compare
+    using the `String.equalsIgnoreCase()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This technique should be considered sufficient to thwart current automated app
+    repackagers. However, it is worth understanding the limitations. Due to the fact
+    that the hash of the signing certificate is hardcoded within the `.apk` file,
+    it is possible for a skilled reverse engineer to dissect the `.apk` file and replace
+    the SHA1 with the hash of a new certificate. This allows the `verifyAppSignature`
+    call to pass ok. Additionally, the method call to `verifyAppSignature` could be
+    removed completely. Both of these options require time and reverse-engineering
+    skills.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We cannot talk about signing without mentioning the bug 8219321, otherwise known
+    as the Master Key exploit publicized by Bluebox security at Blackhat USA 2013\.
+    This bug has since been patched by Google and OEMs. A complete breakdown and analysis
+    of this can be found at [http://www.saurik.com/id/17](http://www.saurik.com/id/17).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Responding to tamper detection
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Of course, this is completely subjective and really depends on your application.
+    The obvious and simple solution would be to check for tampering on startup, and
+    if detected, exit the app optionally with a message to the user explaining why.
+    Additionally, it is likely you will want to know about compromises. So, sending
+    a notification to your servers would be appropriate. Alternatively, if you don't
+    have a server and are using an analytics package such as Google Analytics, you
+    could create a custom "tamper" event and report it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To deter software pirates, you could disable premium app features. For games,
+    disabling the multiplayer or deleting the game progress/high scores would be an
+    effective deterrent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Advance code obfuscation with DexGuard* recipe later in this chapter, which
+    provides a useful complement to tamper protection, making it more difficult for
+    a reverse engineer to find, understand, and importantly remove the tamper check
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Signing Your Applications* page at the Android Developers site ([https://developer.android.com/tools/publishing/app-signing.html](https://developer.android.com/tools/publishing/app-signing.html))
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The gist of the signature-check code at [https://gist.github.com/scottyab/b849701972d57cf9562e](https://gist.github.com/scottyab/b849701972d57cf9562e)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `Signature` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/Signature.html](https://developer.android.com/reference/android/content/pm/Signature.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `PackageManager` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/PackageManager.html](https://developer.android.com/reference/android/content/pm/PackageManager.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Exploit (& Fix) Android "Master Key"* blog article describing the Master
+    Key exploit at [http://www.saurik.com/id/17](http://www.saurik.com/id/17)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Keytool Oracle documentation at [http://docs.oracle.com/javase/6/docs/technotes/tools/windows/keytool.html](http://docs.oracle.com/javase/6/docs/technotes/tools/windows/keytool.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tamper protection by detecting the installer, emulator, and debug flag
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this recipe, we will look at three additional checks that may indicate a
+    tampered, compromised, or hostile environment. These are designed to be activated
+    once you are ready for release.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: These tamper checks can be located anywhere in your app, but it makes the most
+    sense to allow them to be called from multiple places at a separate class or parent
+    class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Detect if Google Play store was the installer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Detect if it runs on an emulator:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Detect if the app has the `debuggable` flag enabled—something that should only
+    be enabled during development:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Detecting if the installer was the Google Play store is a simple check that
+    the package name of the installer app matches that of the Google Play store. Specifically,
+    it checks if the installer's package starts with `com.google.android`. It is a
+    useful check if you are distributed solely through the Google store.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Java Reflection API makes it possible to inspect classes, methods, and
+    fields at runtime; and in this case, allows us to override the access modifiers
+    that would prevent ordinary code from compiling. The emulator check uses reflection
+    to access a hidden system class, `android.os.SystemProperties`. A word of warning:
+    using hidden APIs can be risky, as they can change between Android versions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When `debuggable` is enabled, it is possible to connect via the Android Debug
+    Bridge and preform detailed dynamic analysis. The `debuggable` variable is a simple
+    property of the `<application>` element in the `AndroidManifest.xml` file. It
+    is perhaps one of the easiest and most targeted properties to alter in order to
+    perform dynamic analysis. In step 3, we saw how to check the value of the `debuggable`
+    flag on the application info object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: See the *Application signature verification (anti-tamper)* recipe for suggestions
+    on what to do if you detect tampering. Once released to the Play store, on detecting
+    that the app is running on an emulator or is being debugged, it is reasonable
+    to assume that the app is under analysis and/or attack. Therefore, in these scenarios,
+    it would be justified to take more aggressive actions to frustrate attackers,
+    such as wiping app data or the shared preferences. Although, if you are going
+    to wipe user data, ensure this is noted in your license agreement to avoid any
+    potential legal issues.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Advance code obfuscation with DexGuard* recipe, which provides a useful
+    complement to tamper protection, making it more difficult for a reverse engineer
+    to find, understand, and importantly remove these tamper checks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `SystemProperties.java` class from the Android source code at [https://github.com/android/platform_frameworks_base/blob/master/core/java/android/os/SystemProperties.java](https://github.com/android/platform_frameworks_base/blob/master/core/java/android/os/SystemProperties.java)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `PackageManager` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/PackageManager.html](https://developer.android.com/reference/android/content/pm/PackageManager.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `ApplicationInfo` class in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/ApplicationInfo.html](https://developer.android.com/reference/android/content/pm/ApplicationInfo.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Removing all log messages with ProGuard
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'ProGuard is an open source Java code obfuscator that is supplied with the Android
+    SDK. For those unfamiliar with obfuscators, they remove any information from the
+    code that is not needed for execution, for example, unused code and debugging
+    information. Also, identifiers are renamed from an easy-to-read, descriptive,
+    and maintainable code you''ve written into an optimized, shorter, and very difficult-to-read
+    one. Before, an object/method call might look something like this: `SecurityManager.encrypt(String
+    text);`, but after obfuscation, it could look like: `a.b(String c);`. As you can
+    see, it gives no clue about its purpose.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: ProGuard also reduces the amount of code by removing unused methods, fields,
+    and attributes, and makes it execute quicker by using machine-optimized code.
+    This is ideal for a mobile context, as this optimization can drastically reduce
+    the size of the exported `.apk` file. This is especially useful when only using
+    a subset of third-party libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are other Java obfuscators available, but due to the fact that ProGuard
+    is part of the Android SDK, many third-party development libraries contain custom
+    ProGuard configuration to ensure they function correctly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'First, we''ll enable ProGuard on an Android application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you're developing your application using Eclipse with the Android ADT plugin,
+    you'll need to locate your workspace and navigate to the folder containing your
+    application code. Once you've found it, you should see a text file called `project.properties`:![Getting
+    ready](img/00117.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To enable ProGuard, you need to make sure the following line is uncommented:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This assumes that you have the default folder structure for the Android SDK,
+    since the previous configuration includes a static path, namely `/tools/proguard/proguard-android.txt`.
+    If you don''t have the correct folder structure or you''re not using the Android
+    Developer''s Toolkit plugin for Eclipse, you can fetch the `proguard-android.txt`
+    file and place it one folder above your application''s working folder. In this
+    case, you can configure this directory as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Android Studio configuration requires the following lines in your `buildType`
+    release to your Gradle build file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'It''s important to keep the reference to the `proGuard-android.txt` file, as
+    it contains Android-specific exclusions and without them, the app will likely
+    not run. Here''s an extract from the `proguard-android.txt` file instructing ProGuard
+    to keep methods in activities that could be used in the XML attribute `onClick`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Once ProGuard is enabled for your project, there are two simple steps to ensure
+    all logging messages are removed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To enable ProGuard to successfully find all of the log statements, we must
+    use a wrapper class to wrap the Android log:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In your application code, use `LogWrap` instead of the standard `android.util.Log`.
+    For example:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Insert the following custom ProGuard configuration into the project''s `proguard-project.txt`
+    file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Enable ProGuard Optimize by adding the optimize configuration file to the project:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Build your application in release mode to apply ProGuard:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Use the Android Tools export wizard in Eclipse
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In a terminal window at the root of your project, type the following commands:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**For Ant**: `ant release`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '**For Gradle**: `gradle assembleRelease`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When you build an application in release mode, the build system will check the
+    `proguard.config` property when it is uncommented and use ProGuard to process
+    the application's bytecode before packaging it into the application (`.apk`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: When ProGuard is processing bytecode, the `assumeNoeffects` attribute allows
+    it to completely remove these lines of code—in this case, all of the relevant
+    methods from `android.util.Log`. Using the optimize configuration and log wrapper,
+    we let ProGuard safely identify all of the calls to the various `android.util.Log`
+    methods. An added benefit of enabling Optimize is that optimizing the code enhances
+    the obfuscation factor, making it even harder to read.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's take a closer look at some of the outputs from ProGuard and the limitations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ProGuard output
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'These are the output files from applying ProGuard to Android `.apk`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`mapping.txt`: As the name suggests, this contains the mappings between the
+    obfuscated class, field names, and original names, and is essential to use the
+    companion tool **ReTrace** to deobfuscate stack traces/bug reports produced by
+    the obfuscated apps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Seeds.txt`: This lists the classes and members that are not obfuscated'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Usage.txt`: This lists the code that was stripped from the `.apk` file'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Dump.txt`: This describes the internal structure of all of the class files
+    in the `.apk` file'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It's also worth noting that the output files for each build are overwritten
+    with ProGuard. It's essential to save a copy of the `mappings.txt` file for every
+    application release; otherwise, there is no way to convert stack traces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Limitations
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Obfuscating an application with ProGuard increases the time and skill level
+    needed to reverse engineer, understand, and exploit an application. However, reversing
+    is still possible; so, it certainly should not be the only piece of securing an
+    application, but rather a part of the overall security approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Advanced code obfuscation with DexGuard* recipe, which talks about ProGuard's
+    sibling DexGuard for deeper Android-specific obfuscation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ProGuard* tool's web page on Android Developers site at [http://developer.android.com/tools/help/proguard.html](http://developer.android.com/tools/help/proguard.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The ProGuard official site at [http://proguard.sourceforge.net/index.htm](http://proguard.sourceforge.net/index.htm)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The ProGuard example configurations at [http://proguard.sourceforge.net/index.html#manual/examples.html](http://proguard.sourceforge.net/index.html#manual/examples.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Advanced code obfuscation with DexGuard
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: DexGuard is a commercial optimizer and obfuscator tool written by *Eric Lafortune*
+    (who developed ProGuard). It is used in the place of ProGuard. Rather than targeting
+    Java, DexGuard is specialized for Android resources and Dalvik bytecode. As with
+    ProGuard, one of the key advantages for developers is that source code remains
+    maintainable and testable, while the compiled output is both optimized and hardened.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In general terms, it is more secure to use DexGuard, given that it is optimized
+    for Android and provides additional security features. In this recipe, we are
+    going to implement two of those features, API hiding and string encryption, on
+    the previous recipe''s signature verification check:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**API hiding**: This uses reflection to disguise the calls to sensitive APIs
+    and code. It is ideal for hiding the key areas attackers will look to compromise.
+    For example, the license check detection will be targeted by software pirates,
+    so it''s an area to focus on hardening effort. When decompiled, reflection-based
+    calls are a lot more difficult to decipher.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**String encryption**: This encrypts strings within your source code to hide
+    them from reverse engineers. This is particularly useful for API keys and other
+    constants that are defined in your code.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We use API hiding to convert specific method calls into reflection-based calls.
+    This is particularly useful for sensitive methods that we want to hide from attackers,
+    in this case, the verify signature method. The reflection call is made up of class
+    and method signatures stored as a string. We can further enhance it by using a
+    complementing **string-encryption** feature to encrypt those reflection strings.
+    This provides a robust way of protecting sensitive areas of the applications,
+    for example, tamper detection, license checking, and encryption/decryption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: DexGuard requires a developer license, which is available at [http://www.saikoa.com/dexguard](http://www.saikoa.com/dexguard).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Assume Android SDK Tools (Version 22\. or higher) and DexGuard have been downloaded
+    and extracted to an accessible directory. The examples will use /`Users/user1/dev/lib/DexGuard/`
+    and are based on DexGuard Version 5.3\. Here, we''ll cover installing DexGuard
+    into Eclipse and integrating into both the Ant and Gradle build systems. Once
+    installed, your application will benefit from an increased security level over
+    ProGuard. However, we''re going to enable some customized configuration to protect
+    the sensitive areas of the application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Installing the DexGuard Eclipse plugin
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Copy the plugin JAR file (`com.saikoa.dexguard.eclipse.adt_22.0.0.v5_3_14.jar`)
+    from DexGuard's `/eclipse` directory to the `/dropins` directory of your Eclipse
+    installation.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When you start/restart Eclipse, the DexGuard plugin will be automatically installed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'If all has been successful, when you right-click on an Android project, you
+    should notice a new option in the Android tools menu:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Export Optimize and Obfuscate Application package (DexGuard)**'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Your project will now be compiled and built in to an `.apk` file as usual; however,
+    behind the scenes, DexGuard will be used to optimize and obfuscate the application.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Enabling DexGuard for the Ant build system
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Enabling Ant is simple. Specify the DexGuard directory in the `local.properties`
+    configuration file in your Android project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you don''t have a `local.properties` file, create one. To do this, add the
+    following line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Copy `Custom_rules.xml` from the DexGuard directory `ant` to the root of your
+    Android project.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Enabling DexGuard for the Gradle build system
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To enable DexGuard for the Gradle build system, modify the `build.gradle` file
+    of your project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Once set up, we can enable and configure API hiding and string encryption:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the root directory of your Android project, create a new file called `dexguard-project.txt`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Configure DexGuard to encrypt sensitive strings. In this example, we're using
+    a common pattern for including immutable constants in an interface and the certificate
+    hash used in the previous recipe, as these constants could easily be read after
+    decompilation even when obfuscated with ProGuard.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Encrypt a specific string in the `Constants` interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Alternatively, you can encrypt all of the strings in an interface or class.
+    Here''s an example of encrypting all strings defined in `MainActivity.java`:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In an effort to respond to the limitations noted in the *Application signature
+    verification (anti-tamper)* recipe, we will demonstrate a related method, in addition
+    to the fact that hiding the method calls to the `verifyAppSignature` method make
+    it very difficult for an attacker to figure out where the tamper detection is
+    taking place:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The final step is to build/export in release mode to ensure the DexGuard protection
+    is applied to the resulting `.apk` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Eclipse**: Right-click on your project and then select **Android Tools**
+    | **Export Optimized and Obfuscated Application Package … (DexGuard)**'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Ant**: Run the `ant release` command in the terminal window in the project
+    root'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Gradle**: Run the `gradle releaseCompile` command in the terminal window
+    in the project root'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here''s the head-to-head comparison with ProGuard:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '|   | ProGuard | DexGuard |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Shrinking | X | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Optimization | X | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Name obfuscation | X | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| String encryption |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Class encryption |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Reflection |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Asset encryption |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Resource XML obfuscation |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Conversion to Dalvik |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Packaging |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Signing |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Tamper detection |   | X |'
+  prefs: []
+  type: TYPE_TB
+- en: Tamper detection is a longtime favorite, which uses a utility library and works
+    on some of the same principles as the other recipes in this chapter. It is favorable
+    because it is very easy to implement, as it is just one line of code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Upgrading to DexGuard from ProGuard is seamless, as any custom configurations
+    defined for ProGuard are fully compatible. Another benefit of this compatibility
+    is the existing community of ProGuard support and expertise.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Official DexGuard website at [http://www.saikoa.com/dexguard](http://www.saikoa.com/dexguard)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

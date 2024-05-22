@@ -1,0 +1,1321 @@
+- en: Chapter 5. Cross-platform Audio Streaming
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '|   | *Try turning off the sound in your favorite game.* |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '|   | --*Viktor Latypov* |'
+  prefs: []
+  type: TYPE_TB
+- en: 'In this chapter we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initializing OpenAL and playing the .wav files
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Abstracting basic audio components
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Streaming sounds
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Decoding Ogg Vorbis files
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Decoding tracker music using ModPlug
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We are looking for a truly portable implementation of the sound playback for
+    desktop PCs and mobile devices. We propose using the OpenAL library, since it
+    is a well-established library on a desktop, and using it will make easier porting
+    of existing games to Android. In this chapter we organize a small multithreaded
+    sound streaming library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Audio playback is inherently an asynchronous process, so the decoding and control
+    of sound hardware should be done on a separate thread and controlled from other
+    dedicated threads. For example, when a player presses a fire button, or a character
+    in an arcade game hits the ground, we might just ask the system to start playback
+    of an audio file. The latency of this operation in games usually does not matter
+    so much.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From the digital perspective, a monaural or monophonic sound (mono for short),
+    is nothing more than a long one-dimensional array of values representing a continuous
+    signal. Stereophonic or multichannel sounds are represented by a few channels
+    and stored as interleaved arrays, where the sample from one channel is followed
+    by the sample from the other channel and so on. OpenAL expects us to submit this
+    data as a sequence of buffers. The main concepts of OpenAL library are devices,
+    contexts, listeners, audio sources, and sound buffers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introduction](img/7785_05_1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The sound produced in a virtual environment is played back through the speakers
+    after processing by a sequence of filters. The material covered in this chapter
+    will allow you to create a portable audio subsystem for your game.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Initializing OpenAL and playing the .wav files
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this recipe, we present the simplest possible example to play uncompressed
+    audio files in **PCM** format (**pulse-code modulation**, [http://en.wikipedia.org/wiki/Pulse-code_modulation](http://en.wikipedia.org/wiki/Pulse-code_modulation)).
+    This example just plays a single file in an infinite loop. We will create a single
+    device, a single device context, and an audio source. All of this is done in a
+    single dedicated thread, but we should not worry about multithreading issues because
+    OpenAL functions are guaranteed to be thread-safe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The source code and build scripts for the OpenAL library can be found in the
+    `0_OpenAL` folder, and precompiled static libraries are included with each of
+    the examples for this chapter. For Windows, we use dynamic linking with OpenAL.
+    Explanations on how to load files from the Android `.apk` package can be found
+    in the [Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
+    a Virtual Filesystem*. The complete source of the example for this recipe can
+    be found in the `0_AL_On_Android` folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The class `SoundThread`, where we implement the actual playback, is as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'First we declare handles to the OpenAL audio device and device context:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then, we declare handles to the OpenAL audio source and buffer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Run()` member function does all the work that includes initialization,
+    de-initialization, and submission of audio data into OpenAL:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We initialize the pointers to OpenAL functions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then we create the device and device context:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, we select our newly created device context as the current one:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, we begin the creation of the audio source:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We set a constant maximum playback volume of `1.0`, which is called **gain**
+    in OpenAL:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To hear something, we must load the file containing the sound data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We use our memory-mapped files and ask our iStream object about the file size:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To avoid handling the complete **RIFF WAVE** file format, we prepare a specific
+    file containing a single block of uncompressed audio data; the format of this
+    data is a 22 kHz monophonic 16-bit sound. We pass `Data+sizeof(sWAVHeader)` as
+    the audio data, and the size of the audio data is obviously `DataSize-sizeof(sWAVHeader)`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then we call the `IsPlaying()` function in a spin loop to detect when OpenAL
+    stops playing the sound:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Once the sound playback is complete, we delete all the objects we have created:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, we unload the OpenAL library on Windows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'On Android, it is very important to free the allocated resource and release
+    the audio device. Otherwise, audio will keep playing in the background. To avoid
+    writing Java code in this small example, we just terminate our native activity
+    with the `exit()` call:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The code above uses the function `IsPlaying()` to check if the audio source
+    is busy:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The function `PlayBuffer()` feeds the audio data to the audio source:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The code above uses the size of the `sWAVHeader` structure to determine the
+    offset of the audio data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The alignment of structure fields should be set to `1` for `sWAVHeader`. Our
+    declaration is compatible with Clang and GCC compilers from Android NDK and MinGW.
+    Use #pragma pack for VisualStudio.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Later we reuse this structure for the loading of the`.wav` files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'First, we declare the global variables holding our virtual filesystem and the
+    `SoundThread` object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We create our usual application template and in the `OnStart()` callback function,
+    we start a thread that initializes the OpenAL library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting Common
+    Libraries*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Implementing portable memory-mapped files* recipe in [Chapter 4](ch04.html
+    "Chapter 4. Organizing a Virtual Filesystem"), *Organizing a Virtual Filesystem*
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Abstracting basic audio components
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous recipe, we learned how to initialize OpenAL and how to play
+    the uncompressed `.wav` files. Here, we present the `AudioSource` and `AudioThread`
+    classes which help us to manage the initialization process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Check out the example `0_AL_On_Android` in the supplementary materials to understand
+    the basic concepts of OpenAL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s carefully move the initialization of OpenAL to another thread called
+    `AudioThread`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The code at the beginning of the `Run()` method performs the initialization
+    of a default OpenAL device and creates an audio context:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We set the flag that tells other threads if they can use our audio subsystem:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then we enter an infinite loop where we call the `Env_Sleep()` function, whose
+    source code is explained as follows, to avoid using 100 percent utilization of
+    CPU:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In this example, we used a fixed value of 100 milliseconds to put the thread
+    into the sleep mode. When processing audio, it is useful to calculate sleep delays
+    based on the buffer size and sampling rate. For example, a buffer of `65535` bytes
+    that contains 16-bit mono samples at a sampling rate of `44100` Hz gives us approximately
+    *65535 / (44100 × 16 / 8) ≈ 0.7* seconds of audio playback. Stereo playback cuts
+    this time in half.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Finally, we release the OpenAL objects:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The rest of the declaration simply contains all the required fields and the
+    initialization flag:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Env_Sleep()` function used in the code just makes the thread inactive
+    for a given amount of milliseconds. It is implemented using the `Sleep()` system
+    call in Windows and the `usleep()` function in Android:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Playing the`.wav` files is not enough for us, since we want to support different
+    audio formats. So, we have to split the audio playback and the actual decoding
+    of file formats into two separate entities. We are ready to introduce the `iWaveDataProvider`
+    class whose subclasses serve as data sources for our audio playback classes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The main routines of this class enable access to the decoded audio data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here is how we can get the internal OpenAL audio format identifier for the
+    data from this provider:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Also, we store the information about the audio format here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'As we already know, an audio source must be created to produce sounds. This
+    functionality is implemented in the `AudioSource` class, which wraps the OpenAL
+    function calls from the previous recipe. This class uses the `iWaveDataProvider`
+    instance as the audio data source:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The constructor just creates an OpenAL source handle and sets the default parameters:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The destructor stops the playback and performs the cleanup:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Play()` method switches the OpenAL source into the playing state:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Stop()` method switches the OpenAL source into the stopped state. The
+    playback can be resumed after stop ping only from the beginning of the sound buffer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `IsPlaying()` method checks if the source is playing audio. The implementation
+    comes from the previous recipe:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A small `SetVolume()` method changes the playback volume of the source. Accepted
+    float values are in the range of `0.0…1.0`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The main routine, which feeds the data to the audio source, is `BindWaveform()`.
+    This function stores a smart pointer to the data provider and generates an OpenAL
+    buffer object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The private section of the `AudioSource` class contains a reference to an audio
+    data provider and an internal OpenAL source and buffer handle:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To be able to read the sound from the file, we implement the `iWaveDataProvider`
+    interface in the `WavProvider` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The only field this class contains is a smart pointer to a `Blob` object, containing
+    the file data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A simple pulse-code modulated `.wav` file consists of the `sWAVHeader` structure
+    at the beginning and the audio data, which can be directly fed into the OpenAL
+    audio source. The constructor of the `WavProvider` class extracts the information
+    about the audio data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The destructor is empty, since our `Blob` object is wrapped into a smart pointer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `iWaveDataProvider` interface is simple, and here we just implement two
+    member functions. `GetWaveData()` returns a pointer to the audio data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `GetWaveDataSize()` method subtracts the file header size from the total
+    file size:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: And we are done with the audio playback and decoding for now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now we can demonstrate how to use all the audio classes together. As usual,
+    we create an empty application template, which can be found in the `1_AL_Abstraction`
+    folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to be able to use OpenAL, we must declare a global `AudioThread` instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We start this thread in the `OnStart()` callback function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this example, we implement the `SoundThread` class whose `Run()` method
+    does all the playback. On this thread, we must wait for `g_Audio` to get initialized:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we can create the audio source:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we need to create a `WavProvider` object, which decodes audio files,
+    attach it to the `Src` source, start playback and wait for its completion:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'After the sound playback is finished, we reset the `Src` pointer to `NULL`
+    and send the termination signal to the `g_Audio` thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To obtain the `Data` object, we have to implement the following function, which
+    reads the file contents into a memory block:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use the global initialized instance of `FileSystem`, the `g_FS` object. Please
+    note that on the Android OS, we cannot use the standard paths and therefore resort
+    to our virtual file system implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We can implement a number of helper routines to ease the use of the `AudioSource`
+    class. The first useful routine is source pausing. OpenAL provides the `alSourcePause()`
+    function, which is not enough, since we have to be in control of all the unqueued
+    buffers being played. This unqueuing is not important at this point as we have
+    only one buffer, but when we get to streaming the sound, we have to take care
+    of the buffers queue. The following code should be added to the `AudioSource`
+    class to implement pausing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For infinite sound looping, we can implement the `LoopSound()` method in the
+    `AudioSource` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The Android OS runs on multiple hardware architectures, and this can cause
+    some additional difficulties when reading the `.wav` files. If the CPU we are
+    running on has a big-endian architecture, we have to swap the bytes in the fields
+    of the `sWAVHeader` structure. The modified constructor of the `WavProvider` class
+    looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Big-endian memory byte order requires lower and higher bytes of 16-bit values
+    to be swapped:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here we use the `__BIG_ENDIAN__` preprocessor symbol provided by the GCC compiler
+    to detect the big-endian CPU. The two `SwapBytes()` functions change the order
+    of the bytes in the unsigned word and double word:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Decoding Ogg Vorbis files*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Streaming sounds
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have learned how to play short audio samples, and now we are ready to organize
+    sound streaming. This recipe explains how to organize a buffer queue to allow
+    on-the-fly sound generation and streaming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We suppose that the reader is already familiar with our `AudioSource` and `iWaveDataProvider`
+    classes described in the previous recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'First, we enrich `iWaveDataProvider` with the additional methods `IsStreaming()`,
+    which indicates that the data from this provider should be read in small chunks,
+    and `StreamWaveData()`, which actually reads a single chunk:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next we write a derived class, which contains an intermediate buffer for decoded
+    or generated sound data. It does not implement `StreamWaveData()`, but implements
+    the `GetWaveData()` and `GetWaveDataSize()` methods:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `FBufferUsed` field holds the number of bytes used in the `FBuffer` vector.
+    Now we modify the `AudioSource` class to support our new streaming data providers.
+    We do not want cracks or interruptions in the playback process, so we use a queue
+    of buffers instead of the single buffer that we used in a single-block sound playback.
+    To do this, we first declare a buffer counter and an array of buffer IDs:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE61]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We leave the implementations of the `LoopSound()`, `Stop()`, `Pause()`, `IsPlaying()`,
+    and `SetVolume()` member functions, constructor, and destructor unchanged. The
+    `BindWaveform()` method now generates buffers if the associated wave data provider
+    supports streaming:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE62]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Play()` method invokes the `alSourcePlay()` function and adds buffers
+    to the queue in the streaming mode:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE63]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Fill both audio buffers and submit them into the OpenAL API:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE64]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now that we are using more than one buffer, we change `FBufferID` to `FBufferID[0]`
+    in the `UnqueueAll()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE65]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, as streaming is a continuous process and not a fire-and-forget operation,
+    we provide the `Update()` method, which pulls an appropriate amount of data from
+    `iWaveDataProvider`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE66]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `Update()` method, we use the `StreamBuffer()` member function, which
+    does the job of filling the buffer with decoded or generated data from the provider:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE67]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `BUFFER_SIZE` constant is set to be big enough to hold the data for a couple
+    of seconds of streamed data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE68]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The value `352800` is derived as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '*2 channels × 44,100 samples per second × 2 bytes per sample × 2 seconds =
+    352,800 bytes*.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The code in this recipe does not implement the `StreamWaveData()` method. To
+    hear something from the speakers, we write the `ToneGenerator` class, which generates
+    a pure sine wave as the output data. This class is derived from `StreamingWaveDataProvider`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE69]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The parameters of the signal and an internal sample counter are declared first:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE70]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The constructor sets the sound data parameters and pre-allocates the buffer
+    space:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE71]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The main routine of this class calculates the sine function, keeping track
+    of the current sample index to make the queue of sound buffers contain all the
+    values:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE72]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The argument `t` for the sine function is calculated from the local index `i`
+    and the phase value named `LastOffset`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE73]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following lines convert a single floating-point value to a signed word.
+    Such conversion is necessary because the digital audio hardware only works with
+    integer data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE74]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next we increment the generated sample counter while keeping it inside the
+    `0…FSignalFreq-1` range:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE75]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At the end, the number of generated bytes is returned:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE76]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can now use the `AudioSource` class to stream the sound. Once the audio
+    source is created, we attach a new streaming provider that generates a 440 Hz
+    sine waveform:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE77]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the infinite loop, we constantly update the source, forcing it to generate
+    sound data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE78]'
+  prefs: []
+  type: TYPE_PRE
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It is easy to notice that in the `ToneGenerator::StreamWaveData()` member function,
+    we can use any formula, not just the sine function. We encourage the reader to
+    experiment and create some sort of software synthesizer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Decoding Ogg Vorbis files
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Ogg Vorbis is a widely used, free, open, and patent-free audio compression format.
+    It is comparable to other formats used to store and play digital music, such as
+    MP3, VQF, and AAC.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The reader should be familiar with the sound streaming technique from the previous
+    recipe. The details on the `.ogg` container file format and the Vorbis audio compression
+    algorithm can be found at [http://xiph.org](http://xiph.org).
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We add the `IsEOF()` method to the `iWaveDataProvider` interface. This is used
+    to inform `AudioSource` when the sound is finished:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE79]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Another method we add is `Seek()`, which rewinds the audio stream:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE80]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `DecodingProvider` class, we implement the `StreamWaveData()` member
+    function, which reads the decoded sound data from a source memory block using
+    the `ReadFromFile()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE81]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `FLoop` flag tells the decoder to rewind if an end of stream is encountered
+    and start playback again from the beginning:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE82]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The main streaming routine attempts to read more data from the source memory
+    block:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE83]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We fill an unused part of the buffer with zeros to avoid the noise:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE84]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the end of file, we return zero as the decoded data size:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE85]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, we try to read from the source until we collect the `Size` bytes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE86]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If we have the data, increment the counter:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE87]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If the number of bytes is zero, we have reached the end of the file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE88]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `FLoop` flag tells us to rewind the stream to the beginning:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE89]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Otherwise, we have an error in the stream:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE90]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The number of bytes buffered is now the number of bytes read from the file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE91]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `ReadFromFile()` function is purely virtual here, and the implementations
+    are in the derived classes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE92]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In [Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting Common
+    Libraries*, we compiled Ogg and Vorbis static libraries. We use them now in the
+    `OggProvider` class, which implements the actual sound data decoding:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE93]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The state of the decoder resides in three variables:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE94]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The constructor initializes Ogg and Vorbis libraries. The `Callbacks` structure
+    contains pointers to the functions, which allows the Ogg library to read the data
+    from our memory block using our virtual filesystem streams:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE95]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Fill in the `Callbacks` structure and initialize the file reader:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE96]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Declare the `vorbis_info` structure to read the duration of an audio stream.
+    Store the information about the stream:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE97]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `FBitsPerSample` structure is set to 16 bits, and later we tell the decoder
+    to output the sound data as a 16 bit signal:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE98]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the destructor, `FVorbisFile` is cleared:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE99]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `ReadFromFile()` function uses the OGG library for stream decoding:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE100]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here, we assume that we are running on a little-endian CPU, such as Intel Atom,
+    Intel Core, or some other ARM processor usually encountered in mobile Android
+    devices ([http://en.wikipedia.org/wiki/Endianness](http://en.wikipedia.org/wiki/Endianness)).
+    If this is not the case, for example, the processor is a PowerPC or MIPS in a
+    big-endian mode, you should provide `1` as an argument to the `OGG_ov_read()`
+    function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE101]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Seek()` member function rewinds the stream to the specified time:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE102]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'At the end of the class definition, the `OGG_Callbacks.h` file is included
+    where static callback functions are implemented:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE103]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The functions in the `OGG_Callbacks.h` file implement a `FILE*`-like interface,
+    which the OGG library uses to read our memory block. We pass an instance of `OggProvider`
+    as the `void* DataSource` argument in all of these functions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The `OGG_ReadFunc()` function reads the specified number of bytes and checks
+    for the end of the data:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE104]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `OGG_SeekFunc()` function sets the current read position equal to the value
+    of `Offset`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE105]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Prevent the position from outrunning the end of stream:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE106]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Since we use the memory block as a data source, the `OGG_CloseFunc()` function
+    returns zero immediately because we don''t need to close any handles:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE107]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `OGG_TellFunc()` function returns the current read position:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE108]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We initialize the OpenAL as in the previous recipes and bind `OggProvider`
+    as a data source for the `AudioSource` instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE109]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Update the audio source in a loop, just as we do with `ToneGenerator`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE110]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `LoadFileAsBlob()` function is the same as the one we used to load`.wav`
+    files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Decoding tracker music using ModPlug
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Mobile devices are always limited on resources compared to the desktops. These
+    limitations are both in terms of computing power and the amount of available storage.
+    High-quality MPEG-1 Layer 3 or the Ogg Vorbis audio files occupy a lot of space
+    even at modest bitrates. For example, in a 20 Mb game, two tracks of size 5 Mb
+    each would be unacceptable. However, there is a good trade-off between quality
+    and compression. A technology originated in the eighties known as the tracker
+    music — sometimes called chiptune or 8-bit music ([http://en.wikipedia.org/wiki/Music_tracker](http://en.wikipedia.org/wiki/Music_tracker)).
+    Tracker music formats don't use pulse-code modulation to store the entire soundtrack.
+    Instead, they use `notes` and effects, which are applied to `samples` and played
+    in several channels. `Samples` are small PCM encoded sounds of musical instruments.
+    `Notes` correspond to the playback speed of a sample. We use the **libmodplug**
+    library to decode the most popular tracker music file formats, such as `.it`,
+    `.xm`, and `.mod`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Check out the most recent version of libmodplug at [http://modplug-xmms.sourceforge.net](http://modplug-xmms.sourceforge.net).
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The ModPlug library allows us to implement another class derived from `DecodingProvider`,
+    called `ModPlugProvider`. The library supports direct decoding of the memory blocks,
+    so we don''t have to implement any kind of I/O callbacks:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE111]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'As a state, this class contains the `ModPlugFile` structure:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE112]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The sole constructor initializes the `ModPlugFile` field:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE113]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The destructor unloads the file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE114]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `ReadFromFile()` method calls the ModPlug''s reading function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE115]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To rewind the source stream, we use the `ModPlug_Seek()` member function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE116]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There is no dedicated sample for module file decoding. For better understanding,
+    we suggest modifying the `3_AL_PlayingOGG` source code. The only required modification
+    is the replacement of `OggProvider` by `ModPlugProvider`. For testing, you have
+    the `test.it` file in the `3_AL_PlayingOGG` folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Decoding Ogg Vorbis files*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

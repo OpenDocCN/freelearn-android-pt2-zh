@@ -1,0 +1,521 @@
+- en: Animations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far we've seen how to create and render different types of custom views,
+    from very simple 2D canvas drawing to more complex canvas operations, and recently
+    how to create a custom view using OpenGL ES and vertex/fragment shaders. In some
+    of the examples used to demonstrate how to use these rendering primitives, we've
+    already used some animations and, as you could imagine, animations are one of
+    the key elements of custom views. If we want to build a highly complex UI using
+    a custom view, but we don't animate it at all, it might be better to simply use
+    a static image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we''ll cover how to add animations to our custom views. There
+    are many ways of doing it, but in more detail, we''ll look at the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Custom-made animations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Fixed time step technique
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using the Android Property Animator
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In addition, we'll also see what are the issues if we implement some of the
+    animations the wrong way, as it might seem simpler, and by just good luck, although
+    it'll play against us, they'll seem to work perfectly fine on our device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Custom-made animations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let's start by showing how we can animate some values ourselves without relying
+    too much on the methods and classes provided by the Android SDK. In this section,
+    we'll see how to animate a single property or several properties using different
+    mechanisms. By doing so, we could then apply the approach that suits us better
+    on our custom views, depending on the type of animation we want to achieve or
+    the specificities of the view we're implementing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Timed frame animations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have already used this kind of animation on the 3D example in our previous
+    chapter. The main concept consists of assigning a new value to all the animatable
+    properties before drawing a new frame based on the amount of time passed. We can
+    be tempted with incrementing or computing a new value based on the number of frames
+    drawn, but that is highly inadvisable, as the animation will be played at different
+    speeds depending on the speed of the device, computation, or drawing complexity
+    and other processes executing in the background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To do it right, we have to involve something independent from the rendering
+    speed, frames per second, or frames drawn, and a perfect solution is to use time-based
+    animations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android provides us with several mechanisms to do so. For instance, we could
+    use `System.currentTimeMillis()`, `System.nanoTime()`, or even some of the methods
+    available in system clock, such as `elapsedRealtime()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s build a simple example comparing different methods. First, let''s create
+    a simple custom view that draws four rectangles, or `Rect`s, rotated at different
+    angles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: On the class constructor, we initialize the `Paint` object and create an array
+    of four floats to hold the angle of rotation of each rectangle. At this point,
+    the four of them will be at `0`. Let's now implement the `onDraw()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the `onDraw()` method, the first thing we've got to do is to clear the canvas
+    background with a solid color, to clear our previous frame.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we''ve done so, we calculate the coordinates where we''ll draw the four
+    rectangles and proceed with the drawing. To simplify the rotation, in this case,
+    we used the `canvas.translate` and `canvas.rotate` with a pivot point to rotate
+    by the center of the rectangle. Also, to avoid doing additional calculations and
+    keep it as simple as possible, we''re surrounding each rectangle drawing with
+    a `canvas.save` and `canvas.restore`, to keep the same state before each drawing
+    operation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: To see the differences with more clarity, we're drawing a text showing the angle
+    each rectangle is being rotated. And, to actually trigger a redraw of our view,
+    we're calling an `invalidate`, delayed by 10 milliseconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first rectangle will simply increment its angle each time it is drawn,
+    ignoring time methods, and the other three will use respectively: `System.currentTimeMillis()`,
+    `System.nanoTime(),` and `SystemClock.elapsedRealtime()`. Let''s initialize some
+    variables to hold the initial values of the timers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Add a small calculation at the beginning of the `onDraw()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since some time can pass from the initial class creation to when the `onDraw()`
+    method is called, we're calculating the initial value of the timers here. If the
+    value of `timeStartElapsed` is `-1`, for example, it means it has not been initialized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, as we've set the initial time, we can compute how much time has passed
+    and use that as the base value of our animations. Let's multiply it by a factor
+    to control the speed. In this case, we've used `0.02` as an example, and took
+    into account that nanoseconds are in another order of magnitude than milliseconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run this example, we''ll have something similar to the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/6e50b408-0c88-4542-89ab-9015488a3b94.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'One of the issues with this approach is that if we put the application in the
+    background and after some time we put it back on the foreground, we can see all
+    the values depending on time jumping forward, as time will not stop when our app
+    is in the background. To control this, we can override the `onVisibilityChanged()`
+    callback and check whenever our view is visible or invisible:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: In the preceding code, we're calculating the time our view is not visible and
+    adjusting the `timeStartElapsed` with that time. We've to avoid doing it the very
+    first time, as this method will be called the first time the view becomes visible.
+    For that reason, we're checking if `timeStartElapsed` is different from `-1`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we have this callback just before our view becomes visible, we can easily
+    change our previous code to calculate the initial value of the timers and put
+    it here, simplifying our `onDraw()` method as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: With this small adjustment, only to the `timeStartElapsed`, we'll see the animation
+    is preserved on the bottom right rectangle even when we put the application in
+    the background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can find the whole example source code in the `Example27-Animations` folder
+    in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fixed timestep
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are times when calculations can be very complex when dealing with animations.
+    One clear example can be in physics simulations and in games in general, but some
+    other times, our calculations, even for a simple-ish custom view, can get a bit
+    tricky when using time-based animation. Having a fixed timestep will allow us
+    to abstract our animation logic from time variables, but still keep our animation
+    tied to time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The logic behind having a fixed timestep is to assume our animation logic will
+    be always executed a fixed rate. For instance, we can assume it will be executed
+    at *60* fps regardless of which is the actual rendering frames per second. To
+    show how it could be done, we'll create a new custom view that will spawn particles
+    at the position we're pressing or dragging on the screen and applying some very
+    basic and simple physics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s create the basic custom view like our previous example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''re initializing the basic variables and we''re also creating an array of
+    `particles`. Also, as we''ve implemented the `onVisibilityChange` callback on
+    our previous example, let''s take advantage of it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s now define the `Particle` class, let''s keep it as simple as possible:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've only defined the `x`, `y` coordinates, the `x` and `y` velocity as `vx`
+    and `vy` respectively, and the time to live of the particle. When the time to
+    live of the particle reaches `0`, we'll not update or draw it anymore.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s implement the `onDraw()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've delegated all the animation to the `animateParticles()` method and here
+    we're just iterating through all the particles, checking if their time to live
+    is positive and, in that case, drawing them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see now how we can implement the `animateParticles()` method with a
+    fixed time step:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: We calculate the time difference from the last time, or delta of time, and we
+    accumulate it in the `accTime` variable. Then, as long as `accTime` is higher
+    than the threshold we've defined, we execute one logic step. It might happen that
+    more than one logic steps are executed between renders or, in some other cases,
+    it might not get executed during two different frames.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, we subtract the time threshold we defined to the `accTime` for each
+    logic step we've executed and we set the new `timeStart` to the time we used for
+    calculating the difference of time from the previous call to `animateParticles()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, we've defined the time threshold to be `16`, so every `16`
+    milliseconds we'll execute one logic step, independently if we're rendering `10`
+    or `60` frames per second.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `logicTick()` method on the `Particle` class completely ignores the current
+    value of the timer, as it assumes it''ll be executed on a fixed time step:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: It's an extreme over-simplification of a particle physic simulation. It basically
+    applies friction and adds vertical acceleration to the particles, calculates if
+    they have to bounce from the screen limits, and calculates the new `x` and `y`
+    positions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''re just missing the code to spawn new particles when we''ve a pressed or
+    dragged a `TouchEvent`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we''re calling `spawnParticle()` as long as we''ve got a touch event
+    that is a press or a move. The implementation of `spawnParticle()` is also very
+    simple:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are using the `particleIndex` variable as a circular index of the `particles`
+    array. Whenever it arrives at the end of the array it'll start again at the very
+    beginning. This method sets the `x` and `y` coordinates of the touch event and
+    it randomizes the velocity and time to live of each spawned particle. We've created
+    a `SPAWN_RATE` constant to spawn multiple particles on the same touch event and
+    improve the visual effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run the application, we can see it in action, and it''ll be very similar
+    to the following screenshot, but in this case, it''s very hard to capture the
+    idea of the animation in a screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/7dcca15c-8bc9-4b99-bd5c-6b14d70328c7.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: But we're missing something. As we've mentioned before, sometimes we'll execute
+    two, or maybe more, logic steps between two rendered frames, but on some other
+    times, we'll not execute any logic steps between two consecutive frames. If we
+    don't execute any logic steps between those two frames, the result will be the
+    same and a waste of CPU and battery life.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Even if we're between logic steps, that doesn't mean it hasn't passed any time
+    between frames. Actually, we're somewhere between the previous calculated logic
+    step and the next one. The good news is that we can actually calculate that, improving
+    the smoothness of the animation and solving this issue at the same time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s include this modification to the `animateParticles()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''re calculating the factor between which will tell us how close or far it
+    is from the next logic step. If the factor is `0`, it means we''re just at the
+    exact time of the logic step we''ve just executed. If the factor is `0.5`, it
+    means we''re halfway between the current step and the next one and if the factor
+    is `0.8`, we''re almost at the next logic step and precisely *80%* of time passed
+    since the previous step. The way to smooth the transition between one logic step
+    and the next is to interpolate using this factor, but to be able to do so, first
+    we need to calculate the values of the next step as well. Let''s change the `logicTick()`
+    method to implement this change:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, at every logic step we're assigning the values of the next logic step to
+    the current variables to avoid recalculating them, and calculating the next logic
+    step. This way, we've got both values; the current and the new values after the
+    next logic step is executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we''ll be using some intermediate values between `x`, `y,` and `nextX`,
+    `nextY`, we''ll calculate these values on new variables as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, `drawX` and `drawY` will be an intermediate state between the
+    current logic step and the next one. If we apply the previous example values to
+    this factor, we'll see how this method works.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If factor is `0drawX` and `drawY` are exactly `x` and `y`. On the contrary,
+    if factor is `1`, `drawX` and `drawY` are exactly `nextX` and `nextY`, although
+    this should never happen as another logic step would have been triggered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the case of factor being `0.8`, `drawX` and `drawY` values are a linear interpolation
+    weighed at *80%* the values of the next logic step and *20%* of the current one,
+    allowing a smooth transition between states.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can find the whole example source code in the `Example28-FixedTimestep`
+    folder in the GitHub repository. The fixed timestep is covered with more details
+    in the fix your timestep artiche on the Gaffer On Games blog.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Android SDK Classes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we've seen how to create our own animations, using time-based animations
+    or using a fixed time step mechanism. But Android provides us several ways of
+    doing animations using its SDK and the animation framework. In most cases, we
+    can simplify our animations by just using the property animator system instead
+    of creating our own, but that will depend, always, on the complexity of what we
+    want to achieve and how we want to tackle the development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For more information please refer to the property animation framework from the
+    Android developer's documentation website.
+  prefs: []
+  type: TYPE_NORMAL
+- en: ValueAnimator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As part of the property animator system, we have the `ValueAnimator` class.
+    We can use it to simply animate `int`, `float`, or `color` variables or properties.
+    It''s quite easy to use, for instance we can animate a float value from `0` to
+    `360` during `1500` milliseconds using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is alright, but if we want to get updates of the animation and react to
+    them, we''ve got to set an `AnimatorUpdateListener()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Also, in this example, we can see we're calling `invalidate()`from the `AnimatorUpdateListener()`,
+    so we're also telling the UI to redraw the view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are many things we can configure of the way the animation behaves: from
+    the animation repeat mode, number of repetitions, and type of interpolator. Let''s
+    see it in action using the same example we used at the beginning of this chapter.
+    Let''s draw four rectangles on the screen, and rotate them using different settings
+    of a `ValueAnimator`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Instead of setting the initial time and calculating the time difference, we''re
+    now configuring four different `ValueAnimators` and triggering the invalidate
+    calls from their `onAnimationUpdate()` callbacks. On these `ValueAnimator`, we''ve
+    used different interpolators and different repeat modes: `ValueAnimator.RESTART`
+    and `ValueAnimator.REVERSE`. On all of them we''ve set the repeat count to `ValueAnimator.INFINITE`
+    so we can observe and compare the details of the interpolator without pressure.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the `onDraw()` method we've removed the `postInvalidate` call, as view will
+    be invalidated by the animations, but leaving the `drawText()` it's very interesting,
+    as we'll be able to see how the `OvershootInterpolator()` behaves and goes beyond
+    their maximum value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we run this example, we'll see the four rectangles animating with different
+    interpolation mechanisms. Play with the different interpolators, or even implement
+    your own interpolator by extending TimeInterpolator and implement the `getInterpolation(float
+    input)` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The input parameter of the `getInterpolation` method will be between `0` and
+    `1`, mapping `0` to the beginning of the animation and `1` to its end. The return
+    value should be between `0` and `1`, but could be lower or/and higher if we want
+    to go beyond the original values like, for example, the `OvershootInterpolator`.
+    The `ValueAnimator` will then compute the right value between the initial and
+    final values based on this factor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This example needs to be seen on an emulator or real device, but adding a bit
+    of motion blur to the screenshot slightly shows the rectangles are animating at
+    different speeds and accelerations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/c7fb9c2a-db94-400b-b144-bcc709754b08.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: ObjectAnimator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If we want to animate objects directly instead of properties, we could use the
+    `ObjectAnimator` class. `ObjectAnimator` is a subclass of `ValueAnimator` and
+    uses the same functionality and features, but adds the ability to animate objects
+    properties by name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For instance, to show how it works, we could animate a property of our own
+    View this way. Let''s add a small rotation to the whole canvas, controlled by
+    the `canvasAngle` variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ve got to create a setter and a getter with the right name: `set<VariableName>`and
+    `get<VariableName>` in camel case, and in our specific case:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As these methods will be called by the `ObjectAnimator`, as we''ve already
+    created them, we''re ready to set up the `ObjectAnimator` itself:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is basically the same approach of the `ValueAnimator`, but in this case,
+    we're specifying the property to animate using a String and the reference to the
+    object. As we've just mentioned, `ObjectAnimator` will call the getter and setter
+    of the property using the `set<VariableName>` and `get<VariableName>` format.
+    In addition, in the `onAnimationUpdate` callback there is only a call to `invalidate()`.
+    We've removed any value assignation like on the previous examples, as it'll be
+    automatically updated by the `ObjectAnimator`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can find the whole example source code in the `Example29-PropertyAnimation`
+    folder in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we've seen how to add different types of animation to our custom
+    views, from using the `ValueAnimator` and `ObjectAnimator` classes of the property
+    animator system of Android, to creating our own animations using time-based animation
+    or using a fixed time step mechanism.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android provides us with even more animation classes, such as the `AnimatorSet`
+    where we could combine several animations and specify which one plays before or
+    after another.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a recommendation, we shouldn't reinvent the wheel and, if it is enough, try
+    to use what Android offers or maybe just extend it with our specific needs, but
+    if it doesn't fit don't try to force it, as maybe building your own animation
+    might be simple and easier to maintain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As with everything when developing software, use common sense and choose the
+    best option available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll see how to improve the performance of our custom
+    views. In our custom views, we're in full control of the drawing, so optimizing
+    the draw method and resource allocation is critical to avoid making our application
+    sluggish and save some battery from the user.
+  prefs: []
+  type: TYPE_NORMAL

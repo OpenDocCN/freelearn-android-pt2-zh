@@ -1,0 +1,368 @@
+- en: Handling Events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we've seen the basics of canvas drawing and we've our custom view adapted
+    to its size, it's time to interact with it. Many custom views will only need to
+    draw something in a special way; that's the reason we created them as custom views,
+    but many others will need to react to user events. For example, how our custom
+    view will behave when the user clicks or drags on top of it?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To answer these questions, we''ll cover with more detail the following points
+    in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Basic event handling
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Advanced event handling
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Basic event handling
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let's start by adding some basic event handling to our custom views. We'll go
+    through the basics, and we'll add more complex events later on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Reacting to touch events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In order to make our custom view interactive, one of the first things we will
+    implement is to process and react to touch events, or basically, when the user
+    touches or drags on top of our custom view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android provides us with the `onTouchEvent()` method that we can override in
+    our custom view. By overriding this method, we''ll get any touch event happening
+    on top of it. To see how it works, let''s add it to the custom view we built in
+    the last chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Lets also add a log call to see the events we receive. If we run this code
+    and touch on top of our view, we''ll get the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, there is a lot of information on the event, coordinates, action
+    type, and time, but even if we perform more actions on it, we'll only get `ACTION_DOWN`
+    events. That's because the default implementation of view is not clickable. By
+    default, if we don't enable the clickable flag on the view, the default implementation
+    of `onTouchEvent()` will return false and ignore further events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `onTouchEvent()` method has to return `true` if the event has been processed
+    or false if it hasn't. If we receive an event in our custom view and we don't
+    know what to do or we're not interested in such events, we should return `false`,
+    so it can be processed by our view's parent or by any other component or the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To receive more types of events, we can do two things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Set the view as clickable using `setClickable(true)`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implement our own logic and process the events in our custom class
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Later on, we'll implement more complex events; we'll go for the second option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Lets carry out a quick test and change the method to return simply true instead
+    of calling the parent method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we should receive many other types of events, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: As seen in the preceding example, we can see that in the previous log we not
+    only have both `ACTION_DOWN` and `ACTION_UP` but also `ACTION_MOVE` to indicate
+    that we're performing an action of drag on top of our view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll focus on handling the `ACTION_UP` and `ACTION_DOWN` events first. Let''s
+    add a `boolean` variable name that will keep track whether we''re currently pressing
+    or touching our view or not:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ve added the variable and set its default state to `false`, as the view
+    will not be pressed when created. Now, lets add the code to handle this on our
+    `onTouchEvent()` implementation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: We're processed the `MotionEvent`. The `ACTION_DOWN` and `MotionEvent.ACTION_UP`
+    events; any other action we receive here, we ignore and return `false`, since
+    we haven't handled it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'OK, now we''ve a variable that keeps track if we''re pressing our view or not,
+    but we should do something else or otherwise this won''t be of that much use.
+    Let''s modify the `onDraw()` method to paint the circle in a different color when
+    the view is pressed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run this example and we touch our view, we''ll see that nothing happens!
+    What is the issue? We''re not triggering any repaint or redraw event and the view
+    it''s not drawn again. We can see this code is working if we manage to keep pressing
+    the view and put the app in the background and return it to the foreground, for
+    example. However, to do it properly, we should trigger a repaint event when we
+    change something that requires our view to be redrawn, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'OK, that should do the trick! Calling the invalidate method will trigger an
+    `onDraw()` method call in the future:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://developer.android.com/reference/android/view/View.html#invalidate()](https://developer.android.com/reference/android/view/View.html#invalidate()).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can now refactor this code and move it into a method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We need to be aware that invalidate has to be called from the UI thread and
+    will throw an exception if called from another thread. If we've to call it from
+    another thread, for example, we've to update a view after receiving some data
+    from a web service, we've to call `postInvalidate()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/2dc0bea6-a89d-419d-89a7-25935dad6ba3.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Drag events
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we're already reacting to `ACTION_DOWN` and `ACTION_UP` events, we
+    will add a bit more complexity by reacting to `ACTION_MOVE` as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's update the angle, based on the amount of dragging in both directions.
+    To do so, we need to store where the user pressed in the first place, so we'll
+    store the variables `lastX` and `lastY` with the `X` and `Y` coordinates on the
+    `ACTION_DOWN` event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we receive an `ACTION_MOVE` event, we calculate the difference between
+    the `lastX` and `lastY` coordinates and the current values we received with the
+    event. We update `selectedAngle` with the average of the `X` and `Y` difference,
+    and we finally update the `lastX` and `lastY` coordinates. We have to remember
+    to call invalidate or otherwise our view will not be redrawn:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That movement might feel a bit unnatural, so if we want the angle of the circle
+    to follow where we actually pressed, we should change from Cartesian coordinates
+    to polar coordinates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations](https://en.wikipedia.org/wiki/List_of_common_coordinate_transformations).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With this change, there is no need to track the previous coordinates, so we
+    can replace our code with the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Complex layouts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we've seen how to manage `onTouchEvent()` events on our custom view,
+    but that was on a view occupying the whole screen size, so it was a bit of a simple
+    approach. If we want to include or view inside a `ViewGroup` that also handles
+    touch events, for example, a `ScrollView`, what do we've to change?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s change the layout for this one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Basically, we've put our custom view inside `ScrollView`, so both can process
+    events. We should be selective in which events have to be processed by our view
+    and  have to be processed by which the `ScrollView`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To do so, the view provides us with the `getParent()` method, to get its parent:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://developer.android.com/reference/android/view/ViewParent.html](https://developer.android.com/reference/android/view/ViewParent.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once we've the parent, we can call `requestDisallowInterceptTouchEvent` to disallow
+    the parent and its parents to intercept touch events. In addition, to only consume
+    the events we're interested in, we added a check to see if the location where
+    the user touched is inside the radius of the circle or outside. If the touch is
+    outside, we'll ignore the event and won't process it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: We compute the radius applying the same Cartesian to the polar transformation
+    we used before. We also changed the code, so if the touch is inside the radius
+    of the circle, we call `getParent().requestDisallowInterceptTouchEvent(true)`
+    on the `ACTION_DOWN` event, telling the `ViewParent` to not intercept the touch
+    events. We need to undo this action by calling the opposite `getParent().requestDisallowInterceptTouchEvent(false)`
+    on the `ACTION_UP` event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is the result of this change, and we can see that there is a `TextView`
+    view on top and another one at the bottom of our custom view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/5031ea4d-f7c8-4a23-91e7-aed43739b00d.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now if we touch on the circle, our custom view will only process the event and
+    change the circle angle. On the other hand, touching just outside the circle we'll
+    let the `ScrollView` process the events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There aren't that many changes, but when building a custom view that can potentially
+    be reused in multiple places, we should definitely test it on multiple layout
+    configurations to see how it behaves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Find the full source code of this example in the `Example10-Events` folder in
+    the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Advanced event handling
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've seen how to process `onTouchEvent()`, but we can also detect some **gestures**
+    or more complex interactions. Android provides us with the `GestureDetector` to
+    help us detect some gestures. There is even a `GestureDetectorCompat` on the support
+    library to provide this support to older versions of Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For more information on the `GestureDetector`, please check the Android documentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Detecting gestures
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s change the code we''ve been building to use `GestureDetector`. We''ll
+    also use a `Scroller` implementation to scroll smoothly between values. We can
+    modify the constructor to create the `Scroller` object and the `GestureDetector`
+    with an implementation of a `GestureDetector.OnGestureListener`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are many callbacks in this interface, but first, in order to process the
+    gestures, we need to return true on the `onDown()` callback; otherwise, we're
+    indicating that we will not process the chain of events further.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ve simplified `onTouchEvent()` now, as it just simply forwards the event
+    to the `gestureListener`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we may have different gestures, long press, flings, scrolls, we created
+    a method to end the gesture and restore the status:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ve modified the `computeAndSetAngle()` method to use `Scroller`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `Scroller` instance will be animating the values; we need to keep checking
+    the updated values to perform the animation. One approach to do so will be to
+    check on the `onDraw()` method if the animation is finished and trigger an invalidate
+    in order to redraw the view if it isn''t:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `computeScrollOffset()` will return true if the `Scroller` hasn't reached
+    the end; also after calling it, we can query the value of the scroll using the
+    `getCurrX()` method. In this example, we're animating the value of the circle
+    angle, but we're using the `X` coordinate of the `Scroller` to animate it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using this `GestureDetector`, we can also detect long presses and flings, for
+    example. As flings involve more animations, we'll cover it in the following chapters
+    of this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For more information about how to make views interactive refer to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://developer.android.com/training/custom-views/making-interactive.html](https://developer.android.com/training/custom-views/making-interactive.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The source code of this example can be found in the `Example11-Events` folder,
+    in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we've seen how to interact with our custom views. A part of
+    the power of building custom views is the ability to interact with them and make
+    them interactive. We have also seen how to simply react to touch and release events,
+    how to drag elements and calculate the delta distance between drag events, and
+    finally how to use `GestureDetector`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As rendering has been kept quite simple until now, we'll focus on making our
+    rendering more complex and using more drawing primitives in the next chapter.
+  prefs: []
+  type: TYPE_NORMAL

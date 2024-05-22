@@ -1,0 +1,901 @@
+- en: Chapter 7. Secure Networking
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Validating self-signed SSL certificates
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using StrongTrustManager from the OnionKit library
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: SSL pinning
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Secure Sockets Layer** (**SSL**) is one of the core parts of encrypted communications
+    between a client and a server. Its primary deployment has been for web browsers
+    to encrypt messages and ascertain a level of trust with a third-party service
+    for online transactions, such as buying a DVD or Internet banking. Unlike web
+    browsers, there is no padlock icon in the left corner of an Android app providing
+    a visual indicator that the connection is secure. Unfortunately, there have been
+    instances where this validation has been skipped by app developers. This was highlighted
+    by the paper, *Why Eve and Mallory Love Android: An Analysis of Android SSL (In)Security*
+    ([http://www2.dcsec.uni-hannover.de/files/android/p50-fahl.pdf](http://www2.dcsec.uni-hannover.de/files/android/p50-fahl.pdf)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we are going to look at some of the common pitfalls of using
+    SSL on Android, specifically relating to self-signed certifications. The main
+    focus is how to make SSL stronger to help guard against some of the vulnerabilities
+    noted in the previous chapter. After all, Android apps are effectively thick clients.
+    Therefore why not take advantage of additional capabilities compared with web
+    browsers by performing extra validation and imposing restrictions of the certificates
+    and certificate roots we trust.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although, out of the scope of this book, the web server's configuration is a
+    big factor in effective network security. Common vectors that an app can do little
+    about are including a SSL strip, session hijacking, and cross-site request forgery.
+    However, these can be mitigated with robust server configuration. To aid in this,
+    the SSL labs recently released a best practice document, which is available at
+    [https://www.ssllabs.com/downloads/SSL_TLS_Deployment_Best_Practices_1.3.pdf](https://www.ssllabs.com/downloads/SSL_TLS_Deployment_Best_Practices_1.3.pdf).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Validating self-signed SSL certificates
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Android supports the use of SSL with standard Android API components, such
+    as `HTTPClient` and `URLConnection`. However, if you attempt to connect to a secure
+    HTTPS server URL, you may encounter an `SSLHandshakeException`. The common issues
+    are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The certificate authority (CA) who issued the server SSL certificate is not
+    included in the ~130 CAs that are included as part of the Android system, and
+    therefore, is treated as unknown
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The server SSL certificate is self signed
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The server isn't configured with intermediary SSL certificates
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If the server isn't configured with intermediary certificates, it's simply a
+    case of installing them to allow the connection code to validate the root of trust.
+    However, if the server is using a self-signed certification or a CA-issued certificate
+    but the CA isn't trusted by Android, we need to customize the SSL validation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A common practice is to develop and test with servers that have self-signed
+    SSL certificates and only use paid CA-signed certificates in the live environment.
+    Therefore, this recipe specifically focuses on robustly validating self-signed
+    SSL certificates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For this recipe, we will be importing the self-signed SSL certificate into the
+    app, and to do this, we are going to run some terminal commands. This section
+    will cover the tools and commands to download the SSL certificate files on your
+    machine.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The latest version of the Bouncy Castle library is needed later in this recipe
+    to create and import certificates into the truststore. We use Bouncy Castle as
+    it is a robust open source cryptology library that Android has built-in support
+    for. You'll find the `bcprov.jar` file at [http://www.bouncycastle.org/latest_releases.html](http://www.bouncycastle.org/latest_releases.html).
+    Download and save it to the current working directory. For this recipe, we have
+    saved it to a local directory called `libs` so the path to reference the `.jar`
+    file is `/libs/bcprov-jdk15on-149.jar` (which is the latest version at the time
+    of writing this book).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will need a self-signed SSL certificate file from the server; if you created
+    yours manually or already have it, you can skip the rest of this section and move
+    on to the recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To create or download an SSL certificate, we will need to take advantage of
+    the open source SSL toolkit known as **OpenSSL**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Mac** – Fortunately, OpenSSL has been included on Mac OS X since Version
+    10.2.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Linux** – Many Linux distributions come with precompiled OpenSSL packages
+    installed. If not, download and build the source code from [https://www.openssl.org/source/](https://www.openssl.org/source/)or
+    if you are on Ubuntu, it should be a case of `apt-get install openssl`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Windows** – Build from source or use a third-party-provided Win32 installer
+    from Shining Light Productions ([http://slproweb.com/products/Win32OpenSSL.html](http://slproweb.com/products/Win32OpenSSL.html)).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To get the certificates from the server in the terminal window, type the following
+    command, where `server.domain` is either the IP address or server name:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The certificate details will be displayed in the console output. Copy and paste
+    the certificate that is defined, starting with `-----BEGIN CERTIFICATE-----` and
+    ending with `-----END CERTIFICATE-----`, into a new file and save it as `mycert.crt`.
+    It's important not to include any additional white space or trailing spaces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following screenshot shows an example of the `Openssl –showcerts` command
+    for `android.com`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting ready](img/00158.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If you don''t have a server yet and want to create a new self-signed certificate
+    to use, we first need to generate a private RSA key using the OpenSSL toolkit.
+    Type the following into a terminal window:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This creates the private key file `my_private_key.pem`. The next step is to
+    generate the certificate file using the private key generated in the previous
+    step. In the terminal, type:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Follow the onscreen prompts and fill in the certificate details. Note the common
+    name is typically your server IP address or domain name.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That's it for getting ready! We should have a certificate file in hand for the
+    next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's get started!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You should have an SSL certificate in CRT/PEM encoded format, which when opened
+    in, text editor, looks something like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: For this recipe, we will use the example named `mycert.crt`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: To package the certificates into an app, we create and import the certificates
+    into a `.keystore` file that we will refer to as our app's truststore.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In a terminal window, set the `CLASSPATH` variable so that the following command
+    can access the `bcprov.jar` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The preceding command path of the `bcprov-jdk15on-149.jar` file should match
+    the `-providerpath` argument.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now, create and import the certificate with the following `keytool` command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You should be prompted to trust the certificate, type `yes`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The output file is `customtruststore.bks`, with the public certificate added.
+    The truststore is protected with a password, `androidcookbook`, which we will
+    reference in the code when we load the truststore in the app. We set the `–storetype`
+    argument as `BKS`, which denotes the Bouncy Castle Keystore type, also explaining
+    the `.bks` extension. It's possible to import multiple certificates into your
+    truststore; for example, development and test servers.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Difference between keystore and truststore**'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Although they are the same type of file (`.keystore`), and in fact can be the
+    same file, we tend to have separate files. We use the term **truststore** to define
+    a set of third-party public certificates you expect to communicate with. Whereas,
+    a keystore is for private keys and should be stored in a protected location (that
+    is, not in the app).
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Copy the truststore file into the `raw` folder of your Android app; if the
+    folder doesn''t exist, create it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`/res/raw/customtruststore.bks`'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Load the local truststore from the `raw` directory into a `KeyStore` object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we create an instance of the `KeyStore` class with the type `BKS` (Bouncy
+    Castle Keystore) that matches the type we created. Conveniently, there is a `.load()`
+    method, which takes the input stream (`InputStream`) of the loaded `.bks` file.
+    You'll notice we are using the same password we used to create the truststore
+    to open, verify, and read the contents. The primary use of the password is to
+    verify the integrity of the truststore rather than enforce security. Especially
+    since the truststore contains the server's public certificate, it is not a security
+    issue having this hardcoded, as the certificates are easily accessible from the
+    URL. However, to make things harder for attackers, it could be a good candidate
+    for DexGuard's string encryption as mentioned in [Chapter 5](part0057_split_000.html#page
+    "Chapter 5. Protecting Applications"), *Protecting Applications*.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Extend `DefaultHttpClient` to use the local truststore:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We override the `createClientConnectionManager` method so that we can register
+    a new `SSLSocketFactory` interface with our local truststore. For brevity of the
+    code samples, here we have caught the exception and printed the error to the system
+    log; however, it is recommended to implement appropriate error handling and reduce
+    the amount of information logged when using this in live code.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Write a sample HTTP `GET` request using `HttpClient`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This shows us how to construct a simple HTTP `GET` request and use the `LocalTrustStoreMyHttpClient`
+    class, which doesn't throw `SSLHandshakeException` because the self-signed certificate
+    from the server can be successfully verified.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Gotcha**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have defined an explicit truststore for all HTTPS requests. Remember, if
+    the backend server certificate is changed, the app will cease to trust the connection
+    and throw `SecurityException`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: That concludes this recipe; we can communicate with Internet resources that
+    are protected by SSL and signed with our self-signed SSL certificate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In general, when dealing with SSL, a common mistake is to catch and hide certificate
+    and security exceptions. This is exactly what an attacker is relying on to dupe
+    an unsuspecting app user. What you choose to do about SSL errors is subjective
+    and depends on the app. However, blocking networking communications is usually
+    a good step to ensure that data is not transmitted over a potentially compromised
+    channel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using self-signed SSL certificates in a live environment
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It is common for Android application developers to know at compile/build time
+    the servers they are commutating with. They may even have control over them. If
+    you follow the validation steps noted here, there's no security issue with using
+    self-signed certificates in a live environment. The advantage is that you'll insulate
+    yourself from certificate authority compromise and save money of SSL certificate
+    renewal fees.
+  prefs: []
+  type: TYPE_NORMAL
+- en: HttpsUrlConnection
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There''s no additional security benefit, but you may prefer using the `HttpsURLConnection`
+    API. For this, we take a slightly different approach and create a custom `TrustManager`
+    class, which verifiers our local truststore file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a custom `TrustManager` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We implement the `X509TrustManager` interface, and the constructor of our `LocalTrustStoreTrustManager`
+    class takes a `KeyStore` object, which we loaded in a previous step defined earlier
+    in the recipe. As previously noted, this `KeyStore` object is referred to as our
+    truststore because it contains the certificate we trust. We initialize the `TrustManagerFactory`
+    class with the truststore and then using the `findX509TrustManager()` method,
+    we get the system-specific implementation of the `X509TrustManager` interface.
+    We then keep a reference to this `TrustManager`, which uses our truststore to
+    verify whether a certificate from a connection is trusted, rather than using the
+    system truststore.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Here is an example of an HTTP `GET` request using `HttpsURLConnection` and
+    the custom `TrustManager` class created in the previous step:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We initialize the `SSLContext` with the `LocalTrustStoreTrustManager` class
+    so that when we call `sc.getSocketFactory()`, it will use our `TrustManager` implementation.
+    This is set on the `HttpsURLConnection` by overriding the default using `setDefaultSSLSocketFactory()`.
+    That's all you need to successfully connect to our self-signed SSL resources with
+    `URLConnection`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Antipattern – what not to do!
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This is an antipattern that unfortunately is posted on various forums and message
+    boards when developers are trying to work with self-signed certifications or SSL
+    certificates signed by an untrusted certification authority.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here, we see an insecure implementation of the `X509TrustManager` interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see from the code, the `checkServerTrusted` method has no validation
+    implemented consequently, and all servers are trusted. This leaves HTTPS communications
+    exposed to a man-in-the-middle (MITM) attack, which defeats the whole point of
+    using certificates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *SSL pinning* recipe later in this chapter shows a similar approach to enhanced
+    validation of the SSL connection
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Security with HTTPS and SSL* page in the Android training documentation
+    at [https://developer.android.com/training/articles/security-ssl.html](https://developer.android.com/training/articles/security-ssl.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Bouncy Castle Java cryptography API at [http://www.bouncycastle.org/latest_releases.html](http://www.bouncycastle.org/latest_releases.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *HttpsURLConnection* page in the Android Developers reference guide at [https://developer.android.com/reference/javax/net/ssl/HttpsURLConnection.html](https://developer.android.com/reference/javax/net/ssl/HttpsURLConnection.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *SSLSocketFactory* page in the Android Developers reference guide at [https://developer.android.com/reference/javax/net/ssl/SSLSocketFactory.html](https://developer.android.com/reference/javax/net/ssl/SSLSocketFactory.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using StrongTrustManager from the OnionKit library
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this recipe, we are going to leverage the great work of the folks at the
+    Guardian Project to enhance the validation of SSL connections made by our app.
+    Specifically, we are going to make use of `StrongTrustManager`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: OnionKit is distributed as an Android library project. Before we start this
+    recipe, download the OnionKit library from the GitHub page ([https://github.com/guardianproject/OnionKit](https://github.com/guardianproject/OnionKit)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, extract and add to your project as you would add any other Android library
+    project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's get started!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Integrating the `StrongTustManager` class couldn''t be simpler. It is just
+    a case of swapping out your `HttpClient` implementation. Hence, change the following
+    code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To this:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In your code, change the imports from `org.apache.http.*` to `ch.boye.httpclientandroidlib.*`.
+    The `HttpGet` and `HttpResponse` objects used by OnionKit are from another library
+    called `httpclientandroidlib` (also included in OnionKit). `httpclientandroidlib`
+    is a repackaging of `HttpClient` 4.2.3 for Android, which includes updates and
+    bug fixes over the standard `HttpClient` library included in Android SDK.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Enable the notifications:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This is a useful feature for notifying users that there has been an issue with
+    the verification, and also that the Internet resource they are currently connected
+    to is unsafe.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Enable the full verification of the certificate chain:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Enabling `verifyChain` ensures when the `TrustManager.checkServerTrusted server(…)`
+    method is called while making an HTTPS connection that the whole certificate chain
+    is validated. This setting is enabled by default.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Enable checking for weak cryptographic algorithms:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This checks the certificate chain for instances where an issuer has used an
+    MD5 algorithm, which is considered weak and should be avoided. This setting is
+    enabled by default.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Throughout this chapter, we have used the `HttpClient` API; you might wonder
+    why since the `HttpClient` API has been deprecated in Android. To clarify, Google
+    deprecated the use of the version of `HttpClient` included in the Android SDK
+    due to several existing bugs. Google currently recommends using `URLConnection`
+    instead. However, as previously noted, OnionKit uses a separate, updated, and
+    fixed version of the `HttpClient` API library, and subsequently shouldn't be considered
+    deprecated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Orbot and Tor networks
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The Tor project is a free implementation of Onion routing, which provides Internet
+    anonymity and resistance to traffic surveillance. Orbot is a free Android application
+    that provides a proxy specifically for other Android apps to use it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another key feature of OnionKit is allowing your app to connect to the Internet
+    via the Orbot proxy and therefore have its Internet traffic anonymized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `OrbotHelper` class helps determine whether the Orbot app is installed and
+    running and provides convenient methods to start and use it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pinning and CACert
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `StrongTrustManager` class does provide some limited certificate pinning
+    by restricting the trusted root certificate authorities when used in conjunction
+    with another of the Guardian Projects libraries, called **CACert**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will discuss SSL pinning in more detail in the next chapter and create our
+    own `TrustManager` class to specifically pin our SSL certificate chain that is
+    suitable for both CA and self-signed certificates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *OnionKit for Android* article at [https://guardianproject.info/code/onionkit/](https://guardianproject.info/code/onionkit/)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The *Orbot: Proxy with Tor* Android app at [https://play.google.com/store/apps/details?id=org.torproject.android](https://play.google.com/store/apps/details?id=org.torproject.android)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The repackaging of HttpClient 4.2.3 for Android used by the OnionKit project
+    ([https://code.google.com/p/httpclientandroidlib/](https://code.google.com/p/httpclientandroidlib/))
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The CACert project, which is useful for restricting the trusted root CAs at
+    [https://github.com/guardianproject/cacert](https://github.com/guardianproject/cacert)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: SSL pinning
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A certificate authority (CA) is needed to solve the key distribution problem
+    in regular network clients, such as web browsers, IM, and e-mail clients. They
+    need to communicate with many servers, which the application developers have no
+    prior knowledge of. As we have discussed in the previous recipes, it's common
+    to know the backend servers or services your app is communicating with, and so
+    it is advisable to restrict the other CA roots.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android currently trusts around 130 CAs, varying slightly between manufacturers
+    and versions. It also restricts other CA roots and enhances the security of the
+    connection. If one of these CAs were to be compromised, an attacker could use
+    the compromised CA's root certificate to sign and issue new certificates for our
+    server's domain. In this scenario, the attacker could complete a **MITM** attack
+    on our app. This is because the standard HTTPS client validation will recognize
+    the new certificates as trusted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'SSL pinning is one way to restrict who is trusted, and is usually approached
+    in the following two ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Certificate pinning
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Public key pinning
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Much like what we achieved in the *Validating self-signed SSL certificates*
+    recipe of this chapter, certificate pinning limits the number of trusted certificates
+    to the ones in a local truststore. When using a CA, you would include your server's
+    SSL certificate plus the root signing of the certificate and any intermediary
+    certificates into your local truststore. This allows the full validation of the
+    whole certificate chain; so when a compromised CA signs new certificates, these
+    would fail the local truststore verification.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Public key pinning follows the same idea but is slightly more difficult to implement.
+    There is an additional step of extracting the public key from the SSL certificate
+    rather than just bundling the certificate(s) in the app. However, the extra effort
+    is worth it because public keys remain consistent between certificate renewals.
+    This means there is no need to force users to upgrade the app when the SSL certificate
+    has been renewed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this recipe, we are going to pin against several certificate public keys
+    using [Android.com](http://Android.com) as an example. The recipe consists of
+    two distinct parts; the first is a standalone Java utility to process and get
+    the public keys from all of the SSL certificates in the chain and convert them
+    to SHA1 hashes to embed/pin in your app. We embed SHA1 hashes of the public keys,
+    as it is more secure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second part deals with the app code and how to verify the pins at runtime,
+    and to decide whether a particular SSL connection is to be trusted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's get started!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''re going to create a standalone Java file called `CalcPins.java` that we
+    will run on the command line to connect and print the SHA1 hashes of the certificate
+    public keys. As we are dealing with a certificate signed by CA, there will be
+    two or more certificates in the chain. This first step is mostly initiation and
+    code to get the arguments to pass to the `fetchAndPrintPinHashs` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Next, we define the `PublicKeyExtractingTrustManager` class, which actually
+    does the extraction of the public keys. The `checkServerTrusted` method will be
+    called with the full chain of `X509Certificates`, when the socket connects, which
+    is shown in a later step. We take the chain (the `X509Certificate[]` array) and
+    call `cert.getPublicKey().getEncoded();` to get a byte array for each public key.
+    We then use the `MessageDigest` class to compute the SHA1 hash of the key. As
+    this is a simple console application, we print the SHA1 hash to `System.out`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then, we write the `bytesToHex()` utility method as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We use a utility method to convert the byte array into upper case hexadecimal
+    string before printing to `System.out` so that they can be embedded into our Android
+    app.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Finally, we use the host and port that was passed from the `main` method to
+    open a `SSLSocket` connection to the host:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We initialize the `SSLContext` object with our custom `PublicKeyExtractingTrustManager`
+    class, which in turn prints the public key hash of each certification to the console
+    ready for embedding in the Android app.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'From the terminal window, compile `CalcPins.java` with the `javac` and `run`
+    commands using `java` with `hostname:port` as a command-line argument. The sample
+    uses `Android.com` as an example host:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: However, you might find it easier to create `CalcPins.java` as a simple Java
+    project in your IDE then export it as a runnable `.jar` file.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'A sample terminal command for the runnable `.jar` is as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If the public key extraction works, you will see the hash''s output. This sample
+    output shows the pins of three SSL certificate public keys of the `Android.com`
+    host:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, we move on to the second part of the recipe to verify the SSL connection
+    in our Android app project.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now that we have the pins, we copy them from the terminal and embed them in
+    a `String` array:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Implement a custom `TrustManager` class that validates the pins:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `PubKeyPinningTrustManager` constructor is constructed with the pins array
+    to use internally for validation. An instance of `MessageDigest` is also created
+    to generate SHA1 hashes of incoming SSL certificate public keys. Note, for this
+    example, that we are not implementing the `checkClientTrusted()` or `getAcceptedIssuers()`
+    methods; see the *Enhancements* section.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Validate the certificate:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We extract the public key and compute the SHA1 hash and then convert to a hexadecimal
+    string using the `bytesToHex()` method as noted previously. The validation then
+    boils down to a simple `String.isEquals` operation (actually, we use `equalsIgnoreCase`
+    just in case there is a case mismatch). If the pin from the certificate does not
+    match one of the embedded pins, a `CertificateException` is thrown and the connection
+    will not be permitted.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'We can integrate `PubKeyPinningTrustManager` in the same way as the `LocalTrustStoreTrustManager`
+    class, discussed earlier in this chapter. Here is an example of this being used
+    with `HttpsURLConnection`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: In conclusion, we extracted the certificate public keys and generated SHA1 hashes
+    to embed in our app. Use these at runtime to validate the public keys of the SSL
+    certificates of the SSL connection. This not only protects against other CAs being
+    compromised, but also makes things more difficult for MITM attackers. The great
+    thing is that we are using the industry standard SSL infrastructure, just in a
+    stringent way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It is important to understand where this recipe can be improved and where the
+    limitations are.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enhancements
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For maximum security, each time you make a server connection, you should validate
+    the SSL pins. However, there is a trade off with performance per connection; therefore,
+    you could adapt the previous code to check the first couple of connections per
+    session. Although, this obviously comprises security. Also, including the Android's
+    default trust manager validation would further increase the security. An open
+    source library called **AndroidPinning** by *Moxie Marlinspike* has these enhancements
+    implemented. You could also change the hash algorithm to a stronger version of
+    SHA.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `validateCertificatePin` method is an ideal candidate for DexGuard's API
+    hiding, as mentioned in [Chapter 5](part0057_split_000.html#page "Chapter 5. Protecting
+    Applications"), *Protecting Applications*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Limitations
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: While SSL pinning makes it more difficult for MITM attackers, it's not a 100
+    percent solution (not that any security solution is 100 percent). There is an
+    interesting library from iSECPartners, which aims to circumvent pinning ([https://github.com/iSECPartners/android-ssl-bypass](https://github.com/iSECPartners/android-ssl-bypass)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, the anti-temper recipes noted in [Chapter 5](part0057_split_000.html#page
+    "Chapter 5. Protecting Applications"), *Protecting Applications*, could be used
+    to mitigate the `.apk` modification and the ability to run on an emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Learn more about the MITM attack at [https://www.owasp.org/index.php/Man-in-the-middle_attack](https://www.owasp.org/index.php/Man-in-the-middle_attack)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *OpenSSL command line HowTo* guide is available at [http://www.madboa.com/geek/openssl/](http://www.madboa.com/geek/openssl/)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *OWASP Certificate and Public Key Pinning* guide is available at [https://www.owasp.org/index.php/Certificate_and_Public_Key_Pinning](https://www.owasp.org/index.php/Certificate_and_Public_Key_Pinning)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The AndroidPinning project, an open source pinning library by *Moxie Marlinspike*,
+    is available at [https://github.com/moxie0/AndroidPinning](https://github.com/moxie0/AndroidPinning)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Google Chrome uses pins, which is explained at [https://www.imperialviolet.org/2011/05/04/pinning.html](https://www.imperialviolet.org/2011/05/04/pinning.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

@@ -1,0 +1,820 @@
+- en: Introducing 3D Custom Views
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In previous chapters, we've seen how to implement custom views using the Android
+    2D graphics library. That would be our most common approach, but sometimes, we
+    might need some more horsepower because of additional render particularities or
+    the requirements of our custom view. In those cases, we might use **OpenGL for
+    Embedded Systems** (**OpenGL ES**) and enable 3D rendering operations in our view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we''ll see how to use OpenGL ES in our custom views and show
+    a practical example of how we can build one. With more detail, we will cover the
+    following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introduction to OpenGL ES
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing geometry
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Loading external geometry
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction to OpenGL ES
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android supports OpenGL ES for 3D rendering. OpenGL ES is a subset of the desktop
+    **OpenGL API** implementation. On its own, **Open Graphics Library** (**OpenGL**)
+    is a very popular cross-platform API for rendering 2D and 3D graphics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is slightly more complex to use OpenGL ES to render our custom view than
+    the standard Android canvas drawing primitives and, as we'll see during this chapter,
+    it needs to be used with common sense and it won't always be the best approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For any additional information about OpenGL ES please refer to the official
+    documentation from The Khronos Group:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://www.khronos.org/opengles/](https://www.khronos.org/opengles/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting started with OpenGL ES in Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'It''s very easy to create a 3D-enabled custom view. We can do it by simply
+    extending `GLSurfaceView` instead of just extending from the `View` class. The
+    complexity comes in the rendering part, but let''s go step by step. First, we''ll
+    create a class named `GLDrawer` and add it to our project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Like our previous examples, we created the constructor with the `AttributeSet`,
+    so we can inflate it and set parameters, if needed, from the XML layout file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We might have the impression that OpenGL ES is only used in full screen games,
+    but it can be used in non-full screen views and even inside `ViewGroups` or a
+    `ScrollView`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To see how it behaves, let''s add it to the `layout` file between two `TextView`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We need to do an additional step before our `GLDrawer` class can work. We have
+    to create a `GLSurfaceView.Renderer` object to handle all the rendering and set
+    it to the view by using the `setRenderer()` method. When we set this renderer,
+    `GLSurfaceView` will additionally create a new thread to manage the drawing cycle
+    of the view. Let''s add a `GLRenderer` class at the end of the `GLDrawer` class
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `glClearColor()` method tells OpenGL which color we''d like to clear from
+    the screen. We''re setting the four components, red, green, blue, and alpha, in
+    a floating-point format ranging from `0` to `1`. `glClear()` is the method that
+    actually clears the screen. As OpenGL can also clear several other buffers, it''ll
+    only clear the screen if we set the `GL_COLOR_BUFFER_BIT` flag. Now that we''ve
+    been introduced to some OpenGL functions, let''s create a `GLRenderer` instance
+    variable and initialize it in the class constructor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When implementing a `GLSurfaceView.Renderer` class, we have to override the
+    following three methods or callbacks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`onSurfaceCreated()`: This method will be called every time Android needs to
+    create an OpenGL context-for example, the very first time the rendered thread
+    is created, or every time the OpenGL context is lost. Context might be lost whenever
+    the application goes into the background. This callback is the ideal method to
+    put all the initialization code that depends on the OpenGL context.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onSurfaceChanged()`:This method will be called when the view is resized. It''ll
+    also be called the very first time the surface is created.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`onDrawFrame()`:This method is responsible for doing the actual drawing, and
+    will be called every time the view needs to be drawn.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In our example, we've left the `onSurfaceCreated()` and `onSurfaceChanged()`
+    methods empty as, at this moment, we're only focusing on drawing a solid background
+    to check if we have everything working, and we don't need the view size yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run this example, we''ll see both `TextView`s and our custom view with
+    a red background:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/55be06cb-b0bb-4248-9da3-cbbe3d4bbd7e.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If we set a breakpoint or we print a log in our `onDrawFrame()` method, we''ll
+    see that the view is continuously redrawn. This behavior is different from a normal
+    view, as the renderer thread will be continuously calling the `onDrawFrame()`
+    method. This behavior can be modified by calling the `setRender()` method once
+    we''ve set the renderer object. If we call it before, it''ll crash our application.
+    There are two render modes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`setRenderMode`(`RENDERMODE_CONTINUOUSLY`): This is the default behavior. The
+    renderer will be continuously called to render the view.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`setRenderMode`(`RENDERMODE_WHEN_DIRTY`): This can be set to avoid the continuous
+    redrawing of the view. Instead of calling invalidate, we have to call `requestRender`
+    in order to request a new render of the view.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawing basic geometry
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We''ve got our view initialized and have drawn a solid red background. Let''s
+    draw something more interesting. We''ll focus on OpenGL ES 2.0 in the following
+    examples, as it''s been available since Android 2.2, or API level 8, and it''s
+    not really worth explaining how to do it in OpenGL ES 1.1\. However, if you want
+    to know more, there are some ports of the old NeHe OpenGL ES tutorials ported
+    to Android on GitHub:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://github.com/nea/nehe-android-ports](https://github.com/nea/nehe-android-ports).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: OpenGLES 1.1 and OpenGL ES 2.0 code are incompatible because the OpenGL ES 1.1
+    code is based on a fixed-function pipeline, where you have to specify the geometry,
+    lights, and so on, and OpenGL ES 2.0 is based on a programmable pipeline handled
+    by the vertex and fragment shaders.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, as we require OpenGL ES 2.0, we should add a `uses-feature` configuration
+    line in our manifest file so that Google Play will not show the application to
+    those devices that are not compatible:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we use specific APIs from OpenGL ES3.0, we'd change the requirement to `android:glEsVersion="0x00030000"`
+    to let Google Play filter accordingly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we''ve done this step, we could start drawing some more shapes and geometry.
+    But first, before setting the renderer, we should set the renderer context to
+    `2` so it will create an OpenGL ES 2.0 context. We can easily do that by modifying
+    the constructor of the `GLDrawer` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Let's now go through how to draw a rectangle on the screen, step by step. If
+    you're familiar with OpenGL ES 1.1 but not with OpenGL ES 2.0, you'll see that
+    there is a bit more work to do, but at the end, we'll benefit from the additional
+    flexibility and power of OpenGL ES 2.0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will start by defining an array with the coordinates of a rectangle, or
+    a quad, centered on the position `0, 0, 0`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll be drawing triangles, so we have to define their vertex indexes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To understand the reasoning behind these indexes, how to map them to the vertex
+    indexes we previously defined, and how we can draw a quad using two triangles,
+    look at the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/553dbbb6-5901-4c39-9689-13577d604010.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: If we draw a triangle with the vertices `0`, `1`, and `2,` and another one with
+    the vertices `0`, `2`, and `3`, we'll end up having a quad.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When working with OpenGL ES, we''ll need to provide data using a `Buffer` or
+    a subclass of a `Buffer`, so let''s convert those arrays into `Buffer`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'First, we have to allocate the space we need for the `Buffer`. As we know the
+    size of the array, this would be very easy: We just have to multiply it by the
+    size of a float in bytes. One float is exactly four bytes, but we can calculate
+    it by getting the number of bits using `Float.SIZE` and dividing it by `8`. In
+    Java 8, there is a new constant called `Float.BYTES` that precisely returns the
+    size in bytes.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have to indicate that the `Buffer` in which we put the data will have the
+    native byte order of the platform. We can do this by calling the `order()` method
+    on the `Buffer` with `ByteOrder.nativeOrder()` as a parameter. Once we've done
+    this step, we can convert it to a float buffer by calling `Buffer.asFloatBuffer()`
+    and set the data. To finish, we reset the position of the `Buffer` to the beginning
+    by setting its position to `0`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have to do this process for the vertices as well as for the indexes. As
+    indexes are stored as short integers, we need to take that into consideration
+    when we convert the buffer, and when calculating the size:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we mentioned before, the OpenGL ES 2.0 rendering pipeline is handled by
+    the vertex and the fragment `shader`. Let''s create a helper method to load and
+    compile the `shader` code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using this new method, we can load both the vertex and fragment `shaders`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: For the time being, let's use the default `shaders` from the Android developer's
+    OpenGL training website.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `vertexShader` is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `fragmentShader` is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've added a matrix multiplication in our `vertexShader`, so we can modify
+    the position of the vertices by updating the `uMVPMatrix`. Let's add a projection
+    and some transformations in order to have the basic rendering in place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We shouldn''t forget about the `onSurfaceChanged()` callback; let''s use it
+    to set our projection matrix and define the clipping planes of our camera, taking
+    into account the width and height of the screen to keep its aspect ratio:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s compute the view matrix by using `Matrix.setLookAtM()` and multiplying
+    it by the projection matrix we''ve just calculated on `mProjectionMatrix`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding code, we also saw how to update a variable that can be read
+    from a `shader`. To do so, we need to get the handle of the uniform variable first.
+    By using `GLES20.glGetUniformLocation(shaderProgram, "uMVPMatrix")` we can get
+    the handle of the `uMVPMatrix` uniform variable and, using this handle on the
+    `GLES20.glUniformMatrix4fv` call, we can set the matrix we''ve just calculated
+    onto it. If we check the code for the `shader`, we can see we''ve defined `uMVPMatrix`
+    as uniform:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that we know how to set a uniform variable, let''s do the same with the
+    color. On the fragment `shader`, we''ve set `vColor` as a uniform variable as
+    well, so we can follow the same method to set it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using the same mechanism, but changing `glGetUniformLocation` to `glGetAttribLocation`,
+    we can also set the vertex coordinates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have everything ready to draw it to the screen; we just have to enable the
+    vertex attribute array, as we''ve set the coordinate data using the `glVertexAttribPointer()`
+    call and `glDrawElements()` will only draw enabled arrays:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There are many mays of drawing geometry on OpenGL, but we''ve used the `glDrawElements()`
+    call pointing to the buffer of the face indexes we''ve previously created. We''ve
+    used `GL_TRIANGLES` primitive here, but there are many other OpenGL primitives
+    we can use. Check the official Khronos documentation about `glDrawElements()`
+    for more information:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDrawElements.xhtml](https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glDrawElements.xhtml).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, as good practice, and to restore the OpenGL machine state, we disable
+    the vertex attribute array after drawing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we execute this code, we'll get the following-still not really useful, but
+    it's a start!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/9d92fb4b-de8c-40a2-b36d-acf1bc25cb0e.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check the `Example23-GLSurfaceView` in the GitHub repository for the full example
+    source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Drawing geometry
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we've seen how to set up our OpenGL renderer and draw some very basic
+    geometry. But, as you can imagine, we can do a lot more with OpenGL. In this section
+    we'll see how to do some more complex operations and how to load geometry defined
+    using an external tool. Sometimes, it might come in useful to define the geometry
+    using code, but most of the time, and especially if the geometry is very complex,
+    it'll be designed and created using a 3D modeling tool. Knowing how we can import
+    that geometry will definitely come in very handy for our projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding volume
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In our previous example, we've seen how to draw a quad with one single color,
+    but what about if each vertex has a completely different color? The process will
+    not be very different from what we've already done, but let's see how we can do
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s change the color array to hold the color of the four vertices:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, in our `initBuffers()` method, let''s initialize an additional `Buffer`
+    for the color:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have to update our `shaders` as well to take the color parameter into account.
+    First, on our `vertexShader`, we have to create a new attribute that we will call
+    `aColor` to hold the color of each vertex:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we define a varying `vColor` variable that will be passed to the `fragmentShader`,
+    and the `fragmentShader` will compute the value per fragment. Let''s see the changes
+    on the `fragmentShader`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: The only thing we've changed is the declaration of `vColor`; instead of being
+    a uniform variable, now it's a `varying` variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Just like we did with the vertex and face indexes, we have to set the color
+    data to the `shader`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before drawing, we have to enable and disable the vertex array. If the color
+    array is not enabled, we'll get a black square instead, as `glDrawElements()`
+    will not be able to get the color information;
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run this example, we''ll see a similar effect as our previous example,
+    but we can see how the color is interpolated between the vertices:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/5c79b673-9efb-487a-a670-b7b80d2f4857.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Now that we know how to interpolate colors, let''s add some depth into the
+    geometry. Everything we''ve drawn so far is quite flat, so let''s convert the
+    quad into a cube. It is very straightforward. Lets first define the vertices and
+    new face indexes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've replicated the same four vertices we had before, but with a displaced
+    *Z* coordinate, that would add volume to the cube.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, we have to create the new face indexes. A cube has six faces, or quads,
+    that can be reproduced with twelve triangles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Lets also add new colors for the new four vertices:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we execute this example, as it is, we''ll get a strange result, similar
+    to the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/760e6080-d9a9-432e-b521-453297d9451e.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Lets add a rotation transformation to the `mMVPMatrix` matrix to see what is
+    going on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have to define a private variable to hold the rotation angle and apply the
+    rotation to the `mMVPMatrix`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this case, just to see what is going on, we''re applying the rotation to
+    the three axes: *x*, *y*, and *z*. We also moved the camera a bit away from our
+    previous example, as now there might be some clipping if we don''t do so.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To define the amount we have to rotate by, we''ll use one of the Android timers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We store the start time on the `startTime` variable, and on our `onDrawFrame()`
+    method we compute the angle based on the amount of time that has passed since
+    this moment:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we have just multiplied it by `0.02f` to limit the speed of rotation,
+    as otherwise it''ll be too fast. Doing it this way, the animation speed will be
+    the same on all devices regardless of the rendering frame rate or their CPU speed.
+    Now, if we run this code, we''ll see the origin of the issue we''re experiencing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/5e919ddd-cbb4-4b83-9e1b-75d836ef6a17.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The issue is that OpenGL is not checking the z coordinate of the pixel when
+    drawing all the triangles, so there might be some superposition and overdrawing
+    as we can easily see in the preceding screenshots. Luckily for us, this is very
+    easy to solve. OpenGL has a state that we can use to enable and disable depth,
+    or z, tests:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As with the previous example, after drawing we disable the state we''ve enabled
+    to avoid leaving an unknown OpenGL state for any other drawing operation. If we
+    run this code, we''ll see the difference:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/d984ccec-3892-428b-86df-98af92c587e0.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check the `Example24-GLDrawing` on the GitHub repository for the full example
+    source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding textures
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let's keep doing more interesting things! We've seen how to add a color per
+    vertex, but let's see now what do we have to change if we want to add some textures
+    to our 3D object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s replace the color array with a texture coordinate array. We''ll
+    map texture coordinate `0` to the start of our texture, in both axes, and `1`
+    to the end of the texture, also in both axes. Using the geometry we had in our
+    previous example, we could then define the texture coordinates this way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To load these texture coordinates, we use exactly the same procedure as we
+    did previously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s also create a helper method to load a resource into a texture:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have to take into account that both texture dimensions have to be to the
+    power of `2`. To preserve the original size of the image and avoid any scaling
+    done by Android, we have to set the bitmap options `inScaled` flag to `false`.
+    In the previous code, we generate a texture ID to hold the reference to our texture,
+    binding it as the active texture, setting the parameters of filtering and wrapping,
+    and finally loading the bitmap data. Once we've done so, we can recycle the temporary
+    bitmap, as we don't need it anymore.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we did before, we have to update our `shaders` as well. In our `vertexShader,`
+    we have to apply almost the same changes as we did before, adding an attribute
+    where we can set the vertex texture coordinate and a `varying` variable to pass
+    to the `fragmentShader`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Note that the vertex coordinates are a `vec2` instead of a `vec4`, as we only
+    have two coordinates: U and V. Our new `fragmentShader` is a bit more complex
+    than the one we had before:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have to create the `varying` texture coordinate variable and also a uniform
+    `sampler2D` variable where we'll set the active texture. To get the color, we
+    have to use the `texture2D` lookup function to read the color data from the texture
+    on the specified coordinates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s now add a bitmap named `texture.png` to our drawables `res` folder and
+    modify the `onSurfaceCreated()` method to load it as a texture:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here is the image used in our example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/52a4bc51-0f65-4acb-917f-1d025ff08a65.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Finally, let''s update the `onDrawFrame()` method to set the texture coordinates:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here is the texture itself:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: Also, as we did before, we have to enable, and later disable, the texture coordinates
+    vertex array.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run this code, we''ll get the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/157987b0-6971-4066-ab7d-707b4325c097.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check the `Example25-GLDrawing` on the GitHub repository for the full example
+    source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading external geometry
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we've been drawing quads and cubes, but if we want to draw more complex
+    geometry, it is probably handier to model it on a 3D modeling tool rather than
+    doing it by code. We can cover multiple chapters on this topic, but let's just
+    look at a quick example of how can it be done and you can extend it to your needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have used a Blender to model our example data. Blender is a free and open
+    source 3D modeling toolset and can be downloaded for free at its website:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://www.blender.org/](https://www.blender.org/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For this example, we haven''t modeled an extremely complex example; we''ve
+    just used one of the primitives that Blender provides: Suzanne:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/0f8fb505-8aeb-46bd-b17e-fc7dcd36f3f4.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'To simplify our importing tool, we''ll select the object mesh under the Scene
+    | Suzanne drop-down menu on the right and, when we press *Ctrl* + *T*, Blender
+    will convert all faces into triangles. Otherwise, we''ll have both triangles and
+    quads on our exported file and it''s not straightforward to implement the face
+    importer from our Android application code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/976e8d5b-34e3-4ddb-8ebf-9d791dc29f78.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now, we'll export it as a `Wavefront` (`.obj`) file, which will create both
+    a `.obj` and a `.mtl` file. The latter is the material information that, for the
+    moment, we'll ignore. Let's put the exported file into our project in the `assets`
+    folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s now create a very simple `Wavefront` file object parser ourselves. As
+    we''ll be dealing with files, loading, and parsing, we''ll have to do it asynchronously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can see, there is no actual work done here. To do the real loading and
+    parsing, we''ve created a helper class that will do it on a separate **thread**
+    and call the listener either if it''s successful or if there has been an error
+    parsing the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, when we call `helper.start()`, it''ll create the actual thread, and execute
+    the `run()` method on it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the previous code, we first read the asset by opening the file with the
+    name provided. To get the application assets, we need a `context` here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then, we read the file line by line and we take different actions depending
+    on the starting keyword, except if the line starts with `#`, which means that
+    it's a comment. We're only taking into consideration the commands of a new object,
+    vertex coordinates, and face index; we're ignoring any additional commands that
+    there might be on the file, such as material used, or vertex and face normals.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we can get face index information, such as f 330//278 336//278 338//278
+    332//278, we created a helper method to parse that information and only extract
+    the face index. The number after the slashes is the face normal index. Refer to
+    the official file format to understand the usage of the face index numbers in
+    more detail:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: Also, as face indices start at `1`, we have to subtract `1` to get it right.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To store all this data we''re reading from the file, we''ve also created some
+    data classes. The `Object3D` class will store all relevant information-vertices,
+    face indexes, and the `Scene` class will store the whole 3D scene with all the
+    `Objects3D` inside. For simplicity, we''ve kept these implementations as short
+    as possible, but they can be made way more complex depending on our needs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that there is a `render()` method on the `Scene` class. We''ve moved
+    the responsibility of rendering all its 3D objects to the `Scene` itself, and,
+    applying the same principle, each object is also responsible for rendering itself:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once we've set all the data to the `3DObject`, we can prepare it to render by
+    calling its `prepare()` method. This method will create the vertex and index `Buffer`,
+    and, as in this case we don't have any color information from the mesh on the
+    data file, it'll generate a random color, or rather an intensity, for each vertex.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the buffers here in the `3DObject` itself allows us to render any kind
+    of object. The `Scene` container doesn't know what kind of object or what kind
+    of geometry is inside. We could easily extend this class with another type of
+    `3DObject`, as long as it handles its own rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we''ve added a `render()` method to the `3DObject`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method is responsible for enabling and disabling the right arrays and rendering
+    itself. We get the `shader` attributes from the method parameters. Ideally, each
+    object could have its own `shader`, but we didn't want to add that much complexity
+    in this example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In our `GLDrawer` class, we''ve also added a helper method to calculate a perspective
+    frustrum matrix. One of the most used calls in OpenGL was `gluPerspective`, and
+    NeHe, the author of many awesome OpenGL tutorials, created a function to convert
+    `gluPerspective` to a `glFrustrum` call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we don''t need it anymore, we''ve removed all vertex and face index information
+    from `GLDrawer` and simplified the `onDrawFrame()` method to now delegate the
+    rendering of all objects to the `Scene` class, and, by default, to each individual
+    `3DObject`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Putting it all together, if we run this example, we''ll get the following screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/88851ca6-f800-445a-9f74-e2e0c7edf0f9.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check the `Example26-GLDrawing` on the GitHub repository for the full example
+    source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we've seen how to create very basic custom views using OpenGL
+    ES. OpenGL ES adds a lot of possibilities when creating custom views, but it also
+    adds a lot of complexity if we don't have that much experience working with it.
+    We could cover many more chapters on this topic, but that is not the main goal
+    of this book. We'll have some more examples of using 3D custom views, but there
+    is a lot of published material on how to learn, or even master, OpenGL ES on Android
+    devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll see how to add more animations and smooth movements
+    to our custom view. As we could animate any parameter or variable, it will not
+    matter if it is a 3D custom view or a standard 2D custom view, but we'll see how
+    to apply animations in both cases.
+  prefs: []
+  type: TYPE_NORMAL

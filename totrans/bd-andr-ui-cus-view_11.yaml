@@ -1,0 +1,650 @@
+- en: Creating a 3D Spinning Wheel Menu
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With the exception of [Chapter 5](7a508b47-7123-4cae-9e93-a1f0affbd9d8.xhtml),
+    *Introducing 3D Custom Views*, where we explained how to build custom views using
+    OpenGL ES, all the other examples in this book use the 2D drawing methods available
+    from the `Canvas` class. In the last two chapters, we have seen how to build slightly
+    more complex custom views, but none of them were using any 3D rendering techniques.
+    So, in this chapter, we will show how to build and customize a full custom 3D
+    view and how to interact with it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With more detail, we will cover the following in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding interactions to a 3D custom view
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Adding a `GestureDetector` to manage complex gestures
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using a `scroller` to manage scroll and fling gestures
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Rendering text into textures and drawing them on OpenGL ES
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating geometry programmatically
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating an interactive 3D custom view
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 5](7a508b47-7123-4cae-9e93-a1f0affbd9d8.xhtml), *Introducing 3D
+    Custom Views, *we saw how to create a very simple rotating cube using OpenGL ES.
+    Starting from that example and by just adding a way to react to user interactions,
+    we can create the foundations of a more complex and interactive custom view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding interactions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let's start by using the code from the `Example25-GLDrawing`. Processing user
+    interactions is quite simple, as we have already seen in our previous examples.
+    We don't have to do anything different than before, just override the `onTouchEvent()`
+    method in our class extending `GLSurfaceView` and react properly to the different
+    MotionEvents we will receive. For instance, if we don't return `true` when we
+    receive a `MotionEvent.ACTION_DOWN`, we will not receive any further events, as
+    we are basically saying that we are not handling the event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once we have the source code of the example, let''s add a simple implementation
+    of the `onTouchEvent()` that tracks drag events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll use the drag amount to change the angle of rotation of the cube, as
+    we will see in the following code snippets. In addition, later in this chapter,
+    we will see how we can do this animation using a `scroller` class, but, for the
+    moment, let''s use a fixed time-step mechanism:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: It uses the same principles as what we have been doing in previous examples,
+    execute a single tick of logic every `TIME_THRESHOLD` milliseconds. The cube angle
+    value will be interpolated between the current state and the next state depending
+    on the time remaining to the execution of the next logic tick. This interpolated
+    value will be stored on the `angleFr` variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have also done some changes to the `onSurfaceChanged` to use the perspective
+    projection mode instead of using `Matrix.frustrumM`. The latter defines the six
+    clipping planes: near, far, top, bottom, left, and right. However, using `Matrix.perspective`
+    allows us to define the projection matrix in terms of the camera field of view
+    angle and two clipping planes: near and far. It might be handier in some situations,
+    but at the end of the day, both methods achieve the same objective:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we have got to do some changes to the `onDrawFrame()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Basically, the changes we have got to make are to call the `animateLogic()`
+    method to execute any pending logic tick and use the interpolated `angleFr` variable
+    for the rotation angle. If we run this example, we will get the same cube we had
+    in `Example25` but, in this case, we can control the animation by dragging horizontally
+    on the screen. We have also got to remember, that there is no need to call `invalidate`
+    or `postInvalidate` as when extending our class from `GLSurfaceView` and, unless
+    specifically indicated, the screen will be constantly redrawn.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Improving interactions and animations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have been using a fixed time-step mechanism to manage the animations, but
+    let's see what advantages it gives us to use a `scroller` class provided by Android
+    to handle the animations, instead of handling all the animations by ourselves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s create a `GestureDetector` instance to handle the touch events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are using the `GestureDetectorCompat` from the support library to guarantee
+    the same behavior on older versions of Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we covered in [Chapter 3](99203bd5-42a8-4ef7-96a5-83d55acf109d.xhtml), *Handling
+    Events*, by introducing a `GestureDetector` we can greatly simplify our `onTouchEvent()`,
+    as all the logic will be handled by the `MenuGestureListener`callback instead
+    of being on the `onTouchEvent()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `gestureDetector` requires an implementation of an `OnGestureListener`,
+    but if we only want to implement some methods and not have to worry about the
+    other methods exposed by the interface, we could just extend from `GestureDetector.SimpleOnGestureListener`
+    and only override the methods we need. The `GestureDetector.SimpleOnGestureListener`
+    class comes with a dummy empty implementation for all the methods exposed in the
+    `OnGestureListener` interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`SimpleOnGestureListener` also implements other interfaces to make our lives
+    as software engineers easier, but please refer to the Android documentation for
+    more information.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s then create our own internal class, `MenuGestureListener`, extending
+    from `GestureDetector.SimpleOnGestureListener`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we have mentioned before, even if it's an `OnGestureListener` implementation,
+    we have got to return `true` on the `onDown()` method. Otherwise, the `onScroll()`
+    or `onFling()` methods from our `OnGestureListener` implementation won't be called
+    whenever there is a scroll or fling event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Anyway, we still have some work to do on the `onDown()` method: We have got
+    to stop any running animation so the custom view will feel more reactive to the
+    user.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have implemented two other methods: `onScroll()` and `onFling()`. They''re
+    both managing different gestures that directly map to different ways of scrolling.
+    Whenever we are dragging on the screen, the `onScroll()` method will be called
+    as we will be actually scrolling. On the other hand, when we do a fling gesture;
+    that is, when the user drags and lifts the finger from the screen very quickly,
+    we need to take into consideration other parameters, such as the velocity and
+    friction of the animation. When the gesture finishes, the animation will still
+    run for some time, slowing down until stopping depending on the defined friction.
+    In that case, the `onFling()` method from our listener will be called with the
+    horizontal and vertical velocity of the fling event, leaving the friction to be
+    handled by us.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In both events, we will be using a `scroller` class to simplify the calculations.
+    We could do it ourselves but, although implementing the `onScroll()` logic would
+    be quite straightforward, implementing the `onFling()` animation properly would
+    require some calculations and complexities that we can take for granted by using
+    a `scroller` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On the `onScroll()` implementation, we are simply calling the `startScroll`
+    method of the `scroller` from the current position and the dragged distance. To
+    get the current position, we have got to call `scroller.computeScrollOffset` first.
+    If we don't call it, the current value will always be zero. Once we have called
+    this method, we can retrieve the current value of the `scroller` by using the
+    `getCurrX` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As in our listener we are getting the distance as a floating point and `startScroll`
+    only accepts integer values, we will round the `distanceX` value by just adding
+    0.5 and then converting it in to an integer value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Similarly, on the `onFling()` implementation we will be calling the `fling`
+    method of the `scroller`. We'll get the current position, as we have described
+    in the `onScroll()` implementation, and we will adjust the velocity as it was
+    too high from the point of view of animating a rotating cube. We have set the
+    maximum and minimum values to 100 full turns of the cube as, in normal circumstances,
+    we don't want to limit the rotation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, by using a `scroller`, we can get rid of the `animateLogic()` method and
+    all associated variables, as we will no longer need them. On both gestures, scroll
+    and fling, the animations will be performed on the background and we can directly
+    query the current animated value directly from the `scroller` instance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The only changes we have got to do on the `onDraw()` method is to call the
+    `scroller.computeScrollOffset` method to have an updated value and, instead of
+    using the `angleFr` variable, get the value from the `scroller`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Adding actionable callbacks
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Let's convert this into an actionable menu. We could map an action to each face
+    of the cube. As we are rotating the cube horizontally, or on the `y` axis, we
+    could map an action to each of the four available faces.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For added clarity, as currently the rotation might end in the middle of a face,
+    let''s add a small feature: whenever the animation finishes, let''s snap it to
+    the closest face, so we''ll always have a fully aligned front face of the cube
+    when there is no animation running.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Implementing snapping is fairly simple. We have got to check if the animation
+    has finished and, in that case, check which face is facing to the camera. We could
+    do so by simply dividing the current rotation angle by `90`; `360` degrees split
+    by four faces is `90` degrees each. To see if we are closer to that face than
+    from the next one, we have got to get the fractional part of the rotation angle.
+    If we calculate the angle modulo `90`, we will get a number between *0* and *89*.
+    If that result is smaller than half the degrees needed to switch from one face
+    to another, we will be on the right face. However, in the opposite case, if that
+    result is bigger than `45`, or smaller than `-45`, we''d have to rotate to the
+    next or previous face, respectively. Let''s write this small logic in our `onDraw()`
+    method, just after the call to `scroller.computeScrollOffset`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To calculate the snap angle, we do an integer division by `90` and multiply
+    the result by `90`. As it''s an integer division, it''ll get rid of the decimal
+    part and calculate the absolute angle value of that face. Another way of writing
+    that code would be the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then, depending on the modulo result, we are adding `90` or subtracting `90`
+    to effectively go to the next or previous face.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s add the code to manage the user clicks. First, let''s create an
+    interface of a listener to delegate the handling of the event to that listener:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Also, let''s add an` OnMenuClickedListener` variable to our class and a setter
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we can implement the `onSingleTapUp` method on the `MenuGestureListener`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s also add an `id` to our custom view in the `activity_main` layout file,
+    so we can get the `GLDrawer` view from the code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, modify the `MainActivity` class to create an `OnMenuClickedListener`
+    and set it to the `GLDrawer` view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run this example, we will see how the `MainActivity` is logging which
+    face are we clicking on the cube:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`com.packt.rrafols.draw I/Example36-Menu3D: option clicked 3`'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`com.packt.rrafols.draw I/Example36-Menu3D: option clicked 2`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will also see how the snapping works. Play with it to see how it snaps to
+    the current face, to the next one, or to the previous one if we are scrolling
+    backwards.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Customizations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We are still rendering the cube the same way we left it in `Example25`. Let's
+    change it to draw every cube face in a different solid color. We can define a
+    different color per vertex, but as vertices are shared between faces, their colors
+    will be interpolated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''d have to replicate some vertices so we can have different unique colors
+    for each single face:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have updated the index as well, to map to the new faces. On the duplicated
+    vertex, we have added a comment with the new index and the old index.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, we can define some colors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s also change the texture initialization on the `initBuffer` methods to
+    create a color `Buffer`, like we did in `Example24-GLDrawing`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Update the pixel and vertex `Shader`s:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To make it more configurable, let''s create a public `setColors()` method on
+    `GLDrawer` to change the colors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The implementation on the `Renderer`  is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For simplicity, we will pass the colors as an integer, instead of a float array,
+    so we can use colors in hexadecimal encoding, for example. To convert an integer
+    color to a float array we can use a simple helper method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To update the example, let''s set some colors using the method we have just
+    added:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run the example, we will get something like the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/ae6c30d9-7a8d-4dfe-a9b6-887b1e7cc9ae.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check the full source code of this example in the `Example36-Menu3D` folder
+    in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Beyond the basic implementation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have got a very basic and actionable 3D menu but, in order for it to be used
+    on a production application, we have got to add some more details. For instance,
+    we can now select a different menu option depending on the face of the cube we
+    are selecting, but unless we are doing a very simple color picker, we'd be selecting
+    an option completely blind, as we won't know which face does exactly what.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One way to solve this is to render some text depending on which face is selected,
+    but on OpenGL ES we can't simply just call `drawText` and render some text, like
+    we are used to do when using a `Canvas`. Also, in this example, there are only
+    four selectable faces or options; let's make some changes so we can have more
+    selectable options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rendering text
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we have just mentioned, to render text, we can't just call a `drawText` method
+    that will render some text in 3D inside our small 3D scene. Actually, we'd be
+    using `drawText`, but just to render it on a background `Bitmap` that would be
+    used as a texture for an additional plane we will be rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In order to do so, we''d have to define the geometry of that plane:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: As the cube front face is at z-coordinate -1.f, this plane will be at -1.4f,
+    so 0.4f in front of it, otherwise it might get occluded by the cube.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have got to add the vertex and fragment `Shader` again, to render with a
+    texture. Although we will not replace the current `Shader` we have got in our
+    code, we will have to live with both sets of `Shader`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s also update the `initBuffers` method to initialize both sets of `Buffers`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we can see, this method is allocating both sets of Buffers: one set for
+    the cube and another for the plane we will use to draw the text. We have got to
+    do a similar approach for the vertex and fragment `Shaders`, we have got to load
+    and link both sets of `Shaders`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are attaching the shaders we will use to draw the text in a texture to another
+    `Shader` program we will store in the `shaderTextProgram` variable. Depending
+    on what we want to render we could now switch from `shaderProgram` or `shaderTextProgram`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s now create a method that returns a Bitmap with a text centered on it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This method creates a `Bitmap` of `512` by `512` with eight bits per color
+    component and four components: alpha, or transparency, red, green, and blue. Then,
+    it is creating a `Paint` object with the color and size of the text, getting the
+    text boundaries in order to center it on the `Bitmap` and drawing the text twice
+    on the `Canvas` object we can get from the `Bitmap`. Text is drawn twice, because
+    it first draws the text with a solid white color and then, as we change the `Paint`
+    object style to `STROKE`, it''s draws the silhouette using a black color.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code we had in previous examples to load a texture was loading it from
+    a local resource. As it was converting it into an unscaled `Bitmap`, we could
+    reuse most of that code to load our generated `Bitmap`. Let''s recover the `loadTexture()`
+    method we already had, but let''s change it to use a helper method to upload a
+    `Bitmap` into a `Texture`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The implementation of the helper method is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have only got to create a method that puts everything together: that is,
+    one that generates a `Bitmap` from a text, generates a `textureIds`, uploads the
+    `Bitmap` as a texture, and recycles the `Bitmap`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using this method, we can now generate a different texture for each face of
+    the cube:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can now add at the bottom of the `onDraw()` method some additional code
+    to render a plane in front of each face of the cube:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, we are changing the `positionHandle` to the plane geometry, enabling
+    the texture vertex array and, in addition, we are enabling the blending mode.
+    As the text texture will be transparent with the exception of the text, we need
+    to enable blending or otherwise, OpenGL ES will render the transparent pixels
+    as black.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To draw different planes, one for each horizontal face of the cube, we are doing
+    a small loop where we bind a different texture and rotate by 90 degrees on each
+    iteration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run this example, we will see something similar to the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/70b31fe6-26e6-4027-9e6e-de7345c92dee.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Multiple faces
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we have added the ability to render some text on top of the faces of
+    the cube, we can know what we are selecting when clicking an option, but we are
+    still limited to four different options. Currently, we have got the geometry hardcoded
+    in the code in several arrays. If we want to make the number of options, or number
+    or faces, dynamic we'd have to generate, programmatically, both the geometry and
+    the face indexes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Luckily for us, our starting point is to have several choices in a 3D circle,
+    so we only have to generate a hollow cylinder with several faces, exactly as much
+    as the number of options we'd like to have.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s add a method to the `GLDrawer` custom view class, allowing us to set
+    the number of options and faces that we will have:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: To generate diverse faces in a form of a cylinder is as easy as dividing the
+    `360` degrees, or two times `PI` in radians, of a circle in the amount of faces
+    we'd like to have. Here, we are dividing `2.f*Math.PI` by the number of options
+    and then multiplying it by the loop iterator. By calculating the sine and the
+    cosine of that angle we can get two coordinates, usually `x` and `y` in a 2D projection,
+    but in our specific case, we'd map it to `x` and `z` as we are setting the `y`
+    coordinate to `-1.f` as the top vertical edge and `1.f` as the bottom vertical
+    edge. We are also calculating the next `x` and `z` coordinates, so we can create
+    a face quad between these points.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We're generating four points for each face and we're indexing them as two triangles
+    in the index array. This matches perfectly with the way we were generating colors
+    before, as we're generating four color values for each face and now we are also
+    generating exactly four vertices per face, each face will have a unique solid
+    color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At the end of the method, we''re calling the `setCoordinates()` method of the
+    `GLRenderer`, but that is very simple to implement:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will work without touching anything else, as long as we call it before
+    the surface is created. As we''re talking about it, we have got to update the
+    `onSurfaceCreated()` method to use the number of options we''ve set instead of
+    the default four we had hardcoded in the code before:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: We're also calculating the amount we've got to rotate to switch from one face
+    to another. In our previous case it was easy, as there were four faces, `360`
+    degrees divided by 4 is 90\. Now, the calculation is still straightforward, but
+    we've got to change the hardcoded 90 we had in the code by this new variable we've
+    created, named `faceAngle`, the value of which is `360` divided by the number
+    of options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s test this new feature by calling it on the `MainActivity`, just after
+    setting the different colors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've not specifically added a check, but the number of colors must be at least
+    the same number of options or otherwise we will get an exception when rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run this example, we will see something similar to the following screenshot,
+    depending always on the current rotation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/29f47705-8e88-43da-aead-ab20139b5456.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check out the full source code of this example in the `Example37-Menu3D` folder
+    in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we've seen how to add interactions to a 3D custom view to make
+    it interactive. In addition, we've seen how to use a `scroller` instance to manage
+    both scroll and fling gestures and how to render text as a texture and use different
+    geometry with different Buffers and different `Shaders`. At the end, we've also
+    seen how we can easily generate geometry to make our custom view adaptable and
+    dynamic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this book, we've seen how to build different kinds of custom views and to
+    use both methods and classes from the Android SDK or to use our own, depending
+    on our needs. We've also seen how to build both 2D and 3D custom views and to
+    make them reactive to user input. At the end of the day, using all the APIs we've
+    shown and a lot of creativity we can build any custom view we want. We still have
+    to keep in mind that Android provides us with a great framework that is constantly
+    evolving and contains plenty of good, and efficient, ways of drawing awesome UIs,
+    but sometimes we want to build something special that we can't easily make using
+    the standard APIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To learn even more about building Android UIs and custom views, there are plenty
+    of tutorials on development blogs, several open sourced open views, and many sessions
+    at meetups and conferences. Attending local meetups and conferences is a great
+    way to not only learn about custom views, but also to stay up-to-date with Android
+    development. There are many initiatives led by the Android community and I'd really
+    like to encourage anyone to contribute in any way they can to keep the Android
+    community alive and as awesome as it is.
+  prefs: []
+  type: TYPE_NORMAL

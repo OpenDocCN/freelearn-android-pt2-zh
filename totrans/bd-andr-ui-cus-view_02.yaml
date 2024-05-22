@@ -1,0 +1,736 @@
+- en: Implementing Your First Custom View
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapter, we've seen how to create the foundations of a custom
+    view, but unless we add some more features and customizations it'll be pretty
+    useless. In this chapter, we'll continue building on top of these foundations,
+    see how we can parameterize our custom view to allow either ourselves or any other
+    developer to customize them, and at the end, cover some rendering that will enable
+    us to build slightly more complex custom views.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition, as we've mentioned in the previous chapter, we can create custom
+    layouts as well. In this chapter, we'll see how to create a simple custom layout.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In more detail, we''ll cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Measuring and parameterizing our custom view
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Instantiating custom views
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating custom layouts
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Basic rendering
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Measuring and parameterizing our custom view
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In order to have a good reusable custom view, it needs to be able to adapt to
+    different sizes and device resolutions, and to increase its reusability even more
+    it should support parameterization.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Measuring our custom view
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the quick example we built in the previous chapter, we delegated all sizes
+    and measurement to the parent view itself. To be honest, we haven''t even delegated
+    it; we just didn''t do anything specifically to take care of that. Being able
+    to control the size and dimensions of our custom view is something we definitely
+    need to pay some attention to. To start, we''re going to **override** the `onMeasure()`
+    method from view as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Reading the Android documentation about the `onMeasure()` method, we should
+    see we must **call** either `setMeasuredDimension(int, int)` or the superclass''
+    `onMeasure(int, int)`. If we forget to do so, we''ll get an `IllegalStateException`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are three different **modes** in which our view's parent can indicate
+    to our view how it should calculate its size. We can get the mode by using the
+    `MeasureSpec.getMode(int)` method with each size spec `widthMeasureSpec` and `heightMeasureSpec`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'These modes are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`MeasureSpec.EXACTLY`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MeasureSpec.AT_MOST`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`MeasureSpec.UNSPECIFIED`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We''ll get `MeasureSpec.EXACTLY` when the size has been calculated or decided
+    by the parent. Our view will have that size even if it requires or returns a different
+    size. If we get `MeasureSpec.AT_MOST` we have more flexibility: we can be as big
+    as we need but up to the size we also have. Finally, if we received `MeasureSpec.UNSPECIFIED`,
+    we can size our view to whatever size we want or the view needs.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using `MeasureSpec.getSize(int)`, we can also get a size value from the size
+    spec.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we have all this, how do we know which values map to the width and
+    height parameters on our XML layout file? Easy to see, let''s check. For example,
+    if we specify precise values as shown in the `activity_main.xml` file in the GitHub
+    repository, we will get the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Code on our custom view, using `MeasureSpec.toString(int)` to get a string
+    description of the measure specification and the size looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The result on the Android log is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our view will be `394` by `394` pixels exactly. The `394` pixels comes from
+    transforming the `150dp` to pixels on the mobile device I was using for testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As there are many Android devices with different resolutions and screen densities,
+    we should always use **density-independent pixel** (**dp**) or (**dip**) instead
+    of pixels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For more details about dp, refer to a video by Google available on YouTube:
+    DesignBytes: Density-independent Pixels.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you would like to convert from dp to real pixels on a specific device, you
+    can use the following method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see how the conversion is done using the density of the screen, so on
+    different devices the conversion can be different. The `+ 0.5` in the previous
+    code is just to round up the value when converting from a floating point number
+    to an `int`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To convert from pixels to density-independent points, we have to do the inverse
+    operation, as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s now see what we receive if we use different measure parameters, such
+    as `match_parent` or `wrap_content`, as shown in the `activity_main.xml` file
+    in the GitHub repository:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Running the same code as before, we get the following on the Android log:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So we are still getting a `MeasureSpec.EXACTLY`, but this time with the size
+    of the parent `RelativeLayout`; let''s try changing one of the `match_parents`
+    for a `wrap_content` in `activity_main.xml`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The result is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can spot an easy-to-follow pattern with `MeasureSpec.EXACTLY` and `MeasureSpec.AT_MOST`,
+    but what about `MeasureSpec.UNSPECIFIED`?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll get a `MeasureSpec.UNSPECIFIED` if our parent is not bounded; for example,
+    if we have a vertical `LinearLayout` inside a `ScrollView`, as shown in the `scrollview_layout.xml`
+    file in the GitHub repository:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then we''ll get the following on the Android log:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That seems alright, but what happens if we now run this code? We''ll get an
+    empty screen; our red background we''ve previously implemented is gone:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/a1bcec83-d3f8-4aab-8d2c-a4cbe743e041.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'That is because we''re not managing the size of our custom view. Let''s fix
+    that, as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, depending on the measurement specs, we'll set the size of our view by calling
+    the `setMeasuredDimension(int, int)` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the full example, check the source code in the `Example03-Measurement` folder
+    in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Parameterizing our custom view
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We have our custom view that adapts to multiple sizes now; that''s good, but
+    what happens if we need another custom view that paints the background blue instead
+    of red? And yellow? We shouldn''t have to copy the custom view class for each
+    customization. Luckily, we can set parameters on the XML layout and read them
+    from our custom view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we need to define the type of parameters we will use on our custom view.
+    We''ve got to create a file called `attrs.xml` in the `res` folder:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we add a different namespace on our layout file where we want to use
+    this new parameter we''ve just created:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that we have this defined, let''s see how we can read it from our custom
+    view class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: By getting a `TypedArray` using the styled attribute ID Android tools created
+    for us after saving the `attrs.xml` file, we'll be able to query for the value
+    of those parameters set on the XML layout file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example, we created an attribute named `fillColor` that will be formatted
+    as a color. This format, or basically, the type of the attribute, is very important
+    to limit the kind of values we can set, and how these values can be retrieved
+    afterwards from our custom view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, for each parameter we define, we'll get a `R.styleable.<name>_<parameter_name>
+    index` in the `TypedArray`. In the preceding code, we're querying for the `fillColor`
+    using the `R.styleable.OwnCustomView_fillColor index`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We shouldn't forget to recycle the `TypedArray` after using it so it can be
+    reused later on, but once recycled, we can't use it again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s see the results of this little customization:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/a9126c6f-80b6-489a-8525-aebfd9ecb311.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We''ve used color in this specific case, but we can use many other types of
+    parameters; for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Boolean
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Int
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Float
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Color
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Dimension
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Drawable
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: String
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Resource
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Each one has its own getter method: `getBoolean(int index, boolean defValue)`
+    or `getFloat(int index, float defValue)`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In addition, to know if a parameter is set we can use the `hasValue(int)` method
+    before querying or we can simply use the default values of the getters. If the
+    attribute is not set at that index, the getter will return the default value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the full example, check the `Example04-Parameters` folder in the GitHub
+    repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instantiating custom views
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we've seen how to set parameters on the XML layout and parse them on
+    our custom view class, we'll see how to instantiate custom views from code as
+    well and reuse then as much as possible from both instantiation mechanisms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Instantiating custom views from code
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: On our custom view, we've created a single constructor with two parameters,
+    a `Context` and an `AttributeSet`. Now, if we're creating our UI programmatically,
+    or if by any other reason we need to instantiate our custom view by code, we need
+    to create an additional constructor.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As we want to keep using our custom view in our XML layouts, we have to keep
+    both constructors. To code avoid duplication, we will create some helper methods
+    to initialize it and use them from both constructors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We also created a public method, `setFillColor(int)`, so we can set the fill
+    color by code as well. For example, let''s modify our `Activity` to create the
+    view hierarchy programmatically instead of inflating it from an XML layout file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we're just creating a `LinearLayout` with vertical orientation and adding
+    a custom view as a child. Then we're setting the `LinearLayout` as the content
+    view of the `Activity`. Also, we've used a hexadecimal color directly. If we're
+    not used to specifying colors in hexadecimal format, we could use `Color.argb()`
+    or `Color.rgb()` to convert color components to an integer value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The full source code can be found in the `Example05-Code` folder in the GitHub
+    repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Builder pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous example, we used the `setFillColor()` method to set the fill
+    color of the custom view, but suppose we will have many other parameters, the
+    code might get a bit messy with all the setters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s create a simple example: instead of having one single background color,
+    we''ll have four different colors and we''ll draw a gradient on our view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s start by defining the four different colors and their setters as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: We also added a boolean to check if we have to update the gradient. Let's ignore
+    thread synchronization here as it's not the main purpose of this example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Then, we''ve added a check for this `boolean` on the `onDraw()` method and,
+    in the case it''s needed, it''ll regenerate the gradient:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: It's a bad practice to create new object instances on the `onDraw()` method.
+    Here it is only done once, or every time we're changing the colors. If we were
+    changing the color constantly, this would be a bad example as it'll be constantly
+    creating new objects, polluting the memory, and triggering the **Garbage Collector**
+    (**GC**). There will be more on performance and memory in [Chapter 7](6a783453-2297-4806-80b4-c8022bd9e309.xhtml),
+    *Performance Considerations*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have to update the code of our `Activity` to set these new colors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, we've used four setters to set the colors. If we've got more
+    parameters, we could use more setters, but one of the issues of this approach
+    is that we have to take care of thread synchronization and the object might be
+    in an unstable state until all calls are done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another option is to add all the parameters to the constructor, but that is
+    not a good solution either. It'd make our job more complex, as it'll be hard to
+    remember the order of the parameters or, in the case where we had optional, to
+    create many different constructors or passing null references that make our code
+    harder to read and maintain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Check the full source code of this example in the `Example06-BuilderPattern-NoBuilder`
+    folder of the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we''ve introduced the issue, let''s solve it by implementing the `Builder`
+    pattern on our custom view. We start by creating a `public static class` inside
+    our custom view that will build it as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We also create a new private constructor that only accepts an `OwnCustomView.Builder`
+    object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've removed other constructors for clarity. Also at this point, we create
+    the array of colors based on the colors that the `builder` object has and a `boolean`
+    to know if it's the first time it'll be drawn or not.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This will be useful to instantiate the `LinearGradient` object only once and
+    avoid creating many instances:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, once the object is created we can't change its colors, but we don't have
+    to worry about thread synchronization and the object's state.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To make it work, let''s update the code on our `Activity` as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using the `Builder` pattern, our code is cleaner and the object is constructed
+    or built when we've set all the properties and this will become even handier if
+    the custom view has more parameters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The full example source code can be found in the `Example07-BuilderPattern`
+    folder in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a custom layout
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android provides several layouts to position our views in many different ways,
+    but if these standard layouts aren't useful for our specific use case, we can
+    create our own layouts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extending ViewGroup
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The process to create a custom layout is quite similar to creating a custom
+    view. We've got to create a class that extends from `ViewGroup` instead of view,
+    create the appropriate constructors, implement the `onMeasure()` method, and override
+    the `onLayout()` method rather than the `onDraw()` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's create a very simple custom layout; it will add elements to the right
+    of the previous element until it doesn't fit on the screen, then it'll start a
+    new row, using the higher element to calculate where this new row will start and
+    avoid any overlapping between views.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Adding random sized views, where each view has a red background, will look
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/62f2b38c-b67f-4150-b747-a33a9502534a.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'First, let''s create a class that extends from `ViewGroup`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We created the constructor and we implemented the `onLayout()` method as it''s
+    an abstract method and we''ve got to implement it. Let''s add some logic to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: This logic implements what we've described before; it tries to add a child to
+    the right of the previous child and if it doesn't fit on the layout width, checking
+    the current `left` position plus the measured child width, it starts a new row.
+    The `rowHeight` variable measures the higher view on that row.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s also implement the `onMeasure()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The logic is the same as before, but it''s not laying out its children. It
+    calculates the maximum width and height that will be needed, and then with the
+    help of a helper method sets the dimensions of this custom layout according to
+    the width and height measurement specs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that we''ve got our custom layout, let''s add it to our `activity_main`
+    layout:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For the last step, let''s add some random sized views to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Check the `Example08-CustomLayout` folder on GitHub for the full source code
+    of this example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On this page, we can also find a quite complex example of a full-featured custom
+    layout.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Basic rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far we've only been drawing a solid background or a linear gradient. That's
+    neither exciting nor really useful. Let's see how we can draw more interesting
+    shapes and primitives. We'll do so by creating an example of a circular activity
+    indicator that we'll be adding more and more features to in the following chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the basic circular activity indicator
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The `Canvas` class provides us with many drawing functions; for example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`drawArc()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawBitmap()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawOval()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`drawPath()`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'To draw a circular activity indicator, we can use the `drawArc()` method. Let''s
+    create the basic class and draw an arc:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The result is as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/2c9a946b-8846-4198-97c5-f5f935e32353.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Let''s fix the ratio, so the width of the arc will be the same as the height:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll use the smaller dimension, either width or height, and draw the arc
+    centered with a square ratio: with the same width and same height.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This doesn't look like an activity indicator; let's change it and draw only
+    a thin band of the arc. We can achieve this by using the clipping capabilities
+    that `canvas` gives us. We can use `canvas.clipRect` or `canvas.clipPath`, for
+    example. When using clipping methods, we can also specify a clipping operation.
+    By default, if we don't specify it, it will intersect with the current clipping.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To draw only a thin band, we''ll create a smaller arc in a path, around *75%*
+    of the size of the arc we''d like to draw. Then, we''ll subtract it from the clipping
+    rectangle of the whole view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the following screenshot, we can see the difference:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/6ac73a16-70b2-4c7a-87ea-d1feacd304a0.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: As finishing touches, let's add a background color to the arc and change the
+    starting position to the top of the view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To draw the background, we''ll add the following code to create a background
+    `Paint` to our constructor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then modify the `onDraw()` method to actually draw it, just before drawing
+    the other arc:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: As a small difference, we're drawing the whole `360` degrees so it will cover
+    the whole circle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To change the starting position of the arc, we''ll rotate our drawing operations.
+    `Canvas` supports rotation, translation, and matrix transformations as well. In
+    this case, we only need to rotate `90` degrees anti-clockwise to get our starting
+    point at the top of the arc:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: We also used `canvas.save()` and `canvas.restore()` to preserve the state of
+    our `canvas`; otherwise, it will be rotating `-90` degrees each time it is drawn.
+    When calling the `canvas.rotate()` method, we also specified the center point
+    of the rotation, which matches with the center point of the screen and the center
+    point of the arc.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Whenever we're using a `canvas` function as `rotate`, `scale`, or `translate`,
+    for example, we're actually applying a transformation to all the successive `canvas`
+    drawing operations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The final result is shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/725dac60-6a60-4a79-8249-148e5a8cf8a4.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Something we need to be aware of is that not all `canvas` operations are supported
+    by hardware on all Android versions. Please check if the operations you have to
+    do are supported or provide a runtime workaround for them. Find more information
+    about what operations are hardware accelerated at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://developer.android.com/guide/topics/graphics/hardware-accel.html](https://developer.android.com/guide/topics/graphics/hardware-accel.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is the final implementation of the class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: The whole example source code can be found in the `Example09-BasicRendering`
+    folder in the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Furthermore, I gave a talk about this at the Android Developer''s Backstage
+    in Krakow in January 2015; here is a link to the presentation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://www.slideshare.net/RaimonRls/android-custom-views-72600098](https://www.slideshare.net/RaimonRls/android-custom-views-72600098).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have seen how to measure and how to add parameters to our
+    custom view. We also saw how to instantiate a custom view from code and use a
+    `Builder` pattern to simplify all the parameters and keep our code cleaner. In
+    addition, we went through a quick example of a custom layout and we started building
+    a circular activity indicator. In the next chapter, we will see how to handle
+    events and add some interactions to the circular activity indicator we've just
+    started to build.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,1039 @@
+- en: Chapter 4. Leveraging Activities and Intents
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '*In many ways Android application management appears to be inspired by JavaScript
+    and the web browser and rightly so! The web browser model has proved itself as
+    a mechanism that users find easy to work with. Android as a system, Android has
+    many things in common with a web browser, some of which are obvious, and others
+    that you will need to look a little deeper for.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*The Activity Stack is much like a single-directional web browser history.
+    When you launch an `Activity` using the `startActivity` method, you effectively
+    hand control back to the Android system. When the user pushes the hardware "Back"
+    button on their phone, the default action is to pop the top `Activity` off the
+    stack, and display the one underneath (not always the one that started it).*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter we'll explore a little of how Android runs an application and
+    manages `Activity` instances. While not strictly necessary for user interface
+    design, it's important to know how this works. Properly leveraging these concepts
+    will help you ensure a consistent user interface experience. As you will also
+    see, it will help you improve the performance of your application, and allow you
+    to reuse more of your application components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's also important to understand how an `Activity` is created (and when it
+    is created), as well as how Android decides what `Activity` to create. We'll also
+    look at some good practices to follow when building an `Activity` class, and how
+    to behave nicely within the confines of an Android application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ve already encountered the "Activity Stack" in [Chapter 1](ch01.html "Chapter 1. Developing
+    a Simple Activity"), *Developing a Simple Activity* and [Chapter 2](ch02.html
+    "Chapter 2. Presenting Data for Views"), *Presenting Data for Views* where we
+    constructed `Intent` objects to launch specific `Activity` classes. When you used
+    the hardware "Back" button, you were automatically taken to the previous `Activity`
+    instance, no code needed (much like a web-browser). For this chapter we''ll be
+    looking at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The life cycle of an `Activity` object
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using the `Bundle` class to maintain application state
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Exploring the relationship between an `Intent` and an `Activity`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Passing data into an `Activity` through an `Intent`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Exploring the Activity class
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The life cycle of an `Activity` object is much more like a Java `Applet` than
+    a normal application. It may be started, paused, resumed, paused again, killed,
+    and then brought back to life in a seemingly random order. Most Android devices
+    have very good performance specifications. However, most of them appear underpowered
+    when compared to the top-of-the-range devices. For those devices that do have
+    good specifications, users tend to demand a lot more from them than the cheaper
+    devices. On a phone, you're never going to get away from the fact that you have
+    many applications and services sharing a very limited device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An `Activity` may be garbage-collected any time it is not visible to the user.
+    This means it may be your application that is running, but because the user is
+    looking at a different `Activity`, any non-visible or background `Activity` objects
+    may be shut down or garbage-collected in order to save memory. By default, the
+    Android APIs will handle these shut down/start up cycles elegantly by storing
+    their state before a shut down, and restoring it when they are re-created. A very
+    simple diagram of the life cycle of an application with two `Activity` instances
+    is shown in the following figure. When the "Main Activity" is paused, it becomes
+    eligible for garbage-collection by the system. If this happens, it will first
+    store its state in a temporary location, restoring the state when it is brought
+    back to the foreground.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Exploring the Activity class](img/4484OS_04_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Storage of user interface state**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If an `Activity` is stopped, all `View` objects that have an ID assigned will
+    attempt to store their state before they are made available for garbage-collection.
+    However, this state is only stored for the lifetime of the application. When the
+    application is shut-down, this state is lost.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While it's possible to use the `setContentView` method over and over again to
+    change the content on the screen (much the way you might build a wizard interface
+    with an AWT `CardLayout` object), it's considered a very bad idea. You are effectively
+    trying to take the control away from Android, which will always create problems
+    for you. If for example, you developed an application with only one `Activity`
+    class, and used multiple layout resources or your own custom `ViewGroup` objects
+    to represent different screens, you would also have to take control of the hardware
+    "Back" button on the device in order to allow the user to go backwards. Your application
+    is released in the Android market, and a few months later a handset manufacturer
+    decides to put a "Forward" button onto their new phone (in the same style as the
+    "Forward" button on a web-browser). The Android system would be patched to handle
+    this change to the device, but your application would not be. As a result, your
+    users get frustrated with your application because "it doesn't work properly".
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Bundle objects
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the `onCreate` method of the `Activity` class, we've been accepting a `Bundle`
+    parameter named `saveInstanceState`, as you may have guessed. It's where state
+    information is stored between stops and starts of an `Activity`. Despite what
+    it looks like, a `Bundle` object is not a form of persistent storage. When the
+    configuration of a device context changes (for example when the user selects a
+    new language, or changes from "portrait" to "landscape" mode), the current `Activity`
+    is "restarted". For this to happen, Android requests the `Activity` save its state
+    in a `Bundle` object. It then shuts down and destroys the existing instance, and
+    then creates a new instance of the `Activity` (with the new configuration parameters)
+    with the `Bundle` that the state information was saved in.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `Bundle` class is effectively a `Map<String, ?>` containing any number
+    of values. Since `Bundle` objects are used to store short term state (that is,
+    the blog post a user was busy typing), they are mostly used to store the state
+    of `View` objects. They have two major advantages over standard Java serialization
+    in this regard:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You are forced to implement the storage of the object manually. This requires
+    some thought as to how the object will be stored, and what parts of it need to
+    be stored. For example, most of the time in a user interface, you don't need to
+    store the layout information, since that can be recreated from the layout file.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Being a key-value structure, a `Bundle` is more future-proof and flexible than
+    a serialized object. You can leave out values that are set to their defaults,
+    reducing the size of the `Bundle`.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A `Bundle` object is also a type-safe structure. If you use the `putString`
+    method, only then `getString` or `getCharSequence` will work to retrieve the object.
+    I strongly advise that when using the `get` methods of `Bundle`, you should always
+    provide a default value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before an `Activity` is paused by the Android system, the system requests that
+    it save any state information in a `Bundle` object. To do this, the `onSaveInstanceState`
+    method will be invoked on the `Activity`. This happens before the `onPause` method.
+    In order to restore the state of the `Activity`, the system will invoke the `onCreate`
+    method with the saved state `Bundle`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Handling Activity crashes**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If an `Activity` class throws an uncaught exception, the user will get the dreaded
+    **Force Close** dialog box. Android will attempt to recover from these errors
+    by terminating the Virtual Machine, and re-opening the root activity, providing
+    a `Bundle` object with the last known state from `onSaveInstanceState`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `View` class also has an `onSaveInstanceState` method, as well as a corresponding
+    `onRestoreInstanceState` method. As mentioned earlier, the `Activity` class' default
+    functionality will attempt to save each `View` object with an ID within a `Bundle`.
+    This is another good reason to stick to XML layouts instead of building your own.
+    Having a reference to a `View` object is not enough for it to be saved and restored,
+    and while you can assign IDs in Java code, it clutters your user interface code
+    even more.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Time for action – building an example game: "guess my number"'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We want to build a simple example that will save and restore its state from
+    a `Bundle` object. For this example, we have a very simple "guess my number" game.
+    The `Activity` object picks a number between one and ten and challenges the user
+    to guess it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The basic user interface layout for this example will need a label telling
+    the user what to do, an input area for them to input their guess, and a button
+    to tell the application they wish to input a guess. The following diagram is a
+    basic idea of how the user interface should be structured:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Time for action – building an example game: "guess my number"](img/4484OS_04_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If the user were to get an SMS while playing this game, there's a strong chance
+    that we will lose the number he is trying to guess. For this reason we will store
+    the number that he is trying to guess in a `Bundle` object when the system asks
+    us to save our state. We'll also need to look for the stored number when starting
+    up.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From a command-prompt, create a new project named `GuessMyNumber`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Open the default `res/layout/main.xml` file in an editor or IDE.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remove the default content within the `LinearLayout` element.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add a new `TextView` to serve as a label, to tell the user what to do:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a new `EditText` where the users will enter their guess. Use the `android:numeric`
+    attribute of `TextView` to enforce only `integer` input:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a `Button` that the users can click on to submit their guess:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now open the `GuessActivity.java` file in your editor or IDE.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Make the `GuessActivity` class implement `OnClickListener`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a field variable to store the number the user is supposed to guess:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a utility method to generate a random number between one and ten:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `onCreate` method, directly after the call to `super.onCreate`, check
+    to make sure the `Bundle` passed in is not `null`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If the `Bundle` isn''t `null`, then attempt to fetch the stored `Number` from
+    it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If the `Bundle` is `null`, the Activity is running as a new instance—generate
+    a random number:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then `setContentView` to the `main.xml` layout resource:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Find the `Button` object you declared in the `main.xml` layout resource:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Set the `Button` object''s `OnClickListener` to the `GuessActivity` object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now override the `onSaveInstanceState` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Be sure to first allow the default `Activity` behavior:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then store the `number` variable in the `Bundle`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We need to override the `onClick` method to handle the user''s guess:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Find the `EditText` where the user enters the guessed number:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Parse the current value of the `EditText` as an integer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If the number they guessed is too low, use a `Toast` to tell them:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If the number they guessed is too high, again use a `Toast` to tell them:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If they successfully guessed the correct number, then congratulate them:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then generate a new number for the user to guess:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `Toast` class is used in the previous code to display the output messages
+    for **Too high**, **Too low**, and **You got it!** The `Toast` class is the perfect
+    mechanism for displaying short output messages, and they automatically disappear
+    after a few seconds. However they're not suitable for long messages as the user
+    has no control over them, and cannot leave the message open or close it on command
+    as they are entirely non-interactive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*What just happened*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In the previous example, we listened for a call to `onSaveInstanceState` in
+    order to record the number that the user is supposed to guess. We also have the
+    current guess which the user most recently made, in the form of an `EditText`.
+    Since we assigned an ID value to `EditText` in the `main.xml` file, the call to
+    `super.onSaveInstanceState` will handle the storage of the `EditText` widget's
+    exact state (potentially including "selection" and "focus" state).
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `onCreate` method, the example first checks to make sure that the `Bundle`
+    is not `null`. If Android is attempting to create a new instance of the `GuessActivity`
+    object, it won't pass in any saved state. If however, we have a `Bundle` object,
+    we invoke the `Bundle.getInt` method to attempt to fetch our previously stored
+    `number` value. We also pass in a `r` `andom()` number as a second parameter.
+    If the `Bundle` object (for whatever reason) doesn't have a stored `Number`, it
+    will return this random number, eliminating the need for us to check such a condition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a quick side-note, the example made use of the `android:numeric` attribute
+    of the `TextView` class to enforce `integer` input on the `EditText` object. Switching
+    to a numeric view stops the user from entering anything except "valid" characters.
+    It also affects the soft-keyboard. Instead of displaying the full keyboard, it
+    will only display the numbers and symbols.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![What just happened](img/4484_04_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Creating and consuming intents
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The `Intent` class is Android''s primary method of "late binding". It''s a
+    form of very loose coupling which allows you to specify an action (along with
+    some parameter data), while not specifying how the action should be carried out.
+    For example, you may specify `browse to` [http://www.packtpub.com/](http://www.packtpub.com/)
+    using an `Intent`, but you don''t need to specify how Android should carry out
+    this action. It may use the default "browser" application, or another web browser
+    the user has installed, or it may even ask the user how exactly they want to get
+    to [http://www.packtpub.com/](http://www.packtpub.com/). There are two primary
+    types of `Intent`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Explicit Intents
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implicit Intents
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'So far we''ve only made use of explicit `Intent` objects, where we specify
+    the exact class we want to run. These are very important when switching from one
+    `Activity` to another, as your application may depend on the exact implementation
+    of an `Activity`. An implicit `Intent` is one where instead of specifying the
+    exact class which we want to work with, we include an abstract name for the action
+    we want carried out. Generally, an implicit `Intent` will have much more information
+    content, due to the following reasons:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To allow the system to make a good selection of which component to interact
+    with
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Intent` may point to a more generic structure than we would have built ourselves
+    and a more generic structure often requires more information about how it is expected
+    to behave'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Intent` objects are what really make Android different from other (more traditional)
+    operating systems. They level the playing field between applications, and allow
+    the user much more choice in how they want to run their phones. It''s perfectly
+    plausible for the user to not just install a new web browser, but also a new menu,
+    desktop, or even dialler application.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each `Activity` instance holds onto the `Intent` object that started it. In
+    [Chapter 1](ch01.html "Chapter 1. Developing a Simple Activity"), *Developing
+    a Simple Activity,* we made use of the `Ac` `tivity.getIntent()` method to fetch
+    some parameters from the `Intent` object, which in turn told us which question
+    to ask the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Defining Intent actions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The first thing looked at in an implicit `Intent` is its action. The action
+    defines what the `Intent` "does", but not how it does it, or what it does it to.
+    The `Intent` class defines a long series of constants which represent common actions.
+    These common actions always have some form of backing logic, which is generally
+    defined by the phone system. Thus they are always available to be used by an application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, you wanted to present the users with the dialler application,
+    so they could dial a phone number and make a call, you would use an `Intent` with
+    `ACTION_DIAL`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The action value of an `Intent` is matched against one of the actions defined
+    for an `Activity`. An `Activity` may have any number of actions that it may perform,
+    and they''re all specified as part of an application''s `AndroidManifest.xml`
+    file. For example, you wanted to define an `askQuestion` action and bind it to
+    an `Activity`, your `AndroidManifest.xml` file would contain an `Activity` entry
+    which would look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: An `Activity` may have any number of `<intent-filter>` elements, each defining
+    a different type of match to perform on an `Intent`. The `Activity` with the closest
+    match to any given `Intent` is chosen to perform the action requested by the `Intent`
+    object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Passing data in an Intent
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Presenting the user with the dialler application in order to let them dial a
+    phone number is very nice, but what if we actually need them to dial a phone number?
+    The `Intent` class doesn't just work by using the action, it also provides a default
+    space for us to tell it what we want the action to be performed on. It's not brilliantly
+    useful being able to open a web browser without being able to tell the browser
+    what URL to go to, is it?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The default data provided by an `Intent` is provided as a `Uri` object. The
+    `Uri` can be made to technically point to absolutely anything. For our earlier
+    code snippet, we started the dialler to let the user dial a phone number. How
+    would we then tell the dialler: "Dial 555-1234"? Simple, just take a look at the
+    following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: Adding extra data to an Intent
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Sometimes a `Uri` doesn't allow enough data to be specified. For these cases,
+    the `Intent` class provides you with a `Map` space of key-value pairs, called
+    "extra" data. The methods for accessing the extra data correspond to the methods
+    in the `Bundle` class. Back in [Chapter 1](ch01.html "Chapter 1. Developing a
+    Simple Activity"), *Developing a Simple Activity*, we used the extra data to keep
+    track of which question we were asking the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When defining generic `Activity` classes (such as file viewers), it''s a good
+    idea to work on a three phase fall-back system when looking for operational data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Any custom (non-standard) parameters can be passed in extra fields (and none
+    of them should be mandatory)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Inspect the data `Uri` to see what information you should be working with
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If no data `Uri` is specified, fall-back gracefully to a logical default, and
+    provide some functionality to the user
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Have a go hero – generic questions and answers
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Go back to the example question and answer application from [Chapter 1](ch01.html
+    "Chapter 1. Developing a Simple Activity"), *Developing a Simple Activity*. Rework
+    the `QuestionActivity` class to use the data `Uri` to specify the question ID
+    (by name) instead of the extra parameters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, allow for the full question to be passed in using "extra" parameters—a
+    parameter `Question` for the question text to ask the user, and a parameter `Answers`,
+    specifying a string array of possible answers to the given question.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using advanced Intent features
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: An `Intent` object is designed to indicate a single action as requested by the
+    user. It's a self-contained request, and in some ways it is quite similar to an
+    HTTP request, containing both, the action to carry out, and the resource upon
+    which the action should be carried out, and any additional information that may
+    be required.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to find the `Activity` (service or broadcast receiver) that will handle
+    an `Intent`, the system makes use of intent-filters (as we discussed briefly earlier).
+    Each intent-filter indicates a single type of action that could be carried out
+    by the `Activity`. When two or more `Activity` implementations match an `Intent`,
+    the system sends out an `ACTION_PICK_ACTIVITY Intent` to allow the user (or some
+    automated system) to select which of the `Activity` implementations should be
+    used to handle the `Intent`. The default behavior is to ask the users which of
+    the `Activity` implementations they wish to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting data back from an Intent
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: An `Intent` is not always a one-way structure, some `Intent` actions will provide
+    feedback. A great example of this is `Intent.ACTION_PICK`. The `Intent.ACTION_PICK`
+    action is a way to ask the user to "pick" or select some form of data (a common
+    use would be to ask the user to select a person or phone number from their contacts
+    list).
+  prefs: []
+  type: TYPE_NORMAL
+- en: When you need information back from an `Intent`, you use the `startActivityForResult`
+    method instead of the normal `startActivity` method. The `startActivityForResult`
+    method accepts two parameters, the `Intent` object to execute, and a useful `int`
+    value which will be passed back to you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As mentioned earlier, when another `Activity` is visible instead of yours, your
+    `Activity` is paused, and may even be stopped and garbage-collected. For this
+    reason, the `startActivityForResult` method returns immediately and you can generally
+    assume your `Activity` will be paused directly after you return from your current
+    event (passing control back to the system).
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to get information back out of the `Intent` you triggered, you will
+    need to override the `onActivityResult` method. The `onActivityResult` method
+    is invoked every time an `Intent` started with `startActivityForResult` returns
+    some data to you. The first parameter passed back into the `onActivityResult`
+    method is the same integer value that you passed into the `startActivityForResult`
+    method (allowing you to pass simple parameters back).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Passing information to another Activity**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you intend for an `Activity` implementation to pass information back to its
+    caller, you can make use of the `Activity.setResult` method to pass both, a result-code
+    and an `Intent` object with your response data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pop quiz
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When does `onCreate` get passed a valid `Bundle` object?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Every time the `Activity` is created
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When the application stored information in the `Bundle` in a previous execution
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When the Activity is being restarted due to configuration changes, or a crash
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When is the `onSaveInstanceState` method invoked?
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: After the `onStop` method
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Before the `onPause` method
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: When the `Activity` is being restarted
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Before the `onDestroy` method
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'A `Bundle` object will be stored until:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The application is closed
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `Activity` is no longer visible
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The application is uninstalled
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Time for action – viewing phone book contacts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this example we will delve a little deeper into the workings of the Android
+    system. We're going to override the default "view contact" option, providing our
+    own `Activity` to view contacts from the phonebook on the device. When the user
+    tries to open a contact to e-mail or call them, they will be presented with an
+    option to view the contact using our `Activity` instead of the default one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Start by creating a new project from the command line:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Open the `res/layout/main.xml` layout resource in an editor or IDE.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Remove the default content within the `LinearLayout` element.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Add a new `TextView` object to contain the contact''s display name:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then add a `Button` which will be used to "dial" the default phone number of
+    the displayed contact:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Open the `ViewContactActivity.java` source file in your editor or IDE.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Make `ViewContactActivity` implement `OnClickListener`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'After the `setContentView(R.layout.main)` in the `onCreate` method, find the
+    `TextView` object you have created, to show the contact''s name in:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then find the `Button` widget to display the phone number in:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now use the `Activity.managedQuery` method to query the contact''s database
+    for the `data Uri` specified in our `Intent`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In a `try {} finally{}` block, tell the `Cursor` to `moveToNext()` and make
+    sure it does so (this works in exactly the same way as `ResultSet.next()`):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Fetch and display the contact display name from the `Cursor`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Fetch and display the contact default phone number from the `Cursor`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In the `finally{}` block, close the `Cursor`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now set the `OnClickListener` of the `number Button` to `this`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Override the `onClick` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We know that the `number Button` is what was clicked (it''s the only `View`
+    with an event-listener at this point). Cast the `View` parameter to a `Button`
+    so that we can use it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create an `Intent` object to dial the selected phone number:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Use `startActivity` to open the dialler application:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now open the `AndroidManifest.xml` file in your editor or IDE.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Before the declaration of the `<application>` element, we need permission to
+    read the contacts list:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Change the label of the `ViewContactActivity` to **View Contact**:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Remove all of the default content inside the `<intent-filter>` element.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Declare an `<action>` type of `ACTION_VIEW` for this `<intent-filter>`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Set the `<catagory>` of this `<intent-filter>` to `CATAGORY_DEFAULT`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a `<data>` element to filter `person` entries (this is a MIME type):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add another `<data>` element to filter `contact` entries:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: When installed on a device, the preceding code will become an option for opening
+    "Contacts" in the user's address book. As you can see, replacing part of the standard
+    Android framework is very simple, and allows more seamless integration of applications
+    with the base system than is possible with a more conventional application architecture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*What just happened*'
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'If you install this application on the emulator, you''ll notice that in the
+    launcher, there''s no icon to start it up. That''s because this application doesn''t
+    have a main entry point like all of the others we''ve written thus far. Instead,
+    if you open the "Contacts" application, and then click on one of the contacts
+    in the address book, you''ll be greeted by the following screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![What just happened](img/4484_04_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If you select the second icon, your new `ViewContactActivity` will be started
+    in order to view the selected contact. The user (as you can see) also has the
+    ability to use your application in preference to the default (for as long as your
+    application remains available on the device).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Overriding a default behavior is a very important decision when developing a
+    new application. Android makes it very easy to do, and as you can see, a third-party
+    application can slot in almost seamlessly between two of the default applications.
+    In a normal operating system environment, you would need to write an entire "contacts
+    manager", while in Android you need only write the bits that interest you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is a part of your user interface design since you can use it to extend
+    the functionality of various default parts of the system. For example, if you
+    wrote a chat application, such as a "Jabber" client, you could embed the client
+    in the **View contact** `Activity` for each contact in the user's address book
+    that was linked with a Jabber ID. This would allow users to chat with available
+    contacts directly from their address book, instead of having to go to your application.
+    You application becomes a way for them to check a contact's status, and possibly
+    avoid a phone call entirely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Implementing an `Activity` at the correct granularity is an important part of
+    your user interface design process. Although it's not a graphical part directly,
+    it defines how the system will interact with your application, and thus how the
+    user will interact with it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's a good idea to keep implicit intents in mind when structuring how your
+    `Activity` will be started. Creating a generic `Activity` allows for other applications
+    to integrate seamlessly with your own, effectively turning your new application
+    into a platform for other developers to work with. An implicitly started `Activity`
+    can be replaced or extended by another application, or it can be re-used in other
+    application. In both cases, the user becomes free to customize your application
+    in much the same way that they can customize the wallpaper image or theme.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Always try and provide a single `Activity` implementation for each action the
+    user might want to take, don't make an `Activity` do too many things in the same
+    screen. A very good example of granularity is the "Contacts" application—there's
+    a contact list, contact viewer, contact editor, and the dialler application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When working with tabbed interfaces (as we did in the previous chapter), it's
+    possible to specify the tab content as an `Intent`, effectively embedding the
+    `Activity` in your application. I would strongly urge you to consider doing exactly
+    this when building a tabbed user interface, since it allows each tab to be re-used
+    by your application far more easily, while also allowing third-party developers
+    to create extensions to your interface, one tab at a time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So far we've only really worked with the `LinearLayout` class, and while it's
+    a great base for simple user interfaces, it's almost never enough. In the next
+    chapter, we'll be looking at the many other types of layouts that Android provides
+    by default, exploring the way in which each layout works, and how they can be
+    used.
+  prefs: []
+  type: TYPE_NORMAL

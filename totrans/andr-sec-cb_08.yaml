@@ -1,0 +1,2061 @@
+- en: Chapter 8. Native Exploitation and Analysis
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inspecting file permissions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cross-compiling native executables
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Exploitation of race condition vulnerabilities
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Stack memory corruption exploitation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Automated native Android fuzzing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far we've covered most of the high-level aspects of applications on the Android
+    platform; this chapter focuses on the some of the native aspects—everything supporting
+    the application layer components. The native aspects include the system daemons,
+    the binary executables—compiled specifically for the system architecture—and the
+    components of the filesystem and device-level configurations. Any of these aspects
+    of the Android system may cause security vulnerabilities and enable privilege
+    escalation on Android devices—especially smartphones—and thus they cannot be looked
+    over in a complete security review of an Android system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This chapter also covers how to pick up some basic memory corruption exploitation
+    flaws. However, please note that this chapter does not cover all of the known
+    memory exploitation styles and techniques. But what is covered is enough to allow
+    you to learn how to implement most of the others on your own. This chapter also
+    includes good articles and sources of information on other techniques for those
+    who would like to go all the way down the rabbit hole.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Why study native exploitation techniques? Well, how else would you root your
+    phone? Root exploits usually work by abusing natively based vulnerabilities in
+    Android devices that allow privileges to be escalated enough to allow persistent
+    access to the root (or superuser) account on an Android device. Naturally, these
+    may present themselves as a gateway to unbridled customization of an Android device
+    but they also open the door for malware and remote attackers; it's not hard to
+    see why a vulnerability that allows someone to gain superuser privileges on your
+    mobile phone is a bad idea! And therefore, any mobile security auditor worth their
+    salt should be able to identify any potential vulnerabilities that may enable
+    such exploitation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inspecting file permissions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the most commonly exploited ways to escalate privileges from within a
+    local context is to abuse discrepancies and inadequacies in the way filesystem
+    permissions—or access rights—are set up in an operating system. There are countless
+    instances of vulnerabilities and privilege escalation attack methods that abuse
+    file permissions, be it the `setuid` flag on a globally executable vulnerable
+    binary, such as `su` or `symlink`, or the race condition attack on a file that
+    is globally readable and written to by a superuser-owned application; for example,
+    pulse audio CVE-2009-1894.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Being able to clearly identify any potential entry points presented by the filesystem
+    is a good place to start defining the Android native attack surface. The walkthrough
+    in this section details a few methods you can use to find dangerous or potential
+    files that possibly enable exploitation while interacting with the device through
+    an ADB shell.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Seeing that the following tutorial is focused on detailing ways to find files
+    with inadequate or discrepant permissions, a fundamental skill you require in
+    order to understand why certain commands are executed would be to understand how
+    Linux- or Unix-based operating systems define file permissions. A quick side note:
+    it''s common in some Linux circles to talk about file and directory permissions
+    as access rights; here, these terms will be used interchangeably.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Linux- or Unix-based operating systems'' file permissions are defined in terms
+    of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The likely users (abbreviated as `o`) of the file that don't fall into the other
+    user categories
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The owner of the file (abbreviated as `u`)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The access control enforced on the group of users that the owner of file belongs
+    to (abbreviated as `g`)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Categorizing users in this way allows mutual exclusivity, enabling a user to
+    fine-tune who has access to the file. This means specification of access rights
+    can be done with respect to the file and every likely user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For each collection of users (group, other users, and the owner), five attributes
+    of access control are defined, namely:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Read ability (**r**) of the file; who is allowed to actually read the contents
+    of the file.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Write ability (**w**) of the file; this controls who is allowed to augment
+    or modify the contents of the file.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Execute ability (**x**) of the file; whether a given collection of users
+    is allowed to execute the instructions of the file.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Set Group ID ability (**s**); should the file be executable; this defines
+    how the user's permissions are augmented according to its group permissions. This
+    permission may allow a low-privileged user to escalate their privileges in order
+    to perform certain tasks; for example, substitute a user who escalates the privileges
+    of any user to root or any user it desires—given that the authentication succeeds,
+    of course!
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Set User ID ability (**s**); this determines whether the user ID of the
+    file owner, and therefore all the access rights that go along with it, can be
+    transmitted to the executing process.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Each of these are defined in terms of either mnemonics—using abbreviations—or
+    as the literal bitwise values encoded in octal format. For first timers, this
+    may be a confusing description, which is why this section includes a small table
+    that defines the values, both in binary and octal (numbers in base 8).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Why base 8? Well, because base 8 in binary allows space for three bits, each
+    one describing the Boolean value of each of the attributes; `1` for on (or true)
+    and `0` for off (or false):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Description | Binary value | Decimal value |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Read | 100 | 4 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Write | 010 | 2 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Execute | 001 | 1 |'
+  prefs: []
+  type: TYPE_TB
+- en: 'These are combined by adding the binary values. Here is a table that describes
+    that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Description | Read | Write | Execute |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Read | 100 | 4 | 110 | 6 | 101 | 5 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Write |   | 010 | 2 | 011 | 3 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Execute |   | 001 | 1 |'
+  prefs: []
+  type: TYPE_TB
+- en: These are specified for each collection of users; this means the permission
+    has one bit for each user as well, seeing that there are three collections, namely
+    the file owner, the group, and other users—commonly referred to as "the world".
+    The permission bits also include an extra bit for the definition of `setuid`,
+    `setguid`, and the **sticky** bit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The sticky bit is an access right that allows only the owner of a file or directory
+    to delete or rename a file or directory. When specified, it appears as a `T` symbol
+    in the access right bits displayed by the `ls` command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The structure looks as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Owner | Group | Other |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| r | w | x | r | w | x | r | w | x |'
+  prefs: []
+  type: TYPE_TB
+- en: That's pretty much it as far as the basics of file access rights go; if you've
+    followed the previous paragraphs carefully, you should have enough to spot the
+    most fundamental flaws when it comes to Android's native access rights.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to properly appreciate the discrepancies that vendors add to device
+    builds, you will need to know a little bit about what the "default" or standard
+    Android filesystem looks like in terms of its structure and access permissions
+    setup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Inspecting file permissions](img/00159.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Here's the summary of the default or standard filesystem folders and their purposes
+    according to the Linux filesystem hierarchy standard and the `init.rc` scripts
+    on Jelly Bean. References for the `init.rc` scripts of other platforms are given
+    in the *See also* section of the next tutorial Inspecting System Configurations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Folder | Purpose |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/acct` | The `cgroup` mount point—accounting and monitoring of CPU resources
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/cache` | Temporary storage for downloads in progress and also used for
+    nonessential data |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/data` | Directory containing apps and other application-specific storage
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/dev` | Device nodes, as in a classic Linux system, though not used as prolifically
+    for device and hardware driver access |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/etc` | A symbolic link to `/system/etc/` contains configuration scripts,
+    some of which are launched at startup during the bootstrapping process |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/mnt` | A temporary mount point, akin to many other traditional Linux systems
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/proc` | Contains data structures and information about a process, as in
+    traditional Linux- or Unix-based systems |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/root` | Typically an empty directory, but akin to the root users home directory
+    as on many Linux/Unix systems |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/sbin` | A folder containing important utilities for system administrative
+    tasks |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/sdcard` | Mount point for the external SD cards |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/sys` | Mount point for `sysfs`, holds exported kernel data structures |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/system` | Immutable (read-only) binaries and scripts generated during the
+    system build; on many Android systems, this also holds system-owned applications
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/vendor` | A directory set aside for vendor-specific augmentations to the
+    device, including binaries, applications, and configuration scripts |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/init` | The `init` binary executed during the bootstrapping process after
+    the kernel has been loaded |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/init.rc` | The configuration script for the `init` binary |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/init[device_name].rc` | The device-specific configuration script |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/ueventd.rc` | The `uevent` daemon configuration script |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/uevent[device_name].rc` | The device-specific configuration script for
+    the `uevent` daemon |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/default.prop` | The configuration file containing global properties for
+    the system, including device names |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/config` | The mount point for `configfs` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/storage` | The added directory for 4.1 devices and up; used as a mount
+    point for external storage |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `/charger` | A native standalone application that displays the battery''s
+    charge progress |'
+  prefs: []
+  type: TYPE_TB
+- en: Please keep in mind that the vendor builds of the devices may differ; take these
+    to be the most basic, untouched filesystem layouts and purposes. Often, vendors
+    also make mistakes in their usage of some of these file paths and go against their
+    intended purpose, so keep an eye on the purpose of these folders and the default
+    access rights.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This section doesn't go into full detail with the filesystem layout; however,
+    there are some good sources on the semantics, layout, and conventions for Android
+    and Linux filesystems in the *See also* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's look at how to hunt for interesting file- or directory-based targets on
+    an Android system. The following walkthrough assumes you have ADB shell permission
+    on the device being assessed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In order to use the commands mentioned in the following example, you will need
+    to be able to either install the `find` binary or Busybox for Android; the instructions
+    for installation can be found at [http://www.busybox.net/](http://www.busybox.net/)
+    and in the *Setting up Busybox* section of the *Automated native Android fuzzing*
+    recipe at the end of this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To search for files with respect to their access rights, you can find a list
+    of readable files by executing the following command in your ADB shell; firstly,
+    for world readable, this command does the trick:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'See the following screenshot for the sample output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00160.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The previous screenshot—and the subsequent ones in this section—were taken from
+    a rooted Samsung Galaxy S3\. Here the command-line instruction included a redirect
+    to `/dev/null` in order to omit the erroneous output caused by permission denial.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Just a little caveat for non-Linux/Unix users**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`/dev/null` acts like a sort of "blackhole" for output, allowing Linux/Unix
+    users to use it as a place to put output they are not interesting in seeing. As
+    an added benefit, it also returns a value to let you know whether the write operation
+    succeeded.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Moving on, if you''re looking for world writable files, you can find them using
+    the following arguments:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'See the following screenshot for the sample output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00161.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'And for files that have executable permission set for all users:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: You aren't explicitly required to use the octal format; the `find` command also
+    understands the popular shorthands for user collections and permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For instance, to find files readable to everyone outside of the owner''s group,
+    you specify permissions this way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'See the following screenshot for the sample output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00162.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The previous specifications will ensure only exact matches; this means files
+    returned must have only the bits specified. If you''re looking for files with
+    at least the specified bits set and any of the other bits—which you will probably
+    be doing most of the time—you can specify the permissions by including a `-` symbol
+    as a prefix as in the preceding example. For the octal mode, this will work as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'See the following screenshot for the sample output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00163.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This will at least match files that have read bits set for all user collections,
+    which means the 445, 566, 777, and so on permission bits will be matched. And
+    the 344, 424, 222, and so on would not be matched.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A couple of really useful access right patterns you would probably be interested
+    in looking for include finding executable files with `setuid`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'See the following screenshot for the sample output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00164.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the previous screenshot, we see that the `su` binary was found using the
+    preceding command. If you ever find this binary on an Android device, it's always
+    a strong indication that the device has been rooted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can also find files with `setguid` and execute permissions for all:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'See the following screenshot for the sample output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00165.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The `find` command also allows you to specify users as part of the search criteria;
+    for instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You could list all the files that belong to the root user as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You could list all the files for the system user as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You can also list files according to the group ID setting as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You may want to get an idea of how much each user—or rather, application—on
+    your Android system has access to, and to do this you may want to build a list
+    of user IDs—or, more importantly, UIDs for applications. The easiest way to do
+    this is to dump the access rights for the files in the `/data/data` directory
+    since it contains the data for most of the apps installed on the Android device.
+    However, in order to access this list from an ADB shell, you'll need access to
+    the root or system account or any account that has equivalent permissions; this
+    is easy to obtain on an emulator—it's granted automatically. Alternatively, if
+    you so choose, you could fire off a couple of searches to the XDA developers site
+    to look for a method to root your phone. The XDA developer's site is available
+    at [http://www.xda-developers.com/](http://www.xda-developers.com/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are both good and bad things about rooting your phone; in this case, it
+    allows you to inspect the filesystem and access rights in more detail. However,
+    on the other hand, if access to root privileges are not managed properly, it can
+    expose your phone to a number of very devastating attacks! So be stingy with your
+    root permissions and only temporarily root phones when they need to be rooted.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Moving on, if you list all of the files in the `/data/data` directory, you
+    should see the following; this is taken from a Samsung Galaxy S3:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00166.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: You may notice the odd naming convention for each app, namely `u[number]_a[number]`,
+    which means to say `u[profile number]` for the user profile the app is installed
+    on—since some Android versions support multiple user profiles, namely everything
+    from Jelly Bean and later—and `a[number]`, which is the application ID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can use the application ID to construct the actual system user ID (UID)
+    for the app by adding this number to `10000`; for instance, for the Mozilla installation
+    that has a username of `u0_a170`, the corresponding UID will be `10170`. To find
+    all of the files that have this UID as its owner, you would then execute this
+    command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'See the following screenshot for the sample output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00167.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: You can find other usernames by checking out the `Android_filesystem_config.h`
+    file referenced in the *See also* section of this recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A command that can make the output of the `find` command a little more useful
+    is `stat`. This command displays properties of the file and allows you to specify
+    the format in which you'd like these details to be displayed. The `stat` command
+    has a myriad of features and makes hunting for incorrectly "permissioned" files
+    a much more informative experience than just calling `ls –al` via the `find –exec`
+    command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can use `stat` with `find` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For instance, if you''d like to display the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`%A`: The access rights in human-readable format'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`%u`: The user ID of the file owner'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`%g`: The group ID of the file owner'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`%f`: The file mode in raw hex'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`%N`: The quoted file name with dereference if it''s a symbolic link'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'You can do so by executing the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This command produces output as follows—here the example uses `-0666` as an
+    example permission mode:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/00168.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Vulnerability Summary for CVE-2009-1894* article at [http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-1894](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-1894)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `Android_filesystem_config.h` file in the Android Git Repository at [https://android.googlesource.com/platform/system/core/+/android-4.4.2_r1/include/private/android_filesystem_config.h](https://android.googlesource.com/platform/system/core/+/android-4.4.2_r1/include/private/android_filesystem_config.h)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Filesystem Hierarchy Standard* in the Linux documentation project at [http://www.tldp.org/HOWTO/HighQuality-Apps-HOWTO/fhs.html](http://www.tldp.org/HOWTO/HighQuality-Apps-HOWTO/fhs.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Filesystem Hierarch Standard* guide by the Filesystem Hierarchy Group at
+    [http://www.pathname.com/fhs/pub/fhs-2.3.pdf](http://www.pathname.com/fhs/pub/fhs-2.3.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Embedded Android*, *O''Reilly*, March 2013, by *Karim Yaghmour*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cross-compiling native executables
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Before we can start smashing stacks and hijacking instruction pointers on Android
+    devices, we need a way to prepare some sample vulnerable applications. To do this,
+    we need to be able to compile native executables and to do that we need to use
+    some of the awesome applications packaged into the Android native development
+    kit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To cross-compile your own native Android components, you need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Prepare a directory to develop your code. All this requires is that you make
+    a directory named whatever you'd like to name your "module"; for example, you
+    could call the directory `buffer-overflow`, as I do in the example here. Once
+    you've created that directory, you then need to make a subdirectory called `jni/`.
+    It's imperative that you name it this because the compilation scripts in the NDK
+    will specifically look for this directory.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Once you have your directories, you can create an `Android.mk` file. Create
+    this file inside your `jni` directory. The `Android.mk` file is basically a Make
+    file that prepares some of the properties of your compilation; here''s what it
+    should contain:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Once you have both your required `jni` directory structure and `Android.mk`
+    set up properly, you can start writing some C code; here''s an example you can
+    use:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Please make sure this file appears in the `jni` directory along with the `Android.mk`
+    file.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Here''s the fun part; you can now compile your code. You can do this by invoking
+    the NDK build script, which surprisingly is done by executing the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, `[path-to-ndk]` is the path of your Android NDK.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'If all goes well, you should see output similar to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00169.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Just compiling is not enough; we need to be able to modify the way normal executables
+    are compiled so that we can exploit and study certain vulnerabilities. The protection
+    we will remove here is something that protects the function stack from being corrupted
+    in a way that allows exploitation—most exploitation. Before removing this protection,
+    it will be useful to detail how this protection actually works and show you the
+    difference when the protection is removed. Brace yourself—ARMv7 assembler code
+    is coming!
+  prefs: []
+  type: TYPE_NORMAL
+- en: So we can dump the assembler code for this executable using the **objdump**
+    tool that comes bundled with the NDK; naturally you would expect the standard
+    `objdump` tool that comes bundled with any run-of-the-mill Linux or Unix distribution
+    to work fine, but these executables are cross-compiled specifically for embedded
+    ARM devices. This means the endianness may be different; the structure of the
+    executable may also be one that a normal `objdump` doesn't understand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To make sure we can use the correct `objdump` tool, the Android guys made sure
+    versions that are compatible with ARM executables come packaged with the NDK.
+    You should find it under the `/toolchains/arm-linux-androideabi-[version]/prebuilt/linux-x86-64/bin/`
+    path of the NDK; you could use any one of the `arm-linux-androideabi` versions,
+    though it's always simpler to try to stick to the latest version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `objdump` binary will be named something like `arm-linux-androideabi-objdump`
+    inside the aforementioned folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use it, all you need to do is point it at the binary in the root of the
+    `/buffer-overflow/obj/local/armeabi/` directory, which should appear in your `jni`
+    directory and execute this command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For our example, the command will look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will produce quite a bit of output; what we are interested in are the functions
+    compiled around the "vulnerable" function. I've piped the output into `less`,
+    which allows us to scroll and search through the text; what you should do next
+    is press the `/` character while `less` is open with the `objdump` output and
+    type in `<vulnerable>` and then press *Enter*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you''ve done this properly, your screen should display the following output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Just a little tip**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the preceding `objdump` output, the far-left column shows the offsets of
+    the instructions; the column after that, delimited by the `:` character, holds
+    the actual hex representation of the code; and the column after that shows the
+    human-readable mnemonics for the associated assembler instructions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Pay attention to the emboldened code in the previous `objdump` output. The instruction
+    at the `8526` offset loads the contents of memory found `0x40` addresses away
+    from the current value in the program counter (`pc`) register; this address holds
+    a special value called the **stack canary** .
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: It's commonly termed as a canary because of how actual canaries were used by
+    miners to make sure mine shafts were safe to explore.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This value is placed on the stack between the local variables and the saved
+    instruction and base pointer; this is done so that if an attacker or erroneous
+    instructions were to corrupt the stack far enough to influence the values saved
+    there, it would need to destroy or change the stack canary as well, meaning the
+    program would be able to check if the value changed. This value is generated from
+    a cryptographically secure—supposedly so—pseudorandom number generator, and it's
+    stuck in the memory of the program during runtime to avoid reliably predicting
+    this value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Moving on, we see that the instructions at offsets `852c-8530` stick the stack
+    canary in the `r3` and `r4` registers. The following instruction at offset `8532`
+    makes sure the stack canary is placed on the stack before the dangerous `strcpy`
+    call at offset `8534`. So far, all the code has accomplished was to place the
+    value on the stack after the `strcpy` call—actually, closer to the `printf` function.
+    From offset `8542` to offset `8544`, the stack canary values are fetched from
+    register `r4` and the position it was placed on the stack, loaded into the `r2`
+    and `r3` registers, and then compared at offset `8546`. If they don't match, we
+    see that the instruction at `854a` will be executed, which will basically cause
+    the program to abort and not exit normally. So, in summary, it grabs the stack
+    canary from some offset in the file, places it in a register and another copy
+    on the stack, and checks for any changes before exiting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One thing you may notice is that though this prevents the saved instruction
+    pointer from being corrupted it does not protect the local variables at all! It
+    is still possible to maliciously corrupt the other variables on the stack depending
+    on their layout in memory—where they appear in relation to the canary and the
+    other stack buffers. This could in some very special circumstances still be abused
+    to maliciously influence the behavior of a process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So now how do we remove this annoying protection such that we can smash some
+    stack properly and gain the ability to control the instruction pointer? Well,
+    seeing that stack canaries are a compiler-based protection—meaning that it's something
+    the executable compiler enforces—we should be able to modify the way NDK executables
+    are compiled so that stack protection is not enforced.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Though this may seldom be a practical situation for the binaries on the Android
+    system, it is still something that may very well happen. We are removing this
+    protection in order to simulate a stack-based overflow vulnerability.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To remove the protection, you''ll need to change some of the GCC compiler extensions
+    that the NDK uses. To do this, you''ll need to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Navigate to the `/toolchains/arm-linux-Androideabi-4.9/` directory and locate
+    a file called `setup.mk`. Please note, your NDK may use a different version of
+    `arm-linux-androideabi`. If the following steps don't work or have the desired
+    effect, you should try removing the stack protection:![There's more...](img/00170.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The next thing you may want to do is back up the `setup.mk` file. We''re about
+    to change the default compilation configuration for the NDK, so it''s always good
+    to back it up. You can create a makeshift back up by copying the script to another
+    file named slightly differently. For instance, you can back up the `setup.mk`
+    file by executing this command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![There''s more...](img/00171.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: After backing it up, you should open the `setup.mk` file in your favorite text
+    editor and remove the flags, specifically the one containing the `-fstack-protector`
+    switch; see the following screenshots for more clarity:![There's more...](img/00172.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'After removing the specified flag, your `setup.mk` file should look something
+    like this:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/00173.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Once you''ve done that, you can use the `ndk-build` script to compile a fresh
+    copy of your executable and then pass it to `androideabi-objdump`. Without stack
+    protection, your code should look like this:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Notice how there are none of the instructions that were in the previous version
+    of the executable. This is because the `-fstack-protector` compiler flag that
+    we removed tells GCC to autonomously look for any instance of any function that
+    may potentially corrupt the function stack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *ARM and Thumb Instruction Set Quick Reference Card* document by ARM infocenter
+    at [http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.qrc0001l/QRC0001_UAL.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ARM Instruction Set* document at [http://simplemachines.it/doc/arm_inst.pdf](http://simplemachines.it/doc/arm_inst.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ARM v7-M Architecture Reference Manual* document by the department of Electrical
+    Engineering and Computer Science, University of Michigan at [http://web.eecs.umich.edu/~prabal/teaching/eecs373-f10/readings/ARMv7-M_ARM.pdf](http://web.eecs.umich.edu/~prabal/teaching/eecs373-f10/readings/ARMv7-M_ARM.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Exploiting Arm Linux Systems, An Introduction* by *Emanuele Acri* at [http://www.exploit-db.com/wp-content/themes/exploit/docs/16151.pdf](http://www.exploit-db.com/wp-content/themes/exploit/docs/16151.pdf)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Procedure Standard for the ARM Architecture* document at [http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/IHI0042E_aapcs.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/IHI0042E_aapcs.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ARM Instruction Set* document at [http://bear.ces.cwru.edu/eecs_382/ARM7-TDMI-manual-pt2.pdf](http://bear.ces.cwru.edu/eecs_382/ARM7-TDMI-manual-pt2.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *ARM Developer Suite Version 1.2 Assembler Guide* document by ARM infocenter
+    at [http://infocenter.arm.com/help/topic/com.arm.doc.dui0068b/DUI0068.pdf](http://infocenter.arm.com/help/topic/com.arm.doc.dui0068b/DUI0068.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*The DLMalloc Implementation library* at the Android Platform Bionic GitHub
+    page at [https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c](https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `ok_magic` call in the DLMalloc implementation at the Android Platform Bionic
+    GitHub page at [https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c#L4715](https://github.com/android/platform_bionic/blob/master/libc/upstream-dlmalloc/malloc.c#L4715)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Bionic* source code at the Android Source code repository at [https://android.googlesource.com/platform/bionic/](https://android.googlesource.com/platform/bionic/)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`DLMalloc.c`, Android Platform Bionic `jb-mr0-release` at the Android Official
+    GitHub repository at [https://android.googlesource.com/platform/bionic/+/jb-mr0-release/libc/bionic/dlmalloc.c](https://android.googlesource.com/platform/bionic/+/jb-mr0-release/libc/bionic/dlmalloc.c)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Exploitation of race condition vulnerabilities
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Race conditions have caused quite a few issues and privilege escalation attacks
+    on the Android platform; many of them allowing malicious attackers to gain root
+    privileges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Essentially, race conditions are caused by the lack of enforced mutual exclusion
+    when a process on a multithreaded (a platform where more than one process is allowed
+    to run concurrently) system that uses preemptive process scheduling. Preemptive
+    scheduling allows a task scheduler to interrupt a thread or running process preemptively,
+    meaning without first waiting for the task to be ready for interruption. This
+    enables race conditions because often developers don't enable applications to
+    operate in a way that accommodates arbitrary and unpredictable interrupts from
+    the process scheduler; as a result, processes that rely on access to potentially
+    shared resources like files, environment variables, or data structures in shared
+    memory are always "racing" to get first and exclusive access to these resources.
+    Attackers abuse this situation by gaining access to these resources first and
+    corrupting them in a way that enables either damage to the processes operation
+    or allows them to maliciously influence the process's behavior. A simple example
+    would be a program that checks if a user authenticating themselves is in a given
+    file listing the valid usernames; should this process not accommodate the preemptive
+    scheduler, it may only access the file after a malicious user has corrupted it
+    by adding his/her username to the list, allowing them to be authenticated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this walkthrough, I will detail some basic race condition vulnerabilities
+    and discuss other potential causes; I will also detail exploitation of a few of
+    the most basic race condition vulnerabilities. The walkthrough ends with references
+    and useful sources of information on past Android-based race condition vulnerabilities;
+    most of them reported in the year of this writing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Exploitation of race condition vulnerabilities depends on a few factors, namely
+    an attacker must at least be able to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Gain access to the resources a vulnerable process is racing for access to**:
+    Just having a process that doesn''t enforce mutual exclusion for its external
+    resources but leaves the attacker with no method of access to these same resources
+    wouldn''t harbor much potential for exploitation. If this wasn''t true, every
+    single nonmutual exclusive access a process makes would be exploitable. This includes
+    every time a process dereferences a pointer in memory without checking out a semaphore
+    or spin lock, which could happen billions of times!'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Influence these resources maliciously**: It wouldn''t help much if a process
+    doesn''t exclusively access its resources in the context in which an attack cannot
+    augment or maliciously modify the resources. For instance, if a process accesses
+    shared memory or a file that an attacker only has read access to—unless of course
+    this causes the vulnerable process to crash, given the semantic priority of the
+    process; for example, an anti-virus program, IDS, or firewall.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Time of use / time of check window size** (**TOU/TOC**): This is essentially
+    the time difference, or more effectively the likelihood of scheduler interrupts,
+    between the time an application checks for access to a resource and actually accesses
+    the resource. The exploitability of a race condition depends heavily on this time
+    difference because exploits will essentially race for access in this time frame
+    in order to maliciously affect the resource.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Taking these conditions into account, let's look at some constructed examples
+    of race condition vulnerabilities and how to exploit them on Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we start exploiting race conditions, we need to prepare an example.
+    Here''s how you do that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''re going to prepare to an embedded ARM Android platform—the Jelly Bean
+    emulator in this example—that causes race condition vulnerability. The following
+    code details the behavior of a vulnerable process:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Compile this by following the same process as detailed in the *Cross-compiling
+    native executables* recipe and deploy it to your Android device. Try deploying
+    it to a partition or folder that's been mounted as executable and readable by
+    any user on the Android system (to see how to do this, please refer to the *Copying
+    files off/into an AVD* recipe in [Chapter 1](part0014_split_000.html#page "Chapter 1. Android
+    Development Tools"), *Android Development Tools*). Throughout this recipe, we
+    use the partition mounted as `/system`, which was remounted with read and write
+    permissions, as in other recipes. Please note this may cause the NDK to throw
+    out a couple of warnings, but as long as everything compiles to an executable,
+    you're good to go!
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: You'll also need to put the `commands.txt` file in the directory mentioned in
+    the code, namely `/data/race-condition/command.txt`. This requires making a race
+    condition folder in the `/data` path. A good example of how to do this can be
+    found in the *Inspecting network traffic* recipe in [Chapter 4](part0045_split_000.html#page
+    "Chapter 4. Exploiting Applications"), *Exploiting Applications*, since we needed
+    to create a similar setup for `TCPdump`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'You will need to set the `setuid` permission for this executable on the Android
+    device; you can do this by executing the following command after deploying it
+    to the device:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This command also makes sure any user on the system has execute permissions.
+    Please be aware that you will need root permissions to perform this command. We
+    are simulating the effect of a `setuid` binary and how it can cause arbitrary
+    code execution.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: We have everything set up for exploitation; we can move onto detailing this
+    exploitation now.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To exploit the vulnerable binary, you will need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Run the ADB shell into the Android device; if you're using an emulator or a
+    rooted device, you should be able to use `su` to assume another application's
+    access rights.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Try accessing some root-owned folders and files that don''t have execute, read,
+    or write permission set for your user. Here I''ve chosen user `10170` as an example,
+    and you should see the `Permission denied` messages being thrown around when you
+    try to access the `/cache/` directory:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00174.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Let''s exploit the `race-condition` binary. We do this by augmenting the `commands.txt`
+    file with another command, namely `/system/bin/sh`, which will open a shell for
+    us. You can do this by executing the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `/system/bin/sh` command should now be the last entry in the `commands.txt`
+    file, this means, if we hope to select it from the menu we need to choose option
+    5.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00175.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Execute `race-condition` on the Android device and supply `5` as an option.
+    The vulnerable binary would then execute the `sh` command and give you root permissions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Test your root access by trying to change the directory to `/cache`. If you're
+    running a Jelly Bean or later version of Android, you should not see any `Permission
+    denial` messages, which means you've just escalated your privileges to root!![How
+    to do it...](img/00176.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The preceding example is designed to detail the most basic concepts in race
+    conditions, namely when an application accesses a file that any other process
+    can augment and uses it to perform actions as the root user. There are more intricate
+    and subtle situations that cause race conditions, one that's been commonly exploited
+    are those involving symbolic links. These vulnerabilities stem from an application's
+    inability to discern a file from a symbolic link, which allows attacks to augment
+    files via a crafted symbolic link or when a file reads a symbolic or hard link
+    but is incapable of determining the authenticity of the link target, which means
+    the link can be redirected maliciously. For more modern examples of race condition
+    vulnerabilities, check out the links in the *See also* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Vulnerability Summary for CVE-2013-1727* article at [http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1727&cid=8](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1727&cid=8)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Vulnerability Summary for CVE-2013-1731* article at [http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1731&cid=8](http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-1731&cid=8)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Sprite Software Android Race Condition* article by *Justin Case* at [http://packetstormsecurity.com/files/122145/Sprite-Software-Android-Race-Condition.html](http://packetstormsecurity.com/files/122145/Sprite-Software-Android-Race-Condition.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Race Condition Exploits* article by *Prabhaker Mateti* at [http://cecs.wright.edu/~pmateti/InternetSecurity/Lectures/RaceConditions/index.html](http://cecs.wright.edu/~pmateti/InternetSecurity/Lectures/RaceConditions/index.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Stack memory corruption exploitation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Stack memory exploitation may not be the most likely source of Android bugs
+    and security vulnerabilities, though it is still possible for these kinds of memory
+    corruption bugs to affect native Android executables even in the midst of protections
+    such as ASLR, StackGuard, and SE Linux. In addition to this, most of the Android
+    market share consists of devices that don't have as robust protection against
+    stack and other memory-based exploitation, namely 2.3.3 Gingerbread devices. Another
+    great reason—besides its direct relevance to security research—to include a discussion
+    and walkthrough on stack-based exploitation is because it provides a great gateway
+    into more advanced exploitation techniques.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section we will detail how to exploit a common stack-based memory corruption
+    flaw to take control of the flow of execution.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we start, you''ll need to prepare a vulnerable executable; here''s how
+    you do it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a directory with the usual `jni` folder and the same naming convention
+    as in the previous recipes. If you need a recap, see the *Cross-compiling native
+    executables* recipe in this chapter.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Write this code into a `.c` file in the `jni` folder:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This code is strikingly similar to the previous example. In fact you may even
+    edit the previous example code, since it differs in only a few lines.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Compile the code using the `ndk-build` script as before.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Deploy the code to an Android device or emulator; for the following example,
+    I used an emulated Android 4.2.2 device.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Once you've got your code all set up, you can move on to pushing the binary
+    onto your emulator or device—if you're up for the challenge.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To exploit the stack-based buffer overflow, you could do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Launch the application on your emulator a couple of times, each time giving
+    it a bigger input until it fails to exit the execution gracefully and your Android
+    system reports a segmentation fault.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Try to remember how many input characters you gave the application because
+    you''ll need to give it the same number to trigger the crash using `gdbserver`.
+    Here''s a screenshot of what a normal run of the executable looks like:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00177.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: You should see the GDB output `exited normally`, indicating that the return
+    code of the process was the same and nothing interrupted or forced it to stop.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Once too much input is given to the application, it exits with a segmentation
+    fault, which looks like this in GDB:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00178.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Launch the application in `gdbserver`, giving it an "unsafe" amount of input,
+    namely an amount of input that will crash it. For our code that should be anything
+    above 14 to 16 characters. In this example, I've entered around 16 characters
+    to make sure I overwrite the correct portion of memory.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Run `androideabi-gdb` and connect to the remote process. If you need a recap
+    on how to do this, see the *Debugging the Android processes using the GDB server*
+    recipe in [Chapter 6](part0066_split_000.html#page "Chapter 6. Reverse Engineering
+    Applications"), *Reverse Engineering Applications*.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Set a couple of breakpoints using GDB. Set a breakpoint just before `blx` to
+    `strcpy` and another after, as in the following screenshot:![How to do it...](img/00179.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You set breakpoints using the `break` command or `b` as a shorthand, and giving
+    it either an offset for a line of code or a pointer to an address that holds an
+    instruction; hence the `*` character before the memory value.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Once your breakpoints are set, re-run the application via `gdbsever` and reconnect
+    to it using the Android GDB. Step through each breakpoint as explained later.
+    All you need to do is type in `continue` in the GDB prompt, or `c` as shorthand.
+    GDB will continue the execution of the program until a breakpoint is reached.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The first breakpoint you reach should be the one before the `strcpy` call;
+    we set a breakpoint here so that you could see how the stack changes before and
+    after the `strcpy` call. It''s crucial to understand this so you can work out
+    how much data to give the application before you start overwriting the return
+    addresses. This is shown in the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00180.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: This is a snapshot of the stack for the `vulnerable` function before the call
+    to `strcpy`; nothing much has happened yet except that some space has been prepared
+    for the local variables. Once the first breakpoint is reached, you should inspect
+    the stack by printing some of its memory contents.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'In the following example, this is shown by executing this `x` command in GDB:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This command tells GDB to print 32 hexadecimal words from the memory address
+    contained in the `sp` (Stack Pointer) register; here''s what you should see:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00181.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'You''ll notice that a couple of values are highlighted; these values were passed
+    to the stack by an instruction in the function prologue, which is the following
+    instruction:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `push` instruction—as used in the previous command—makes sure the register
+    values of the calling function are preserved. This instruction helps ensure that
+    when the function executing returns control back to the function that called it,
+    the stack is returned to its original state.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: One of the values used in the `push` instruction is `lr` or link register. The
+    link register usually holds the return address of the current function. Here,
+    the `lr` register holds the value `0x000084f5`. We are going to try to overwrite
+    it with one of our own later; and in a few minutes, you should see how our input
+    has changed this value, so try to remember it for the time being.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'You want to do this because of an instruction further down in the `vulnerable`
+    function, namely the following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This instruction moves the saved `lr` value straight into the program counter
+    register; which causes execution to continue at the address saved in the `lr`
+    register. If we can overwrite the saved `lr` value, we can effectively control
+    where the execution is branched at the end for the `vulnerable` function. The
+    next step covers how to calculate exactly and what to enter into the program in
+    order to make sure you control the execution as mentioned.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Continue to the next breakpoint. Once GDB hits this breakpoint, `strcpy` should
+    have written your input to the stack. Inspecting the stack at this point should
+    yield the following output:![How to do it...](img/00182.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'You should notice that the value `0x000084f5` changed to `0x00008400`; they''re
+    quite similar because when `strcpy` wrote our input into the buffer, it partly
+    overwrote the saved `lr` value with the `NULL` byte that follows our string; this
+    is why the `0xf5` was replaced with `0x00`. We now know that our 16 characters
+    of input overwrites one byte of the saved return address. This means to completely
+    overwrite the 2 bytes of return address, we need to add 2 bytes of input—accommodating
+    the `NULL` byte—with the last 4 bytes being the new return address. Here''s how
+    it works:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Before the `strcpy` call, the stack had this structure:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '| Uninteresting stack contents | Input Buffer field | Saved lr value |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| 0xbee6fc75 | 0xbee6fb44 | 0xbee6fb50 | 0x00000000 | 0x000084ed | 0x00000
+    | 0x84 | 0xF5 |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: 'After the `strcpy` call with the 16 bytes of input, the stack had the following
+    structure:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '| Uninteresting stack contents | Input Buffer field | Saved lr value |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| …0xbee6fc75 | 16 chars | 0x00000 | 0x84 | 0x00 |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: 'The bold `0x00` value is the `NULL` byte from our input; based on this we would
+    want to input 16 chars plus 2 chars for the new return address, which would look
+    like this:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '| Uninteresting stack contents | Input Buffer field | Saved lr value |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| …0xbee6fc75 | [16 chars] | 0x00000 | 0x?? | 0x?? |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: Here, the `0x??` characters indicate the extra input chars we give the `strcpy`
+    call to overwrite the return address; again we see the `0x00` character after
+    the extra input chars.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Relaunch the GDB server with the given input; try skipping over the `printf
+    "you lose"` call and checking that it wasn''t executed—this makes for an easy
+    way to check if you''ve successfully redirected execution. Here''s how you can
+    grab an example address to redirect execution flow to. Disassemble the main section
+    by executing the following command in the GDB shell:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This will yield the following output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `blx` instruction at `0x000084f8` is clearly the call to `printf` so, if
+    we want to skip over it, we would need to grab the address of the instruction
+    just following it, which is `0x000084fc`. More specifically, we would give the
+    following as input to our program:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '`[16 padding chars] \xfc\x84`'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The bytes that specify the return address are given in reverse order because
+    of the endianness of the architecture.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Relaunch the application using the GDB server, this time giving it the following
+    input:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If all goes well, you should not see the application print the `"you lose"`
+    message and just exit instead.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: There's a lot more you can do than just skip over a simple `print` instruction;
+    in some circumstances, you can even take complete control of the process running
+    a program with vulnerability like this. For more information on how to do this,
+    see the link titled *Return-Oriented Programming without Returns* in the *See
+    also* section. For good sources on general memory corruption attacks, see the
+    *Memory Corruption Attacks, The (almost) Complete History* as well as the *Smashing
+    the Stack for fun and Profit* links in the *See also* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*A short Guide on ARM Exploitation* at [http://www.exploit-db.com/wp-content/themes/exploit/docs/24493.pdf](http://www.exploit-db.com/wp-content/themes/exploit/docs/24493.pdf)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Smashing the Stack for fun and Profit* article by *Aleph One* at [http://www.phrack.org/issues.html?issue=49&id=14#article](http://www.phrack.org/issues.html?issue=49&id=14#article)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Memory Corruption Attacks, The (almost) Complete History* guide, Thinkst
+    Security 2010, by *Haroon Meer*, at [http://thinkst.com/stuff/bh10/BlackHat-USA-2010-Meer-History-of-Memory-Corruption-Attacks-wp.pdf](http://thinkst.com/stuff/bh10/BlackHat-USA-2010-Meer-History-of-Memory-Corruption-Attacks-wp.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Return-Oriented Programming without Returns* guide by *Stephen Checkoway*,
+    *Lucas Davi*, *Alexandra Dmitrienko*, *Ahmad-Reza Sadeghi*, *Hovav Shacham*, and
+    *Marcel Winandy* at [http://cseweb.ucsd.edu/~hovav/dist/noret-ccs.pdf](http://cseweb.ucsd.edu/~hovav/dist/noret-ccs.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Return-Oriented Programming without Returns on ARM* guide by *Lucas Davi*,
+    *Alexandra Dmitrienko*, *Ahmad-Reza Sadeghi*, and *Marcel Winandy* at [http://www.informatik.tu-darmstadt.de/fileadmin/user_upload/Group_TRUST/PubsPDF/ROP-without-Returns-on-ARM.pdf](http://www.informatik.tu-darmstadt.de/fileadmin/user_upload/Group_TRUST/PubsPDF/ROP-without-Returns-on-ARM.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Automated native Android fuzzing
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Fuzz testing is a great way to find exploitable bugs or bugs in system utilities.
+    It allows auditors to gauge the effectiveness of file handlers and any other application
+    against malformed and possibly malicious input, and helps determine whether there
+    are any easily exploitable entry points on a system. It's also a great way to
+    automate security testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android is no different from any other system and has a myriad of interesting
+    fuzz targets. The attack surface of an Android device doesn't stop at the Java
+    application layer; in fact, root exploits are sometimes based on a native executable
+    or system utility that doesn't properly handle any given input or respond in a
+    secure way to certain situations. Fuzzing is a great way to find these situations
+    and possible root exploits on an Android device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What I'm going to cover here is how to port a fuzz test generator called **Radamsa**
+    to the Android platform, and also install some utilities that will help you to
+    script some robust fuzzing scripts that use Radamsa.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we can start porting, you will need to grab a copy of the Radamsa fuzzer;
+    here''s how you do that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Make sure you have either **CURL** or **Wget** installed on your Linux machines.
+    Wget will work fine, but sticking to the recommendation on the Radamsa site, you
+    can install the prerequisites by executing the following command from your Ubuntu
+    machines:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Running this command should produce an output similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Getting ready](img/00183.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Once they''ve been downloaded, you can grab your copy of the Radamsa source
+    code as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Running this command should produce an output similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Getting ready](img/00184.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'You should then extract the Radamsa source by executing this command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If you''ve executed this command correctly, your output should be similar to
+    the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Getting ready](img/00185.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Your directory should look something like the following when you''re done:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Getting ready](img/00186.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Everything is set up now; we can begin setting up the `jni` directory structure
+    and compiling Radamsa for Android.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To cross-compile Radamsa for Android, you should do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You should have a directory called `radamsa-0.3` after unpacking the Radamsa
+    source inside this directory; you should create a directory called `jni`, just
+    as we've done in the *Cross-compiling native executables* recipe.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Make a copy of the `Android.mk` file you used for the buffer overflow recipe
+    and stick it inside the `jni` directory; your directory should look similar to
+    the following screenshot:![How to do it...](img/00187.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Copy the `radamsa.c` file, which contains the Radamsa source, into the `jni`
+    directory as in the following screenshot:![How to do it...](img/00188.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Grab a copy of the `Android.mk` file and stick it inside the `jni` folder.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Copying your `Android.mk` file should be similar to the demonstration shown
+    in the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00189.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Edit the `Android.mk` file you copied in the previous step so that it looks
+    like the following:![How to do it...](img/00190.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Once you're done setting up the `Android.mk` file, you can execute the `ndk-build`
+    command; you should get the following output:![How to do it...](img/00191.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: This means the build has failed. GCC also shows you which lines of code cause
+    the error. It is, in actual fact, one issue cascading through the rest of the
+    code, namely `typedef`, which aliases an unsigned long into something called `in_addr_t`;
+    in the next step, we will fix this issue to get Radamsa compiled successfully.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Open the `radamsa.c` file in your favorite code editor—preferably one that displays
+    line numbers. Scroll down to line number `3222`; you should see the following
+    code if you're using the vim text editor:![How to do it...](img/00192.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In line `3222` of the `radamsa.c` code, replace the `in_addr_t` type name to
+    an unsigned long. The code should look something like this when you've changed
+    it correctly:![How to do it...](img/00193.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: You should also remove the `typedef` command in line `2686`; before editing
+    the line, it should look like the following:![How to do it...](img/00194.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'After commenting it out, it should look something like the following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00195.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: After you're done editing the `radamsa.c` source so it pleases the NDK GCC compiler,
+    you can run the `ndk-build` script. If you've done everything correctly, your
+    output should look something like this:![How to do it...](img/00196.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: After successfully building the executable you can then push it to an Android
+    emulator as follows—assuming you have one set up already, and you've remounted
+    the system partition as writeable:![How to do it...](img/00197.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Once you''ve pushed the Radamsa executable, you can test it by executing this
+    command on your Android emulator:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This should generate the following output:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00198.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'You can run Radamsa on some test input to make sure everything is working fine.
+    As an example, see how Radamsa was run using the following command to make sure
+    everything was sane and in working condition:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Running this command should produce an output similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/00199.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: And that's it! Radamsa is up and running on Android. The next section talks
+    about setting up a simple fuzzing script and pointing it at dexdump to try and
+    generate some crashes and hopefully find some exploitable vulnerabilities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you're going to be doing some fuzzing, you will eventually need to do some
+    bash scripting to hone Radamsa at the right targets and autonomously report input
+    data that causes interesting behavior. Unfortunately, Android platforms don't
+    come packaged with all the utilities that make bash scripting powerful; they don't
+    even come with a bash shell application, mostly because it's not needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We could use the `sh` shell do to our scripting, but bash is a little more powerful
+    and robust and generally most people are more accustomed to bash scripting. Because
+    of this, the following section of this recipe explains how to get Busybox running
+    on an Android platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up Busybox
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To get Busybox utilities (a package of useful terminal applications) on Android,
+    you need to do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Grab a copy of the Android port from [http://benno.id.au/Android/busybox](http://benno.id.au/Android/busybox);
+    in the example, we used `wget` to do this:![Setting up Busybox](img/00200.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: What you need to do then is prepare a `busybox` directory on your Android emulator—assuming
+    you have one already set up and ready to go.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: For this example, the `busybox` directory was made in the `/data/` folder; since
+    it's writable and executable, any folder on a partition mounted with write, read,
+    and execute permissions should work well.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Setting up Busybox](img/00201.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Once you''ve made a dedicated directory for Busybox, you can push it to the
+    emulator using this command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You should be doing something similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Setting up Busybox](img/00202.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Once you''ve pushed a copy of the `busybox` binary to your emulator, you can
+    install the binaries by executing the following command on your emulator:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here''s an example from a Samsung Galaxy S3 smartphone:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Setting up Busybox](img/00203.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'After executing this command, your `busybox` folder should look something like
+    the following:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Setting up Busybox](img/00204.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Fuzzing dexdump
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Now that you've got your test case generator up and running and the Busybox
+    utilities installed, you can start generating some crashes!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this example, we will see how to set up a simple script to do some "dumb"
+    fuzz testing against dexdump, a utility that dissects an Android DEX file and
+    prints its contents:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we start, you will need a sample DEX file; you can either get one by
+    writing a sample "hello world" type application using the Android SDK or just
+    grabbing the `Example.dex` file created in the previous chapter's recipes. If
+    you'd like to generate this file, see the *Compiling from Java to DEX* recipe
+    in [Chapter 6](part0066_split_000.html#page "Chapter 6. Reverse Engineering Applications"),
+    *Reverse Engineering Applications*.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a directory to base your input test case generation files in. This is
+    the folder on the Android emulator where your script will generate files. Test
+    them and copy the interesting ones should they cause any crashes; the `/data/`
+    directory once again is a great place to do this, though it would be good to consider
+    emulating an SD card and saving your data there.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Inside your fuzzing directory—the one created in the previous step—create a
+    bash script that contains the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Run the script in bash by executing the following command on your emulator:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: And now you're fuzzing!
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In the first part of the *How to do it…* section of this recipe, we covered
+    cross-compiling a popular fuzz test generator called Radamsa. Most of what we
+    did is already explained in the *Cross-compiling native executables* recipe. Things
+    get interesting when the NDK build script fails to compile Radamsa because of
+    a type definition; here''s what it looked like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: This causes the build script to fail because the GCC compiler used by the NDK
+    build script—namely one that was built to support the ARM Application Binary Interface—failed
+    to recognize the effect of the type definition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When the type defined by the mentioned statement is referenced, it causes GCC
+    to halt and report that it basically doesn't know what `in_addr_t` is. This issue
+    was resolved by removing the need for `typedef` by replacing the mentioning of
+    the `in_addr_t` alias with the full variable type of unsigned long and commenting
+    out the `typedef` statement.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once this issue was resolved, Radamsa could compile successfully and be deployed
+    to an Android device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then we wrote a makeshift fuzzing script to the target dexdump. To make sure
+    you guys understand exactly what you're doing in this recipe, it's important we
+    detail what the bash script does.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first few instructions make sure we have some useful mnemonics to help us
+    refer to the arguments passed to the script. These instructions—appearing after
+    the `#!/bin/bash` instruction—simply assign values to some variable names.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After assigning these values, the script steps into a `for` loop with a sentinel
+    value—the value that limits the number of times the `for` loop iterates—which
+    will cause the script to iterate forever unless explicitly stopped by the user
+    or the operating system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside the for loop, we see the following line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: All this does is grab the file pointed to by the `ROOT` variable and feeds it
+    to Radamsa. Radamsa then applies some randomized transformations to the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After making the requested random transformations to the DEX file, Radamsa redirects
+    the output to a file called `fuzz.dex`, which is the "fuzzed" version of the sample
+    DEX file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Then dexdump is invoked with the fuzzed DEX file as an argument; here''s what
+    it looks like:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: And all output is redirected to `/dev/null`, since we probably won't be interested
+    in it. This line of code also redirects all the output from `STDIN` (the standard
+    output file) to the `STDERR` file (the standard error output file). This allows
+    all the output generated by the program—any that would likely clutter the screen—to
+    be redirected to `/dev/null`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next instruction looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: This records the exit code of whatever the last command was; in this case, it
+    was `dexdump`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The script does this because it will reveal information about how `dexdump`
+    exited. If `dexdump` exited execution normally, the return code will be `0`; should
+    anything have happened that caused dexdump to exit or halt abnormally—say, like
+    a fault due to corrupted input—the exit code will be nonzero.
+  prefs: []
+  type: TYPE_NORMAL
+- en: And even more interestingly, if the fault required the operating system to halt
+    dexdump via the use of inter-process signaling, the return code will be greater
+    than 127\. These return codes are the ones we are interested in generating since
+    they give us a strong indication that a relatively serious flaw was exposed due
+    to the given dexdump input. Errors like segmentation faults, which usually happen
+    when an invalid portion of memory is used in an incorrect manner, always generate
+    return codes higher than 127\. For more detail on how exit codes or rather exit
+    statuses work, see the *Work the Shell - Understanding Exit Codes* link in the
+    *See also* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Moving on, the rest of the code looks like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first instruction of this portion of the code simply helps us keep track
+    of which iteration the script is currently executing—by printing the `$c` value.
+    It also prints out the return code of the previous run of dexdump and how many
+    notable halts have occurred.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After printing out the mentioned "status indicators", the script compares the
+    value saved in the `RET_CODE` variable's value to `127`; if this value is greater,
+    it makes a copy of the sample input that caused this error and increments the
+    `WINS` variable by `1` to reflect that another notable error was generated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Work the Shell – Understanding Exit Codes* Linux journal at [http://www.linuxjournal.com/article/10844](http://www.linuxjournal.com/article/10844)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Radamsa* Google Code at [http://code.google.com/p/ouspg/wiki/Radamsa](http://code.google.com/p/ouspg/wiki/Radamsa)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Blab* Google Code at [http://code.google.com/p/ouspg/wiki/Blab](http://code.google.com/p/ouspg/wiki/Blab)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Options for Code Generation Conventions* web page at [http://gcc.gnu.org/onlinedocs/gcc/Code-Gen-Options.html](http://gcc.gnu.org/onlinedocs/gcc/Code-Gen-Options.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Fuzzing with Radamsa and some thoughts about coverage* file at [http://www.cs.tut.fi/tapahtumat/testaus12/kalvot/Wieser_20120606radamsa-coverage.pdf](http://www.cs.tut.fi/tapahtumat/testaus12/kalvot/Wieser_20120606radamsa-coverage.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

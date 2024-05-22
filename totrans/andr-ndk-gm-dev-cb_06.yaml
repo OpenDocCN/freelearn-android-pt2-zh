@@ -1,0 +1,1446 @@
+- en: Chapter 6. Unifying OpenGL ES 3 and OpenGL 3
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unifying the OpenGL 3 core profile and OpenGL ES 2
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Initializing the OpenGL 3 core profile on Windows
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Initializing OpenGL ES 2 on Android
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unifying GLSL 3 and GLSL ES 2 shaders
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manipulating geometry
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unifying vertex arrays
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a wrapper for textures
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a canvas for immediate rendering
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: No doubt, any game needs to render some graphics. In this chapter, we will learn
+    how to create a portable graphics rendering subsystem for your game. The chapter
+    is titled *Unifying OpenGL ES 3 and OpenGL 3*; however, in this book we deal with
+    portable development, so we start our recipes with the OpenGL 3 desktop API. This
+    serves two purposes. First, OpenGL 3 is almost a superset of OpenGL ES 3\. This
+    will allow us to port applications between two versions of OpenGL API easily.
+    Second, we can create a simple but very effective wrapper to abstract both APIs
+    from the game code, so that we are able to develop our games on a desktop PC.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: OpenGL ES 3 support was introduced in Android 4.3 and Android NDK r9\. However,
+    all of the examples in this book are backwards-compatible with the previous version
+    of this mobile API, OpenGL ES 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: OpenGL itself is a huge topic which merits a dedicated book. We recommend starting
+    with *The OpenGL Programming Guide*, *Pearson Publications* (the red book).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unifying the OpenGL 3 core profile and OpenGL ES 2
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s implement a thin abstraction layer on top of OpenGL 3 and OpenGL ES
+    2, to make our high-level code unaware of the particular GL version that our application
+    runs on. This means that our game code can be completely unaware whether it runs
+    on a mobile or a desktop version of OpenGL. Take a look at the following diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Unifying the OpenGL 3 core profile and OpenGL ES 2](img/7785_06_1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: The part that we are going to implement in this chapter is within the **High-level
+    API** rectangle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In [Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
+    a Virtual Filesystem*, we created an example `3_AsyncTexture`, where we learned
+    how to initialize OpenGL ES 2 on Android using Java. Now we use `GLView.java`
+    from that example to initialize a rendering context on Android. No EGL from Android
+    NDK is involved, so our examples will run on Android 2.1 and higher.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In the previous recipe, we mentioned the `sLGLAPI` struct. It contains pointers
+    to OpenGL functions that we load at startup dynamically. The declaration can be
+    found in `LGLAPI.h`, and it starts like in the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A variable is defined to hold a pointer to this structure:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This means we have to call all OpenGL functions through pointers contained
+    in `LGL3`. For example, following is the code for `OnDrawFrame()` from the `2_OpenGLES2`
+    example:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: A bit more complicated than a simple `glClear(GL_COLOR_BUFFER_BIT)` call, so
+    why would we need it? Depending on how your application links to OpenGL on different
+    platforms, `glClear`-like entities can be represented in two ways. If your application
+    is linked dynamically to OpenGL, global symbols such as `glClear` are represented
+    by global variables that hold pointers to functions retrieved from a .`DLL/.so`
+    library. Your application might also be statically linked against some OpenGL
+    wrapper library, exactly how it is done on Android with the `-lGLESv2` and `-lGLESv3`
+    switches in `LOCAL_LDLIBS`. In this case, `glClear()` will be a function, not
+    a variable, and you will not be able to change the code it contains. Furthermore,
+    things get more complicated if we look at certain OpenGL 3 functions, for example,
+    `glClearDepth(double Depth)`, only to find out that OpenGL ES 2 has no direct
+    equivalent for them. That is why we need a collection of pointers to OpenGL functions
+    we can change at will.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'On Android, we define a thunk function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This function emulates the `glClearDepth()` call of OpenGL 3 using the `glClearDepthf()`
+    call of OpenGL ES 3\. Now things are simple again. There are some GL3 functions
+    that cannot be trivially emulated on GLES3\. We can now easily implement empty
+    stubs for them, for example:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Unimplemented features in this case will disable some rendering capabilities;
+    but the application will run fine, while gracefully degrading on GLES2\. Some
+    more complicated aspects, such as multiple render targets using `glBindFragDataLocation()`,
+    will still require us to select different shader programs and code paths for OpenGL
+    3 and OpenGL ES 2\. However, this is now doable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `sLGLAPI` binding code is implemented in the `GetAPI()` function. The Windows
+    version that was described in previous recipes was simple `.DLL` loading code.
+    The Android version is even simpler. Since our application is linked statically
+    with the OpenGL ES 2 library, we just assign function pointers to the fields of
+    `sLGLAPI`, except the calls that are not present in OpenGL ES 2:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Instead, we use stubs for them, as described previously:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now the usage of OpenGL is entirely transparent, and our application is completely
+    unaware of what flavor of OpenGL is actually in use. Look at the `OpenGL3.cpp`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code runs identically on Windows and Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The Android version of the `2_OpenGLES2` example can be built with the following
+    commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Running the app will paint the entire screen in red, and output the surface
+    size into the system log:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are other differences in OpenGL 3 Core Profile, OpenGL ES 2, and OpenGL
+    ES 3 that cannot be abstracted by mimicking all of the API function calls. This
+    includes different syntax of GLSL shaders, and the mandatory usage of vertex array
+    objects (VAO) in OpenGL 3.2 Core Profile, which are absent from OpenGL ES 2.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Unifying the GLSL 3 and GLSL ES 2 shaders
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manipulating geometry
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unifying vertex arrays
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a wrapper for textures
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Initializing the OpenGL 3 core profile on Windows
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: OpenGL 3.0 introduced the idea of features deprecation. Some features could
+    be marked as deprecated and could be removed from the specification in later versions.
+    For example, immediate mode rendering via `glBegin` `()/glEnd` `()` was marked
+    as deprecated in OpenGL standard Version 3.0 and removed in Version 3.1\. However,
+    many OpenGL implementations retain the deprecated functionality. For example,
+    they want to be able to provide a way for users of modern OpenGL versions to access
+    the features from old APIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Starting from the OpenGL Version 3.2, a new mechanism was introduced to allow
+    the user to create a rendering context of particular version. Each version allows
+    **backwards-compatible**, or **core profile** contexts. A backwards-compatible
+    context allows the use of all features marked as deprecated. The core profile
+    context removes the deprecated functionality, making the API cleaner. Furthermore,
+    the OpenGL 3 core profile is much closer to the mobile OpenGL ES 2 than previous
+    OpenGL versions. Since the goal of this book is to provide a way to develop mobile
+    applications on a desktop, this similarity in feature sets will come in handy.
+    Let's find out how we can create a core profile context manually on Windows.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For readers with Unix or Mac desktop computers, we recommend using the GLFW
+    library for OpenGL context creation, available at [http://www.glfw.org](http://www.glfw.org).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: More information on core and compatibility context can be found on the official
+    OpenGL page at [http://www.opengl.org/wiki/Core_And_Compatibility_in_Contexts](http://www.opengl.org/wiki/Core_And_Compatibility_in_Contexts).
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There is an OpenGL extension named `WGL_ARB_create_context` that can create
+    an OpenGL context of a specific version on Windows, which is available at [http://www.opengl.org/registry/specs/ARB/wgl_create_context.txt](http://www.opengl.org/registry/specs/ARB/wgl_create_context.txt).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The trick is that we can get a pointer to the `wglCreateContextAttribsARB()`
+    function, which can create a core profile context, only from an existing valid
+    OpenGL context. This means we have to initialize OpenGL twice. Firstly, we create
+    a temporary compatibility context using `glCreateContext()` and retrieve a pointer
+    to the `wglCreateContextAttribsARB()` extension function. Then, we go ahead and
+    use the extension function to create an OpenGL context of the specified version
+    and with the desired flags. The following is the code we use to create an OpenGL
+    rendering context:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `sLGLAPI` structure contains pointers to all the OpenGL functions we use.
+    Read the previous recipe *Unifying the OpenGL 3 core profile and OpenGL ES 2*
+    for implementation details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The first time this function is called, it reaches the `else` block and creates
+    an OpenGL backwards-compatible context. When you retrieve a valid pointer to the
+    `wglCreateContextAttribsARB()` function, save it in the `sLGLAPI` structure, and
+    call `CreateContext()` again. This time the first `if` block takes control:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `lglCreateContext()` call is just a wrapper for an OS-specific API call,
+    `wglCreateContext()` in this case:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This function is wrapped into the `CreateContextFull()` function, which selects
+    an appropriate pixel format and makes the context current:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: It returns the created OpenGL rendering context, `HGLRC` on Windows, and updates
+    pointers in `LGL3` structure to correspond to the created context.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The previously described function has many side effects, and some functional
+    programmers claim it is inconsistent. Another approach is to return a new `HGLRC`
+    together with the new `LGL3` (or as a part of new `LGL3`), so you can make it
+    current later at your own will, and still has an access to the old context. We
+    will leave this idea as an exercise for the reader.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: The function `Reload()`, previously mentioned, reloads pointers to OpenGL functions
+    in the `sLGLAPI` structure. This indirection is important since we need to emulate
+    the behavior of some OpenGL 3 functions on OpenGL ES 2.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Pixel format selection also uses another OpenGL extension: `WGL_ARB_pixel_format`
+    available at [http://www.opengl.org/registry/specs/ARB/wgl_pixel_format.txt](http://www.opengl.org/registry/specs/ARB/wgl_pixel_format.txt).'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'That means we have to choose and set the pixel format twice. The code is as
+    follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Try to use the extension if the valid pointer is available:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Alternatively, fall back to the pixel format selection function provided by
+    WinAPI:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `Reload()` function loads `opengl32.dll` and gets pointers to certain WGL
+    ([http://en.wikipedia.org/wiki/WGL_(API)](http://en.wikipedia.org/wiki/WGL_(API)))
+    functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `GetAPI()` function is much bigger but still trivial. The following are
+    just a few lines to give you the idea:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The complete source code is in the `1_OpenGL3` folder. You can build it with
+    `make`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This example opens a window with a red background and prints lines similar
+    to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: The OpenGL context version matches the version specified in the call to `glCreateContextAttribsARB()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Setting a pixel format of a window more than once is not allowed in WinAPI.
+    Hence, we use a temporary invisible window to create the first rendering context
+    and retrieve the extensions. Check out the file `OpenGL3.cpp` from the `1_OpenGL3`
+    example for further implementation details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Unifying the OpenGL 3 core profile and OpenGL ES 3*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Initializing OpenGL ES 2 on Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Initialization of OpenGL on Android is straightforward when compared to Windows.
+    There are two possibilities to create an OpenGL rendering context in the Android
+    NDK: use EGL API ([http://en.wikipedia.org/wiki/EGL_(API)](http://en.wikipedia.org/wiki/EGL_(API)))
+    from NDK directly, or create a wrapper Java class based on `android.opengl.GLSurfaceView`.
+    We will choose the second option.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Make yourself familiar with the interface of the `GLSurfaceView` class at [http://developer.android.com/reference/android/opengl/GLSurfaceView.html](http://developer.android.com/reference/android/opengl/GLSurfaceView.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We extend the `GLSurfaceView` class in the following way:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `init()` method selects the `RGB_888` pixel format for a frame buffer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This inner class performs EGL calls to create an OpenGL rendering context:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `ConfigChooser` class deals with pixel formats. We omit all error checks
+    here in the book; however, a more robust implementation can be found in the `GLView.java`
+    file of the `2_OpenGLES2` example:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Default values for our pixel format chooser are:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Allocate and read the array of minimally matching EGL configurations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Choose the best matching one:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Select configurations with the specified values for depth buffer and stencil
+    buffer bits:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We need at least `mDepthSize` and `mStencilSize` bits for depth and stencil:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We want an exact match for red/green/blue/alpha bits:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Use the helper method to look for matching configurations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Renderer` class delegates frame rendering callbacks to our NDK code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Frame rendering callbacks are declared in `App13Activity.java`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'They are JNI calls that are implemented in the `Wrappers.cpp` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Allocate a new `sLGLAPI` structure and reload the pointers to OpenGL functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Update the surface size. We don''t need to do anything else here, since `SetSurface()`
+    will be called right after it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Invoke our platform-independent frame rendering callback:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now we can put out rendering code in the `OnDrawFrame()` callback and use it
+    on Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To use the previously discussed code, you have to add this line into the `AndroidManifest.xml`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Furthermore, you have to link your native application with either OpenGL ES
+    2 or the OpenGL ES 3 library. Put the `-lGLESv2` or `-lGLESv3` switch into your
+    `Android.mk` file, like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: There is a third possibility to do it. You can omit static linking, open the
+    `libGLESv2.so` shared library via the `dlopen()` call, and retrieve pointers to
+    OpenGL functions using the `dlsym()` function. This is useful if you are developing
+    a versatile renderer for OpenGL ES 2 and OpenGL ES 3, and want to tune everything
+    at runtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Unifying the OpenGL 3 core profile and OpenGL ES 2*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unifying the GLSL 3 and GLSL ES 2 shaders
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: OpenGL 3 provides support for OpenGL Shading Language. In particular, OpenGL
+    3.2 Core Profile supports the GLSL 1.50 Core Profile. On the other hand, OpenGL
+    ES 2 provides support for GLSL ES Version 1.0, and OpenGL ES 3 supports GLSL ES
+    3.0\. There are minor syntax differences between these three GLSL versions, which
+    we have to abstract in order to write portable shaders. In this recipe, we will
+    create a facility to downgrade desktop OpenGL shaders, to become shaders compatible
+    with OpenGL ES Shading Language 1.0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: OpenGL ES 3 has backwards-compatible support for OpenGL ES Shading Language
+    1.0\. For this purpose, we put `#version 100` at the beginning of our shaders.
+    However, if your application targets only the most recent OpenGL ES 3, you can
+    use the marker `#version 300 es` and avoid some conversions. Refer to the specification
+    of OpenGL ES Shading Language 3.0 for more details at [http://www.khronos.org/registry/gles/specs/3.0/GLSL_ES_Specification_3.00.4.pdf](http://www.khronos.org/registry/gles/specs/3.0/GLSL_ES_Specification_3.00.4.pdf).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Specifications of different GLSL language versions can be downloaded from the
+    official OpenGL website at [http://www.opengl.org](http://www.opengl.org). The
+    GLSL 1.50 specification is found at [http://www.opengl.org/registry/doc/GLSLangSpec.1.50.09.pdf](http://www.opengl.org/registry/doc/GLSLangSpec.1.50.09.pdf).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Specifications for GLSL ES can be downloaded from the Khronos website at [http://www.khronos.org](http://www.khronos.org).
+    The GLSL ES 1.0 specification is available at [http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf).
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s take a look at two sets of simple vertex and fragment shaders. The one
+    for GLSL 1.50 is:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'And the other pair of shaders is for GLSL ES 1.0:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The following table is the summary of some differences between three versions
+    of OpenGL API, which need abstracting:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '|   | OpenGL 3 | OpenGL ES 2 | OpenGL ES 3 |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| Version definition | #version 150 core | #version 100 | #version 300 es |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| Explicit floats precision | not required | required | not required |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| Keywords for varyings and attributes | in and out | varying and attribute
+    | in and out |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| Fixed-function fragment data location | no, customizable | gl_FragColor |
+    no, customizable |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: '| 2D texture fetching | texture(), overloaded | texture2D() | texture(), overloaded
+    |'
+  prefs:
+  - PREF_IND
+  type: TYPE_TB
+- en: 'Let''s implement conversion rules in the following code to downgrade GLSL 1.50
+    shaders to GLSL 1.0:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This kind of search and replace implies some restrictions on the shaders source
+    code. For example, it will invalidate shaders containing identifiers such as `grayin`
+    and `sprout`. However, the code above is very simple and was used successfully
+    in a couple of released commercial projects.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: We store our shaders in GLSL 1.5 source code and just do a simple search and
+    replace to use them on Android. It is very easy and transparent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The complete implementation is presented in the `clGLSLShaderProgram` class
+    from the `3_ShadersAndVertexArrays` example. After the code is downgraded, in
+    case of need, it is uploaded into OpenGL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `CheckStatus()` function performs error checks and logs a specified error
+    message on failure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`OldShaderID` retains the previous compiled shader. It is used to allow the
+    editing of shaders on-the-fly on a PC and prevents loading of invalid shaders.
+    After the vertex and fragment shaders have compiled, a shader program should be
+    linked:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The same should also be done to the shader program. Replace the old program
+    only if the program was linked successfully:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have to bind the default locations of different attributes that we will
+    use throughout our renderer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The meaning of the `L_VS_` identifiers is explained in the recipe *Manipulating
+    geometry*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: The shader program can now be used for rendering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'During rendering, we can specify the location of additional uniforms by name
+    and ask the underlying OpenGL API to bind uniforms by name. However, it is more
+    convenient to do it in our own code, since we can omit the redundant OpenGL state
+    change calls. The following is the listing of the `RebindAllUniforms()` method
+    that will get locations of all the active uniforms of a shader program and save
+    them for the further use:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`sUniform` is a `struct` holding a single active uniform:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is used in numerous `SetUniformName()`functions to set the values of uniforms
+    by name at runtime without touching OpenGL API to resolve the names.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Manipulating geometry*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Unifying vertex arrays*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Creating a canvas for immediate rendering*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manipulating geometry
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
+    a Virtual Filesystem*, we created the `Bitmap` class to load and store bitmaps
+    in an API-independent way. Now we will create a similar abstraction for geometry
+    data representation that we will later use to submit vertices and their attributes
+    to OpenGL.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before we proceed with the abstraction, let's take a look at how the vertex
+    specification in OpenGL works. Submitting vertex data to OpenGL requires you to
+    create different **vertex streams**, and specify ways of their interpretation.
+    Refer to the tutorial if you are unfamiliar with this concept at [http://www.opengl.org/wiki/Vertex_Specification](http://www.opengl.org/wiki/Vertex_Specification).
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We have to decide which **vertex attributes**, or vertex streams, we will store
+    in our **mesh**. Let's assume that for a given vertex we need a position, texture
+    coordinates, a normal, and a color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following are the names and indices of these streams:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: One may require additional texture coordinates, for example, for multi texturing
+    algorithms, or additional attributes, such as tangents, binormals, or bones and
+    weights for hardware-accelerated GPU skinning. They can be easily introduced using
+    these semantics. We leave it as an exercise for the reader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s define the number of float components for each attribute:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This means positions and normals are represented as `vec3`, texture coordinates
+    as `vec2`, and colors as `vec4`. We need this information to correctly define
+    types in OpenGL shader programs and submit the vertex data. The following is the
+    source code of a rendering API-independent container we use for vertex attributes:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We need a method to map our vertex attributes to enumerated streams:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We also need some helper methods to construct the geometry:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Actual data holders are made `public` for convenience:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To use `clVertexAttribs` and populate it with useful data, we declare a few
+    helper functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following is an example definition of one of these:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Restart the regeneration and allocate space for `3` vertices:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: The complete source code for these functions is found in the `GeomServ.cpp`
+    file in the `3_ShadersAndVertexArrays` project. Now we have a set of handy functions
+    to create simple 2D and 3D geometry primitives, such as single triangles, rectangles,
+    and boxes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If you want to learn how to create more complex 3D primitives, download the
+    source code for Linderdaum Engine ([http://www.linderdaum.com](http://www.linderdaum.com)).
+    In `Geometry/GeomServ.h`, you will find out how to generate spheres, tubes, polyhedra,
+    gears, and other 3D objects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Unifying vertex arrays*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unifying vertex arrays
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Geometry data is submitted into OpenGL using Vertex Buffer Objects (**VBO**)
+    and Vertex Array Objects (**VAO**). VBOs are part of both OpenGL versions; however,
+    VAOs are not part of OpenGL ES 2 but are mandatory in the OpenGL 3.2 Core Profile.
+    This means we have to make yet another abstraction to hide the difference between
+    the two APIs behind it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*A **Vertex Buffer Object** (**VBO**) is an OpenGL feature that provides methods
+    for uploading vertex data (position, normal vector, color, and so on) to the video
+    device for non-immediate-mode rendering. VBOs offer substantial performance gains
+    over immediate mode rendering, primarily because the data resides in the video
+    device memory rather than the system memory and so it can be rendered directly
+    by the video device.*'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Courtesy: [http://en.wikipedia.org/wiki/Vertex_Buffer_Object](http://en.wikipedia.org/wiki/Vertex_Buffer_Object)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '*A **Vertex Array Object** (**VAO**) is an OpenGL Object that encapsulates
+    the state needed to specify vertex data. They define the format of the vertex
+    data as well as the sources for the vertex arrays. VAOs do not contain the arrays
+    themselves; the arrays are stored in Buffer Objects. The VAOs simply reference
+    already existing buffer objects.*'
+  prefs:
+  - PREF_BQ
+  type: TYPE_NORMAL
+- en: 'Courtesy: [http://www.opengl.org/wiki/Vertex_Specification](http://www.opengl.org/wiki/Vertex_Specification)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before proceeding with vertex arrays, make sure you are familiar with the platform-independent
+    storage of geometry from the previous recipe. The source code for this recipe
+    can be found in the `4_Canvas` example. Take a look at the `GLVertexArray.cpp`
+    and `GLVertexArray.h` files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Our vertex arrays are hidden behind the interface of the `clGLVertexArray`
+    class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Offsets for VBO are stored through the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE61]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The following are the pointers to the actual data of the attached `clVertexAttribs`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE62]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `clVertexAttribs` should be attached to our vertex array using the `SetVertexAttribs()`
+    method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE63]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We have to remove any old vertex buffer objects before using the `FVBOID` again
+    in order to allow the reuse of `clGLVertexArray`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE64]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Calculate the size of a vertex buffer object and allocate it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE65]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Submit data for every vertex attribute:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE66]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here we create VAO if we are not on Android:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE67]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: VAOs can be used with OpenGL ES 3\. We leave their implementation as a simple
+    exercise to the reader. This can be done by using the OpenGL 3 code path for OpenGL
+    ES 3.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `Bind()` method does the actual job of binding the vertex buffer object
+    and preparing the attribute pointers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE68]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we can render the geometry via the `Draw()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE69]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Again, there is `#define` to disable VAO on Android. The following is a screenshot
+    of the `3_ShadersAndVertexArrays` example, which renders an animated rotating
+    cube using the techniques from all of the previous recipes in this chapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works…](img/7785_06_2.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We always assume that every vertex attribute (position, texture coordinate,
+    normal, and color) exists in the geometry data in all of our examples. Indeed,
+    this is always true for our implementation of `clVertexAttribs`. However, in more
+    complicated cases, where you might need many more vertex attributes, for example,
+    binormals, tangents, bone weights, and so on, it is wise not to allocate memory
+    for unused attributes. This can be done by modifying the `clVertexAttribs::EnumerateVertexStreams()`
+    member function and adding NULL-checks to `Bind()` and `SetVertexAttribs()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Manipulating geometry*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a wrapper for textures
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In previous chapters, we already used OpenGL textures to render an offscreen
+    framebuffer on the screen. However, that code path works on Android only and cannot
+    be used on a desktop. In this recipe, we will create a wrapper for textures to
+    make them portable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Take a look at the `GLTexture.cpp` and `GLTexture.h` files from `4_Canvas`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s declare a class to hold an OpenGL texture. We need only two public operations:
+    loading the pixel data from a bitmap, and binding the texture to a specified OpenGL
+    texture unit:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE70]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The interface of the class is very simple, since textures management is almost
+    identical in OpenGL ES 2 and OpenGL 3\. All the differences lie in the implementation.
+    The following code shows how we bind a texture:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE71]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We load a texture from a bitmap through the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE72]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Not all texture wrapping modes are supported in OpenGL ES 2\. Particularly,
+    `GL_CLAMP_TO_BORDER` is unsupported:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE73]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'There is a helper function `ChooseInternalFormat()`, that we use to select
+    the appropriate OpenGL image formats for our bitmap, either RGB or RGBA. The implementation
+    looks like the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE74]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This also happens with RGBA bitmaps that contain an alpha channel:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE75]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This function can be easily extended to work with grayscale, float, and compressed
+    formats.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Using our texture wrapper is straightforward:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE76]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, `g_FS` is a `FileSystem` object that we created in [Chapter 5](ch05.html
+    "Chapter 5. Cross-platform Audio Streaming"), *Cross-platform Audio Streaming*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The texture loading we have dealt with so far is synchronous and is performed
+    on the main rendering thread. This is acceptable if we only have a few bitmaps
+    to load. The real-world approach is to load and decode images asynchronously,
+    on another thread and then call `glTexImage2D()` and other related OpenGL commands
+    only on the rendering thread. We will learn how to do this in [Chapter 9](ch09.html
+    "Chapter 9. Writing a Picture Puzzle Game"), *Writing a Picture Puzzle Game*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
+    a Virtual Filesystem*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[Chapter 9](ch09.html "Chapter 9. Writing a Picture Puzzle Game"), *Writing
+    a Picture Puzzle Game*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a canvas for immediate rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the previous recipes, we learned how to make abstractions for main OpenGL
+    entities: vertex buffers, shader programs, and textures. This basis is enough
+    to render many sophisticated effects using OpenGL. However, there are a lot of
+    tiny rendering tasks where you need to render only one triangle or a rectangle
+    with a single texture, or render a fullscreen quad with a specific shader to apply
+    some image-space effect. In this case, the code for managing buffers, shaders,
+    and textures may become a serious burden. Let''s organize a place for such a helper
+    code, that is, a canvas that will help us to render simple things in a single
+    line of code.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This recipe uses the `clGLSLShaderProgram`, `clGLTexture`, and `clGLVertexArray`
+    classes described in the previous recipes to hide the differences between OpenGL
+    ES 2 and OpenGL 3\. Read them carefully before proceeding.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We first define a `clCanvas` class as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE77]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We store some OpenGL-related entities right here:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE78]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Before we can use the canvas, we have to construct it. Note `FRect` is created
+    as a fullscreen quad:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE79]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We remap the coordinates of `FRect` in the following vertex shader, so that
+    they match the user-specified dimensions:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE80]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The actual dimensions, specified as the top-left and bottom-right corners of
+    the rectangle, are passed as `xyzw` components of the `u_RectSize` uniform. A
+    simple arithmetic does the rest. The fragment shader is very simple. Indeed, we
+    need to apply just a solid color from the uniform:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE81]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Alternatively, apply an additional color from a texture:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE82]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We use the `clGLSLShaderProgram` class from the previous recipes to set up shader
+    programs. It hides the syntax differences between OpenGL ES 2 and OpenGL 3, so
+    we can store only one version of each shader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You may want to implement a similar wrapper for OpenGL ES 3 as an exercise.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The actual rendering code inside the canvas is very simple. Bind textures and
+    the shader program, set the values of uniforms, and draw the vertex array:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE83]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Here we always enable and disable blending. This causes a redundant state changes.
+    A better approach is to save the value of the previously set blending mode and
+    toggle it only when necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The complete source code is in the `Canvas.cpp` and `Canvas.h` files from the
+    `4_Canvas` project. Usage of the canvas is trivial. For example, use this one-liner
+    call to render a semi-transparent magenta rectangle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE84]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The example `4_Canvas` shows you how to use the canvas, and produces an image
+    similar to the following diagram, which shows overlays rendering using `Canvas`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works…](img/7785_06_3.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The canvas is a placeholder for different immediate rendering functions. In
+    the next two chapters, we will augment it with other methods to render the user
+    interface of our games.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Unifying the OpenGL 3 core profile and OpenGL ES 2*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Unifying the GLSL 3 and GLSL ES 2 shaders*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Unifying vertex arrays*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '*Creating a wrapper for textures*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

@@ -1,0 +1,439 @@
+- en: Performance Considerations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapters, we have been talking briefly about performance and,
+    for example, avoiding doing some operations using the `onDraw()` method. But we
+    haven't covered in detail why you should follow these recommendations and what
+    the real impact of not following these best practices is to the custom view and
+    to the application using it. Many of the things we will explain here might seem
+    common sense, and indeed they should be, but sometimes we might not think about
+    them, or we may not know or be aware of the real impact that it might have on
+    the application, both from a performance point of view and regarding battery consumption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will address these points and we will look at the following
+    topics in more detail:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recommendations and best practices
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The impact on the app when performance is not taken into account
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Code optimizations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Performance impact and recommendations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we've just said, unless we have suffered it or we are supporting a low-end
+    or really old device, we might not even be aware of what the impact is of not
+    following the performance recommendations or best practices. If we are using a
+    high-end device to test what are we currently developing, we might not see how
+    it performs on a low-end device, and most probably there will be more downloads
+    or more users using it on medium or low-end devices. It is almost the same as
+    when we develop a network-connected piece of software with a nice and reliable
+    Wi-Fi connection, or have an unlimited 4G network. The experience might not be
+    the same for those with a limited or metered connection, and for especially those
+    still on a 2G network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is important, in both cases, to take all our target users into account and
+    test under several scenarios, with different devices and hardware.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The impact of not following the best practices
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the recommendations we have been giving during these last chapters is
+    to avoid allocating objects in the `onDraw()` method. But what will happen if
+    we start allocating objects?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s create a simple custom view and allocate an object on purpose so we
+    can evaluate the result when running the app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this quick example, we are allocating several things within the `onDraw()`
+    method, from the `Paint` objects, to the `Rect` objects, to creating a new `bitmap`,
+    which allocates internal memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we run this code, we''ll get a rotating white rectangle in the middle of
+    the screen, as in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/cfb6fc4b-3ea8-44da-a6a3-1fb33a15e297.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'In addition, we will not only get a similar view. If we check the logcat logs
+    when our application is running, we might get lines similar to these:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: We might even get them several times during the application execution. This
+    is the Android run-time's (ART's) garbage collector kicking in to clean unused
+    objects to free up some memory. As we are continuously creating new objects, the
+    VM triggers the garbage collector to free up some memory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'More information about garbage collection can be found at the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Luckily, Android Studio already shows us, quite clearly, that we are doing
+    something wrong inside our `onDraw()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/086755ce-57d4-42e6-8888-aa6a6a597b59.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: It also shows us what it might cause if we don't follow this recommendation.
+    In this case, if the garbage collector kicks in, in the middle of a scroll or
+    drawing, we might get some stuttering or, simply, a smooth animation might be
+    seen as jumpy or not as smooth as it should be.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Check the full source code of this example, which shouldn't be followed, in
+    the `Example30-Performance` folder in the GitHub repository. Please use it as
+    an example of what should be avoided.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Code optimization
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Allocating objects is not the only thing we should take into consideration
+    when thinking about performance in our custom view. The amount of calculations,
+    the type of calculations, the amount of primitives we are drawing, the amount
+    of overdrawing, and the list of things we should check, is pretty big. In the
+    end, most things are common sense: just don''t recalculate values that we already
+    have and maximize parts of the code that can be skipped if there are no changes
+    required or, basically, try to reuse as much as possible what has been calculated
+    on previous frames.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's compare two methods that convert YUV pixel data to RGB. It is not the
+    most typical thing you'll have to do in a custom view, but it's perfect to show
+    how performance can be impacted by reusing as much as we can and not recalculating
+    what doesn't have to be recalculated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When getting frames from the camera viewfinder in Android, they are usually
+    in YUV format instead of RGB. More information about YUV can be found at the following
+    URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://en.wikipedia.org/wiki/YUV](https://en.wikipedia.org/wiki/YUV).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will start with a straightforward code and we will optimize it step by step
+    to evaluate the impact of all the optimizations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This version is based on the YUV-to-RGB converter, found at the following URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://searchcode.com/codesearch/view/2393/](https://searchcode.com/codesearch/view/2393/)
+    and'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://sourceforge.jp/projects/nyartoolkit-and/](http://sourceforge.jp/projects/nyartoolkit-and/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We've used the floating point version here so that we can see, later on, the
+    differences with the fixed point version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s create a small custom view that will transform, in every frame,
+    a YUV image to an RGB, set it into a `Bitmap`, and draw it on the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s also add a code to check the number of frames per second that our small
+    code will manage to draw. We will use this measurement to check the performance
+    improvements on the optimizations we''ll be doing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we run this code as it is, on my device it measures 1.20 frames per second.
+    The demo image used is a *1,000x1,500* image. Let's see what we can do to improve
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To start, we can remove some unnecessary calculations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we've removed the two calculations of the pixel position and we are doing
+    it by just a single increment at each pixel. In the previous case, it was doing
+    the calculation `i * width + j` both for reading the `yuvData` and writing to
+    `rgbData`. If we check the frames per second counter after this change, we'll
+    notice it has slightly increased to 1.22\. Not a huge improvement, but it's a
+    start.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, we can see in the original implementation, the one used in the Android
+    SDK, that the floating point operations are commented out in favor of fixed point
+    operations. Floating point operations are usually costlier than plain integer
+    operations. The performance of floating point operations has been improving quite
+    a lot these last years with all the new hardware, but integer operations are still
+    faster. We will not be able to get the same precision as with floating point operations,
+    but we can get quite a good approximation by using fixed-point arithmetic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'More information about fixed-point arithmetic can be found at the following
+    URL:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://en.wikipedia.org/wiki/Fixed-point_arithmetic](https://en.wikipedia.org/wiki/Fixed-point_arithmetic).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When using fixed-point arithmetic, we have to define the number of bits of an
+    integer value that will be used as the fixed point precision. The remaining bits
+    will be used to actually store the integer value. Obviously, we'll have more precision
+    as more bits we use to store it but, on the other hand, we'll have less bits to
+    store the integer value. The idea is to multiply all constants and operations
+    by a power of two number and, after doing all the operations, divide the result
+    by the same number. As it's a power of two, we can easily perform a fast bitwise
+    shift right operation instead of a costly divide.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For example, if we used a fixed point precision of 10 bits, we have to multiply
+    all values by *1,024* or shift them 10 bits to the left and, at the end of all
+    calculations, perform a right shift of 10 bits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s apply this to these operations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We are transforming them into the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can check that *1.164 * 1,024* is `1192` rounded up, and the same applies
+    to all the other constants-we rounded the numbers to get the most valid approximation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For the same reason, we have to change the following checks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have to change the check with *255*255* multiplied by *1,024* of shifted
+    `10` positions to the left:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Add the division by *1,024* or right shift by `10` before using the values
+    to output the color:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Implementing these changes, even if we have added some more operations compared
+    to the floating point version, improves our frames per second counter to *1.55*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Another small optimization we can do is to avoid calculating the `luminance`
+    factor of every component, as it''s the same in each case. So let''s replace this
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With this one, which only calculates the `luminance` once:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: This should be optimized by most compilers; I'm not sure what the new compilers
+    D8 and R8 will do, but with the current Java/Android tooling, it isn't optimized.
+    By making this small change, we increase the frames per second counter to *1.59*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The way this YUV file format works is that a pair of `U` and `V` chroma values
+    are shared for two `luminance` values, so let''s try to use this to our advantage
+    to compute two pixels at the same time, avoiding additional checks and code overhead:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are now just calculating the chroma components once, and we've removed the
+    check to get new `U` and `V` components only every two pixels. Doing these changes
+    increased our frames per second counter to *1.77*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As Java bytes range from -128 to 127, we''ve added some checks for negative
+    numbers, but instead of doing these checks, we can do a quick bitwise AND operation
+    (`&`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'That small change slightly increased our frames per second counter to *1.83*.
+    But we can still optimize it a bit more. We have used `10` bits of fixed-point
+    arithmetic precision, but, in this particular case, we might have enough using
+    `8` bits of precision. Changing from `10` bits of precision to only `8` will save
+    us one operation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've updated all the constants to be multiplied by `256` instead of *1,024*,
+    and we've updated the checks. The constant `65280` that appears on the code is
+    `255` multiplied by `256`. On the part of the code that we are shifting the values
+    to in order to get the actual color components, we have to shift right the red
+    component by `8` and shift it left by `16` to adjust it to the ARGB position in
+    the color component, so we can just do one single shift operation of `8` bits
+    left. It's even better on the green coordinate-we have to shift it right by `8`
+    and shift it left by `8`, so we can leave it as it is and not shift it at all.
+    We still have to shift right the blue component by `8` positions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also had to update the masks to check that every component stays between
+    its 0-255 range, but now the masks are shifted by the right bit position `s0x00ff0000`,
+    `0x0000ff00`, and `0x000000ff`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This change marginally improved our frames per second counter to *1.85*, but
+    we can still go further. Let''s try to get rid of all the shifts, checks, and
+    masks. We could do that by using some pre-calculated tables that we''ll calculate
+    once at the creation of our custom view. Let''s create this function to pre-calculate
+    everything we need:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are calculating the values for `luminance`, all chroma components, and finally
+    the clipped, shifted, and masked values for everything. As `luminance` and some
+    chromas might be negative, we've added a *+*`300` value to the `luminance` value,
+    as it'll be added to all values, and then adapted the `clipValues` tables to take
+    that `300` offset into account. Otherwise, we might try to index an array with
+    a negative index, and that would make our application crash. Checking whether
+    the index is negative before accessing the array will kill all the performance
+    optimizations, as we are trying to get rid, as much as possible, of all operations
+    and checks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using these tables, our YUV-to-RGB converter code is reduced to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: With these changes, we get a *2.04* frames per second counter, or a *70%* increase
+    of performance, compared with the original method. Anyway, this is only an example
+    of how code can be optimized; if you really want to convert, in real-time, a YUV
+    image to RGB, I suggest that you either check out a native C or C++ implementation
+    or go for a GPU or render script approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, if we run this application, we will get a screen similar to the following
+    screenshot. We are not scaling or applying any additional transformation to the
+    image, as we just wanted to measure the amount of time that it takes to transform
+    from a YUV image to an RGB image. Your screen image might differ depending on
+    the screen size and your device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/53a62ad7-ada2-4617-be51-6c276d395892.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Check the whole example source code in the `Example31-Performance` folder in
+    the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are many other things to take into consideration when talking about performance.
+    If you want to know more details about how Java code is translated into dexbyte
+    code and executed in the Android VM, check out the following presentation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://www.slideshare.net/RaimonRls/the-bytecode-mumbojumbo](https://www.slideshare.net/RaimonRls/the-bytecode-mumbojumbo).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mocking up the preview window
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When previewing our custom views on Android Studio, there are some occasions
+    when calculations can be very complex or, for example, we need some data initialized,
+    but we can't do that while showing our custom view inside the preview window of
+    Android Studio. We'll be able to do something about this by checking the is `InEditMode()`
+    method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This method will return true if we are inside an IDE or a development tool.
+    Knowing this information, we could easily mock some of the data or simplify the
+    rendering to just show a preview of what we want to draw.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, in the `Example07-BuilderPattern` folder in the GitHub repository,
+    we are calling this method at the custom view creation to alter the color values
+    used in the gradient, although we could actually call it during the `onDraw()`
+    method as well, to alter the rendering of the view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/caf6b140-52e3-494b-8ca1-e8a86b627326.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have seen what the impact is of not following the performance
+    recommendations and why there is a set of best practices and things we should
+    avoid when implementing our own custom view. We have also seen how to improve
+    or optimize a code for performance and how to tweak or customize a view to render
+    a preview on the Android Studio IDE preview window.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we will see in the next chapter, whether our custom view is used by other
+    people or even by ourselves shouldn't make a difference. It should not make the
+    application using it crash or misbehave because of it. Like including a third-party
+    library, it should never crash our application, as otherwise, we will most probably
+    stop using it and replace it with another library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, in the next chapter, we will not only see how to apply these recommendations,
+    but also how to make our custom view reusable with many applications, and how
+    to share it or open source it so it can be widely used within the Android community.
+  prefs: []
+  type: TYPE_NORMAL

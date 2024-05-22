@@ -1,0 +1,1506 @@
+- en: Chapter 2. Porting Common Libraries
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compiling the native static libraries for Windows
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Compiling the native static libraries for Android
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Compiling the libcurl networking library
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Compiling the OpenAL library
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Compiling libvorbis, libmodplug, and libtheora
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using the FreeImage graphics library
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using FreeType library for text rendering
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing timing in physics
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Rendering graphics in 2D
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up Box2D simulations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building the ODE physical library
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter explains how to port existing popular C/C++ libraries to Android
+    using **Android NDK**. These libraries are widely used to implement feature-rich
+    applications with graphics, sounds, and physical simulations entirely in C++.
+    There is not much fun in simply compiling libraries. So, the parts related to
+    FreeImage, FreeType, and Box2D provide minimal samples to demonstrate the functionality
+    of each library. Audio and networking libraries are discussed in greater detail
+    in the subsequent chapters. We will show you how to compile libraries and, of
+    course, give some short samples and hints on how to start using them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Typical caveats for porting libraries across different processors and operating
+    systems are memory access (structure alignment/padding), byte-order (endianness),
+    calling conventions, and floating-point issues. All the libraries described below
+    address these issues quite well, and even if some of them do not officially support
+    Android NDK, fixing this is just a matter of a few compiler switches.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To build any of the mentioned libraries, we need to create makefile for the
+    Windows version and a pair of the `Android.mk` and the `Application.mk` files
+    for Android NDK. The source files of the library are compiled to object files.
+    A collection of object files is combined into an archive, which is also called
+    a static library. Later, this static library can be passed as an input to the
+    linker. We start with the Windows version because the `Android.mk` and `Application.mk`
+    files are built on top of standard makefiles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compiling the native static libraries for Windows
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To build the Windows version of libraries, we need a C++ compiler. We use MinGW
+    with the GCC toolchain described in [Chapter 1](ch01.html "Chapter 1. Establishing
+    a Build Environment"), *Establishing a Build Environment*. For each library, we
+    have a collection of source-code files, and we need to get the static library,
+    a file with the `.a` extension.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let us assume the `src` directory contains the source code of a library we need
+    to build for Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let us start with writing a makefile:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This line defines a variable with a list of compiler command-line parameters.
+    In our case, we instruct the compiler to search the `src` directory for header
+    files. If the library source code spans across many directories, we need to add
+    the `–I` switch for each of the directories.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Next, we add the following lines for each source file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '`<SourceFile>` should be replaced by the actual name of the `.cpp` source file,
+    and these lines should be written for each of the source files.'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Now, we add the list of object files:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, we write the target for our library:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Every line in the makefile, except the empty lines and the names of the targets,
+    should start with a tabulation character.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'To build the library, invoke the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: When using the library in our programs, we pass the `LibraryName.a` file as
+    a parameter to `gcc`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Makefiles consist of targets similar to subroutines in programming languages,
+    and usually each target results in an object file being generated. For example,
+    we have seen that each source file of the library gets compiled into the corresponding
+    object file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Target names may include the file name pattern to avoid copying and pasting,
+    but in the simplest case, we just list all the source files and duplicate those
+    lines replacing `SourceFile` with the appropriate file names. The `–c` switch
+    after the `gcc` command is the option to compile the source file and `–o` specifies
+    the name of the output object file. The `$(CFLAGS)` symbol denotes the substitution
+    of the value of the `CFLAGS` variable to the command line.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The GCC toolchain for Windows includes the `AR` tool, which is an abbreviation
+    for the archiver. Makefiles for our libraries invoke this tool to create a static
+    version of the library. This is done in the last lines of the makefile.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There’s more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here are some tips for writing makefiles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When a line, with a list of object files becomes too long, it can be split
+    using the backslash symbol like the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: There should be no space after the backslash. It is a limitation of the `make`
+    tool.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Sometimes, comments are required. This can be done by writing a line, which
+    starts with a sharp character:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If the header files for the library do not reside in the same directory as the
+    source files, we have to add those directories to the `CFLAGS` list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compiling the native static libraries for Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android NDK includes a number of GCC and Clang toolchains for each kind of the
+    supported processors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When building a static library from the source code, we follow the steps similar
+    to the Windows version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a folder named `jni` and create the `Application.mk` file with the appropriate
+    compiler switches, and set the name of the library accordingly. For example, one
+    for the FreeImage library should look like the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Android.mk` file is similar to the ones we have written for the sample
+    applications in the previous chapter, yet with a few exceptions. At the top of
+    the file, some required variables must be defined. Let us see what the `Android.mk`
+    file for the FreeImage library may look like:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Define some common compiler options: treat all warnings as errors (`-Werror`),
+    the `ANDROID` pre-processing symbol is defined, and the `system` include directory
+    is set:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The compilation flags are fixed, according to the selected CPU architecture:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Since we are building a static library, we need the following line at the end
+    of the makefile:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Android NDK developers provide their own set of rules to build applications
+    and libraries. In the previous chapter we saw how to build a shared object file
+    with the `.so` extension. Here we just replace the `BUILD_SHARED_LIBRARY` symbol
+    to the `BUILD_STATIC_LIBRARY` and explicitly list the source files required to
+    build each object file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Of course, you can build a shared library and link your application dynamically
+    against it. However, this usually is a good choice when the library is located
+    in the system and is shared between several applications. In our case, since our
+    application is the sole user of the library, the static linking will make it easier
+    to link and debug the project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Compiling the libcurl networking library
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The libcurl library is a de facto standard for native applications, which deal
+    with numerous networking protocols. The libcurl compilation for Android on a Windows
+    host requires some additional steps to be done. We explain them in this recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Download the libcurl source code from the library homepage: [http://curl.haxx.se/libcurl/](http://curl.haxx.se/libcurl/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Since the libcurl library build process is based on `Autoconf`, we will need
+    to generate a `curl_config.h` file before actually building the library. Run the
+    `configure` script from the folder containing the unpacked libcurl distribution
+    package. Cross-compilation command-line flags should be set to:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `-I` parameter of the `CPPFLAGS` variable should point to the `/system/core/include`
+    subfolder of your NDK folder, in our case:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The libcurl library can be customized in many ways. We use this set of parameters
+    (disable all protocols except HTTP):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `configure` script will generate a valid `curl_config.h` header file. You
+    may find it in the accompanying materials.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Further compilation requires a usual set of `Android.mk/Application.mk` files,
+    which is also available in the accompanying materials.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'A simplistic usage example looks like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here `MemoryCallback()` is a function that handles the received data. A minimalistic
+    unsafe implementation to dump a network response to the terminal can be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The retrieved data will be printed on the screen in the Windows application.
+    The same code will work like a dummy in Android, without producing any visible
+    side effects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There’s more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In order to work with SSL-encrypted connections, we need to tell libcurl where
+    our system certificates are located. This can be done with `CURL_CA_BUNDLE` defined
+    in the beginning of the `curl_config.h` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Chapter 3](ch03.html "Chapter 3. Networking"), *Networking*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Compiling the OpenAL library
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: OpenAL is a cross-platform audio library used in many gaming engines. Here are
+    some notes on how to build it for Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Download the source code of the Martins Mozeiko port from his page: [http://pielot.org/2010/12/14/openal-on-android/](http://pielot.org/2010/12/14/openal-on-android/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The home page of the library is as follows: [http://github.com/AerialX/openal-soft-android](http://github.com/AerialX/openal-soft-android).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To render the generated, or saved, audio stream we use the OpenAL library, which
+    is compiled using the standard `Android.mk` and `Application.mk` configuration
+    files included in the accompanying materials.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The Android port of the library is actually a wrapper made by Martins Mozeiko
+    for the Android Java class `android.media.AudioTrack` using the JNI. The code
+    is licensed under the GNU Library General Public License and is included in the
+    book’s supplementary materials.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The minimalistic source code to initialize and deinitialize OpenAL looks as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Chapter 5](ch05.html "Chapter 5. Cross-platform Audio Streaming"), *Cross-platform
+    Audio Streaming*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Compiling libvorbis, libmodplug, and libtheora
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: For the loading of audio streams, we use **libogg**, **libvorbis**, and **libmodplug**.
+    Video streams are handled in a similar way with the **libtheora** library. Here,
+    we only give general hints on how to build the libraries from their sources, since
+    the actual build process is straightforward once you have our typical `Android.mk`
+    and `Application.mk` files in place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Download the sources of libvorbis and libtheora codecs from [http://www.xiph.org/downloads](http://www.xiph.org/downloads)
+    and the libmodplug library from [http://modplug-xmms.sourceforge.net](http://modplug-xmms.sourceforge.net).
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: libvorbis and libtheora both depend on libogg. The compilation of these libraries
+    is straightforward with the provided makefiles and a standard `Android.mk` file
+    with the list of source files.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Makefiles for libvorbis and libtheora libraries must refer to the include directories
+    of libogg.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: libmodplug is an open source tracker music decoder by Olivier Lapicque. We provide
+    a shortened version of his library, with loaders for the most popular tracker
+    file formats. It consists of only three files, and there is an excellent support
+    for Android and Linux. The library does not have any problems with big-endian
+    CPUs.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Using the FreeImage graphics library
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: FreeImage is a portable graphics library that unifies loading and saving of
+    popular image formats, such as JPEG, TIFF, PNG, TGA, high dynamic range EXR images,
+    and many others.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Download the most recent FreeImage source code from the library home page:
+    [http://freeimage.sourceforge.net](http://freeimage.sourceforge.net). We used
+    the Version 3.15.4, released in October 2012.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Both the `Android.mk` and `Application.mk` files are pretty standard. The former
+    should contain this definition of the `GLOBAL_CFLAGS`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Unfortunately, the Android NDK runtime library is missing the `lfind()` function
+    used inside FreeImage (in the LibTIFF4 library, which is used in FreeImage). Here
+    is its implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, a single command will do the job:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'An image is a 2D array represented as a collection of raw pixel data, but there
+    are too many ways to store this array: there might be some compression applied,
+    there might be some non-RGB color spaces involved, or non-trivial pixel layouts.
+    To avoid dealing with all these complexities, we suggest using the FreeImage library
+    by Herve Drolon.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We need to be able to deal with image file data as a memory block and FreeImage
+    supports this kind of input. Suppose, we have a file named `1.jpg` and we read
+    it with an `fread()` or `ifstream::read()` calls into an array `char Buffer[]`.
+    The size of the array is stored in the `Size` variable. Then, we can create the
+    `FIBITMAP` structure and use the `FreeImage_OpenMemory()` API call to load the
+    buffer into this `FIBITMAP` structure. The `FIBITMAP` structure is almost the
+    2D array we are looking for, with some extra information on the pixels' layout
+    and image size. To convert it to the 2D array, FreeImage provides the function
+    `FreeImage_GetRowPtr()` that returns a pointer to the raw RGB data of the *i*th
+    pixels row. And vice versa, our frame buffer or any other 2D RGB image can be
+    encoded into a memory block with `FreeImage_SaveMemory()` and saved to a file
+    using a single `fwrite()` or `ofstream::write()` call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here is the code that loads any picture format supported by FreeImage, for example,
+    JPEG, TIFF, or PNG, and converts it into a 24-bit RGB image. Any other supported
+    pixel formats, such as RGBA or floating point EXR, will be automatically converted
+    to a 24-bit color format. For the sake of brevity, we do not handle errors in
+    this code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let us declare a structure that will hold the image dimensions and pixel data:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Decoding the image from the memory block to the `sBitmap` structure is done
+    this way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Saving the image is even simpler. Save the array `img` representing the image
+    with width `W`, height `H`, and containing `BitsPP` bits per pixel:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Changing `FIF_PNG` to any of the `FIF_BMP`, `FIF_TIFF`, or `FIF_JPEG` forms
+    will change the output file format to BMP, TIFF, or JPEG respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There’s more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To understand the importance of reading an image from memory blocks, we should
+    keep two things in mind. Web services, such as **Picasa** and **Flickr**, provide
+    URLs of images, which are then downloaded into memory using the techniques from
+    the [Chapter 3](ch03.html "Chapter 3. Networking"), *Networking*. To avoid wasting
+    time, we do not save this memory block to disk, and instead just decode it from
+    memory using the FreeImage library. The same applies to reading an image file
+    from a compressed archive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
+    a Virtual Filesystem*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using the FreeType library for text rendering
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: FreeType has become a de facto standard for high-quality text rendering. The
+    library itself is quite easy to use, and the compilation of a static version relies
+    on the makefile similar to other libraries from this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Download the most recent source code from the library home page: [http://www.freetype.org](http://www.freetype.org).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The main FreeType concepts are: a font face, a glyph, and a bitmap. Font faces
+    are collections of all the characters in a font for a given encoding. This is
+    exactly what is stored in the `.ttf` files (besides copyrights and similar meta
+    information). Each character is called a glyph and is represented using geometrical
+    primitives, such as spline curves. These glyphs are not something that we can
+    copy pixel-wise to the screen or a frame buffer. We have to rasterize a bitmap
+    of the glyph using FreeType rasterization functions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let’s look at a single glyph:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Getting ready](img/7785_03_1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: FreeType glyph metrics
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `xMin`, `xMax`, `yMin`, and `yMax` values define the dimensions of the glyph
+    in logical coordinates, and the advance value shows where the next glyph starts
+    if we assume no kerning. Once we want to render on the screen, we need to transform
+    logical coordinates used by FreeType into screen coordinates. FreeType avoids
+    using floating point calculations and stores everything in a 26.6 fixed-point
+    format ([http://www.freetype.org/freetype2/docs/glyphs/glyphs-6.html](http://www.freetype.org/freetype2/docs/glyphs/glyphs-6.html)).
+    To convert these fancy values acquired from FreeType, we right-shift these values
+    by six bits (equivalent to the integer division by 64) and get the value we can
+    use with ease.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rendering the individual images of each character is not enough. Sometimes characters
+    look better when they are rendered closer to each other and some letter combinations
+    may even produce new glyphs. The variation of the distance between the characters
+    on the screen is called **kerning**, and FreeType provides functions to calculate
+    offsets between glyphs. Joining several glyphs as a single glyph is called a **ligature**,
+    and is outside of the scope of this book (see [http://en.wikipedia.org/wiki/Typographic_ligature](http://en.wikipedia.org/wiki/Typographic_ligature)
+    for details and references). In [Chapter 7](ch07.html "Chapter 7. Cross-platform
+    UI and Input Systems"), *Cross-platform UI and Input System*, we use only simple
+    kerning, which is good enough for our interactive applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To show the basic usage of FreeType, we are going to write the code in this
+    recipe implementing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An ASCII string renderer using a **monospaced font**.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: FreeType-based textures generator for monospaced fonts.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Later, we shall return to the advanced FreeType usage involving proportional
+    fonts, UTF-8 encoding, and kerning.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'For a monospaced font and an 8-bit ASCII character set, we can use a single
+    pre-rendered bitmap with all the 256 characters to simplify the rendering code.
+    To make this bitmap, we write a small tool, which reads a TrueType font, and outputs
+    a square bitmap 512 x 512 pixels, which contains a 16 × 16 characters grid:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Include FreeType headers:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Declare the number of characters on each side, and the size of each character:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Declare an array to store the output bitmap in RGBA format:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Declaring an externally defined routine to save a `.bmp` file can be done using
+    the FreeImage library:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Declaring a renderer of the `FT_Bitmap` at position `(x, y)` is as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Iterate pixels of the source bitmap:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Read the value `v` from the bitmap and copy each of the four RGBA components
+    into the output:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `main()` function of the application goes as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Clear the bitmap to black color:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Initialize the FreeType library:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create the face object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Set the character size. We declared `CHAR_SIZE` to denote the number of pixels
+    for a single char in our bitmap. The multiplier `64` is used, because FreeType
+    units are equal to 1/64th of a point. The value `100` corresponds to the horizontal
+    resolution of 100 dots per inch:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Render each character of the ASCII table:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Load the next glyph image into the slot, overwriting the previous one, and
+    ignore errors:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Calculate the non-transformed origin of the glyph in the resulting bitmap:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, draw to our target bitmap, converting the position:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Save the generated font texture as a rectangular `.bmp` image file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Clear the font face and release resources allocated by the library:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, we have an ASCII string written in a left-to-right language, and we want
+    to build a graphical representation of this string. We iterate string characters
+    to render them one by one. At the end of each iteration, we copy the bitmap of
+    the current character to the frame buffer, and then increment the current position
+    using the fixed font width (the `SLOT_SIZE` value).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Here is the complete code to render a text string using the pre-rendered bitmap
+    font. We use font array to store the RGB bitmap of our font:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The width and height of the output frame buffer is defined as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Render a single character into the bitmap buffer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Iterate through the pixels of the current character:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Paint only non-zero pixels. This will preserve the existing content of the
+    frame buffer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Render a complete line of ASCII text into the buffer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Advance by a fixed number of pixels:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let’s read the output of the FreeType font generator. We use the following
+    code to test it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Allocate and clear the output 3-channel RGB bitmap:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Render the white text line at position `(10,10)`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Save the resulting bitmap to a file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: There’s more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We encourage the reader to find some free fonts at [http://www.1001freefonts.com](http://www.1001freefonts.com),
+    use the described FreeType font generator to create `.bmp` files for those fonts
+    and render the string using the pre-rendered characters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing timing in physics
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The rest of this chapter is dedicated to two physical simulation libraries,
+    the Box2D (2D simulation) and Open Dynamics Engine (3D simulations). Building
+    these is not hard, so we’ll focus on making real use of them. The APIs of Box2D
+    and ODE only provide functions to calculate current positions of the rigid bodies
+    in simulations. First of all, we have to call the calculation routines. Then,
+    we have to transform the bodies’ physical coordinates into a screen-related coordinate
+    system. Connecting physical simulation with rendering and timing is the main problem
+    treated in this recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Virtually, every rigid body physics library provides abstractions of the world,
+    object (or body), constraint (or joint), and shape. The world here is just a collection
+    of bodies and joints attached to bodies. Shapes define how bodies collide.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create a dynamic application based on the physical simulation, we have to
+    be able to render the physical scene at any moment in time. We also need to convert
+    discrete timer events into a seemingly continuous process of calculation of the
+    bodies’ positions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, we give explanations about the timing and rendering, and then we provide
+    a complete sample using the Box2D library, the `App4`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In order to animate everything on the screen, we need to set up a timer. In
+    Android, we perform time stepping as fast as possible, and on each iteration of
+    our rendering loop, we just call the `GetSeconds()` function and calculate the
+    difference between the previous and the current time. The code for `GetSeconds()`
+    in the `Wrappers_Android.h` file uses the standard **POSIX** `gettimeofday()`
+    function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The coefficient to convert time from microseconds into seconds:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Get the current time:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Calculate the number of microseconds:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Return the current time in seconds. The `double` precision is necessary here,
+    since the timer counts time since the moment the system starts and the 32-bit
+    `float` precision is not enough:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We use three variables with current, previous, and total time. First, we initialize
+    the `g_OldTime` and `g_NewTime` time counters:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Before we start, the total time counter should be set to zero:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE61]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Each frame we call the `GenerateTicks()` method to set up the animation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE62]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Calculate how much time has passed since the previous update:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE63]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Call the `OnTimer()` routine with the non-zero number of seconds:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE64]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'For the Windows version, time stepping is done using the `SetTimer()` function,
+    which enables a system timer event every 10 milliseconds:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE65]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Each time these milliseconds pass, the `WM_TIMER` event is sent to our window
+    function. We add another `case` in the `switch` construction, where we just call
+    the `OnTimer()` method:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE66]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Repaint everything since we’re about to change the state:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE67]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Recalculate everything using the time slice of 0.01 seconds:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE68]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As in [Chapter 2](ch02.html "Chapter 2. Porting Common Libraries"), *Porting
+    Common Libraries*, the new `OnTimer()` callback function is independent of the
+    Windows or Android specifics.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Now, when we have timer events generated for us, we may proceed to the calculation
+    of rigid bodies’ positions. This is a somewhat complicated process of solving
+    the equations of motion. In simple terms, given current positions and orientations,
+    we want to calculate new positions and orientations of all the bodies in the scene:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE69]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this pseudo code, the `positions_new` and `positions_old` are the arrays
+    with new and old rigid body positions and orientations, and `time_step` is the
+    value in seconds, by which we should advance our time counter. Typically, we need
+    to update everything using the time step of `0.05` of a second or lower, to ensure
+    we calculate positions and orientations with high enough accuracy. For each logical
+    timer event, we may need to perform one or more calculation steps. To that end,
+    we introduce the `TimeCounter` variable and implement the so-called **time slicing**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE70]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Call the Box2D’s method `Step()` to recalculate positions of rigid bodies and
+    decrement the time counter for one step:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE71]'
+  prefs: []
+  type: TYPE_PRE
+- en: The presented code guarantees that the `Step()` method will be called `t / TIME_STEP`
+    times for the time value `t` and that the difference between the physical time
+    and logical time will be no more than `TIME_STEP` seconds.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Chapter 8](ch08.html "Chapter 8. Writing a Match-3 Game"), *Writing a Match-3
+    Game*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Rendering graphics in 2D
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To render a 2D scene, we use the wireframe mode. This requires only the `Line2D()`
+    procedure to be implemented with the following prototype:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE72]'
+  prefs: []
+  type: TYPE_PRE
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This can be a simple implementation of the Bresenham’s algorithm ([http://en.wikipedia.org/wiki/Bresenham’s_line_algorithm](http://en.wikipedia.org/wiki/Bresenham’s_line_algorithm))
+    and we do not present code here in the book to save space. See the accompanying
+    `Rendering.h` and `Rendering.cpp` files for `App4`. The book’s supplementary materials
+    can be downloaded from [www.packtpub.com/support](http://www.packtpub.com/support).
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To transform the objects from the simulated physical world to the screen in
+    a 2D environment of the Box2D library, we have to set up a coordinate transform:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE73]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To do so, we introduce a few coefficients, `XScale`, `YScale`, `XOfs`, `YOfs`,
+    and two formulas:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE74]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'They work as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE75]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We also introduce a shortcut for the `Line2D()` routine with vector-valued
+    arguments to use the `Vec2` type of the Box2D library directly:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE76]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To render a single box, we only need to draw four lines, connecting the corner
+    points. If an angle of a body is `Alpha`, the center of mass coordinates are `x`
+    and `y,` and the dimensions are specified by the width `w` and height `h`, then
+    the corner points’ coordinates are calculated as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE77]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, the box is rendered as four lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE78]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also …
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '[Chapter 6](ch06.html "Chapter 6. Unifying OpenGL ES 3 and OpenGL 3"), *Unifying
+    OpenGL ES 3 and OpenGL 3*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up Box2D simulations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Box2D is a pure C++ library with no dependencies on the CPU architecture, so
+    a simple `makefile` and `Android.mk` script, similar to those found in the previous
+    sections, would suffice to build the library. Using the techniques described in
+    the previous section, we set up a simulation. We also have the frame buffer from
+    the previous chapter, and we only render the boxes using 2D lines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As a bonus, Erin Catto—the library author—provides a simplified version of Box2D.
+    Once you are happy with just the boxes available, you can restrict yourself to
+    using the **BoxLite** version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Download the most recent source code from the library home page: [http://box2d.org](http://box2d.org).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To start with Box2D, we adapt the standard sample for a slightly modified BoxLite
+    version, which is included in this book’s materials. First, we declare the global
+    `World` object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE79]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Initialize it at the end of the `OnStartup()` routine:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE80]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `OnTimer()` callback (those used in the previous recipes) updates the `g_World`
+    object using the `TIME_STEP` constant by calling the `Step()` method.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The `OnDrawFrame()` callback passes the parameters of each body to the `DrawBody()`
+    function, which renders the body bounding box:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE81]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Render each joint:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE82]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Update the state as fast as possible:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE83]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The call to the `GenerateTicks()` function makes the actual update timing for
+    the Android version. It is implemented using the ideas from the Implementing timing
+    in physics recipe from this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `Setup()` function is a modification of the original sample code from Box2D
+    to set up a physics scene. The modification consists of defining a number of shortcuts
+    to simplify the scene assembly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The functions `CreateBody()` and `CreateBodyPos()` create rigid bodies with
+    specified positions, orientations, dimensions, and masses. The function `AddGround()`
+    adds a static immovable object to `g_World`, and the function `CreateJoint()`
+    makes a new physical attachment of one body to another.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this sample scene there are also some joints connecting the bodies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The application `App4` produces the same results on Android and Windows, as
+    in the following image, which is one of the simulation steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works...](img/7785_03_2.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: There’s more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As an exercise, we suggest that you experiment with the settings, and add more
+    of your own 2D scenes to the `App4` sample.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Implementing timing in physics
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building the ODE physical library
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This recipe is dedicated to the building of the open source **ODE** (**Open
+    Dynamics Engine**) physical simulation library, which is one of the oldest rigid
+    body simulators for interactive applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Download the most recent source code from the library home page: [http://www.ode.org/download.html](http://www.ode.org/download.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Compiling ODE is no different from other libraries. One subtle point, is the
+    selection between `single` and `double` floating-point precision. Standard compilation
+    involves the `autoconf` and `automake` tools, but here we just prepare `Android.mk`,
+    `makefile` as usual, and `odeconfig.h`. We need to define either the `dDOUBLE`
+    or `dSINGLE` symbol there to enable the `single` or `double` precision calculations.
+    There is this line in the beginning of the `odeconfig.h` file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE84]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'It enables the single-precision, 32-bit floating point calculations which are
+    sufficient for simple interactive applications. Changing the value to `dDOUBLE`
+    enables the double-precision, 64-bit floating point calculations:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE85]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: ODE is rather complex software and it includes the **Ice** collision detection
+    library, which unfortunately, has compilation problems when the strictest possible
+    settings of the Clang compiler are used. However, it is easily fixed by commenting
+    out the contents of the `_prefetch` function in the `OPCODE/Ice/IceUtils.h` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Since ODE calculates positions and orientations of the rigid bodies in 3D space,
+    we have to set up a tiny 3D rendering pipeline on top of the simple 2D rendering
+    we have done in this chapter. To demonstrate the ODE library we cannot avoid some
+    3D math. All objects in the scene (world) have their coordinates and orientations
+    specified as a pair of values consisting of a 3D vector and a quaternion. We convert
+    them to a 4 x 4 affine transformation matrix. Then, we follow the chain of coordinate
+    transforms: we convert the **object space** to **world space**, world space to
+    **camera space** and the camera space to **post-perspective space** with a multiplication
+    by the projection matrix.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, the first post-perspective coordinates, `x` and `y`, are transformed
+    into normalized device coordinates to fit our 2D frame buffer, like in the sample
+    with Box2D. The camera is fixed at a stationary point and its viewing direction
+    cannot be changed in our simple application. The projection matrix is also fixed,
+    but there are no other restrictions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There’s more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The 3D physical simulation is a very complex topic, which requires many books
+    to be read. We would like to encourage the reader to check out the ODE Community
+    Wiki pages at [http://ode-wiki.org/wiki](http://ode-wiki.org/wiki) to find the
+    official documentation and open source examples. A good start in game physics
+    can be made with the book *Learning Game Physics with Bullet Physics and OpenGL*
+    from Packt Publishing: [http://www.packtpub.com/learning-game-physics-with-bullet-physics-and-opengl/book](http://www.packtpub.com/learning-game-physics-with-bullet-physics-and-opengl/book).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Setting up Box2D simulations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

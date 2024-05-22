@@ -1,0 +1,684 @@
+- en: Building a Charts Component
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the previous chapter, we saw how to build a complex custom view that combined
+    a bit of everything we''ve covered in this book. It included some rendering code,
+    used a third-party library, had touch interactions and animations, and we briefly
+    talked about performance considerations. It was a rather complete custom view
+    example, but it''s not the only one. In this chapter, we''ll be building another
+    complex custom view. Step by step, we''ll build a charts custom view to draw graphs
+    we can embed in our Android applications. We''ll start by building a very basic
+    implementation and we''ll be adding additional features and functionalities along
+    the way. In more detail, we''ll see about:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building a basic charts component
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to take into account margins and padding
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using Paths to improve rendering
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Updating and growing our data set
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Rendering additional features and customizations
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building a basic chart custom view
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Most probably, at one point or another, we'll have to draw some charts in an
+    Android application. It can be a static chart, which isn't that fun as it can
+    be replaced simply by an image, or it can be a dynamic chart, allowing user interactions
+    and reactions to data changes. This last case is where we can use a custom view
+    to draw real-time graphs, add multiple sources of data, and even animate it. Let's
+    start by building a very simple custom view where we'll add more features later
+    on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Margins and padding
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'As with any normal view, our custom view will be subject to the layout manager''s
+    margins and to the view''s padding. We should not worry that much about the margin
+    values, as the layout manager will directly process them and will transparently
+    modify the size available for our custom view. The values we''ve to take into
+    consideration are the padding values. As we can see in the following image, the
+    margin is the space the layout manager is adding before and after our custom view
+    and the padding is the internal space between the view boundaries and the content
+    itself:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/740959ca-d93e-41d5-834b-06ba78b731ca.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Our view has to manage this padding appropriately. To do so, we can directly
+    use the different `getPadding` methods from `canvas` such as `getPaddingTop()`,
+    `getPaddingBottom()`, `getPaddingStart()`, and so on. Using the padding values,
+    we should adjust the rendering area accordingly on our `onDraw()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this code, we're storing the left and topmost points of our `Canvas` which
+    are the start and top padding values respectively. We have to be careful with
+    this sentence as the start padding might not be the left padding. If we check
+    the documentation we'll find there are both `getPaddingStart()`, `getPaddingEnd()`,
+    `getPaddingLeft()`, and `getPaddingRight()`. The start padding, for example, can
+    be the right padding if our device is configured in **Right-To-Left** (**RTL**)
+    mode. We have to be careful with these details if we'd like to support both LTR
+    and RTL devices. In this specific example, we'll build it with RTL support by
+    detecting the layout direction using the `getLayoutDirection()` method available
+    on view. But first, let's focus on a very simple implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Basic implementation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Our basic implementation will be quite straightforward. Let''s start by creating
+    the class and its constructor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ve initialized a `Paint` object on our constructor, but this time we''ve
+    set the style to `Paint.Style.STROKE` as we''re only interested in drawing lines.
+    Let''s now add a method so whoever is using the custom view can set the data to
+    render:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: We're making a copy of the original data array as we don't have control over
+    it and it might change without prior warning. Later, we'll see how can we improve
+    this behavior and adapt to changes to the data set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We're also calculating the maximum and minimum values on the array and the difference
+    between them. This will allow us to get a relative scale of those numbers and
+    scale them down, or up if needed, to a 0 to 1 scale, which will be quite handy
+    for adjusting the rendering to our view height.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now that we have the data, we can implement our `onDraw()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: To keep it as simple as possible, for the time being, we're drawing a black
+    background with `canvas.drawARGB(255, 0, 0, 0)` and then we're computing the available
+    size on our `Canvas` by subtracting the paddings from the total width and height.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We're also splitting the horizontal space equally for all the points and scaling
+    them vertically to use the whole available space. As we've calculated the difference
+    between the minimum and maximum value of our data set, we can scale those numbers
+    to a `0` to `1` range by subtracting the minimum value of the number and then
+    dividing by the difference or `verticalDelta` as the variable we're using here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With these calculations, we only have to keep track of the previous values in
+    order to be able to draw a line from the old point to the new one. Here, we are
+    storing the last `x` and `y` coordinates in the `lastX` and `lastY` variables
+    respectively and we are updating them at the end of every single loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Optimizations and improvements with Paths
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We could actually pre-calculate these operations we''re doing on the `onDraw()`
+    method as there is no need to do it every single time we''re drawing the chart
+    on the screen. We could just do it at the `setDataPoints()`, which is the only
+    point in our custom view that our data set can be changed or replaced:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we can simplify our `onDraw()` method as we can safely assume our data
+    set will always range between `0` and `1`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'But we can go further and convert the line drawings into a `Path`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: It will generate a `Path` with all the lines from one point to another the very
+    first time the `onDraw()` method is called. The graph will be also scaled to the
+    `canvas` dimensions. The only issue we will have now is that it'll not automatically
+    adjust to a `canvas` size change or if our graph data is updated. Let's see how
+    we can fix it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we have to declare a `boolean` flag to determine if we''ve to regenerate
+    the Path or not and two variables to hold the last width and height of our custom
+    view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In our class constructor, we have to create an instance of the `Path`. Later
+    on, instead of checking with null and creating a new instance, we''d call the
+    reset method to generate a new `Path`, but reusing this way the object instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'On `setDataPoints()` we have to set `regenerate` to true just before the call
+    to `postInvalidate`. And on our `onDraw()` method, we''ve to add additional checks
+    to detect when the `canvas` size changes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we have just mentioned, instead of checking with null, we will check the
+    value of the `boolean` flag to regenerate the `Path`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Background lines and details
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s add it into an Android project to see the results. First let''s create
+    a very simple layout file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s also create an empty activity that will only set this layout file as
+    the content View and generate some random data for our chart component to render:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run this example, we''ll get the following screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/49ab7a3d-7bc3-42b9-a4d9-38111f1f0f83.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'OK, we''ve a simple implementation done, but let''s add some details. We''ll
+    start by adding a small dot on each data point for improved clarity. Let''s create
+    a new `Paint` object on our class constructor for that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, one approach to do so, is to create an additional Path that will draw
+    small circles on each data point. Using the same approach as we did for the line
+    Path, we''ll create an instance of the `circlePath` on the class constructor and
+    reset it whenever it has to be regenerated. As we''re calculating the coordinates
+    for the lines, we can reuse them as the location of the circles:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this example, we''ve hard coded the radius of the circle to `10`, just a
+    bit bigger than the thickness of the lines: `8`, but we''ll talk about customizations
+    later on this chapter.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we now run this example, we''ll see the difference from our previous version:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/87c0fde5-51bc-41a7-b699-0cea16f43ca7.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'To add a more visual reference, let''s also add some background lines. As it
+    will be drawn using different settings, let''s first create a new `Paint` object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, let''s modify the `onDraw()` method to also generate a new `Path` with
+    the background lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here, we are creating both horizontal and vertical lines. Horizontal lines
+    will be created at the same exact points there will be a data point. We won''t
+    follow the same principle for vertical lines, we''ll just draw 10 vertical lines
+    uniformly separated between the top and the bottom of our `Canvas`. Executing
+    our example now, we''ll get something similar to the following screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/e76fd2c5-61a9-43b3-b16a-d15141d34b73.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: That's alright, but we are still missing some reference points. Let's draw some
+    horizontal and vertical labels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s create an array of labels and create a method to let anyone using
+    this custom view set them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If they''re not set, we can either don''t draw anything or generate them ourselves.
+    In this example, we''ll generate them ourselves automatically using the array
+    index:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To measure the text, so we can center it, we''ll reuse a `Rect` object. Let''s
+    create and instantiate it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we can add the following code to the `onDraw()` method to draw the bottom
+    labels, one for each point in our data set:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We have also adjusted the total height of the graph to add some space for the
+    labels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Let's also draw a side legend indicating the value and scale of the points.
+    As we're drawing a pre-defined set of vertical lines, we just have to calculate
+    these values. We'd have to convert these values from the 0 to 1 range back to
+    their original range and specific value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''d have to adjust the width and the initial left point of the graph depending
+    on the label size. So, in addition, let''s calculate the maximum width of the
+    side labels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We also used a `DecimalFormat` instance to format the floating point values.
+    We''ve created this `DecimalFormat` with the following pattern:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In addition, we''re storing the labels in an array to avoid regenerating them
+    every single time we''re drawing our view. With the maximum label width stored
+    in the `maxLabelWidth` variable, we can adjust the paddings:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: We'll still use `leftPadding` to render all the objects and `labelLeftPadding`
+    to render the labels. We have added the size of the maximum label and an additional
+    *50%* of padding that will be distributed before and after the label when drawing
+    it. For that reason, the labels will be rendered with an additional *25%* of `maxLabelWidth`
+    padding, so there will be another *25%* of space between the end of the label
+    and the start of the graph.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can easily draw the vertical labels by just iterating the array and computing
+    the right vertical position:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: To center the text on a vertical coordinate, we're using the average between
+    the ascent and descent from the current font.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we now run this example, we''ll have a more detailed view of our graph:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/c35a24d3-be7f-4bb4-98dd-8b62d9b3c11e.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We said, early in this chapter, that we''ll build support for RTL and LTR devices.
+    In this graph view, the legend will feel more natural on the right side of the
+    screen if the device layout is configured as RTL. Let''s quickly implement this
+    change:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: The only change we've to do is to is checking if the layout direction is `LAYOUT_DIRECTION_RTL`
+    and change the `leftPadding` and the `labelLeftPadding` to update where to draw
+    the graph and the labels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Customizations
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the last chapter we've already seen how to add parameters to our custom view.
+    On the graph custom view we're building in this chapter, we could configure, for
+    example, colors, thickness of the lines, size of dots, and so on, but instead
+    we'll focus on other kinds of customizations, for example, inverting the vertical
+    axis, and enabling or disabling the rendering of the bottom and side labels or
+    graph legend. Contrasting with the previous configurations, these will require
+    some additional code tweaks and specific implementations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s start by allowing inverting the vertical axis. Our default implementation
+    will render the smaller values on top and the bigger values at the bottom of our
+    graph. This might not be the expected result, so let''s add a way to invert the
+    axis:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we have to change only how labels are generated and invert, if applicable,
+    the values of the data points. To change the generation of labels, we can do it
+    by simply updating the order of the steps. Instead of getting a number from `0`
+    to `1`, we''ll invert the process and get a number from `1` to `0`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To get an inverted value of a data point, if needed, depending on the flag''s
+    value, let''s add a new method to do so:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, instead of getting the data points directly from the array, we should use
+    this method, as it will transparently invert the number if needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we've mentioned before, we've also added a `setLabels()` method, so labels
+    can also be externally customized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can also add a `boolean` flag to allow or prevent drawing the legend and
+    background lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: Simply check the status of this flag before drawing the background lines and
+    labels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See the full example in the `Example34-Charts` folder on the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Adding advanced features
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We've been building a simple implementation of a charts custom view. But we'll
+    need some more features or our custom view might feel a bit static or not really
+    useful. We can't build all the features we might think of or probably need. Also,
+    we should be careful of not building a Swiss army knife custom view as it might
+    become hard to maintain and might have an impact on the custom view performance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Real-time updates
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In our first plain implementation of our custom view, we've created a method
+    to set the data points but we couldn't modify or update the data. Let's implement
+    some quick changes to be able to dynamically add points. In this implementation,
+    we adjusted the values to the 0 to 1 scale directly on the `setDataPoints()` method.
+    As we'll provide a method to add new data values, we might get values outside
+    the original minimum and maximum values, invalidating the scale we calculated
+    before.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s first store the data in a collection instead of an array, so we can
+    easily add new values:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll be storing the data in an `ArrayList` and we''ve modified the `setDataPoints()`
+    method in order to be able to do so. Also, we have created the `adjustDataRange()`
+    method to recalculate the range of the data and trigger a data regeneration and
+    a redraw of our view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The implementation of the `addValue()` method is quite simple. We add the new
+    data to the `ArrayList` and if it''s inside the current range, we just trigger
+    a regeneration of the graph and a redraw of our view. If it''s outside the current
+    range, we call the `adjustDataRange()` method to adjust all the data to the new
+    range:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We just need to modify the `getDataPoint()` method to adjust the data to the
+    `0` to `1` range:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we run the example, we can see we can add new points to the graph and it
+    will adjust automatically. To completely change or update the data, the method
+    `setDataPoints()` must be called.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multiple data sets
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Sometimes, we'd like to show multiple graphs to compare them or simply to show
+    multiple data sets at the same time. Let's do some modifications to allow two
+    graphs at the same time in our graph custom view. It can be further extended to
+    support even more graphs, but let's limit it to two to simplify the logic in this
+    example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we need to create different Paint and Path objects for each graph. We''ll
+    create arrays to store them as it''ll be easier, later on, to iterate and render
+    them. For example, we can create several Paint objects with different colors for
+    each graph:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Actually, it''s a lot of work to set the same parameters again and again, so
+    we can use another constructor from `Paint` that copies the attributes from an
+    already existing `Paint` object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Also, the `Path` objects and the data storage:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We had also need a mechanism to add data to a specific data set:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we will have different data sets, we''ve to calculate the minimum and maximum
+    values of all data sets. We will be using the same scale on each graph so it will
+    be easier to compare:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we need to update the `getDataPoint()` method to allow us to get data
+    from different data sets:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: With all these methods, we can update our path generation code to generate multiple
+    `Path`s. If the data set for that graph is not defined, it'll not generate the
+    `Path`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The rendering code, which is just iterating through all the generated `Path`s
+    and drawing them with their correspondent `Paint` objects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run this example with two sets of random data, we''ll see something similar
+    to the following screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/c9060b21-9612-4d3b-9cc7-f4205e370f02.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Zooming and scrolling
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Another interesting feature we can implement into our custom view is the ability
+    to zoom and scroll. Like we did in our previous chapter, we'll use the `ScaleDetector`
+    class from Android to detect the pinch gesture and update the zoom in our custom
+    view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementation will be quite different from the previous chapter. In this case,
+    we'll do it in a simpler way. As we want to zoom everything, we'll just apply
+    a `canvas` transformation instead of regenerating the scaled `Path` objects again,
+    but first, let's implement the gesture detector and add the ability to scroll
+    and animate properties.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can almost copy the same methods we used in our previous custom EPG View
+    for animating variable logic and checking if we still have an unfinished animation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can also add, almost as it is, the code for checking drag events, sending
+    the touch events to the scale detector and scroll the screen depending on the
+    drag amount:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ve defined a variable named scale that will control the amount of zooming,
+    or scaling, we''re doing to our graph custom view. Let''s now write the implementation
+    of the `scaleDetector`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: We also implemented a scroll correction mechanism to keep where we're zooming
+    as centered as possible. In this case, we had to implement it on both the horizontal
+    and the vertical axis. The main idea behind the algorithm is to calculate the
+    horizontal and vertical position of the focused point of the gesture and when
+    changing the zoom, adjusting the scroll position to keep it at the same place.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, our `onDraw()` method will simply start with the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: We need to check and process the animation cycles by calling `animateLogic()`,
+    then let's behave properly and save our `canvas` state, apply a translation by
+    the scrolling values `frScrollX` and `frScrollY`, and scale the whole `canvas`
+    by the `scale` variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Everything we''ll render will be displaced by the scroll position and scaled
+    by the value of the scale variable. Before finishing the method, we''ve to restore
+    our `canvas` and trigger a new redraw cycle if not all the property animations
+    have finished:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: See the full example source code in the `Example35-Charts` folder on the GitHub
+    repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter we have seen how to build a charts custom view to draw graphs
+    in our Android applications. We have also quickly covered how to manage paddings,
+    RTL / LTR support, and we have finally added some complexity to our custom view
+    by supporting multiple data sets or adding the features of zooming and scrolling.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, the way we've implemented this custom view; using independent data ranges
+    and adapting it dynamically to the screen, means it'll automatically adjust to
+    any screen resolution or for example, to an orientation change. This is usually
+    a good practice and will prevent many issues when testing our custom view on several
+    devices. In addition, making the sizes of everything we draw on the screen depend
+    on the screen density, like we did in our previous example, will make the portability
+    even easier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will show how to build a custom view using the 3D rendering
+    capabilities we've introduced in previous chapters.
+  prefs: []
+  type: TYPE_NORMAL

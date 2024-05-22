@@ -1,0 +1,1645 @@
+- en: Chapter 2. Engaging with Application Security
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inspecting application certificates and signatures
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Signing Android applications
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Verifying application signatures
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Inspecting the AndroidManifest.xml file
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Interacting with the activity manager via ADB
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Extracting application resources via ADB
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we are going to see some components of the Android security
+    architecture in action by directly engaging with them, specifically those focused
+    on protecting applications. "You never really understand anything until you get
+    your hands dirty." This is what this chapter tries to inspire; actually getting
+    down and dirty with some of the security mechanisms, dissecting them, and really
+    getting to know what they are all about.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We're going to cover just the bare minimum here, the tips and tricks that'll
+    get you the information you need from an application, should you ever want to
+    reverse engineer it or perform a pervasive hands-on security assessment for Android
+    applications, or if you're just purely interested in finding out more about application
+    security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Inspecting application certificates and signatures
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Application certificates are what developers use to declare their trust in the
+    applications they publish to the application market. This is done by declaring
+    their identities and associating them to their application(s) cryptographically.
+    Application signatures make sure that no application can impersonate another by
+    providing a simple and effective mechanism to determine and enforce the integrity
+    of Android applications. It is a requirement that all applications be signed with
+    certificates before they are installed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android application signing is a repurposing of JAR signing. It works by applying
+    a cryptographic hash function to an application's contents. We will soon see exactly
+    which of the contents in the APK files are hashed. The hashes are then distributed
+    with a certificate that declares the developer's identity, associating it to the
+    developer's public key and effectively, his/her private key, since they are related
+    semantically. The certificate is usually encrypted using the developer's private
+    key, which means it's a self-signed certificate. There is no trusted third party
+    to vouch for the fact that the developer actually owns the given public key. This
+    process yields a signature and is to be distributed or published with this public
+    key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An application's signature is unique and finding an application's certificate
+    and signature is a crucial skill. You may be looking for malware signatures on
+    a device, or you may want to list all of the applications that share a given public
+    key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we begin, you will need the following software installed on your machine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Java JDK**: This can be installed on either Unix/Linux distribution or Microsoft
+    Windows system, as shown in the previous chapter'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Android SDK**: This can be installed on your Linux Debian or Microsoft Windows
+    system, as shown in the previous chapter'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**WinZip** (for Windows): This is available for download at [http://www.winzip.com](http://www.winzip.com);
+    if you are running Windows 7, WinZip is not explicitly required'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Unzip** (for Debian/Ubuntu Linux systems): This can be installed by typing
+    the following command into your terminal:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Assuming that we don't already have an application in mind—whose certificate
+    you would like to view—and given that you'd like to be able to completely replicate
+    what is demonstrated here, it'd be convenient to pull an app of an emulator. This
+    recipe also details setting up the emulator to do so.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up an emulator, in the way it is done here, ensures that you will be
+    able to get access to exactly the same applications and emulated system, and ultimately,
+    the same certificates, making it easy to check that you're on the right track.
+    Before you can emulate an Android device, you will need to make sure the Android
+    SDK tools are updated to include the latest API levels and emulator images. If
+    you're not sure how to upgrade your Android SDK, please refer to the previous
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, to start off, lets fire up an **Android Virtual Device** (**AVD**) by performing
+    the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open a command-line interface and execute the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![Getting ready](img/00029.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Or if you''re using a Windows machine, type:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If all goes well, you should have just created an AVD. You can now go ahead
+    and launch it by executing the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![Getting ready](img/00030.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'You should see an emulator pop up almost immediately. You will need to give
+    it a second to boot up. Once it''s all booted and you can see the lock screen,
+    it means you can fire up ADB and pull some APK files off for us to dissect. You
+    can pull an APK file off by typing the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'See the following screenshot for a practical example:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Getting ready](img/00031.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'You can find the Contacts app or others, should you need another example to
+    work with, by checking out the contents of the `system/app/` directory, as shown
+    in the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![Getting ready](img/00032.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: You should have just copied over the Contacts app onto your local device. If
+    any of this is confusing, please refer to the previous chapter; it covers how
+    to create an emulator and copy devices from it.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'You should have a local copy of the APK files that you wish to inspect on your
+    hard drive. We can now begin inspecting the application''s certificate. To view
+    an application''s public key certificate and signature, you will first need to
+    unpack the APK file. This is pretty easy if you know how to unzip an archive because
+    APK files are in fact ZIP archives that have been renamed. You can unzip the archive
+    by performing the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If you''re on a Windows machine, you may need to make sure that you have WinZip
+    installed. All you need to do is open the APK file using WinZip, and it should
+    open like any other ZIP archive. On Linux Debian machines, you will need to copy
+    this file to a file with a ZIP extension so that WinZip will happily unzip it
+    for us:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Unzip the archive to some memorable place; you can do that by firing off the
+    following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it…](img/00033.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'After unzipping the archive, your directory should look like the following
+    screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/00034.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Locate the folder called `META-INF`. This folder contains the signature file
+    and the actual `CERT.RSA` file which is the self-signed public key certificate;
+    you can view it using the keytool that comes bundled with the Java JDK that you
+    should have installed prior to attempting this recipe. Use the following command
+    to print the certificate:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it…](img/00035.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: What you have in front of you now is the certificate that declares the holder
+    of the public key.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'To view the actual signatures related to the application content, locate a
+    file called `CERT.SF` under the `META-INF` folder. You can view this on Windows
+    by opening it in notepad or any other text editor that is available to you, or
+    on Unix/Linux machines by executing the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You should have the signature file in front of you now. It includes the cryptographic
+    hashes of the resource files included in the application; see the following screenshot
+    for an example:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/00036.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: This file is used when the `jarsigner` tool tries to verify the content of the
+    application; it computes the cryptographic hash of the resources listed in the
+    `CERT.SF` file and compares it to the digests listed for each resource. In the
+    previous screenshot, the hash—`SHA-1 Digests`—have been base64 encoded.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `META-INF` folder is a very important resource because it helps to establish
+    the integrity of the application. Because of the important role the contents of
+    this folder plays in the cryptographic security of an application's content, it
+    is necessary to discuss the structure of the folder and what should appear inside
+    it and why.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Inside the `META-INF` folder, you should find at least the following things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`MANIFEST.MF`: This file declares the resources very similar to the `CERT.SF`
+    file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`CERT.RSA`: This is the public key certificate, as discussed previously.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`CERT.SF`: This file contains all of the resources in the application that
+    have been accounted for in the application signature. It is added to accommodate
+    JAR-specific cryptographic signing.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`CERT.RSA`: This is a X.509 v3 certificate; the information in it is structured
+    by keytool in the following way:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Owner**: This field is used to declare the holder of the public key, and
+    it contains some basic information about the country and organization associated
+    to this individual.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Issuer**: This field is used to declare the issuer of the X.509 certificate
+    that associates the public key to the declared holder. The people or organizations
+    mentioned here are the ones that effectively vouch for the key holder. They are
+    the ones that establish the authenticity of the public key listed in the certificate.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Serial number**: This is used as an identifier for the issued certificate.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Valid from ... until**: This field specifies the period for which this certificate
+    and its associated attributes can be verified by the issuer.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Certificate fingerprints**: This field holds the digest sums of the certificate.
+    It is used to verify that the certificate has not been tampered with.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The digital signature is computed by encrypting the certificate with the trusted
+    third parties' private key. In most Android applications, the "trusted third party"
+    is the developer. This means that this signature is generated by encrypting the
+    certificate using his/her own private key—usually the one associated to the public
+    key. This usage of the digital signature may be functionally correct—it makes
+    functional use of the digital signature mechanism—but it isn't as robust as relying
+    on a trusted third party like a **Certificate Authority** (**CA**). After all,
+    anyone can say that they developed the Twitter app by signing it with their own
+    key, but no one can say that they own VeriSign or Symantec's private key!
+  prefs: []
+  type: TYPE_NORMAL
+- en: If the certificate is self-signed, the developer can exercise his/her creativity
+    while filling out the information associated to the certificate. The Android package
+    manager makes no effort to verify that the issuer, owner, or any other details
+    of the certificate are valid or are actual existing entities. For instance, the
+    "owner" doesn't explicitly need to mention any valid personal information about
+    the developer, or the "Issuer" could be a completely fabricated organization or
+    individual. Though doing this is possible, it is strongly recommended against
+    because it makes an application very hard to trust; after all, a mobile application
+    is often stored and used on a very personal device, and people who become privy
+    to the fabricated details of a public key certificate may no longer trust such
+    an application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The best way to go about generating a trustworthy application certificate is
+    through a qualified CA by either requesting a signed public key certificate—after
+    generating your own public and private key pair—or requesting a CA to generate
+    a public/private key pair with a public key certificate, since they will often
+    verify all of the information published in the certificate. Symantec and other
+    CAs and security vendors often offer a range of services to facilitate the generation
+    of trustworthy public key certificates, some of which are catered to supporting
+    Android application development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next recipe of this walkthrough contains some useful links on public key
+    certificates for you to check out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'You can also view the full public key certificate using the OpenSSL library
+    via the command-line tool on Linux by performing the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Make sure you have OpenSSL installed; if not, you can install OpenSSL with
+    the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Once installed, you can view the certificate using the following command, provided
+    you are in the root of the unzipped `APK` directory:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'You should see something like the following screenshot appear on your terminal
+    screen:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/00037.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'The second half of the previous screenshot is as follows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/00038.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: The last section of the certificate in the previous screenshot is the actual
+    digital signature of the CA that issued the certificate.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *RFC2459 – Internet X.509 Public Key Infrastructure Certificate and CRL
+    Profile* document at [http://datatracker.ietf.org/doc/rfc2459/?include_text=1](http://datatracker.ietf.org/doc/rfc2459/?include_text=1)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *X.509 Certificates and Certificate Revocation Lists (CRLs)* Oracle documentation
+    at [http://docs.oracle.com/javase/6/docs/technotes/guides/security/cert3.html](http://docs.oracle.com/javase/6/docs/technotes/guides/security/cert3.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Signing Android applications
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: All Android applications are required to be signed before they are installed
+    on an Android device. Eclipse and other IDEs pretty much handle application signing
+    for you; but for you to truly understand how application signing works, you should
+    try your hand at signing an application yourself using the tools in the Java JDK
+    and Android SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, a little background on application signing. Android application signing
+    is simply a repurposing of the JAR signing. It has been used for years to verify
+    the authenticity of Java class file archives. Android's APK files aren't exactly
+    like JAR files and include a little more metadata and resources than JAR files;
+    so, the Android team needed to gear the JAR signing to suit the APK file's structure.
+    They did this by making sure that the extra content included in an Android application
+    forms part of the signing and verification process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, without giving away too much about application signing, let's grab an APK
+    file and get it signed. Later in the walkthrough, we're going to try installing
+    our "hand-signed" application on an Android device as an easy way to verify that
+    we have in fact signed it properly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we can begin, you will need to install the following things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Java JDK**: This contains all of the necessary signing and verification tools'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**APK file**: This is a sample APK to sign'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**WinZip**: This is required for Windows machines'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Unzip**: This is required for Ubuntu machines'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Given that you may be using an APK file that''s already signed, you will need
+    to first remove the certificate and signature file from the APK file. To do this,
+    you will need to perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unzip the APK file. It'd be waste to reiterate unpacking an APK file; so, if
+    you need help with this step, refer to the *Inspecting application certificates
+    and signatures* recipe.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Once the APK file has been unzipped, you''ll need to remove the `META-INF`
+    folder. The Windows folks can simply open the unzipped `APK` folder and delete
+    the `META-INF` folder using the graphical user interface. This can be done from
+    the command-line interface by executing the following command on Unix/Linux systems:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You should be ready to sign the application now.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Signing your Android application can be done by performing the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You''ll first need to set up a keystore for yourself because it will hold the
+    private key that you will need to sign your applications with. If you already
+    have a keystore set up, you can skip this step. To generate a brand new keystore
+    on Windows and Unix/Linux distributions, you will need to execute the following
+    command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: After entering this command, keytool will help you set up a password for your
+    keystore; you should make sure to enter something that you will actually remember!
+    Also, if you at all intend to use this keystore for practical purposes, make sure
+    to keep it in a very safe place!
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: After you've set up the password for your keystore, keytool will begin prompting
+    you for information that will be used to build your certificate; pay close attention
+    to the information being requested and please answer as honestly as possible—even
+    though this is not demonstrated in the following screenshot:![How to do it...](img/00039.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: You should now have a brand new keystore set up with your new private key, public
+    key, and self-signed certificate stored safely inside and encrypted for your protection.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'You can now use this brand new keystore to sign an application, and you can
+    do that by executing the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You'll be prompted for the password to the keystore. Once you enter it correctly,
+    `jarsigner` will start signing the application in place. This means that it will
+    modify the APK file that you gave it by adding the `META-INF` folder with all
+    of the certificate and signature-related details.![How to do it...](img/00040.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: And that's it. Signing an application is that easy. I've also inadvertently
+    illustrated how to re-sign an application, namely, replace the signatures that
+    were distributed with the application originally.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To start off, let''s have a look at the options supplied to keytool:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`-genkey`: This option tells keytool that you''d like to generate some keys'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-v`: This option enables verbose output; however, this command is optional'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-keystore`: This option is used to locate the keystore you''d like to use
+    to store your generated keys'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-alias`: This option is an alias for the key pair being generated'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-keyalg`: This option tells about the encryption algorithm used to generate
+    the key; you can make use of either RSA or DSA'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-keysize`: This option specifies the actual bit length of the key you''re
+    going to generate'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-validity`: This option mentions the number of days for which the generated
+    key will be valid; Android officially recommends using a value above 10,000 days'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: What keytool actually does with the public and private keys is store the public
+    key wrapped inside an X.509 v3 certificate with it. This certificate is used to
+    declare the identity of the public key holder and can be used to affirm that the
+    mentioned public key belongs to the declared holder. This requires involvement
+    from a trusted third party like a CA, but Android does not require public keys
+    to be affirmed in this way. For more on how these certificates are used and structured,
+    refer to the *Inspecting application certificates and signatures* recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The options of `jarsigner` are described in detail after the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The following section explains the attributes of the preceding command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`-verbose`: This is used to enable verbose output'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-sigalg`: This is used to supply the algorithm to be used in the signing process'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-digestalg`: This is used to supply the algorithm that will compute the signatures
+    for each of the resources in the `.apk` file'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-keystore`: This is used to specify the keystore that you want to use'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[your .apk file]`: This is the `.apk` file that you intend to sign'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[your key alias]`: This is the alias that you associated to the key/certificate
+    pair'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Jarsigner* documentation at [http://docs.oracle.com/javase/6/docs/technotes/tools/windows/jarsigner.html](http://docs.oracle.com/javase/6/docs/technotes/tools/windows/jarsigner.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Signing your applications – Android Developer* page at [http://developer.android.com/tools/publishing/app-signing.html](http://developer.android.com/tools/publishing/app-signing.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Keytool* documentation at [http://docs.oracle.com/javase/6/docs/technotes/tools/solaris/keytool.html](http://docs.oracle.com/javase/6/docs/technotes/tools/solaris/keytool.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Verifying application signatures
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous recipes, we walked through how applications are signed and how
+    to generate keys securely to sign them. This recipe will provide details on how
+    application signatures are verified. Being able to do this "by hand" is pretty
+    important because it not only gives you insight into how verification actually
+    works, but also serves as a gateway to deeper introspection of cryptographic application
+    security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To be able to perform this recipe, you will need the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The JDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A sample signed application to verify
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: That's about all that you need for this one. Let's get going!
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To verify application signatures, you will need to perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Java JDK has a tool called `jarsigner` that will be able to handle all
+    of the hard labor; all you need to do is execute the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: All you need to do now is look for the **jar verified** string on your screen;
+    this indicates that the application signatures have been verified.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Inspecting the AndroidManifest.xml file
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The application manifest is probably the most important source of information
+    for Android application security specialists. It contains all of the information
+    regarding an application's permissions and which components form part of an application,
+    and it gives us quite some details about how these components will be allowed
+    to interact with the rest of the applications on your platform. I'm going to use
+    this recipe as a good excuse to talk about the application manifest, how it's
+    structured, and what each component in the sample manifest means.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before you can get going, you will need to have the following software:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: WinZip for Windows
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Java JDK
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A handy text editor; usually Vi/Vim does the trick, but Emacs, Notepad++, and
+    Notepad are all cool; we don't need anything fancy here
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Android SDK (no surprise here!)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'You may also need to go get something called **apktool**; it makes decoding
+    the `AndroidManifest.xml` file really easy. Well, actually, all that it really
+    does is reformat the output of another Android SDK tool. It''s pretty easy to
+    set it up; all that you need to do is perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Download the tool; you can it find at [http://android-apktool.googlecode.com/files/apktool1.5.2.tar.bz2](http://android-apktool.googlecode.com/files/apktool1.5.2.tar.bz2).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'If you have the Android SDK installed, you can simply extract the apktool that
+    you just downloaded to the `platforms-tools` folder in your SDK folder, more specifically:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Or for Linux machines:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Please make sure that you get the `apktool.jar` file and the apktool script
+    in there with everything else; don't put it in its own subfolder!
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: If you don't want to download the Android SDK, there are some dependencies that
+    you will need to download. They can be downloaded at [http://code.google.com/p/android-apktool/downloads/list](http://code.google.com/p/android-apktool/downloads/list).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Namely, if you're using a Windows machine, you should get the apktool at [http://android-apktool.googlecode.com/files/apktool-install-windows-r05-ibot.tar.bz2](http://android-apktool.googlecode.com/files/apktool-install-windows-r05-ibot.tar.bz2).
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: And, if you're using a Linux Debian machine, you should get this one at [http://android-apktool.googlecode.com/files/apktool-install-linux-r05-ibot.tar.bz2](http://android-apktool.googlecode.com/files/apktool-install-linux-r05-ibot.tar.bz2).
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: You will also need to make sure that all of the downloaded files are in the
+    same directory.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'You should be able to fire it up, and you can test it out by trying to run
+    it with the following:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'On Windows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'And on Debian Linux:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If you've got all of that done, you'll be able to move on to the next step,
+    that is, actually dissecting an `AndroidManifest.xml` file.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To grab a copy of the `AndroidManifest.xml` file for a given application package,
+    you need to perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: All that you'll need to do is point apktool at your APK file. We're going to
+    be using the `Contacts.apk` application that we pulled off of an emulator in one
+    of the previous recipes. Type the following into your command prompt and make
+    sure your working directory—the directory you are currently in with your terminal/command
+    prompt—is the one you extracted apktool into.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'On Debian Linux:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'On Windows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'As an example, if you''re using the `Contacts.apk` application and you want
+    all of the decoded files to be saved to a folder called `decoded`, you would type
+    the following command on a Linux machine:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it...](img/00041.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: You can now view the application manifest. It should be under the folder you
+    chose to extract it to in the previous step, inside a file aptly named `AndroidManifest.xml`.
+    To view it, simply whip out your favorite text editor—Linux folks, you have almost
+    a million text-editing tools bundled into your operating system—and point it at
+    the `AndroidManifest.xml` file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'On Linux:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Alternatively, you could just display it on your terminal screen by executing
+    the following command:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'On Windows:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: You should see the manifest either on your terminal screen—if you're on a Linux
+    machine—or notepad should pop up with the manifest open. Some of you may not understand
+    what all of the garble on your screen is or how valuable this information is,
+    which is why the next recipe includes an explanation of all the important parts
+    of the application manifest structure:![How to do it...](img/00042.jpeg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: So, you're probably staring at the garbled information listed in the `AndroidManifest.xml`
+    file. What it means and why all of this is important is stated in the next recipe
+    of the walkthrough. It provides a good background on how some of the elements
+    and their attributes work. I've only covered the background on the most important
+    elements with regard to security and application security assessment.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To help you understand the application manifest, I'm going to show you the structure
+    of a manifest here and explain what the most important sections mean. If you want
+    more details on the Android manifest language, you should check out the *See also*
+    section of this recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The structure of the manifest is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Downloading the example code**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can download the example code files for all Packt books you have purchased
+    from your account at [http://www.packtpub.com](http://www.packtpub.com). If you
+    purchased this book elsewhere, you can visit [http://www.packtpub.com/support](http://www.packtpub.com/support)
+    and register to have the files e-mailed directly to you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: So, what on earth does this mean? Well, to start off, the first line has more
+    to do with the kind of file and Android manifest, and has almost nothing to do
+    with what it does and is intended for. If you couldn't tell from the `.xml` extension,
+    it's an **eXtensible Markup Language** (**XML**) file. This means that the Android
+    manifest is an XML language. XML is a format for basically making up any language
+    you wish; some sources frankly describe it as a language for defining markup languages.
+    XML is designed to be a set of rules for describing just about anything!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, when you see the following code, you know that whatever follows that line
+    is an XML file in XML Version 1 and it''s encoded using UTF-8:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Moving on to the Android-specific part:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This element is the opening tag for the entries in the application manifest;
+    it marks the beginning and is called the root element of an XML document. The
+    next tag declares that the application requires a given permission:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is the string that usually shows up when you install the application,
+    depending on what kind of permission it is. The `android:name` attribute specifies
+    the name of the permission; so, for instance, if your application needs to use
+    a device''s camera service, it should have the following code in its manifest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next element type is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This element is used to define permission; for instance, when a developer feels
+    that for other applications to interact with a particular application component,
+    a special unique permission is required. This element is quite interesting; let''s
+    look at its attributes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`android:description`: This attribute is used to define the string that will
+    be displayed as the description of the permission when the user is prompted to
+    grant the permission.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:icon`: This attribute is used to define a descriptive icon to display
+    when the user is prompted to grant the permission.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:label`: This attribute is used as the name of the permission when
+    the user is prompted to grant the permission, for example, network access and
+    read SMSs.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:name`: This attribute is the actual name of the permission. This is
+    the literal string that will be looked for in an application''s manifest to determine
+    whether it has this permission, for example, `android.permission.Camera`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`android:protectionLevel`: This attribute is the value used to indicate the
+    level of risk associated to this permission. The levels are classified as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`"dangerous"`: This level is usually assigned to any permission that allows
+    apps to access sensitive user data or operate system configuration data. This
+    is used to protect access to any function or data that can be used to harm the
+    user.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`"normal"`: This level is used to indicate any permission that grants access
+    to data or services that incur no inherent risk.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`"signature"`: This level is set when the permission is to be autonomously
+    granted to any application signed with the same certificate as the application
+    that defined the permission, namely, the application with the associated `<permission>`
+    tag in `AndroidManifest.xml`.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`"signatureOrSystem"`: This level is set when the permission is to be autonomously
+    granted to any application signed with the same certificate as the application
+    that defined the permission.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: You should pay close attention to the value used in the `protectionLevel` attribute,
+    especially those of you who need to perform application assessments professionally.
+    Try to think about whether the protection level that the developer decided on
+    is appropriate. You need to be able to make sure that the risk involved with this
+    permission is clearly indicated to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another crucial attribute of `protectionLevel` is that it determines which permissions
+    are displayed to the user before the application is installed. Users are always
+    prompted to grant permissions in dangerous protection levels, though normal permissions
+    are only displayed if explicitly requested by the user. The `signature` and `signatureOrSystem`
+    permissions, on the other hand, are not displayed to the users before the application
+    is installed. What this means is that if applications are granted risky permissions
+    in the `signature` or `signatureOrSystem` protection level, the user would be
+    unaware of it. Please take this into consideration when you are inspecting an
+    application's manifest because it will help determine how the application communicates
+    risks to the user. On to the next element type!
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: This element is used to define the beginning of an application. What's important
+    about this element with regards to security is its attributes and how they can
+    affect the components defined inside this element. The attribute definitions have
+    been omitted here for the sake of brevity; you will need to refer to the official
+    documentation available at [http://developer.android.com/guide/topics/manifest/application-element.html](http://developer.android.com/guide/topics/manifest/application-element.html)
+    for more details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An important property of this element is that some attributes simply define
+    default values for the corresponding attributes of the components defined inside
+    the element; this means that its components will be able to override them. A notable
+    element of these overridable attributes is the one called `permission`, which
+    declares the permission that other applications need to have in order to interact
+    with it. This means that if an application sets a given permission and one of
+    its components sets a different permission as its attribute, the component's permission
+    will take precedence. This could introduce considerable risk if the component
+    overrides a dangerous permission with a normal one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Other attributes cannot be overridden by their components. This depends on
+    the value that is set in the attribute and applied to every single component.
+    The components include the following attributes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`debuggable`: This attribute specifies if a given component or group of components
+    are debuggable.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`enabled`: This attribute specifies if the android application framework will
+    be able to start up or run the components defined with this element; the default
+    for this is `true`. Only when this is set to `false` does it override the value
+    for all components.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`description`: This attribute is simply a string used to describe the application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`allowClearUserData`: This attribute is a flag that determines whether the
+    users will be able to clear data associated to the app; by default, it is set
+    to `true` and cannot be set as anything else by non-system apps on some platforms.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following elements are definitions for application components and allow
+    developers to decide certain attributes for them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: <service android:enabled=["true" | "false"]android:exported=["true" | "false"]android:icon="drawable
+    resource"android:isolatedProcess=["true" | "false"]android:label="string resource"android:name="string"android:permission="string">
+  prefs: []
+  type: TYPE_NORMAL
+- en: </service>
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: <receiver android:enabled=["true" | "false"]android:exported=["true" | "false"]android:icon="drawable
+    resource"android:label="string resource"android:name="string"android:permission="string"android:process="string"
+    ></receiver>
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: <provider android:authorities="list"android:enabled=["true" | "false"]android:exported=["true"
+    | "false"]android:grantUriPermissions=["true" | "false"]android:icon="drawable
+    resource"android:initOrder="integer"  android:label="string resource"android:multiprocess=["true"
+    | "false"]android:name="string"android:permission="string"android:process="string"android:readPermission="string"android:syncable=["true"
+    | "false"]android:writePermission="string" ></provider>
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: <intent-filter android:icon="drawable resource"android:label="string resource"android:priority="integer"
+    ></intent-filter>
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *AndoirdManifest.xml file* page at [http://developer.android.com/guide/topics/manifest/manifest-intro.html](http://developer.android.com/guide/topics/manifest/manifest-intro.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Interacting with the activity manager via ADB
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Getting to know the **Android Debug Bridge** (**ADB**) is quite crucial to any
+    budding Android security specialist. The ADB allows you to interact directly with
+    the native services and resources, such as the package manager, activity manager,
+    and other various daemons that are crucial to an Android system's operation used
+    by the Android system. This recipe will provide details on how to interact with
+    the activity manager by demonstrating a few commands that you can fire off.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Before we start, you will need the following things:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Android SDK tools
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Either a virtual device, see the *Inspecting the AndroidManifest.xml file* recipe
+    to find out how to create and launch one, or a physical Android device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To launch activities using the application manager, you need to perform the
+    following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Drop a shell on your Android device with the help of the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Find yourself an activity to launch; you can do this by searching through the
+    list of activities that are installed on the device. This can be done by using
+    the package manager.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A huge list of packages should start pouring down your screen; any one of them
+    should do just fine as an example:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/00043.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Once you''ve selected the activity that you want to launch, execute the following
+    command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Besides just launching activities, you can also specify intents to send over
+    to an activity by making use of the intent argument accepted by the start command,
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `<INTENT>` argument can be made up of a couple of arguments that allow you
+    to describe an intent in full detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`-a [action]`: This argument specifies the string label of the action to be
+    specified. It helps detail the intended purpose or "action" of the intent that
+    is being sent.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-d [data uri]`: This argument specifies the data URI to be attached to the
+    intent. It points to the data to be used by the application handling the intent.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-t [mime type]`: This argument specifies the mime type of the data included
+    with the intent.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-c [category]`: This argument specifies the category of the intent.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-n [component]`: This argument specifies the component of the specified package
+    targeted with the intent. It is used to fine tune the targeting of the intent.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-f [flags]`: This argument specifies the intent flags. It is used to describe
+    how the intent should be honored and allows you to control a given number of behaviors
+    of the application that is honoring the intent.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-e [extra key] [string value]`: This argument adds a string value associated
+    to a given key. Certain intent definitions allow you to pass a dictionary of string
+    values to an application. These string values will be accessed when the intent
+    is being honored.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-e [extra key] [string value]`: This argument has the same function as `-e`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-ez [extra key] [boolean value]`: This argument associates Boolean values
+    to a name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-ei [extra key] [integer value]`: This argument associates an integer value
+    to a name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-el [extra key] [long value]`: This argument associates a long number value
+    to a name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-ef [extra key] [float value]`: This argument associates a float number value
+    to a name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-eu [extra key] [uri value]`: This argument associates a URI to a name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-ecn [extra key] [component name]`: This argument associates a component name—that
+    will be converted into a `ComponentName` object—to a name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-eia [extra key] [integer value, integer value,...]`: This argument allows
+    you to associate an integer array to a name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-efa [extra key] [float value, float value,...]`: This argument is the same
+    as `-eia`, except that in this case, you would associate an array of float number
+    values to a name.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Not all of the intent arguments are compulsory. All that's needed for this command
+    to be logically sound is a component to target with the intent or an action value;
+    these rules apply to all intents targeted at applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The optional `--user` argument allows you to specify which user this application
+    should run as. If this argument is not supplied with the activity, it will run
+    as the ADB user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are also flags that you can associate to the intent. For a full list of
+    options, refer to the *Intent Specification – Android Developer* labeled link
+    in the *See also* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Using this would work something similar to the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can also start services using the activity manager; you can do this using
+    the `startservice` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Using this would work as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Another function that the activity manager supports is stopping services and
+    processes. This comes in very handy when an app is hogging all of the system resources
+    and slowing the system down. Here''s how you kill a process using the activity
+    manager:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: As with the previous commands, the `UID` argument is optional. Here, this argument
+    allows you to limit the `kill` command to packages running as a given user. If
+    left unspecified, ADB will try to kill the running processes of all users that
+    are associated to the given package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For more commands supported by the Android activity manager, see the *Android
+    Debug Bridge – Android developer* labeled link in the *See also* section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Android Debug Bridge – Android developer* page available at [http://developer.android.com/tools/help/adb.html](http://developer.android.com/tools/help/adb.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Intent Specification – Android Developer* specifications available at [http://developer.android.com/tools/help/adb.html#IntentSpec](http://developer.android.com/tools/help/adb.html#IntentSpec)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Extracting application resources via ADB
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The following recipe shows you how to do some snooping on your Android applications.
+    Namely, find out what kind of data structures they are using to store important
+    information and what kind of information they are storing, for example, high scores,
+    passwords, contacts, and e-mails. Besides allowing you to set your high score
+    to a negative number, this is an effective way for you to influence application
+    behavior from its backend. It also gives you a perspective on how applications
+    protect their users' data, for example, is the data encrypted? How is it encrypted?
+    Does the application protect the integrity of the user data? It also makes for
+    a very useful skill when reverse engineering and assessing application security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Unfortunately for this one, you will need either a "rooted" phone or an emulator,
+    because you already have root access on emulated devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you want to get access to the resources of other apps, you will need root
+    permissions. If you want to study the behavior of applications from the market,
+    nothing prevents you from pulling them off of your device using ADB and installing
+    them on a virtual device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You will also need to install the Android SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Listing files on an Android device can be done in the following ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Drop a shell on your Android device with the help of the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Navigate to the `/data/data/` directory:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The directory should look similar to the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/00044.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'If you list the file permissions, creation, modification, and other metadata,
+    it should look like the following screenshot:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it…](img/00045.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: Notice the owners and groups of the data directories, the first and second columns
+    from the left in the listing. The owners here are actual applications. Linux,
+    by default, runs each application as its own Linux user, which is essentially
+    how the application sandbox operates. When an app is given permission to a resource
+    that it inherently doesn't have access to, Linux puts it in the relevant user
+    group.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Execute the following command if you wish to see all of the application resources
+    and metadata in one go:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it…](img/00046.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'But, typically, you wouldn''t want your screen to be flooded with a massive
+    directory listing unless you''re redirecting it to a file. You may want to display
+    only the databases:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it…](img/00047.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Or, maybe display just the files or whatever that is saved in the `/files/`
+    directory for each application:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: '![How to do it…](img/00048.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: 'Or, you could even search for a given type of file, by specifying an extension;
+    here are a few examples:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Once you''ve found the files you''re looking for, all that you need to do is
+    copy them onto your machine using a good old `adb pull`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: All we're really doing here is listing different file types. One of those types
+    is sqlite3 databases, the DB files that you would have seen in some of the directories.
+    I'm sure you're dying to know how to crack them open and have a look at what's
+    inside. This is how it's done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Before we get going, you will need to make sure that sqlite3 is installed; it
+    comes shipped with the Android SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Extract the DB file to a location on your machine using the following command:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Load up the `.db` file using sqlite3:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Check out the following screenshot if you''re looking for an example:'
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![There''s more...](img/00049.jpeg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: In this chapter, we covered some of the mechanisms that protect applications,
+    some basic protections that involve inter-application communication, application
+    permissions, as well as the cryptographic signatures, and filesystem-related access
+    protections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What you should take away from here are the tips and tricks needed to perform
+    the security mechanisms by hand. This allows you to assess the effectiveness of
+    these mechanisms independent of the Android devices enforcing them, and also allows
+    you to interact directly with them, hopefully allowing you to understand them
+    better.
+  prefs: []
+  type: TYPE_NORMAL

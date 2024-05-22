@@ -1,0 +1,606 @@
+- en: Implementing Your Own EPG
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we have been building very basic examples to show some of the functionalities
+    and methods that Android provides us with to implement and draw our custom views.
+    In this chapter, we will see a more complex example of a custom view. We'll be
+    building an **Electronic Programming Guide** (**EPG**).
+  prefs: []
+  type: TYPE_NORMAL
+- en: An EPG is a fairly complex component to build, and if done wrong, can have an
+    impact on the user experience. For example, if it doesn't perform well, it'll
+    feel sluggish and tedious to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ll be using several things we have covered in previous chapters. All together
+    it can be a bit too much, but we will be building it step by step, and, in more
+    detail, we will cover:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to build a basic EPG custom view
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to add basic animations and interactions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: How to allow zooming
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Making it configurable
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building an EPG
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If we want to make our EPG useful, it should show several channels, and both
+    current and future TV programs at the same time. Also, it'd be nice to clearly
+    see what's currently playing, and have clear indicators of when other TV programs
+    start and end.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this specific component, we will opt for one method of rendering that covers
+    these points. You can use it as an example, but there are many other ways to render
+    the same kind of information. Also, it won't be connected to a backend service
+    providing the EPG data. All EPG data will be mocked up, but it can be easily connected
+    to any service, although some changes might need to be done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: EPG basics and animation setup
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We''ll start by creating a class-extending view. On its `onDraw()` method we
+    will draw the following parts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The view background
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The EPG body with all the channels and TV programs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A top time bar hinting at the time
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A vertical line indicating the current time
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We'll also need to trigger a redraw cycle if we are animating some variables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So, let''s start with this implementation of the `onDraw()` method, and let''s
+    proceed method by method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The easiest method to implement will be `drawBackground()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this case, we have defined a background color as `0xFF333333`, which is some
+    kind of dark gray, and we are just filling the whole screen with the `drawARGB()`
+    call, masking and shifting the color components.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s go for the `drawTimeBar()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s explain what this method is doing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we got the initial time at which we''d like to start drawing the time
+    marks:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We defined the `initialTimeValue` in our class constructor as half an hour
+    to the current time. We also removed the minutes, seconds, and milliseconds as
+    we''d like to indicate the exact hours and the exact half hour past each hour,
+    for instance: 9.00, 9.30, 10.00, 10.30, and so on in this example.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Then we created a helper method to get the screen position based on a timestamp
+    that will be used in many other places in the code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In addition, we need to calculate a timescale based on the device screen density.
+    To calculate it, we defined a default timescale:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the class constructor, we adjusted the timescale depending on the screen
+    density:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: We know there are many Android devices with different screen sizes and densities.
+    Doing it this way, instead of hardcoding the pixel dimensions, makes the rendering
+    as close as possible on all devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'With the help of this method, we can easily loop on blocks of half an hour
+    until we reach the end of the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: By adding `30` minutes, converted to milliseconds, to the time variable we increment
+    the horizontal marks in blocks of `30` minutes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We've taken into consideration the `frScrollX` position as well. This variable
+    will be updated when we add interactions that allow us to scroll, but we will
+    see that later in this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The rendering is quite straightforward: we draw a vertical line as long as
+    the `x` coordinate is inside the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'we draw the time in `HH:mm` format, just next to it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'One small performance improvement we can do is to store the strings so we don''t
+    have to call the format method again and again, and avoid costly object creation.
+    We can do so by creating a **HashMap** that takes a long variable as a key and
+    returns a string:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use the formatted date if we already have it, or format it first and store
+    it on the HashMap if it's the first time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can now go on to draw the current time indicator. It is quite easy; it''s
+    just a vertical box that is slightly wider than a single line, so we use `drawRect()`
+    instead of `drawLine()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we already have the `getTimeHorizontalPosition` method, we can easily pinpoint
+    where to draw the current time indicator. As we will be scrolling through the
+    TV programs, we split the drawing into two parts: one that draws a line over the
+    time bar, without any clipping; and another line from the end of the time bar
+    to the bottom of the screen. In the latter we apply a clipping to only draw it
+    on top of the TV programs.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To understand this more clearly, let''s take a look at a screenshot of the
+    result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/34906304-fb28-4b26-8542-22944465d9ae.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: At the left side, we have got the icons representing the channels, on the top
+    side is the time bar, and the rest is the body of the EPG with different TV programs.
+    We'd like to avoid the current timeline, in red, going over the channel icons,
+    so we apply the clipping we have just mentioned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we can implement the drawing of the whole EPG body. It''s a bit more
+    complex than the other methods, so let''s go through it step by step. First, we
+    need to calculate the number of channels we have to draw to avoid doing unnecessary
+    calculations and trying to draw outside the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Like we did with the timescale, we also define a default channel height and
+    compute it based on the screen density:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that we know the initial channel and the end channel we need to draw, we
+    can outline the drawing loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: We'll be modifying the `canvas` clipping several times, so let's save it at
+    the beginning of the method and restore it at the end. This way we won't impact
+    any other drawing method completed after this. Inside the loop, for each channel,
+    we also calculate the `channelTop` and `channelBottom` values as they'll be handy
+    later when drawing it. These values indicate the vertical coordinates for the
+    top and the bottom of the channel we are drawing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s now draw the icon for each channel, requesting it first from the internet
+    if we don''t have it. We''ll be using `Picasso` to manage the Internet requests,
+    but we can use any other library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'There is information about Picasso at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://square.github.io/picasso/](http://square.github.io/picasso/).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Also, for each channel, we need to draw the TV programs that are inside the
+    screen. Once again, let''s use the method we previously created to convert a timestamp
+    into a screen coordinate:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we are getting the program start and end positions from the program start
+    and end times. If the start position is beyond the width of the screen, we can
+    stop checking more TV programs as they'll all be outside the screen, assuming
+    the TV programs are sorted by time in ascending order. Also, if the end position
+    is less than 0, we can skip this specific TV program as it'll also be drawn outside
+    the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The actual drawing is quite simple; we are using a `drawRoundRect` for the
+    TV program background and we are drawing the program name centered on it. We''re
+    also clipping the area just in case the name is longer than the TV program box:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've also added a small check to see if a TV program is currently playing.
+    If the current time is greater than or equal to the program start time and smaller
+    than its end time, we can conclude that the TV program is currently playing and
+    render it with the highlighted color.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s now add the animation cycle. For this example, we have chosen the fixed
+    time-step mechanism. We''ll only animate the scroll variables, both horizontal
+    and vertical, and the movement of the channel part of the screen:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: In our renderings and calculations later, we will use the `frScrollX`, `frScrollY`,
+    and `frChNameWidth` variables, which contain the fractional parts between the
+    current logic tick and the following one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We'll see how to scroll in the next section when talking about adding interaction
+    to the EPG, but we have just introduced the movement of the channel part. Right
+    now, we are only rendering each channel as an icon, but, to have more information,
+    we have added a toggle that makes the channel box, where we currently have the
+    icon, become larger and draw the channel title next to the icon.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We''ve created a Boolean switch to track which state we are rendering and to
+    draw the channel name if required:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The toggle is quite simple, as it just changes the channel box width target
+    to `channelHeight`, so it''ll have square dimensions, or two times the `channelHeight`
+    when drawing the text. The animation cycle will take care of animating the variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Interaction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, it's not really useful as we can't interact with it. To add interaction,
+    we need to override the `onTouchEvent()` method from the View, as we have seen
+    in previous chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In our own implementation of onTouchEvent, we are mainly interested in the
+    `ACTION_DOWN`, `ACTION_UP`, and `ACTION_MOVE` events. Let''s see the implementation
+    we have done:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method doesn't contain that much logic; it's just checking if we are dragging
+    on the screen, calling `scrollScreen` with the drag amount delta from the last
+    event, and, in the case where we haven't dragged and just pressed on the channel
+    box, triggering the toggle to make the channel box bigger or smaller.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `scrollScreen` method simply updates the `scrollXTarget` and `scrollYTarget` and
+    checks its boundaries:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Also, it''s highly important to call `invalidate` to trigger a redraw event.
+    On the `onDraw()` event itself, we check if all animations are finished and trigger
+    more redraw events if needed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The actual implementation of `missingAnimations` is quite straightforward:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: We're just checking all properties that can be animated if their difference
+    from their target value is smaller than a predefined threshold. If only one is
+    bigger than this threshold, we need to trigger more redraw events and animation
+    cycles.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Zooming
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As we are rendering a box for each TV program and its size is directly determined
+    by the TV program duration, it might happen that TV program titles will be larger
+    than its rendered box. In those cases, we might want to read some more parts of
+    the title, or, at other times, we may like to compress things a bit so we can
+    have an overall picture of what will be on TV later that day.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To solve this, we can implement a zooming mechanism by pinching on our device
+    screen on top of our EPG widget. We can apply this zooming directly to the `timeScale`
+    variable, and, as we have used it everywhere for all calculations, it''ll keep
+    everything synchronized:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: To simplify it, let's use the `SimpleOnScaleGestureListener`, which allows us
+    to override only the methods we'd like to use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, we need to modify the `onTouchEvent` to let the `scaleDetector` instance
+    process the event as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: We've also added a check to see if we are zooming. We'll update this variable
+    in the `ScaleDetector` implementation, but the concept is to avoid scrolling the
+    view, or processing drag events, if we are already zooming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s now implement the `ScaleDetector`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''re basically doing two different things. First, we adjust the `timeScale`
+    variable from half the default value to four times the default value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: Also, we adjust the scroll position to avoid an unpleasant effect when scaling.
+    By adjusting the scroll position, we are trying to keep the focus of the pinch
+    at the same position, even after zooming in or out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: For more information about the `ScaleDetector` and gestures, check out the official
+    Android documentation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Configurations and Extensions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: If want to create a custom view that is usable by many people, it needs to be
+    customizable. The EPG is no exception. In our initial implementation, we hardcoded
+    some colors and values, but let's see how we can extend these functionalities
+    and make our EPG customizable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Making it configurable
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the initial chapters of this book, we introduced how to add parameters and,
+    that way, easily customize our custom view. Following the same principles, we
+    have created an `attrs.xml` file with all the customizable parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: There are many other variables that could be added as parameters, but these
+    are the main customizations from the point of view of the custom view look and
+    feel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Also, in our class constructor, we have added the code to read and parse these
+    parameters. In a case where they're not present, we'd default to the previous
+    values we hardcoded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To make it simpler and clearer for anyone trying to customize it, we can do
+    a small change. Let''s redefine the parameters that map directly to pixel sizes
+    as dimensions instead of floats:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Update the parsing code to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: By using `getDimension` instead of `getFloat`, it'll automatically convert dimensions
+    set as density pixels to actual pixels. It'll not do that transformation to the
+    default value, so we still need to do the multiplication by the `screenDensity`
+    ourselves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, we need to add these configurations in the `activity_main.xml` layout
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see the result of these changes in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![](img/522de8ec-8446-4814-a103-40d84612f4ba.png)'
+  prefs: []
+  type: TYPE_IMG
+- en: Implementing callbacks
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Another critical functionality from our EPG that we haven't covered yet is the
+    ability to actually do something when clicking on a TV program. If we want to
+    do something useful with our EPG, rather than just showing the titles of what
+    is coming, we must implement this functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This implementation is quite straightforward and will handle the logic to an
+    external listener or callback. It would also be quite easy to modify the source
+    code to implement some custom behavior on the EPG itself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To begin, we create a new interface inside the EPG class with one single method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method will be called whenever we click on a TV program, and whoever is
+    implementing this callback will get both the `Channel` and the TV `Program`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s modify the `onTouchEvent()` method to handle this new functionality:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: In our previous code, we were checking only if we clicked on the channel area
+    of the screen. Now we can use the other area to detect if we have clicked inside
+    a TV program.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s now implement the `clickProgram()` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: We first convert the horizontal position where the user clicks into a timestamp,
+    and, with the vertical position of the touch event, we can determine the channel.
+    With the channel and the timestamp, we could check which program the user has
+    clicked inside and call the callback with that information.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the GitHub example, we added a dummy listener that will only log the channel
+    and program clicked:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: There is also a `populateDummyChannelList()` method in this Activity `onCreate`.
+    This method will only populate random channel and TV program data and should be
+    removed if connecting with a real EPG data provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The whole example can be found in the `Example33-EPG` folder on the GitHub repository.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have seen how to build a simple EPG with many functionalities,
+    but we have probably left many others without an implementation. For instance,
+    our TV program rendering is rather simple, and we could add way more information
+    inside the TV program box, such as the duration, start time, and end time, or
+    even show the TV program description directly there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Feel free to take what's in the GitHub repository and play with it, add new
+    customizations or functionalities, and adapt it to your needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We haven't specifically talked about performance that much, but we have tried
+    to minimize the amount of allocations inside our `onDraw` method and the methods
+    called by it as much as possible, and we have reduced what we are drawing on the
+    screen as much as possible and don't even process elements that will fall outside
+    the screen boundaries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Taking into account these details is critical if we want our custom view, or
+    the EPG in this case, to be snappy, responsive, and scale with more channels and
+    TV programs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter we will be building another complex custom view that we
+    can use to draw graphs on our Android applications.
+  prefs: []
+  type: TYPE_NORMAL

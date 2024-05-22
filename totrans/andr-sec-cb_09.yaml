@@ -1,0 +1,1283 @@
+- en: Chapter 9. Encryption and Developing Device Administration Policies
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using cryptography libraries
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating a symmetric encryption key
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Securing SharedPreferences data
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Password-based encryption
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Encrypting a database with SQLCipher
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android KeyStore provider
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up device administration policies
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The primary focus of this chapter will be on how to make use of cryptography
+    properly to store data securely on a device. We start with creating a consistent
+    cryptography foundation by including our own encryption implementation libraries
+    to give support to stronger encryption algorithms on older devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the straightforward items to tackle is the generation of symmetric encryption
+    keys; however, the default settings are not always more secure. We look at the
+    specific parameters to ensure the strongest encryption and review a common antipattern
+    and OS bug that limits the security of the generated keys.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Then, we look at several ways in which we can securely store encryption keys
+    using third-party libraries or a system service called the **Android KeyStore**
+    that was introduced in Android 4.3\. Going further, we learn how to avoid storing
+    the key on the device altogether using a key derivation function to generate a
+    key from the user's password or pin code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We'll cover how to integrate SQLCipher efficiently to ensure that your applications'
+    SQLite database is encrypted to dramatically increase the security of your app
+    data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will wrap up with a look at the Device Administration API that is designed
+    for enterprises to enforce device policies and safeguards to further protect the
+    device. We implement two factitious (yet sensible) enterprise policies to ensure
+    that the device has enabled encrypted storage and meets lock screen timeout requirements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using cryptography libraries
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the great things about Android using Java as the core programming language
+    is that it includes the **Java Cryptographic Extensions** (**JCE**). JCE is a
+    well-established, tested set of security APIs. Android uses Bouncy Castle as the
+    open source implementation of those APIs. However, the Bouncy Castle version varies
+    between Android versions; and only the newer versions of Android get the latest
+    fixes. That's not all in an effort to reduce the size of Bouncy Castle; Android
+    customizes the Bouncy Castle libraries and removes some of the services and APIs.
+    For example, if you intend on using **Elliptic Curve Cryptography** (**ECC** ),
+    you will see provider errors when running it on Android versions below 4.0\. Also,
+    although Bouncy Castle supports the AES-GCM scheme (which we'll cover in the next
+    recipe), you cannot use this in Android without including it separately.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To solve this, we can include an application-specific implementation of cryptographic
+    libraries. This recipe will show you how to include the Spongy Castle library,
+    which provides a higher level of security given that it is more up-to-date as
+    compared to Android's Bouncy Castle implementation and supports more cryptographic
+    options.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You may be wondering "why use Spongy Castle and not just include the Bouncy
+    Castle libraries". The reason is that Android already ships with an older version
+    of the Bouncy Castle libraries, and so we need to rename the package of this library
+    to avoid "classloader" conflicts. So, Spongy Castle is a repackaging of Bouncy
+    Castle. In fact, the package name could be whatever you wanted as long as it differs
+    from `org.bouncycastle`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's add Spongy Castle to our Android application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Download the latest Spongy Castle binaries from [https://github.com/rtyley/spongycastle/#downloads](https://github.com/rtyley/spongycastle/#downloads).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Review the MIT X11 License (same as Bouncy Castle) to ensure that this is compatible
+    with how you intend to use it.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Extract and copy the Spongy Castle `.jar` files in your application''s `/libs`
+    directory:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`sc-light-jdk15on`: Core lightweight API'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`scprov-jdk15on`: JCE provider (requires `sc-light-jdk15on`)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Include the following `static` code block in your Android Application object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We use the static code block to call `Security.insertProviderAt()`. It ensures
+    that the Spongy Castle provider that we have bundled in our application's `/libs`
+    folder is used in preference. By setting the position as `1`, we ensure that it
+    gets preference over the existing security providers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The beauty of using Spongy Castle with the JCE is that no modification to the
+    existing encryption code is needed. Throughout this chapter, we show samples of
+    an encryption code that works equally well with either Bouncy Castle or Spongy
+    Castle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As mentioned, the code is available for download from GitHub; however, it is
+    possible to build your own version. *Roberto Tyley*, the owner of the Spongy Castle
+    repository, has included the `become-spongy.sh` bash script that does the renaming
+    of `com.bouncycastle` to `com.spongycastle`. Therefore, you can use it on your
+    own freshly downloaded and up-to-date version of the Bouncy Castle library, and
+    convert it to `org.spongycastle` or something equally cute and catchy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The `become-spongy.sh` bash script is available at [https://gist.github.com/scottyab/8003892](https://gist.github.com/scottyab/8003892)
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Generating a symmetric encryption key* and *Password-based encryption*
+    recipes demonstrate using the JCE APIs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Spongy Castle GitHub repository at [http://rtyley.github.io/spongycastle/#downloads](http://rtyley.github.io/spongycastle/#downloads)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Bouncy Castle home page at [http://www.bouncycastle.org/java.html](http://www.bouncycastle.org/java.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Using the Java Cryptographic Extensions* OWASP community page at [https://www.owasp.org/index.php/Using_the_Java_Cryptographic_Extensions](https://www.owasp.org/index.php/Using_the_Java_Cryptographic_Extensions)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Generating a symmetric encryption key
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A symmetric key describes a key that is used for both encryption and decryption.
+    To create cryptographically secure encryption keys in general, we use securely
+    generated pseudorandom numbers. This recipe demonstrates how to correctly initialize
+    the `SecureRandom` class and how to use it to initialize an **Advanced Encryption
+    Standard** (**AES**) encryption key. AES is the preferred encryption standard
+    to DES, and typically used with key sizes 128 bit and 256 bit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: There are no code differences whether you are using Bouncy Castle or Spongy
+    Castle, as noted in the previous recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's create a secure encryption key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Write the following function to generate a symmetric AES encryption key:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a random 32-byte initialization vector (IV) that matches the AES key
+    size of 256 bit:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Write the following function to encrypt an arbitrary string:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'For completeness, the preceding snippet shows how to decrypt. The only difference
+    is that we call the `Cipher.init()` method using the `Cipher.DECRYPT_MODE` constant:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: For this sample, we have just stored the key and IV as a static variable; this
+    isn't advisable for actual use. A simple approach would be to persist the key
+    in `SharedPerferences` with the `Context.MODE_PRIVATE` flag so that a consistent
+    key is available between application sessions. The next recipe develops this idea
+    further to use an encrypted version of `SharedPerferences`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Creating a `SecureRandom` object is simply a case of instantiating the default
+    constructor. There are other constructors available; however, the default constructor
+    uses the strongest provider available. We pass an instance of `SecureRandom` to
+    the `KeyGenerator` class with the `keysize` argument, and the `KeyGenerator` class
+    handles the creation of the symmetric encryption key. 256 bit is often touted
+    as "military grade", and for most systems it is considered cryptographically secure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here we introduce an initialization vector which, in simple terms, increases
+    the strength of the encryption, and is essential when encrypting more than one
+    message/item. This is because messages encrypted with the same key can be analyzed
+    together to aid message extraction. A weak IV is part of the reason why **Wired
+    Equivalent Privacy** (**WEP**) was broken. So, it is recommended to generate a
+    new IV for each message, and store it along with the cipher text; for example,
+    you could pre-append or concatenate the IV to the cipher text.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the actual encryption, we use an AES instance of the `Cipher` object that
+    we initiate in `ENCRYPT_MODE` with the newly-generated `SecretKey`. We then call
+    `cipher.doFinal` with the bytes of our plaintext input to return a byte array
+    containing the encrypted bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When requesting the AES encryption mode with the `Cipher` object, a common oversight
+    that is also present in Android documentation is to simply use `AES`. However,
+    this defaults to the simplest and less-secure ECB mode, specifically `AES/ECB/PKCS7Padding`.
+    Therefore, we should explicitly request the stronger CBC mode `AES/CBC/PKCS5Padding`,
+    as shown in the sample code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Here we look at how to use a strong encryption mode called **AES-GCM** **,**
+    and a common antipattern that reduces the security of the generated keys.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using AES-GCM for strong symmetric encryption
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We noted that simply defining `AES` does not default to the strongest mode.
+    If we include the Spongy Castle libraries, we can use the much strong AES-GCM
+    that includes authentication, and can detect if the cipher text has been tampered
+    with. To use AES-GCM when defining the algorithm/transformation string, use `AES/GCM/NoPadding`
+    as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Antipattern – setting the seed
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Since Android Version 4.2, the default **PseudoRandom Number Generator** (**PRNG**)
+    provider of `SecureRandom` was changed to OpenSSL. This disables the ability,
+    which existed previously, of Bouncy Castle provider to manually seed the `SecureRandom`
+    object. This was a welcome change as an antipattern emerged where developers were
+    setting the seed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this code sample, we can see the seed being manually set to `42`, the result
+    being that the `notRandom` variable would always equal the same number. Although
+    useful for unit tests, this defeats any enhanced security from using `SecureRandom`
+    to generate a cryptographic key.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android's PRNG bug
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: As mentioned previously, the default provider of PseudoRandom Number Generator
+    (PRNG) is OpenSSL since Android 4.2\. However, in August 2013, a critical bug
+    was discovered with the generation of random numbers. This was highlighted by
+    the compromise of several Android Bitcoin wallet apps. The issue concerned the
+    seeding of the secure random number generator; instead of using complex and individual
+    system fingerprints, it was initialized to null. The result was similar to that
+    of the antipattern secure keys that were generated earlier from a predictable
+    number. The effected Android versions were Jelly Bean 4.1, 4.2, and 4.3.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A fix was noted in the *Some SecureRandom Thoughts* Android blog article and
+    issued to Open Handset Alliance companies. However, it's recommended that you
+    call this fix from your application's `onCreate()` method in case the fix has
+    not been applied to the device your app is running on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For convenience, here's a gist provided by GitHub of the code from Google, which
+    can be found at [https://gist.github.com/scottyab/6498556](https://gist.github.com/scottyab/6498556).
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The *Securing SharedPreference data* recipe, where we used a generated AES key
+    to encrypt application SharedPreferences
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *An Empirical Study of Cryptographic Misuse in Android Applications* guide
+    at [http://cs.ucsb.edu/~yanick/publications/2013_ccs_cryptolint.pdf](http://cs.ucsb.edu/~yanick/publications/2013_ccs_cryptolint.pdf)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `SecureRandom` class in the Android Developer Reference guide at [https://developer.android.com/reference/java/security/SecureRandom.html](https://developer.android.com/reference/java/security/SecureRandom.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `KeyGenerator` class in the Android Developer Reference guide at [https://developer.android.com/reference/javax/crypto/KeyGenerator.html](https://developer.android.com/reference/javax/crypto/KeyGenerator.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Some SecureRandom Thoughts* Android blog article at [http://android-developers.blogspot.co.uk/2013/08/some-securerandom-thoughts.html](http://android-developers.blogspot.co.uk/2013/08/some-securerandom-thoughts.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Open Handset Alliance members at [http://www.openhandsetalliance.com/oha_members.html](http://www.openhandsetalliance.com/oha_members.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Securing SharedPreferences data
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android provides a simple framework for app developers to persistently store
+    key-value pairs of primitive datatypes. This recipe illustrates a practical use
+    of a pseudorandomly generated secret key and demonstrates the use of **Secure-Preferences**
+    . It is an open source library that wraps the default Android SharedPreferences
+    to encrypt the key-value pairs for protecting them against attackers. Secure-Preferences
+    is compatible with Android 2.1+, and is licensed with Apache 2.0; hence, it is
+    suitable for commercial development.
+  prefs: []
+  type: TYPE_NORMAL
+- en: I should add that I'm the co-creator and maintainer of the Secure-Preferences
+    library. A good alternative to Secure-Preferences is a library called **Cwac-prefs**
+    that is backed by SQLCipher (covered in a later recipe).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's add the Secure-Preferences library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Download or clone Secure-Preferences from GitHub at [https://github.com/scottyab/secure-preferences](https://github.com/scottyab/secure-preferences).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The Secure-Preferences repository contains an Android library project and a
+    sample project.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: Link the library to your Android project as you would normally do.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's get started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Simply initialize the `SecurePreferences` object with Android `context`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The following are several helper methods that you could add to your application
+    to retrieve an instance of the (secure) preferences object in your application
+    object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, `YourApplication.this` is a reference to your application object.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'Then ideally, in a base application component such as `BaseActivity`, `BaseFragment`,
+    or `BaseService`, you can include the following to retrieve an instance of the
+    (secure) preferences object:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Secure-Preferences library implements the `SharedPreferences` interface;
+    therefore, no code changes are needed to interact with it in comparison to the
+    default SharedPreferences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Standard SharedPreferences keys and values are stored in a simple XML file and
+    Secure-Preferences uses the same storage mechanism; except that the keys and values
+    are transparently encrypted using an AES symmetric key. The cipher text of keys
+    and values are encoded with base64 encoding before writing to the file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you examine the following SharedPreference XML file; it shows without and
+    with the Secure-Preferences library. You'll see the file from the Secure-Preferences
+    library is a collection of seemingly random entries that give no clue to their
+    purpose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A standard SharedPreferences XML file:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A SharedPreferences XML file using Secure-Preferences library:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The first time `SecurePreferences` is instantiated, an AES encryption key is
+    generated and stored. This key is used to encrypt/decrypt all future keys/values
+    that are saved via the standard `SharedPreferences` interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The shared preference file is created with `Context.MODE_PRIVATE` that enforces
+    app sandbox security and ensures that only your app has access. However, in the
+    case of rooted devices, sandbox security cannot be relied upon. More correctly,
+    Secure-Preferences is obfuscating the preferences; therefore, this should not
+    be considered as bulletproof security. Instead, view it as a quick win for incrementally
+    making an Android app more secure. For instance, it will stop users on rooted
+    devices easily modifying your app's SharedPreferences.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secure-Preferences could be further enhanced to generate the key based on the
+    user input password using a technique called **password-based encryption** (**PBE**
+    ), which is covered in the next chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `SharedPreferences` interface in the Android Developers Reference guide
+    at [https://developer.android.com/reference/android/content/SharedPreferences.html](https://developer.android.com/reference/android/content/SharedPreferences.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Article on Secure-Preferences by *Daniel Abraham* at [http://www.codeproject.com/Articles/549119/Encryption-Wrapper-for-Android-SharedPreferences](http://www.codeproject.com/Articles/549119/Encryption-Wrapper-for-Android-SharedPreferences)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Secure-Preferences library at [https://github.com/scottyab/secure-preferences](https://github.com/scottyab/secure-preferences)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The CWAC-prefs library (an alternative to Secure-Preferences) at [https://github.com/commonsguy/cwac-prefs](https://github.com/commonsguy/cwac-prefs)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Password-based encryption
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One of the larger issues with encryption is the management and secure storage
+    of encryption keys. Until now and in the pervious recipes, we have settled for
+    storing the key in SharedPreferences as recommended on the Google developer's
+    blog; however, this is not ideal for rooted devices. On rooted devices, you cannot
+    rely on the Android system security sandbox as the root user has access to all
+    areas. By that we mean, unlike on a unrooted device, other apps can obtain elevated
+    root privileges.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The potential for an insecure app sandbox is an ideal case for password-based
+    encryption (PBE). It offers the ability to create (or more correctly derive) the
+    encryption key at runtime using a passcode/password that is usually supplied by
+    the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another solution for key management is to use a system keychain; Android's version
+    of this is called the Android KeyStore, which we will review in a later recipe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: PBE is part of the Java Cryptography Extension, and so is already included in
+    Android SDK.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this recipe, we'll use an initialization vector (IV) and **salt** as part
+    of the key derivation. We covered the IV in the previous recipe, and it helps
+    create more randomness. So, even the same messages that are encrypted with the
+    same key would produce different cipher texts. Salt is similar to an IV in that
+    it is usually a random data that is added as part of the encryption process to
+    enhance its cryptographic strength.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's get started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we define some helper methods to retrieve or create IV and salt. We
+    will use them as part of the key derivation and encryption:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Generate the PBE key:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Write a sample method showing how to encrypt using a newly derived PBE key:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Write a sample method showing how to decrypt cipher text using a newly derived
+    PBE key:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In step 1, we define methods similar to the ones we have used in the previous
+    recipes. Just to reiterate, it's essential for the salt and IV to be consistent
+    to be able to decrypt encrypted data. For example, you could generate a salt per
+    app and store it in `SharedPreferences`. Also, the size of the salt is typically
+    the same as the key size, which in this example is 32 bytes / 256 bit. Typically,
+    you would save the IV along with cipher text to be retrieved upon decryption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In step 2, we derive a 256 bit AES `SecretKey` using PBE with the user's password.
+    `PBKDF2` is a commonly used algorithm for deriving a key from a user password;
+    the Android implementation of this algorithm is noted as `PBKDF2WithHmacSHA1`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As part of the `PBEKeySpec`, we define the number iterations used internally
+    within `SecretKeyFactory` to generate the secret key. The larger the number of
+    iterations, the longer the key derivation takes. To defend against Brute Force
+    attacks, it is recommended that the time to derive the key should be more than
+    100ms; Android uses 10,000 iterations to generate the encryption key for encrypted
+    backups.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Steps 3 and 4 demonstrate using the secret key with the `Cipher` object to encrypt
+    and decrypt; you'll notice that these are very similar to the methods noted in
+    an earlier recipe. But of course, for decryption, the IV and salt are not randomly
+    generated but re-used form the encryption step.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In Android 4.4, a subtle change was made to the `SecretKeyFactory` class when
+    dealing with `PBKDF2WithHmacSHA1` and Unicode passphrases. Previously, `PBKDF2WithHmacSHA1`
+    only looked at the lower eight bits of Java characters in passphrases; the change
+    to the `SecretKeyFactory` class allowed the use of all the available bits in Unicode
+    characters. To maintain backward compatibility, you can use this new key generation
+    algorithm `PBKDF2WithHmacSHA1And8bit`. If you are using ASCII, this change will
+    not affect you.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s a code sample of how to maintain backward compatibility:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `SecretKeyFactory` class in the Android Developers Reference guide at [https://developer.android.com/reference/javax/crypto/SecretKeyFactory.html](https://developer.android.com/reference/javax/crypto/SecretKeyFactory.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `PBEKeySpec` class in the Android Developers Reference guide at [https://developer.android.com/reference/javax/crypto/spec/PBEKeySpec.html](https://developer.android.com/reference/javax/crypto/spec/PBEKeySpec.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Java Cryptography Extension in the Java Cryptography Architecture (JCA) Reference
+    guide at [http://docs.oracle.com/javase/6/docs/technotes/guides/security/crypto/CryptoSpec.html](http://docs.oracle.com/javase/6/docs/technotes/guides/security/crypto/CryptoSpec.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Using Cryptography to Store Credentials Safely* Android Developer's blog
+    at [http://android-developers.blogspot.co.uk/2013/02/using-cryptography-to-store-credentials.html](http://android-developers.blogspot.co.uk/2013/02/using-cryptography-to-store-credentials.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sample PBE project by *Nikolay Elenkov* at [https://github.com/nelenkov/android-pbe](https://github.com/nelenkov/android-pbe)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Changes to the `SecretKeyFactory` API in Android 4.4 at [http://android-developers.blogspot.co.uk/2013/12/changes-to-secretkeyfactory-api-in.html](http://android-developers.blogspot.co.uk/2013/12/changes-to-secretkeyfactory-api-in.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Encrypting a database with SQLCipher
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: SQLCipher is one of the simplest ways to enable secure storage in an Android
+    app, and it's compatible for devices running Android 2.1+. SQLCipher uses 256-bit
+    AES in CBC mode to encrypt each database page; in addition, each page has its
+    own random initialization vector to further increase security.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SQLCipher is a separate implementation of the SQLite database, and rather than
+    implementing its own encryption, it uses the widely used and tested OpenSSL `libcrypto`
+    library. While this ensures greater security and wider compatibility, it does
+    come with a relatively high `.apk` file footprint of roughly 7 MB. This additional
+    weight is probably the only disadvantage of using SQLCipher.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to the SQLCipher website, in terms of read/write performance, there
+    is a ~5 percent performance hit that is negligible unless your app is performing
+    complex SQL joins (but it is worth noting that these aren't great in SQLite either).
+    The good news for commercial development is that not only is SQLCipher for Android
+    open source, it is also released under a BSD-style license.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To start with, we will download and set up your Android project with SQLCipher.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Download the latest binary packages via the link on the SQLCipher GitHub page,
+    or follow this direct link [https://s3.amazonaws.com/sqlcipher/SQLCipher+for+Android+v3.0.0.zip](https://s3.amazonaws.com/sqlcipher/SQLCipher+for+Android+v3.0.0.zip).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Unpack the ZIP file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Copy the `icudt46l.zip` file from `/asset`s to `/assets` of your application.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `/libs` directory contains several JARs and folders containing native libraries.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Copy the `*.jar` files to you application's `/libs` directory. You may already
+    be using Commons-codec and/or guava; if so, check if the version is compatible
+    with SQLCipher.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Both the ARM and x86 implementations of the native code are included; however,
+    you'll probably only need the ARM-based native libraries. So, copy the `armeabi`
+    folder to `/libs` of your application.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's create an encrypted SQLite database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are several ways to handle SQLite database, either by working directly
+    with the `SQLiteDatabase` object or using `SQLiteOpenHelper`. But generally, if
+    you are already using an SQLite database in your app, simply replace the `import
+    android.database.sqlite.*` statement with `import net.sqlcipher.database.*`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The simplest way to create an encrypted SQLCipher database is to call `openOrCreateDatabase(…)`
+    with a password:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'If you''re using the `SQLiteOpenHelper` object, you would have extended it.
+    In this example, we''ll assume that your extension is called `SQLCipherHelper`.
+    When you call `getWritableDatabase`, you''ll notice that you are required to pass
+    a string argument (the database passphrase) with SQLCipher''s version of `SQLiteOpenHelper`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The SQLCipher native libraries need to be loaded before any database operation
+    can be completed using the `SQLiteDatabase.loadLibs(context)` statement. Ideally
+    this call should be located in the `onCreate` lifecycle method of either a content
+    provider or your application's application object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The sample code illustrates the two most common ways of working with SQLite
+    database: directly with the `SQLiteDatabase` object or using `SQLiteOpenHelper`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main point to note is the difference between using the `net.sqlcipher.database`
+    API and the default SQLite API is the use of passphrase when we create or retrieve
+    the SQLCipher database object. SQLCipher derives the encryption key using `PBKDF2`,
+    as covered in the previous recipe. The default configuration generates a 256 bit
+    AES key using 4,000 iterations at the time of writing this book. It's the job
+    of the developer to decide how to generate the passphrase. You could generate
+    using a PRNG on a per app basis or for greater randomness and so greater security
+    input by the user. SQLCipher transparently encrypts and decrypts with the derived
+    key. It also uses a message authentication code (MAC) to ensure both integrity
+    and authenticity, ensuring that the data has not been accidently or maliciously
+    tampered with.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: It's worth noting that because much of SQLCipher is written in native C/C++,
+    it is compatible with other platforms such as Linux, Windows, iOS, and Mac OS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: IOCipher
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Think of IOCipher as SQLCipher's long lost cousin from the good people at the
+    Guardian project. It offers the ability to mount an encrypted virtual filesystem
+    that allows developers to transparently encrypt all files within their app's directory.
+    As with SQLCipher, IOCipher relies on the developer to manage the password and
+    supports Android 2.1+.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One huge advantage of IOCipher is that it is a clone of the `java.io` API. This
+    means that from an integration perspective, there are few code changes to the
+    existing file management code. The difference is that the filesystem is first
+    mounted with a password, and instead of using `java.io.File`, you use `info.guardianproject.iocipher.File`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Even though IOCipher uses parts of SQLCipher, it is less mature but worth investigating
+    if you wish to protect the files rather than data within SQLite database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The SQLCipher downloads at [http://sqlcipher.net/downloads/](http://sqlcipher.net/downloads/)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The SQLCipher for Android source code at [https://github.com/sqlcipher/android-database-sqlcipher](https://github.com/sqlcipher/android-database-sqlcipher)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The *IOCipher: Virtual Encrypted Disks* project at [https://guardianproject.info/code/iocipher/](https://guardianproject.info/code/iocipher/)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Android KeyStore provider
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In Android 4.3, a new facility was added to allow apps to save private encryption
+    keys in a system **KeyStore** . Called Android KeyStore, it restricts access only
+    to the app that created them, and it was secured using the device pin code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Specifically, the Android KeyStore is a certificate store, and so only public/private
+    keys can be stored. Currently, arbitrary symmetric keys such as an AES key cannot
+    be stored. In Android 4.4, the **Elliptic Curve Digital Signature Algorithm**
+    (**ECDSA**) support was added to the Android KeyStore. This recipe discusses how
+    to generate a new key, and save and fetch it from the Android KeyStore.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As this feature was only added in Android 4.3, ensure that the minimum SDK version
+    in the Android manifest file is set to `18`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's get started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Create a handle on your app''s KeyStore:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Generate and save the app''s key pair:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Retrieve the key with a given alias:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `KeyStore` class has been around since API level 1\. To access the new Android
+    KeyStore, you use a special constant `"AndroidKeystore"`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to the Google documentation, there is a strange issue with the `KeyStore`
+    class that requires you to call the `load(null)` method even though you are not
+    loading the `KeyStore` from an input stream; otherwise, you may experience a crash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When generating the key pair, we populate a `KeyPairGeneratorSpec.Builder` object
+    with the required details—including the alias that we use to retrieve it later.
+    In this example, we set an arbitrary validation period of `1` year from the current
+    date and default the serial to `TEN`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loading a key from the alias is as simple as loading `keyStore.getEntry("alias",
+    null)`; from here, we cast to the `PrivateKey` interface so that we can use it
+    in our encryption/decryption.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The API for the `KeyChain` class was also updated in Android 4.3 to allow developers
+    to determine whether the device supports hardware-backed certificate store or
+    not. This basically means that the device supports a secure element for the certificate
+    store. This is an exciting enhancement as it promises to keep the certificate
+    store safe even on rooted devices. However, not all devices support this hardware
+    feature. The LG Nexus 4, a popular device, uses ARM's TrustZone for hardware protection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `KeyStore` class in the Android Developer reference guide at [https://developer.android.com/reference/java/security/KeyStore.html](https://developer.android.com/reference/java/security/KeyStore.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The KeyStore API sample at [https://developer.android.com/samples/BasicAndroidKeyStore/index.html](https://developer.android.com/samples/BasicAndroidKeyStore/index.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Credential storage enhancements in Android 4.3* article by *Nikolay Elenkov*
+    at [http://nelenkov.blogspot.co.uk/2013/08/credential-storage-enhancements-android-43.html](http://nelenkov.blogspot.co.uk/2013/08/credential-storage-enhancements-android-43.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: ARM TrustZone at [http://www.arm.com/products/processors/technologies/trustzone/index.php](http://www.arm.com/products/processors/technologies/trustzone/index.php)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up device administration policies
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: First introduced in Android 2.2, the Device Admin policies grant abilities to
+    apps to gain a greater level of device control. These features are primarily aimed
+    at enterprise app developers given their controlling, restrictive, and potentially
+    destructive nature, and offer an alternative to a third-party **Mobile Device
+    Management** (**MDM**) solution. In general, this is not aimed at consumer apps
+    unless a trust relationship already exists, for example, a bank and a banking
+    app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This recipe will define two device policies designed to strengthen the device
+    that could be part of an enterprise''s mobile security policy:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Enforce device encryption (which also ensures that a device pin/password is
+    set)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Enforce maximum screen lock timeout
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Although device encryption is no replacement for ensuring that the app data
+    is encrypted properly, it does add to the overall device security. Reducing the
+    maximum screen lock timeout helps protect the device if left unattended.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is no restriction on the number of apps enforcing device policies. If
+    there is a conflict on policy, the system defaults to the most secure policy.
+    For example, if there was a conflict on the password strength requirement's policy,
+    the strongest policy would be applied to satisfy all policies.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Device Admin policies were added in Version 2.2; however, this feature and
+    the specific restriction for device encryption were not added until Android 3.0\.
+    Therefore, for this recipe, ensure that you are building against a SDK above API
+    11.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Let's get started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Define a device administration policy by creating a new `.xml` file called
+    `admin_policy_encryption_and_lock_timeout.xml` in the `res/xml` folder with the
+    following content:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a class that extends the `DeviceAdminReceiver` class. This is the app
+    entry point for system broadcasts relating to device administration:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add receiver definition to your Android manifest file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Defining the receiver allows `AppPolicyReceiver` to receive system broadcast
+    intents to disable/request disabling of the admin settings. You should also notice
+    that this is where we reference the policy XML file in the metadata via the filename
+    `admin_policy_encryption_and_lock_timeout`.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: 'A device policy controller handles communication with `DevicePolicyManager`
+    with any additional application-specific logic. The first method that we defined
+    is for other application components (such as an activity) to validate device admin
+    status and to get intents that are specific to device admin:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In `AppPolicyController`, we now define the method that actually enforces the
+    lock screen timeout. We''ve arbitrarily chosen a maximum lock time of `3` minutes,
+    but this should align with an enterprise''s security policy:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Encrypting the device may take some time depending on the device''s hardware
+    and external storage size. As part of enforcing the device encryption policy,
+    we need a way to check whether the device is encrypted or encryption is in progress:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We define an example activity to show how it''s possible to integrate `AppPolicyController`
+    to help direct the user to enable system settings and handle the responses:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here, we implement the `onActivityResult(…)` activity lifecycle method to handle
+    the results from the system activities when enabling device administration and
+    encryption:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, we add a method to handle the process if users choose not to activate
+    this app as a device administrator. In this sample, we simply post a message;
+    however, it is likely that you would prevent the app from running as the device
+    wouldn''t compliment the enterprise security policy:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '`AppPolicyDemoActivity` shows an example of handling user interactions and
+    callbacks in `onActivityResult(…)` from the system activities for enabling the
+    device administration and device encryption.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`AppPolicyController` encapsulates interactions with `DevicePolicyManager`
+    and contains the logic to apply the policies. You could locate this code in your
+    activity or fragment, but it''s a better practice to keep it separate.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Defining the policies is as simple as defining them in the `<uses-policies>`
+    element of the device admin file. This is referenced in the metadata element of
+    the `AppPolicyReceiver` XML declaration in the Android manifest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: Given the elevated privileges of being a device administrator, apps are not
+    enabled as device administrators on installation as a security precaution. This
+    is achieved post install by using a build-in system activity that is requested
+    using an intent with a special action `AppPolicyController.getEnableDeviceAdminIntent()`
+    as shown. This activity is started with `startActivityForResult()`. This returns
+    a callback to `onActivityResult(…)` where the users choose to activate or cancel.
+    Nonactivation of the device administration could count as being in breach of the
+    enterprise security policy. Therefore, if the user doesn't activate it, it might
+    be enough to simply prevent the user from using the app until it is activated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use the `DevicePolicyManager.isActive(…)` method to check if the app is active
+    as a device administrator. Typically, this check should be performed on the entry
+    points to the application, such as the first activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The job of `AppPolicyReceiver` is to listen for device administration system
+    events. To receive these events, firstly you have to extend `DeviceAdminReceiver`
+    and define `Receiver` in the Android manifest file. The `OnEnabled()` callback
+    is where we enforce the lock screen timeout as it requires no additional user
+    input. Enabling device encryption requires user confirmation; therefore, we initiate
+    this from the activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`AppPolicyReceiver` will also receive an `onDisabled` event if the user disables
+    this application as a device administrator. What to do when a user disables your
+    app as device administrator will vary between apps, as mentioned earlier it depends
+    on enterprise security policy. There is also an `onDisableRequested` callback
+    method that allows us to display a specific message to the user, detailing the
+    consequences of disabling the application. In this example, we wipe the SharedPreferences
+    to ensure that data is not at risk while the device is noncompliant.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In addition to the policies used in this recipe, the device admin can enforce
+    the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Password enabled
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Password complexity (more control over this was added in 3.0)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Password history since 3.0
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Maximum failed password attempts before factory reset
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Wipe device (factory reset)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Lock device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Disable lock screen widgets (since 4.2)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Disable camera (since 4.0)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Users cannot uninstall apps that are active device administrators. To uninstall,
+    they must first deactivate the app as a device administrator, and then uninstall
+    it. This allows you to perform any necessary functions in `DeviceAdminReceiver.onDisabled()`,
+    for example, reporting an incident to a remote server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android 4.4 saw the introduction of an optional device admin feature constant
+    to be used in the `<uses-feature>` tag in the app's `manifest.xml` file. This
+    declares that the app requires device admin feature and ensures correct filtering
+    on the Google Play store.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Disabling device camera
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'An interesting feature added in Android 4.0 was the ability to disable camera
+    use. This can be useful for organizations looking to limit data leakage. The following
+    code snippet shows the policy to enable an app to disable camera use:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Device Administration API in the Android Developers Reference guide at [https://developer.android.com/guide/topics/admin/device-admin.html](https://developer.android.com/guide/topics/admin/device-admin.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Device Admin sample application at [https://developer.android.com/guide/topics/admin/device-admin.html#sample](https://developer.android.com/guide/topics/admin/device-admin.html#sample)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The *Enhancing Security with Device Management Policies* web page in the Android
+    Developers training guide at [https://developer.android.com/training/enterprise/device-management-policy.html](https://developer.android.com/training/enterprise/device-management-policy.html)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`FEATURE_DEVICE_ADMIN` in the Android Developers Reference guide at [https://developer.android.com/reference/android/content/pm/PackageManager.html#FEATURE_DEVICE_ADMIN](https://developer.android.com/reference/android/content/pm/PackageManager.html#FEATURE_DEVICE_ADMIN)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL

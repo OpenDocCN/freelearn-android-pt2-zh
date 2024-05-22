@@ -1,0 +1,1322 @@
+- en: Chapter 3. Networking
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fetching list of photos from Flickr and Picasa
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Downloading images from Flickr and Picasa
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Performing cross-platform multithreading
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Synchronizing native cross-platform threads
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Managing memory using reference counting
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing asynchronous task queues
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Handling asynchronous callbacks invocation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Working with the network asynchronously
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Detecting a network address
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Writing the HTTP server
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Networking is an inherently asynchronous and unpredictable area in terms of
+    timing. One may not be sure about the reliability of the connection. Even when
+    we use the **TCP** protocol, there is no guarantee on the delivery time, and nothing
+    prevents the applications from freezing while waiting for the data in the socket.
+    To develop a responsive and safe application, a number of problems must be solved:
+    we need to be in full control of the download process, we have to limit the downloaded
+    data size, and gracefully handle the errors that occur. Without delving into the
+    details of the HTTP protocol implementation, we use the libcurl library and concentrate
+    on higher-level tasks related to game development.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: At first, we look at the Picasa and Flickr REST APIs to download image lists
+    and form direct URLs to photos. Then, we get to the thread-safe asynchronous programming
+    and finally we implement a simple HTTP server for debugging purposes using the
+    pure Berkeley sockets interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The examples of this chapter related to multithreaded programming are Windows-only,
+    but at the end of the chapter, we shall combine everything to create the Android
+    `App5` example with a built-in web server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fetching list of photos from Flickr and Picasa
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous chapter, we built the libcurl library. As a refresher on how
+    to download a web page, refer to the `1_CurlDownloader` example in the accompanying
+    materials for this chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The information about using Picasa and Flickr in C++ is somewhat limited, but
+    calling the **REST** (**Representational State Transfer**) APIs of these sites
+    is no different from downloading web pages. All we have to do is form a correct
+    URL for the images list, download an XML file from this URL, and then parse this
+    file to build a list of individual image URLs. Usually, REST APIs require some
+    form of authentication using **oAuth**, but for the read-only access, it is sufficient
+    to use only the application key, which is available through the simple online
+    registration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: The example code in this recipe only forms the URLs and it is up to the reader
+    to download the actual image list. We also do not provide an application key here,
+    and we encourage the reader to obtain a key and test the code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Every application must sign its requests to the Flickr server with a unique
+    key, obtained through a simple registration process. An application key and a
+    secret key are long hexadecimal numbers similar to: `14fc6b12345678901234567890d69c8d`.
+    Create your own Yahoo ID account and obtain application keys at the following
+    site: [http://www.flickr.com/services/api/misc.api_keys.html](http://www.flickr.com/services/api/misc.api_keys.html).
+    If you already have a Yahoo ID account, proceed directly to [http://www.flickr.com/services/apps/create](http://www.flickr.com/services/apps/create).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Picasa photo hosting provides free access to the RSS feeds and does not
+    require client applications to use any authentication keys.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We would like to keep up with the latest photo trends, so we want to fetch
+    a list of the most upvoted images, or a list of the most recently added images.
+    To access such lists, Flickr provides the `flickr.interestingness.getList` and
+    `flickr.photos.getRecent` methods, and Picasa provides two RSS feeds: `featured`
+    and `all`. The example screenshot of the recent photos in the Flickr RSS feed
+    is as follows:![How to do it…](img/7785OS_03_01.jpg)'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To form the required URLs for Flickr and Picasa, we implement two functions.
+    One for Flickr:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A list may be large and contain many pages. We can choose a page by an index:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'And the other function is for Picasa:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Depending on the list we want, we pass either the `FlickrFavoritesURL` or `FlickrRecentURL`
+    constants as the `BaseURL` parameter of the `Flickr_GetListURL()` function and
+    either the `PicasaFavoritesURL` or `PicasaRecentURL` constants as the `BaseURL`
+    parameter of the `Picasa_GetListURL()` function.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Here is the complete list of the required string constants:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The `MaxResults` parameter limits the number of images in the list. The `PageIndex`
+    parameter specifies how many result pages to skip, and the `SearchQuery` string
+    can be used to fetch only the images with a given text in their description.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The Flickr version uses the `AppKey` global string constant which should contain
+    the obtained application key.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We form the URL; in this case, it is the first page of the user upvoted images
+    from Flickr:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we may pass this URL to our HTTP downloader and receive an XML file with
+    the list of images. The same can be done with Picasa; note the one-based page
+    indexing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The complete sources code of these functions is found in the `PhotoAPI.cpp`
+    file from the `2_FlickrAndPicasa` folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The provided examples do not contain a valid application key for Flickr. Also
+    remember, that according to Flickr's license agreement, your application may not
+    show more than fifteen images on one screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is an extensive documentation of the Flickr API residing at [http://www.flickr.com/services/api/](http://www.flickr.com/services/api/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Downloading images from Flickr and Picasa*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Downloading images from Flickr and Picasa
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We have a list of images in the XML format, which we downloaded in the Fetching
+    lists of photos from Flickr and Picasa recipe. Let's download the actual photos
+    from the photo hosting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Here, we need the image list from Flickr or Picasa to get started. Use the previous
+    recipe to download that list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Once we have retrieved the list, we extract individual image IDs from it. Having
+    these IDs allows us to form the URLs for individual images. Flickr uses a complicated
+    image URL formation process and Picasa stores the URLs directly. Both services
+    can generate responses in XML and JSON formats. We will show you how to parse
+    XML responses using our tiny ad hoc parser. However, if you already use some kind
+    of XML or JSON parsing library in your project, you are encouraged to use it for
+    this task too.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To parse the Flickr XML list, we use the following function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Parse the string in an ad-hoc way. You can use your favorite XML library instead
+    of this loop:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The function for the Picasa RSS feed, in the XML format, looks as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We parse the supplied string using a similar ad-hoc code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The auxiliary function `ExtractURLAttribute()` is used to extract values of
+    individual attributes from XML tags:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Scan the string until the end:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, to form a Flickr URL for the image in the selected resolution we use
+    this function:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'First, we need to prepare parameters using the address from `InURL`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Combine everything into the resulting string:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add the suffix to the resulting string, which determines the size of a requested
+    photo, and a `.jpg` extension:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'For Picasa, we modify the image URL from the list by inserting a different
+    code path:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'When we need the same image in different resolutions, we provide the `ImgSizeType`
+    parameter of the type `PhotoSize`, which can take the following values:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: These values are not related to Flickr or Picasa naming conventions and are
+    used internally for our convenience (and API independence).
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We have the list of images from the previous recipe:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, for the URL for the first image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Finally, use the downloader to get the image located at `ImageURL`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There are sets of rules on both Flickr and Picasa sites, which discourage massive
+    automated downloads of full-size images (not more than one per second), and any
+    application we develop should strictly follow these rules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One nice thing about the code for this recipe, is that it can be modified to
+    support the well-known `Yandex.Fotki` photo site or other similar photo hosting
+    services, which provide RSS feeds. We leave it as a do-it-yourself exercise for
+    the reader.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performing cross-platform multithreading
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To continue improving the user experience, we should make long-running tasks
+    asynchronous, with fine-grained control over their execution. To do so, we implement
+    an abstraction layer on top of the operating systems' threads.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Android NDK threads are based on POSIX threads. Take a look at the header file
+    `platforms\android-14\arch-arm\usr\include\pthread.h` in your NDK folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s start with declarations of thread handle types:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then, we declare the thread interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The entry point prototype differs for Windows and Android, but only in the
+    return type:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A portable implementation of the `iThread::Start()` method is done the following
+    way:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To demonstrate the usage of the implemented thread class, we define a new thread,
+    which prints out a message every second:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, the implementation of a simple multithreaded application in C++ is not
+    much harder than in Java.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Synchronizing native cross-platform threads
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Synchronization is required to prevent different threads from accessing shared
+    resources simultaneously. A piece of code that accesses a shared resource—that
+    must not be concurrently accessed by more than one thread—is called a critical
+    section ([http://en.wikipedia.org/wiki/Critical_section](http://en.wikipedia.org/wiki/Critical_section)).
+    To avoid race conditions, a mechanism is required at the entry and exit of the
+    critical section. In Windows applications, critical sections are part of the WinAPI
+    and in Android, we use mutexes from the `pthread` library, which serve the same
+    purpose.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Android native synchronization primitives are POSIX-based. They include thread's
+    management functions, mutexes, conditional variables, and barriers. Take a look
+    at the header file `platforms\android-14\arch-arm\usr\include\pthread.h` in your
+    NDK folder.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s create an API-independent abstraction to synchronize threads:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Locking and unlocking a mutex is also different in Windows and Android:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Using the **Resource Acquisition Is Initialization** (**RAII**) C++ idiom,
+    we can define the `Lock` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, using mutexes is straightforward:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use mutexes extensively almost everywhere in the subsequent chapters of this
+    book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Implementing asynchronous task queues*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Managing memory using reference counting
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When working in the native code environment, every memory allocation event is
+    handled by the developer. Tracking all the allocations in a multithreaded environment
+    becomes notoriously difficult. The C++ language provides a way to avoid manual
+    object deallocation using smart pointers. Since we are developing mobile applications,
+    we cannot afford to use the whole **Boost** library just to include smart pointers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'You can use the Boost library with Android NDK. The main two reasons we avoid
+    it in our small examples are as follows: a drastically increased compilation time
+    and the desire for showing how basic things can be implemented yourself. If your
+    project already includes Boost, you are advised to use smart pointers from that
+    library. The compilation is straightforward and does not require special steps
+    for porting.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We need a simple intrusive counter to be embedded into all of our reference-countered
+    classes. Here, we provide a lightweight implementation of such a counter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code is portable between Windows, Android, and other systems with the `gcc`
+    or `clang` toolchains.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The implementation of our intrusive smart pointer class is as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Here, we call a helper to do the atomic increment of an intrusive counter.
+    This allows us to use this smart pointer with incomplete types:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The same trick is applied to the atomic decrement operation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We need a constructor for an implicit type conversion from `T*`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We also need an assignment operator:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The dereference operator (`->`) is one of the crucial features of any smart
+    pointer:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Mimic a `dynamic_cast` behavior:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The comparison operator is also implemented:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Sometimes, we need to pass a value of a smart pointer to a third-party C API.
+    We need to retrieve an internal pointer to do it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Refer to the example `4_ReferenceCounting_ptr` from the book's supplementary
+    materials for the full source code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The minimalistic example that demonstrates the usage of our smart pointer is
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: An allocated object of `SomeClass` is assigned to the smart pointer `Ptr`. At
+    the end of `Test()`, the smart pointer is automatically destroyed, and the number
+    of references to the allocated object becomes zero. As such, the allocated object
+    is destroyed implicitly with the `delete()` call, thereby avoiding memory leaks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We extensively check our smart pointers to be non-null and we want to use the
+    traditional syntax like the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This can be achieved without adding a conversion operator to another usable
+    type. The following is how it is done using a private inner class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: Basically, the condition `if ( SomeSmartPointer )` will cast a smart pointer
+    to a pointer to the `clProtector` class. However, the C++ compiler will prevent
+    you from misusing it. The `operator delete( void* )` operator of `clProtector`
+    should be declared but not defined, preventing the user from creating the instances
+    of `clProtector`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One common problem with smart pointers is the cyclic reference problem. When
+    an object `A` holds a reference to an object `B`, and at the same time the object
+    `B` holds a reference to the object `A`, the reference counter of both objects
+    cannot be zero. This situation is quite common for the container classes and can
+    be avoided by using a raw pointer to the containing object, not a smart pointer.
+    See the following code as an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A raw pointer to the parent object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A list of garbage-collected elements:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Implementing asynchronous task queues*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Implementing asynchronous task queues
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We want to execute a list of tasks asynchronously from the main thread but retain
+    their order relative to each other. Let's implement a queue for such tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We need mutexes and smart pointers from the previous recipes to do this, since
+    the queue needs synchronization primitives to keep its internal data structures
+    consistent, and it needs smart pointers to prevent tasks from leaking.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The interface for tasks we want to put into the worker thread is as follows:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `Run()` method contains a payload of our task. It is where all the useful
+    work is done:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A task cannot be safely terminated from outside, since the foreign code does
+    not know the current state of the task and what kind of work it is doing now.
+    So, the `Exit()` method just sets an appropriate flag, which means we want to
+    exit:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We can check this flag inside the `Run()` method by calling `IsPendingExit()`:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Tasks should be distinguishable from each other. That is what IDs are for:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'And here, is the interface of the worker thread (the complete implementation
+    can be found in the book''s download pack):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We can enqueue and cancel tasks at will:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `ExtractTask()` private method is used to access the list of tasks atomically:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We start a single worker thread and run a simple task. The key difference from
+    running three separate threads is that all the tasks are executed sequentially
+    and a common resource, which is the output window in our case, is also used sequentially
+    without the need for handling concurrent access:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Add three tasks one by one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Tasks are never executed in parallel, only sequentially. Use a simple spinlock
+    to wait for completion of all tasks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: Handling asynchronous callbacks invocation
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: One simple situation we may encounter in multithreaded programming is when we
+    need to run a method on another thread. For example, when a download task completes
+    on a worker thread, the main thread may want to be notified of the task completion,
+    to parse the downloaded data. In this recipe we will implement a mechanism for
+    such notifications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Understanding of the **asynchronous event** concept is important before we proceed
+    to the implementation details. When we say asynchronous, we mean that something
+    occurs unpredictably and has no determined timing. For example, we cannot predict
+    how long it will take our task to download a URL—that is it; the task completes
+    asynchronously and should invoke a **callback** asynchronously.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The message for us should be a method call. We will hide a method call behind
+    this interface:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'A pointer to an instance of such type represents a prepared method call. We
+    define a queue of `iAsyncCapsule` with the following implementation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Enqueue an event:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The events demultiplexer, as described in the `Reactor` pattern ([http://en.wikipedia.org/wiki/Reactor_pattern](http://en.wikipedia.org/wiki/Reactor_pattern)):'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This is an even-odd trick to prevent copying the entire queue. We keep two
+    queues and switch between them:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Note the mutex''s scope above. We should not invoke callbacks while the mutex
+    is locked:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE61]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We start two threads. One handles incoming events by making a call to the `DemultiplexEvents()`
+    function in an endless loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE62]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And the other thread produces asynchronous events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE63]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our response to an event is implemented in the `TestCall` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE64]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `main()` function starts both threads and waits infinitely (you can press
+    *Ctrl* + *Break* to stop it):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE65]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You should see this output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE66]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `printf()` function might not be thread-safe, but our queue ensures the
+    calls to it do not interfere with each other.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Working with the network asynchronously
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Networking is essentially a set of unpredictable and asynchronous operations.
+    Let's do it asynchronously in a separate thread to prevent stalls on the UI thread,
+    which may result in ANR behavior on Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Here, we need all that we have implemented in the previous recipes of this
+    chapter: smart pointers, worker threads, libcurl downloader, and asynchronous
+    events queue.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We derive the `DownloadTask` class, which performs an HTTP request using the
+    libcurl library, from `iTask`. Here, we implement its method `Run()`, which sets
+    up the libcurl library and performs a network operation:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE67]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Setup parameters for libcurl:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE68]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Disable SSL keys verification:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE69]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Perform a network operation synchronously. The call `curl_easy_perform()` blocks
+    the current thread until the result is obtained from the network, or an error
+    occurs:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE70]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Read the result and clean up for the library:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE71]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Tell the downloader to invoke completion callback for this task:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE72]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We provide a snippet that downloads a response from the Flickr echo service
+    and handles the task completion on the main thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE73]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Print the result to the console window:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE74]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Wait for incoming events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE75]'
+  prefs: []
+  type: TYPE_PRE
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Downloading images from Flickr and Picasa*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Detecting a network address
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To communicate with a web server, we need to specify its IP address. In a limited
+    mobile environment, it is not convenient to ask the user for the IP address and
+    we have to detect the address ourselves (and not involving any non-portable code).
+    In the forthcoming `App5` example, we use the `GetAdaptersAddresses()` function
+    from the Windows API and the `getifaddrs()` function from POSIX. The Android runtime
+    library provides its own implementation of `getifaddrs()`, which is included in
+    the `App5` sources in the `DetectAdapters.cpp` file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s declare a structure to hold the information describing a network adapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE76]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is the internal system name of the network adapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE77]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The IP address of the adapter is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE78]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The unique identification number of the adapter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE79]'
+  prefs: []
+  type: TYPE_PRE
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We provide detailed code for the Android version of the `Net_EnumerateAdapters()`
+    function in the following code. It enumerates all of the network adapters available
+    in the system:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE80]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The `getifaddrs()` function creates a linked list of structures that describe
+    network interfaces of the local system:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE81]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Iterate through the linked list:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE82]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Treat IPv4 and IPv6 addressed differently:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE83]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Convert the network address structure into a C-string and save it in the `Adapters`
+    vector:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE84]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Release the linked list:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE85]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To enumerate all the adapters in a console window we use a simple loop:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE86]'
+  prefs: []
+  type: TYPE_PRE
+- en: The Android implementation of this code is in the `App5` project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Fortunately, the code above works for any POSIX system and the `App5` example
+    also provides a Windows version of `Net_EnumerateAdapters()`. On Android, we have
+    to enable the `ACCESS_NETWORK_STATE` and `INTERNET` permissions for our application;
+    otherwise, the system will not allow us to access the Internet. This is done in
+    the `AndroidManifest.xml` file of the `App5` example, using the following lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE87]'
+  prefs: []
+  type: TYPE_PRE
+- en: Don't forget to put these lines into the manifest of your application, which
+    intends to work with the network.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing the HTTP server
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When dealing with mobile development, we will eventually run our games on a
+    real device. Until then, we have to use some debugging tools. Of course, we might
+    set up remote debugging with `gdb`, but as soon as most critical bugs related
+    to access violations are eliminated, here come the logical errors or those related
+    to race conditions, which are difficult to hunt down and require multiple redeployment
+    of the application with somewhat trivial changes to it. To be able to quickly
+    change the runtime behavior of your application directly on an Android device,
+    we can implement an embedded web server with an interface to fine-tune some internal
+    parameters of your application. This recipe contains an outline of `App5`, which
+    implements such a web server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Writing an HTTP server from scratch is not easy, so we use a freely available
+    simple server by René Nyffenegger from the following web page: [http://www.adp-gmbh.ch/win/misc/webserver.html](http://www.adp-gmbh.ch/win/misc/webserver.html).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use most of these sources directly, and our more or less refined version
+    which supports Android is included in the `App5` example. The most important difference
+    from the original is the usage of an abstract socket API built on top of **WinSock**
+    and **Android BSD** sockets. We recommend that you take a closer look at the `Sockets.h`
+    and `Sockets.cpp` files in the `App5` sources.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The HTTP server is started on a separate thread, which is a descendant of the
+    `iThread` class. The main loop of the server is simple:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE88]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We await an incoming connection, and when the `Accept()` method succeeds, a
+    new `HTTPRequestThread` is started. This thread reads data from the newly created
+    socket and fills in the `sHTTPServerRequest` structure. Finally, this request
+    is handled in the `HandleRequest()` method by filling the `sHTTPServerRequest::FData`
+    field with the content of an HTML page. In the end, this data is sent to the client.
+    The code is linear, but a little lengthy to present it here. We refer the reader
+    to the `HTTP.cpp` file for the details.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To utilize the server, we have created the `HTTPServerThread` instance and provided
+    an implementation of the `SetVariableValue()` and `GetVariableValue()` functions
+    in the `HTTP.cpp` file, which are empty by default. The server startup code is
+    located in the `OnStart()` function.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We create the server instance:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE89]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we use the detected adapter address:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE90]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we start the web server thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE91]'
+  prefs: []
+  type: TYPE_PRE
+- en: By default, the server starts at the IP address `127.0.0.1` and the port is
+    `8080`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After we start `App5` on an Android device, we can connect to it from a desktop
+    computer with any web browser: just type its IP address and the port. The IP address
+    is detected by the web server at startup and is displayed at the top of the device
+    screen.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is a browser screenshot with the output from our tiny web server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![How it works…](img/7785OS_03_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Accessing our Android web server from a desktop web browser.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more…
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '`App5` works on both Windows and Android, but there are subtleties related
+    to the network configuration.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we are using a 3G or similar cellular network, most likely we do not have
+    an external IP address, so to allow our web server to be visible in the browser
+    we should stick to a Wi-Fi connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: See also
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '*Downloading images from Flickr and Picasa*'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
