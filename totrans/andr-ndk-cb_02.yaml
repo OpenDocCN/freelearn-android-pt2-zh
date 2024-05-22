@@ -1,73 +1,109 @@
 - en: Chapter 2. Java Native Interface
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第2章. Java Native Interface
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将介绍以下食谱：
 - en: Loading native libraries and registering native methods
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 加载原生库和注册原生方法
 - en: Passing parameters and receiving returns in primitive types
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用基本类型传递参数和接收返回值
 - en: Manipulating strings in JNI
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在JNI中操作字符串
 - en: Managing references in JNI
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在JNI中管理引用
 - en: Manipulating classes in JNI
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在JNI中操作类
 - en: Manipulating objects in JNI
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在JNI中操作对象
 - en: Manipulating arrays in JNI
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在JNI中操作数组
 - en: Accessing Java static and instance fields in native code
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在原生代码中访问Java的静态字段和实例字段
 - en: Calling static and instance methods from native code
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在原生代码中调用静态方法和实例方法
 - en: Caching jfieldID, jmethodID, and reference data to improve performance
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 缓存jfieldID、jmethodID和引用数据以提高性能
 - en: Checking errors and handling exceptions in JNI
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在JNI中检查错误和处理异常
 - en: Integrating assembly code in JNI
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在JNI中集成汇编代码
 - en: Introduction
+  id: totrans-14
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 介绍
 - en: 'Programming with Android NDK is essentially writing code in both Java and native
     languages such as C, C++, and assembly. Java code runs on Dalvik **Virtual Machine**
     (**VM**), while native code is compiled to binaries running directly on the operating
     system. **Java Native Interface** (**JNI**) acts like the bridge that brings both
     worlds together. This relationship between Java code, Dalvik VM, native code,
     and the Android system can be illustrated using the following diagram:'
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用Android NDK编程本质上是同时用Java和C、C++、汇编等原生语言编写代码。Java代码在Dalvik **虚拟机** (**VM**)
+    上运行，而原生代码编译为直接在操作系统上运行的二进制文件。**Java Native Interface** (**JNI**) 像一座桥梁，将这两个世界连接起来。Java代码、Dalvik
+    VM、原生代码和Android系统之间的关系可以用以下图表来说明：
 - en: '![Introduction](img/1505OT_02_01.jpg)'
+  id: totrans-16
   prefs: []
   type: TYPE_IMG
+  zh: '![介绍](img/1505OT_02_01.jpg)'
 - en: The arrow in the diagram indicates which party initiates the interaction. Both
     **Dalvik VM** and **Native Code** run on top of **Android system** (Android is
     a Linux-based OS). They require the system to provide the execution environment.
@@ -75,8 +111,12 @@
     and invoke methods at Java Code. **JNI** also allows **Java Code** to invoke native
     methods implemented in **Native Code**. Therefore, **JNI** facilitates the two-way
     communication between **Native Code** and **Java Code**.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 图表中的箭头表示哪个方面发起交互。**Dalvik VM** 和 **原生代码** 都在 **Android系统** 之上运行（Android是基于Linux的操作系统）。它们需要系统提供执行环境。**JNI**
+    是 **Dalvik VM** 的一部分，它允许 **原生代码** 访问Java代码的字段和方法。**JNI** 还允许 **Java代码** 调用 **原生代码**
+    中实现的原生方法。因此，**JNI** 促进了 **原生代码** 与 **Java代码** 之间的双向通信。
 - en: If you are familiar with Java programming and C, or C++, or assembly programming,
     then learning programming with Android NDK is mostly learning JNI. JNI comes with
     both primitive and reference data types. These data types have their corresponding
@@ -84,139 +124,175 @@
     directly, since a data type is normally equivalent to a native C/C++ data type.
     However, reference data manipulation often requires the help of the predefined
     JNI functions.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你熟悉Java编程以及C或C++或汇编编程，那么学习使用Android NDK编程主要是学习JNI。JNI包含基本类型和引用类型。这些数据类型在Java中有相应的映射数据类型。操作基本类型通常可以直接进行，因为一个数据类型通常等同于一个原生的C/C++数据类型。然而，引用数据操作通常需要借助预定义的JNI函数。
 - en: In this chapter, we'll first cover various data types in JNI and demonstrate
     how to invoke native methods from Java. We then describe accessing the Java fields
     and calling Java methods from the native code. Finally, we will discuss how to
     cache data to achieve better performance, how to handle errors and exceptions,
     and how to use assembly in native method implementation.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们首先介绍JNI中的各种数据类型，并演示如何从Java调用原生方法。然后描述如何从原生代码访问Java字段和调用Java方法。最后，我们将讨论如何缓存数据以实现更好的性能，如何处理错误和异常，以及如何在原生方法实现中使用汇编。
 - en: Every recipe in this chapter comes with a sample Android project that illustrates
     the topic and related JNI functions. Because of the space constraint, we cannot
     list all the source code in the book. The code is a very important part of this
     chapter and it is strongly recommended that you download the source code and refer
     to it when going through the recipes.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章节的每个食谱都附带一个示例Android项目，展示了主题及相关JNI函数。由于篇幅限制，书中无法列出所有源代码。代码是本章非常重要的部分，强烈建议你在阅读食谱时下载源代码并参考。
 - en: Tip
+  id: totrans-21
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: 'JNI is a complex topic, and we tried to cover the most essential parts of it
     in the context of Android NDK programming. However, a single chapter is not enough
     to provide all the details. Readers may want to refer to Java JNI Specification
     at [http://docs.oracle.com/javase/6/docs/technotes/guides/jni/](http://docs.oracle.com/javase/6/docs/technotes/guides/jni/)
     or the Java Native Interface: Programmer''s Guide and Specification book at [http://java.sun.com/docs/books/jni/](http://java.sun.com/docs/books/jni/).
     For Android-specific information, you can refer to JNI Tips at [https://developer.android.com/guide/practices/jni.html](https://developer.android.com/guide/practices/jni.html).'
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
 - en: Loading native libraries and registering native methods
+  id: totrans-23
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: Native code is usually compiled into a shared library and loaded before the
     native methods can be called. This recipe covers how to load native libraries
     and register native methods.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-25
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: Please read the recipes in [Chapter 1](ch01.html "Chapter 1. Hello NDK"), *Hello
     NDK*, to set up the Android NDK development environment if you haven't done so
     already.
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-27
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The following steps will show you how to build an Android application that
     demonstrates loading native libraries and registering native methods:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
 - en: Start Eclipse, select **File** | **New** | **Android Project**. Enter the value
     for **Project Name** as `NativeMethodsRegister`. Select **Create new project in
     workspace**. Then, click on **Next**.
+  id: totrans-29
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: In the next window, select the latest version of Android SDK, then click on
     **Next** to go to the next window.
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Specify the package name as `cookbook.chapter2`. Select the **Create Activity**
     checkbox, and specify the name as `NativeMethodsRegisterActivity`. Set the value
     for **Minimum SDK** as **5 (Android 2.0)**. Then, click on **Finish**.
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: In **Eclipse Package Explorer**, right-click on the `NativeMethodsRegister`
     project, then select **New** | **Folder**. Enter the name `jni` in the pop-up
     window, then click on **Finish**.
+  id: totrans-32
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Right-click on the newly created `jni` folder under the `NativeMethodsRegister`
     project, then select **New** | **File**. Enter `nativetest.c` as the value for
     **File name**, then click on **Finish**.
+  id: totrans-33
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'Add the following code to `nativetest.c`:'
+  id: totrans-34
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE0]'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Add the following code to load the native shared library and define native
     methods to `NativeMethodRegisterActivity.java`:'
+  id: totrans-36
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE1]'
+  id: totrans-37
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Change `TextView` in the `res/layout/activity_native_method_register.xml` file
     as follows:'
+  id: totrans-38
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE2]'
+  id: totrans-39
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Create a file named `Android.mk` under the `jni` folder with the following
     content:'
+  id: totrans-40
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE3]'
+  id: totrans-41
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Start a terminal, go to the `jni` folder under our project, and type `ndk-build`
     to build the native library.
+  id: totrans-42
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Run the project on an Android device or emulator. You should see something similar
     to the following screenshot:![How to do it…](img/1505_02_02.jpg)
+  id: totrans-43
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-44
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'This recipe describes how to load a native library and register native methods:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
 - en: '**Loading Native Library**: The `java.lang.System` class provides two methods
@@ -229,204 +305,271 @@
     to load the native library. The `System.load` method can be handy when we want
     to switch between different versions of a native library, since it allows us to
     specify the full library path.'
+  id: totrans-46
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**加载本地库**：`java.lang.System`类提供了两种加载本地库的方法，即`loadLibrary`和`load`。`loadLibrary`接受不带前缀和文件扩展名的库名。例如，如果我们想要加载在示例项目中编译为`libNativeRegister.so`的Android本地库，我们使用`System.loadLibrary("NativeRegister")`。`System.load`方法不同，它需要本地库的完整路径。在我们的示例项目中，我们可以使用`System.load("/data/data/cookbook.chapter2/lib/libNativeRegister.so")`来加载本地库。当我们想要在不同版本的本地库之间切换时，`System.load`方法很有用，因为它允许我们指定完整的库路径。'
 - en: We demonstrated the usage of both the methods in the static initializer of the
     `NativeMethodRegisterActivity.java` class. Note that only one method should be
     enabled when we build and run the sample application.
+  id: totrans-47
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们在`NativeMethodRegisterActivity.java`类的静态初始化器中演示了这两种方法的用法。请注意，在构建和运行示例应用程序时，只应启用一种方法。
 - en: '**JNIEnv Interface Pointer**: Every native method defined in native code at
     JNI must accept two input parameters, the first one being a pointer to `JNIEnv`.
     The `JNIEnv` interface pointer is pointing to thread-local data, which in turn
     points to a JNI function table shared by all threads. This can be illustrated
     using the following diagram:![How it works…](img/1505OT_02_03.jpg)'
+  id: totrans-48
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**JNIEnv接口指针**：在JNI中，本地代码中定义的每个本地方法都必须接受两个输入参数，第一个是指向`JNIEnv`的指针。`JNIEnv`接口指针指向线程局部数据，进而指向所有线程共享的JNI函数表。以下图可以说明这一点：![工作原理](img/1505OT_02_03.jpg)'
 - en: The `JNIEnv` interface pointer is the gateway to access all pre-defined JNI
     functions, including the functions that enable the native code to process Java
     objects, access Java fields, invoke Java methods, and so on. The `RegisterNatives`
     native function we're going to discuss next is also one of them.
+  id: totrans-49
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`JNIEnv`接口指针是访问所有预定义JNI函数的网关，包括使本地代码能够处理Java对象、访问Java字段、调用Java方法的函数等。我们接下来将要讨论的`RegisterNatives`本地函数也是其中之一。'
 - en: Tip
+  id: totrans-50
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The `JNIEnv` interface pointer points to thread-local data, so it cannot be
     shared between threads. In addition, `JNIEnv` is only accessible by a Java thread.
     A native thread must call the JNI function `AttachCurrentThread` to attach itself
     to the VM, to obtain the `JNIEnv` interface pointer. We will see an example of
     this in the *Manipulating classes in JNI* recipe in this chapter.
+  id: totrans-51
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`JNIEnv`接口指针指向线程局部数据，因此不能在多个线程之间共享。此外，`JNIEnv`仅可由Java线程访问。本地线程必须调用JNI函数`AttachCurrentThread`将自己附加到虚拟机，以获取`JNIEnv`接口指针。我们将在本章的*在JNI中操作类*的菜谱中看到一个例子。'
 - en: '**Registering Native Methods**: JNI can automatically discover the native method
     implementation if its function name follows a specific naming convention as mentioned
     in [Chapter 1](ch01.html "Chapter 1. Hello NDK"), *Hello NDK*. This is not the
     only way. In our sample project, we explicitly called the `RegisterNatives` JNI
     function to register the native methods. The `RegisterNatives` function has the
     following prototype:'
+  id: totrans-52
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**注册本地方法**：如果本地方法实现的函数名遵循[第1章](ch01.html "第1章. Hello NDK")中提到的特定命名约定，JNI可以自动发现本地方法实现。这不是唯一的方法。在我们的示例项目中，我们显式调用了`RegisterNatives`
+    JNI函数来注册本地方法。`RegisterNatives`函数具有以下原型：'
 - en: '[PRE4]'
+  id: totrans-53
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'The `clazz` argument is a reference to the class in which the native method
     is to be registered. The `methods` argument is an array of the `JNINativeMethod`
     data structure. `JNINativeMethod` is defined as follows:'
+  id: totrans-54
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`clazz`参数是对注册本地方法的类的引用。`methods`参数是`JNINativeMethod`数据结构的数组。`JNINativeMethod`定义如下：'
 - en: '[PRE5]'
+  id: totrans-55
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: '`name` indicates the native method name, `signature` is the descriptor of the
     method''s input argument data type and return value data type, and `fnPtr` is
     the function pointer pointing to the native method. The last argument, `nMethods`
     of `RegisterNatives`, indicates the number of methods to register. The function
     returns zero to indicate success, and a negative value otherwise.'
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`name`表示本地方法名称，`signature`是方法的输入参数数据类型和返回值数据类型的描述符，`fnPtr`是指向本地方法的函数指针。`RegisterNatives`的最后一个参数`nMethods`表示要注册的方法数量。函数返回零表示成功，否则返回负值。'
 - en: '`RegisterNatives` is handy to register a native method implementation for different
     classes. In addition, it can simplify the native method name to avoid careless
     mistakes.'
+  id: totrans-57
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`RegisterNatives`方便注册不同类的本地方法实现。此外，它还可以简化本地方法名称，以避免粗心大意。'
 - en: 'The typical way of using `RegisterNatives` is in the `JNI_OnLoad` method as
     shown in the following template. `JNI_OnLoad` is called when the native library
     is loaded, so we can guarantee that the native methods are registered before they''re
     invoked:'
+  id: totrans-58
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 使用`RegisterNatives`的典型方式是在`JNI_OnLoad`方法中，如下面的模板所示。当加载本地库时，会调用`JNI_OnLoad`，因此我们可以确保在调用本地方法之前注册它们：
 - en: '[PRE6]'
+  id: totrans-59
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: We demonstrated the usage of the preceding template in the `JNI_OnLoad` method
     of our sample code, where we registered two native methods to add and multiply
     two input integers respectively. The execution result shown earlier proves that
     the Java code can invoke the two registered native methods successfully.
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们在示例代码的`JNI_OnLoad`方法中演示了前面模板的使用，在那里我们注册了两个本地方法，分别用于对两个输入整数进行加法和乘法。前面显示的执行结果证明Java代码可以成功调用这两个注册的本地方法。
 - en: Note that this example uses some JNI features that we're going to cover in later
     recipes, including the `FindClass` function and field descriptors. It is alright
     if don't fully understand the code at this stage. You can always go back to it
     after learning more about those topics.
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，此示例使用了一些JNI功能，我们将在后面的菜谱中介绍，包括`FindClass`函数和字段描述符。如果目前你不完全理解代码，这是正常的。在学习了这些主题后，你可以随时回来复习。
 - en: Passing parameters and receiving returns in primitive types
+  id: totrans-62
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 以原始类型传递参数和接收返回值
 - en: Java code can pass parameters to native methods and receive the processing results
     returned. This recipe walks through how to pass parameters and receive returns
     in primitive types.
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: Java代码可以将参数传递给本地方法，并接收返回的处理结果。这个菜谱将介绍如何以原始类型传递参数和接收返回值。
 - en: Getting ready
+  id: totrans-64
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: You should have built at least one Android application with native code before
     reading this recipe. If you haven't done so, please read the *Writing a Hello
     NDK program* recipe in [Chapter 1](ch01.html "Chapter 1. Hello NDK"), *Hello NDK*
     first.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 在阅读这个菜谱之前，你应该至少构建过一个带有本地代码的Android应用程序。如果你还没有这样做，请先阅读[第1章](ch01.html "第1章. Hello
+    NDK")中的*编写Hello NDK程序*菜谱，*Hello NDK*。
 - en: How to do it…
+  id: totrans-66
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The following steps create a sample Android application with native methods
     receiving input parameters from the Java code and returning the processing result
     back:'
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将创建一个示例Android应用程序，其中本地方法接收来自Java代码的输入参数，并返回处理结果：
 - en: Create a project named `PassingPrimitive`. Set the package name as `cookbook.chapter2`.
     Create an activity named `PassingPrimitiveActivity`. Under this project, create
     a folder named `jni`. Please refer to the *Loading native libraries and registering
     native methods* recipe in this chapter if you want more detailed instructions.
+  id: totrans-68
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`PassingPrimitive`的项目。将包名设置为`cookbook.chapter2`。创建一个名为`PassingPrimitiveActivity`的活动。在此项目下，创建一个名为`jni`的文件夹。如果你需要更详细的说明，请参考本章中的*加载本地库和注册本地方法*菜谱。
 - en: 'Add a file named `primitive.c` under the `jni` folder and implement the native
     methods. In our sample project, we implemented one native method for each of the
     eight primitive data types. Following is the code for `jboolean`, `jint`, and
     `jdouble`. Please refer to the downloaded code for the complete list of methods:'
+  id: totrans-69
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下添加一个名为`primitive.c`的文件，并实现本地方法。在我们的示例项目中，我们为八种原始数据类型中的每一种都实现了一个本地方法。以下是`jboolean`、`jint`和`jdouble`的代码。请参考下载的代码以获取完整的方法列表：
 - en: '[PRE7]'
+  id: totrans-70
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'In the `PassingPrimitiveActivity.java` Java code, we add code to load the native
     library, declare the native methods, and call the native methods. Following is
     that part of the code. The "`…`" indicates the part that is not shown. Please
     refer to the source file downloaded from the website for the complete code:'
+  id: totrans-71
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE8]'
+  id: totrans-72
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Modify the `res/layout/activity_passing_primitive.xml` file according to step
     8 of the *Loading native libraries and registering native methods* recipe of this
     chapter or the downloaded project code.
+  id: totrans-73
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'Create a file named `Android.mk` under the `jni` folder, and add the following
     content to it:'
+  id: totrans-74
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE9]'
+  id: totrans-75
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Start a terminal, go to the `jni` folder, and type `ndk-build` to build the
     native library `PassingPrimitive`.
+  id: totrans-76
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'In Eclipse, select **Window** | **Show View** | **LogCat** to show the logcat
     console. Alternatively, start a terminal and enter the following command in your
     terminal to show `logcat` output on it:'
+  id: totrans-77
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE10]'
+  id: totrans-78
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: Run the project on an Android device or emulator. You should see something similar
     to the following screenshot:![How to do it…](img/1505_02_04.jpg)
+  id: totrans-79
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'The logcat output is as follows:'
+  id: totrans-80
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How to do it…](img/1505_02_05.jpg)'
+  id: totrans-81
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: How it works…
+  id: totrans-82
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -434,130 +577,167 @@
     types from the native method. We created one method for each primitive type. In
     the native code, we printed the received value to `logcat`, modified the value,
     and returned it back.
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
 - en: '**JNI primitive type and Java primitive** **type mapping**: The primitive types
     in JNI and Java have the following mapping:'
+  id: totrans-84
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '| Java Type | JNI Type | Number of bytes | Sign |'
+  id: totrans-85
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| --- | --- | --- | --- |'
+  id: totrans-86
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `boolean` | `jboolean` | 1 | unsigned |'
+  id: totrans-87
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `byte` | `jbyte` | 1 | signed |'
+  id: totrans-88
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `char` | `jchar` | 2 | unsigned |'
+  id: totrans-89
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `short` | `jshort` | 2 | signed |'
+  id: totrans-90
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `int` | `jint` | 4 | signed |'
+  id: totrans-91
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `long` | `jlong` | 8 | signed |'
+  id: totrans-92
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `float` | `jfloat` | 4 | - |'
+  id: totrans-93
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `double` | `jdouble` | 8 | - |'
+  id: totrans-94
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: Note that both Java `char` and JNI `jchar` are two bytes, while the C/C++ `char`
     type is only one byte long. In fact, C/C++ `char` are interchangeable with `jbyte`
     instead of `jchar` in JNI programming.
+  id: totrans-95
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '**Android log library**: We output the received values to the Android logging
     system at a native method, by using the following code:'
+  id: totrans-96
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE11]'
+  id: totrans-97
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: '`ANDROID_LOG_INFO` is an `enum` value defined in `android/log.h`, which indicates
     that we''re using the info-level logging. `LOG_TAG` can be any strings, and `__VA_ARGS__`
     is replaced by the parameters passed to the API, in a format similar to the `printf`
     method in C.'
+  id: totrans-98
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'We must include the `android/log.h` header in the native code to use the log
     functions:'
+  id: totrans-99
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE12]'
+  id: totrans-100
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Besides this, we''ll need to include the NDK log library in the `Android.mk`
     file in order to use the API:'
+  id: totrans-101
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE13]'
+  id: totrans-102
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: We will cover more details about Android logging API in [Chapter 3](ch03.html
     "Chapter 3. Build and Debug NDK Applications"), *Build and Debug NDK Applications*,
     while utilizing logging API for debugging purposes.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
 - en: Manipulating strings in JNI
+  id: totrans-104
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: Strings are somewhat complicated in JNI, mainly because Java strings and C strings
     are internally different. This recipe will cover the most commonly used JNI string
     features.
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 在JNI中，字符串有点复杂，主要是因为Java字符串和C字符串在内部表示上是不同的。本指南将涵盖最常使用的JNI字符串特性。
 - en: Getting ready
+  id: totrans-106
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Understanding the basics of encoding is essential to comprehend the differences
     between Java string and C string. We'll give a brief introduction to Unicode.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 了解编码的基础知识对于理解Java字符串和C字符串之间的区别至关重要。我们将简要介绍Unicode。
 - en: 'According to the Unicode Consortium, the Unicode Standard is defined as follows:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据统一码联盟的定义，统一码标准如下所述：
 - en: '*The Unicode Standard is a character coding system designed to support the
     worldwide interchange, processing, and display of the written texts of the diverse
     languages and technical disciplines of the modern world. In addition, it supports
     classical and historical texts of many written languages.*'
+  id: totrans-109
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
+  zh: '*统一码标准是一个字符编码系统，旨在支持现代世界各种语言和技术学科书面文本的全球交换、处理和显示。此外，它还支持许多书面语言的古典和历史文本。*'
 - en: Unicode assigns a unique number for each character it defines, called **code
     point**. There are mainly two categories of encoding methods that support the
     entire Unicode character set, or a subset of it.
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: Unicode为其定义的每个字符分配了一个唯一的数字，称为**码点**。主要有两类编码方法支持整个Unicode字符集或其子集。
 - en: The first one is the **Unicode Transformation Format** (**UTF**), which encodes
     a Unicode code point into a variable number of code values. UTF-8, UTF-16, UTF-32,
     and a few others belong to this category. The numbers 8, 16, and 32 refer to the
@@ -565,18 +745,24 @@
     Set** (**UCS**) encodings, which encodes a Unicode code point into a single code
     value. UCS2 and UCS4 belong to this category. The numbers 2 and 4 refer to the
     number of bytes in one code value.
+  id: totrans-111
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一种是**统一码转换格式**（**UTF**），它将统一码码点编码为不同数量的代码值。UTF-8、UTF-16、UTF-32及其他几种格式都属于这一类。数字8、16和32指的是一个代码值的位数。第二种是**通用字符集**（**UCS**）编码，它将统一码码点编码为一个单一的代码值。UCS2和UCS4属于这一类。数字2和4指的是一个代码值的字节数。
 - en: Note
+  id: totrans-112
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Unicode defines more characters than what two bytes can possibly represent.
     Therefore, UCS2 can only represent a subset of Unicode characters. Because Unicode
     defines fewer characters than what four bytes can represent, multiple code values
     of UTF-32 are never needed. Therefore, UTF-32 and UCS4 are functionally identical.
+  id: totrans-113
   prefs: []
   type: TYPE_NORMAL
+  zh: Unicode定义的字符比两个字节能表示的要多，因此UCS2只能表示Unicode字符的一个子集。由于Unicode定义的字符比四个字节能表示的要少，UTF-32的多个代码值从未被需要。因此，UTF-32和UCS4在功能上是相同的。
 - en: Java programming language uses UTF-16 to represent strings. If a character cannot
     fit in a 16-bit code value, a pair of code values named **surrogate pair** is
     used. C strings are simply an array of bytes terminated by a null character. The
@@ -588,75 +774,105 @@
     Standard UTF-8 are supported by JNI, while longer formats cannot be recognized
     properly. JNI uses its own format to represent Unicode that cannot fit into three
     bytes.
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: Java编程语言使用UTF-16来表示字符串。如果一个字符无法适应16位的代码值，就会使用一对名为**代理对**的代码值。C字符串只是一个以空字符终止的字节数组。实际的编码/解码几乎完全由开发人员和底层系统来处理。JNI使用修改后的UTF-8版本来表示字符串，包括本地代码中的类、字段和方法名称。修改后的UTF-8与标准UTF-8有两个区别。首先，空字符使用两个字节进行编码。其次，JNI只支持标准UTF-8的一字节、两字节和三字节的格式，而较长的格式无法被正确识别。JNI使用自己的格式来表示无法适应三个字节的Unicode。
 - en: How to do it
+  id: totrans-115
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作
 - en: 'The following steps show you how to create a sample Android project that illustrates
     string manipulation at JNI:'
+  id: totrans-116
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将指导您如何创建一个示例Android项目，该项目展示了JNI中的字符串操作：
 - en: Create a project named `StringManipulation`. Set the package name as `cookbook.chapter2`.
     Create an activity named `StringManipulationActivity`. Under the project, create
     a folder named `jni`. Refer to the *Loading native libraries and registering native
     methods* recipe in this chapter if you want more detailed instructions.
+  id: totrans-117
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`StringManipulation`的项目。将包名设置为`cookbook.chapter2`。创建一个名为`StringManipulationActivity`的活动。在项目下，创建一个名为`jni`的文件夹。如果你需要更详细的说明，请参考本章中的*加载本地库和注册本地方法*的菜谱。
 - en: 'Create a file named `stringtest.c` under the `jni` folder, then implement the
     `passStringReturnString` method as follows:'
+  id: totrans-118
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下创建一个名为`stringtest.c`的文件，然后按照以下方式实现`passStringReturnString`方法：
 - en: '[PRE14]'
+  id: totrans-119
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: In the `StringManipulationActivity.java` Java code, add the code to load a native
     library, declare a native method, and invoke a native method. Refer to downloaded
     code for the source code details.
+  id: totrans-120
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`StringManipulationActivity.java`的Java代码中，添加加载本地库、声明本地方法并调用本地方法的代码。源代码详情请参考下载的代码。
 - en: Modify the `res/layout/activity_passing_primitive.xml` file according to step
     8 of the *Loading native libraries and registering native methods* recipe in this
     chapter or the downloaded project code.
+  id: totrans-121
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 根据本章中*加载本地库和注册本地方法*的步骤8或下载的项目代码，修改`res/layout/activity_passing_primitive.xml`文件。
 - en: Create a file called `Android.mk` under the `jni` folder. Refer to step 9 of
     the *Loading native libraries and registering native methods* recipe in this chapter
     or the downloaded code for details.
+  id: totrans-122
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下创建一个名为`Android.mk`的文件。具体细节请参考本章中*加载本地库和注册本地方法*的步骤9或下载的代码。
 - en: Start a terminal, go to the `jni` folder, and type `ndk-build` to build the
     native library.
+  id: totrans-123
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动终端，进入`jni`文件夹，并输入`ndk-build`以构建本地库。
 - en: Run the project on an Android device or emulator. We should see something similar
     to the following screenshot:![How to do it](img/1505_02_06.jpg)
+  id: totrans-124
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在Android设备或模拟器上运行项目。我们应该看到类似于以下截图的内容：![如何操作](img/1505_02_06.jpg)
 - en: 'The following should be seen at the logcat output:'
+  id: totrans-125
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在logcat输出中应该看到以下内容：
 - en: '![How to do it](img/1505_02_07.jpg)'
+  id: totrans-126
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![如何操作](img/1505_02_07.jpg)'
 - en: How it works…
+  id: totrans-127
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: This recipe discusses string manipulation at JNI.
+  id: totrans-128
   prefs: []
   type: TYPE_NORMAL
+  zh: 本菜谱讨论了JNI中的字符串操作。
 - en: '**Character encoding**: Android uses UTF-8 as its default charset, which is
     shown in our program by executing the `Charset.defaultCharset().name()` method.
     This means that the default encoding in the native code is UTF-8\. As mentioned
@@ -664,229 +880,312 @@
     is needed when we pass a string from Java to the native code and vice versa. Failing
     to do so will cause unwanted results. In our example, we tried printing `jstring`
     directly in the native code, but the result was some unrecognizable characters.'
+  id: totrans-129
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**字符编码**：Android使用UTF-8作为其默认字符集，通过执行`Charset.defaultCharset().name()`方法在我们的程序中显示。这意味着在本地代码中的默认编码是UTF-8。如前所述，Java使用UTF-16字符集。这意味着当我们从Java传递字符串到本地代码，反之亦然时，需要进行编码转换。如果不这样做，会导致不想要的结果。在我们的例子中，我们尝试在本地代码中直接打印`jstring`，但结果是一些无法识别的字符。'
 - en: Fortunately, JNI comes with a few pre-defined functions that do the conversion.
+  id: totrans-130
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 幸运的是，JNI附带了一些预定义的函数来进行转换。
 - en: '**Java string to native string**: When a native method is called with an input
     parameter of string type, the string received needs to be converted to the native
     string first. Two JNI functions can be used for different cases.'
+  id: totrans-131
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Java字符串到本地字符串**：当本地方法被调用并带有字符串类型的输入参数时，首先需要将接收到的字符串转换为本地字符串。对于不同的情况可以使用两个JNI函数。'
 - en: 'The first function is `GetStringUTFChars`, which has the following prototype:'
+  id: totrans-132
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 第一个函数是`GetStringUTFChars`，其原型如下：
 - en: '[PRE15]'
+  id: totrans-133
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: This function converts the Java string into an array of UTF-8 characters. If
     a new copy of the Java string content is made, `isCopy` is set to `true` when
     the function returns; otherwise `isCopy` is set to false and the returned pointer
     points to the same characters as the original Java string.
+  id: totrans-134
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这个函数将Java字符串转换为UTF-8字符数组。如果创建了Java字符串内容的新副本，当函数返回时`isCopy`被设置为`true`；否则`isCopy`被设置为`false`，返回的指针指向与原始Java字符串相同的字符。
 - en: Tip
+  id: totrans-135
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: It is not predictable whether the VM will return a new copy of the Java string.
     Therefore, we must be careful when converting a large string, as the possible
     memory allocation and copy may affect the performance and even cause "out of memory"
     issues. Also note that if `isCopy` is set to `false`, we cannot modify the returned
     UTF-8 native string, because it will modify the Java string content and break
     the immutability property of the Java string.
+  id: totrans-136
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们无法预测虚拟机是否会返回Java字符串的新副本。因此，在转换大字符串时我们必须小心，因为可能的内存分配和复制可能会影响性能，甚至可能导致“内存不足”的问题。还要注意，如果将`isCopy`设置为`false`，我们不能修改返回的UTF-8本地字符串，因为这会修改Java字符串内容，破坏Java字符串的不可变性属性。
 - en: 'Once we''ve finished all the operations with the converted native string, we
     should call `ReleaseStringUTFChars` to inform the VM that we don''t need to access
     the UTF-8 native string anymore. The function has the following prototype, with
     the second parameter being the Java string and the third parameter being the UTF-8
     native string:'
+  id: totrans-137
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 当我们完成了所有转换后的本地字符串的操作后，应该调用`ReleaseStringUTFChars`来通知虚拟机我们不再需要访问UTF-8本地字符串了。该函数的原型如下，第二个参数是Java字符串，第三个参数是UTF-8本地字符串：
 - en: '[PRE16]'
+  id: totrans-138
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'The second function for conversion is `GetStringUTFRegion`, with the following
     prototype:'
+  id: totrans-139
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 第二个转换函数是`GetStringUTFRegion`，其原型如下：
 - en: '[PRE17]'
+  id: totrans-140
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: The `start` and `len` parameters indicate the start position of the Java UTF-16
     string and number of UTF-16 characters for conversion. The `buf` argument points
     to the location to store the converted native UTF-8 char array.
+  id: totrans-141
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`start`和`len`参数表示Java UTF-16字符串的起始位置和需要转换的UTF-16字符数量。`buf`参数指向存储转换后的本地UTF-8字符数组的位置。'
 - en: 'Let''s compare the two methods. The first method may or may not require allocation
     of new memory for the converted UTF-8 string depending on whether VM decides to
     make a new copy or not, whereas the second method made use of a pre-allocated
     buffer to store the converted content. In addition, the second method allows us
     to specify the position and length of the conversion source. Therefore, the following
     rules can be followed:'
+  id: totrans-142
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 让我们比较一下这两种方法。第一种方法可能需要也可能不需要为转换后的UTF-8字符串分配新内存，这取决于虚拟机是否决定创建新副本；而第二种方法使用了预分配的缓冲区来存储转换后的内容。此外，第二种方法允许我们指定转换源的位置和长度。因此，可以遵循以下规则：
 - en: To modify the converted UTF-8 native string, the JNI method `GetStringUTFRegion`
     should be used
+  id: totrans-143
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 要修改转换后的UTF-8本地字符串，应该使用JNI方法`GetStringUTFRegion`。
 - en: If we only need a substring of the original Java string, and the substring is
     not large, the `GetStringUTFRegion` should be used
+  id: totrans-144
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果我们只需要原始Java字符串的一个子串，并且这个子串不大，应该使用`GetStringUTFRegion`。
 - en: If we're dealing with a large string, and we're not going to modify the converted
     UTF-8 native string, `GetStringUTFChars` should be used
+  id: totrans-145
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 如果我们处理的是一个大字符串，并且我们不打算修改转换后的UTF-8本地字符串，应该使用`GetStringUTFChars`。
 - en: Tip
+  id: totrans-146
   prefs:
   - PREF_IND
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: In our example, we used a fixed length buffer when calling the `GetStringUTFRegion`
     function. We should make sure it is enough to hold the string, otherwise we should
     use the dynamic allocated array.
+  id: totrans-147
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在我们的示例中，调用`GetStringUTFRegion`函数时使用了固定长度的缓冲区。我们应该确保它足以容纳字符串，否则应该使用动态分配的数组。
 - en: '**String length**: The JNI function `GetStringUTFLength` can be used to get
     the string length of a UTF-8 `jstring`. Note that it returns the number of bytes
     and not the number of UTF-8 characters, as shown in our example.'
+  id: totrans-148
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**字符串长度**：可以使用JNI函数`GetStringUTFLength`来获取UTF-8编码的`jstring`的字符串长度。注意，它返回的是字节数量，而不是UTF-8字符的数量，正如我们的示例所示。'
 - en: '**Native string to Java string**: We also need to return string data from the
     native code to Java code at times. The returned string should be UTF-16 encoded.
     The JNI function `NewStringUTF` constructs a `jstring` from a UTF-8 native string.
     It has the following prototype:'
+  id: totrans-149
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**本地字符串到Java字符串**：有时我们也需要从本地代码向Java代码返回字符串数据。返回的字符串应该是UTF-16编码的。JNI函数`NewStringUTF`从UTF-8本地字符串构造一个`jstring`。它具有以下原型：'
 - en: '[PRE18]'
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: '**Conversion failure**: `GetStringUTFChars` and `NewStringUTF` require allocation
     of memory space to store the converted string. If you run out of memory, these
     methods will throw an `OutOfMemoryError` exception and return `NULL`. We''ll cover
     more about exception handling in the *Checking errors and handling exceptions
     in JNI* recipe.'
+  id: totrans-151
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**转换失败**：`GetStringUTFChars`和`NewStringUTF`需要分配内存空间来存储转换后的字符串。如果内存不足，这些方法将抛出`OutOfMemoryError`异常并返回`NULL`。我们将在*JNI中的检查错误和处理异常*的菜谱中详细介绍异常处理。'
 - en: There's more…
+  id: totrans-152
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: '**More about character encoding in JNI**: JNI character encoding is much more
     complicated than what we covered here. Besides UTF-8, it also supports UTF-16
     conversion functions. It is also possible to call Java string methods in the native
     code to encode/decode characters in other formats. Since Android uses UTF-8 as
     its platform charset, we only cover how to deal with conversions between Java
     UTF-16 and UTF-8 native string here.'
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: '**关于JNI字符编码的更多内容**：JNI字符编码比我们这里介绍的更为复杂。除了UTF-8，它还支持UTF-16转换函数。也可以在本地代码中调用Java字符串方法以编码/解码其他格式的字符。由于Android使用UTF-8作为其平台字符集，我们这里只介绍如何处理Java
+    UTF-16和UTF-8本地字符串之间的转换。'
 - en: Managing references in JNI
+  id: totrans-154
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在JNI中管理引用
 - en: JNI exposes strings, classes, instance objects, and arrays as reference types.
     The previous recipe introduces the string type. This recipe will cover reference
     management and the subsequent three recipes will discuss class, object, and arrays
     respectively.
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: JNI将字符串、类、实例对象和数组作为引用类型暴露。上一个菜谱介绍了字符串类型。这个菜谱将涵盖引用管理，接下来的三个菜谱将分别讨论类、对象和数组。
 - en: How to do it…
+  id: totrans-156
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The following steps create a sample Android project that illustrates reference
     management in JNI:'
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤创建了一个示例Android项目，说明了JNI中的引用管理：
 - en: Create a project named `ManagingReference`. Set the package name as `cookbook.chapter2`.
     Create an activity named `ManagingReferenceActivity`. Under the project, create
     a folder named `jni`. Refer to the *Loading native libraries and registering native
     methods* recipe in this chapter, if you want more detailed instructions.
+  id: totrans-158
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为 `ManagingReference` 的项目。将包名设置为 `cookbook.chapter2`。创建一个名为 `ManagingReferenceActivity`
+    的活动。在项目下，创建一个名为 `jni` 的文件夹。如果你需要更详细的说明，请参考本章中的*加载本地库和注册本地方法*的菜谱。
 - en: 'Create a file named `referencetest.c` under the `jni` folder, then implement
     the `localReference`, `globalReference`, `weakReference`, and `referenceAssignmentAndNew`
     methods. This is shown in the following code snippet:'
+  id: totrans-159
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `jni` 文件夹下创建一个名为 `referencetest.c` 的文件，然后实现 `localReference`、`globalReference`、`weakReference`
+    和 `referenceAssignmentAndNew` 方法。以下代码片段展示了这一点：
 - en: '[PRE19]'
+  id: totrans-160
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Modify the `ManagingReferenceActivity.java` file by adding code to load the
     native library, then declare and invoke the native methods.
+  id: totrans-161
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 修改 `ManagingReferenceActivity.java` 文件，添加加载本地库的代码，然后声明并调用本地方法。
 - en: Modify the `res/layout/activity_managing_reference.xml` file according to step
     8 of the *Loading native libraries and registering native methods* recipe in this
     chapter, or the downloaded project code.
+  id: totrans-162
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 根据本章中*加载本地库和注册本地方法*的步骤8，修改 `res/layout/activity_managing_reference.xml` 文件，或者下载的项目代码。
 - en: Create a file named `Android.mk` under the `jni` folder. Refer to step 9 of
     the *Loading native libraries and registering native methods* recipe of this chapter,
     or the downloaded code for details.
+  id: totrans-163
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `jni` 文件夹下创建一个名为 `Android.mk` 的文件。参考本章中*加载本地库和注册本地方法*的步骤9，或下载的代码以获取详细信息。
 - en: Start a terminal, go to the `jni` folder, and type `ndk-build` to build the
     native library.
+  id: totrans-164
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动终端，进入 `jni` 文件夹，并输入 `ndk-build` 以构建本地库。
 - en: Run the project on an Android device or emulator and monitor the logcat output
     with either eclipse or the `adb logcat -v time` command in your terminal. We'll
     show the sample results for each native method when while going through the details
     in the following section.
+  id: totrans-165
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在Android设备或模拟器上运行项目，并使用eclipse或终端中的 `adb logcat -v time` 命令监控logcat输出。在下一节详细介绍时，我们将展示每个本地方法的样本结果。
 - en: How it works…
+  id: totrans-166
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'This recipe covers reference management in JNI:'
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个菜谱涵盖了JNI中的引用管理：
 - en: '**JNI reference**: JNI exposes strings, classes, instance objects, and arrays
     as references. The basic idea of a reference can be illustrated using the following
     diagram:![How it works…](img/1505OT_02_08.jpg)'
+  id: totrans-168
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**JNI引用**：JNI将字符串、类、实例对象和数组作为引用暴露。引用的基本思想可以用以下图表说明：![工作原理…](img/1505OT_02_08.jpg)'
 - en: The reference adds one more level of indirection to an object (an object can
     be a class, an instance object, a string, or an array) access. An object is pointed
     by an object pointer, and a reference is used to locate the object pointer. Although
@@ -894,60 +1193,85 @@
     to conceal the object pointer from developers. The VM can therefore move the underlying
     object at runtime memory management and update the object pointer value accordingly,
     without affecting the reference.
+  id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 引用为对象（可以是类、实例对象、字符串或数组）访问增加了一层间接寻址。对象由对象指针指向，引用用于定位对象指针。尽管这种间接寻址为对象操作引入了开销，但它允许虚拟机（VM）将对象指针从开发者面前隐藏起来。因此，VM可以在运行时内存管理中移动底层对象，并相应地更新对象指针值，而不会影响引用。
 - en: Note that the garbage collector at VM moves the objects around to achieve cheap
     memory allocation, bulk de-allocation, reduce heap fragmentation, improve locality,
     and so on.
+  id: totrans-170
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 请注意，虚拟机中的垃圾收集器移动对象以实现廉价的内存分配、批量释放、减少堆碎片、提高局部性等。
 - en: Tip
+  id: totrans-171
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: A reference does not have to be a pointer. The details of how a reference is
     used to locate the object pointer are hidden from the developers.
+  id: totrans-172
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 引用不一定是指针。引用如何用于定位对象指针的具体细节对开发者是隐藏的。
 - en: '**Local reference versus global reference versus weak reference**: Three different
     types of references can be created to refer to the same data, namely local reference,
     global reference, and weak reference. Unless we explicitly create a global or
     weak reference, JNI operates using a local reference. The following table summarizes
     the differences between the three different types of references:'
+  id: totrans-173
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**局部引用、全局引用与弱引用**：为了指向同一数据，可以创建三种不同类型的引用，即局部引用、全局引用和弱引用。除非我们明确创建全局引用或弱引用，否则JNI默认使用局部引用。下表总结了这三种不同类型引用之间的区别：'
 - en: '|   | Creation | Lifespan | Visibility | Garbage collector (GC) behavior for
     referenced object | Free |'
+  id: totrans-174
   prefs: []
   type: TYPE_TB
+  zh: '|   | 创建 | 生命周期 | 可见性 | 对被引用对象的垃圾收集器（GC）行为 | 释放 |'
 - en: '| --- | --- | --- | --- | --- | --- |'
+  id: totrans-175
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- | --- | --- | --- | --- |'
 - en: '| **Local reference** | `Default` or `NewLocalRef` | One invocation of the
     native method. Invalid after native method returns. | Within the thread that created
     it. | GC won''t garbage collect the referenced object. | Automatically freed or
     call `DeleteLocalRef` |'
+  id: totrans-176
   prefs: []
   type: TYPE_TB
+  zh: '| **局部引用** | `Default` 或 `NewLocalRef` | 本地方法调用期间有效。本地方法返回后无效 | 在创建它的线程内有效
+    | GC不会回收被引用对象 | 自动释放或调用 `DeleteLocalRef` |'
 - en: '| **Global reference** | `NewGlobalRef` | Valid until freed explicitly. | Across
     multiple threads. | GC won''t garbage collect the referenced object. | `DeleteGlobalRef`
     |'
+  id: totrans-177
   prefs: []
   type: TYPE_TB
+  zh: '| **全局引用** | `NewGlobalRef` | 明确释放前有效 | 多个线程间有效 | GC不会回收被引用对象 | `DeleteGlobalRef`
+    |'
 - en: '| **Weak reference** | `NewGlobalWeakRef` | Valid until freed explicitly. |
     Across multiple threads. | GC can garbage collect the referenced object. | `DeleteWeakGlobalRef`
     |'
+  id: totrans-178
   prefs: []
   type: TYPE_TB
+  zh: '| **弱引用** | `NewGlobalWeakRef` | 明确释放前有效 | 多个线程间有效 | GC可以回收被引用对象 | `DeleteWeakGlobalRef`
+    |'
 - en: 'We will now take a look at the reference types one by one while referring to
     the sample source code:'
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们将逐一查看引用类型，同时参考示例源代码：
 - en: '**Local reference**: The native method `localReference` shows the two basic
     JNI functions, namely `NewLocalRef` and `DeleteLocalRef`. The first function creates
     a local reference, while the second frees it. Note that normally we don''t have
@@ -957,27 +1281,36 @@
     overflow. This is illustrated in our sample method when we pass `false` to the
     `pDelete` input parameter. The following screenshot represents an example of such
     a scenario:![How it works…](img/1505_02_09.jpg)'
+  id: totrans-180
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**局部引用**：本地方法 `localReference` 展示了两个基本的JNI函数，即 `NewLocalRef` 和 `DeleteLocalRef`。第一个函数创建局部引用，而第二个释放它。请注意，通常我们不需要显式释放局部引用，因为它会在本地方法返回后自动释放。然而，有两种例外情况。首先，如果在本地方法调用中创建大量局部引用，我们可能会引起溢出。当我们将
+    `false` 传递给 `pDelete` 输入参数时，我们的示例方法展示了这种情况。以下截图是此类场景的一个示例：![如何工作…](img/1505_02_09.jpg)'
 - en: The first execution deletes the local reference right after using it, so it's
     finished fine, while the second doesn't delete the local reference and eventually
     causes the `ReferenceTable` overflow.
+  id: totrans-181
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 第一次执行在用完后立即删除了局部引用，所以它顺利完成，而第二次没有删除局部引用，最终导致 `ReferenceTable` 溢出。
 - en: Secondly, when we implement a utility function that is called by other native
     functions, we should not leak any references other than the return value. Otherwise,
     if the utility function is invoked by a native method many times, it will also
     cause an overflow issue.
+  id: totrans-182
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 其次，当我们实现一个由其他本地函数调用的实用函数时，我们不应该泄露除返回值以外的任何引用。否则，如果该实用函数被本地方法多次调用，它也将导致溢出问题。
 - en: Tip
+  id: totrans-183
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Prior to Android 4.0, the local references were implemented using direct pointers
     to objects. Furthermore, those direct pointers were never invalidated even after
     `DeleteLocalRef` was called. Therefore, programmers can use local references as
@@ -986,9 +1319,11 @@
     have been changed to use an indirection mechanism from Android 4.0 onwards. Hence,
     the buggy code using local references as direct pointers are going to break in
     Android 4.0 onwards. It is strongly recommended that you always follow JNI specifications.
+  id: totrans-184
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在安卓4.0之前，局部引用是通过直接指向对象的指针实现的。此外，即使调用了`DeleteLocalRef`，这些直接指针也从未失效。因此，程序员可以在引用声称被删除后，仍然使用局部引用作为直接指针。由于这种设计，很多不符合JNI规范的代码也能工作。然而，从安卓4.0开始，局部引用已经改为使用间接机制。因此，在安卓4.0及以后版本中，使用局部引用作为直接指针的buggy代码将会出错。强烈建议您始终遵循JNI规范。
 - en: '**Global reference**: The native method, `globalReference`, demonstrates a
     typical usage of a global reference. The global reference is retained when passing
     `false` to the `pDelete` input parameter, since it is a static variable. Next
@@ -996,453 +1331,621 @@
     the same object. Therefore, we don''t need to call `NewGlobalRef` again. This
     technique can save us from carrying out the same operation at every invocation
     of global reference.'
+  id: totrans-185
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**全局引用**：本地方法`globalReference`展示了全局引用的一个典型用法。当向`pDelete`输入参数传递`false`时，会保留全局引用，因为这是一个静态变量。下次调用该方法时，静态全局引用仍然会引用同一个对象。因此，我们不需要再次调用`NewGlobalRef`。这种技术可以让我们避免在每次调用全局引用时执行相同的操作。'
 - en: 'We invoke `globalReference` three times in the Java code, as follows:'
+  id: totrans-186
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们在Java代码中三次调用`globalReference`，如下所示：
 - en: '[PRE20]'
+  id: totrans-187
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'The results should look similar to the following:'
+  id: totrans-188
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 结果应该类似于以下内容：
 - en: '![How it works…](img/1505_02_10.jpg)'
+  id: totrans-189
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![它是如何工作的…](img/1505_02_10.jpg)'
 - en: The string passed along with the first method call is retained, and therefore
     the first two invocations display the same string. After we delete the global
     reference at the end of the second call, the third call displays the string passed
     along with it.
+  id: totrans-190
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 伴随第一次方法调用的字符串被保留，因此前两次调用显示相同的字符串。在我们第二次调用结束时删除全局引用后，第三次调用显示的是伴随其调用的字符串。
 - en: Note that although `DeleteGlobalRef` frees the global reference, it doesn't
     set it to `NULL`. We have explicitly set the global reference to `NULL` after
     the deletion.
+  id: totrans-191
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 请注意，尽管`DeleteGlobalRef`释放了全局引用，但它并没有将其设置为`NULL`。我们在删除操作之后明确地将全局引用设置为`NULL`。
 - en: '**Weak reference**: Weak reference is similar to global reference, except that
     it doesn''t prevent the **Garbage Collector** (**GC**) from garbage collecting
     the underlying object referenced by it. Weak reference is not used as often as
     local and global reference. A typical use case is when we are referencing to lots
     of non-critical objects, and we don''t want to prevent the GC from garbage collecting
     some of those objects when the GC thinks it''s necessary.'
+  id: totrans-192
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**弱引用**：弱引用与全局引用类似，不同之处在于它不会阻止**垃圾收集器**（**GC**）收集它所引用的底层对象。弱引用不如局部引用和全局引用常用。一个典型的用例是，当我们引用大量非关键对象，并且我们不希望当GC认为有必要时，阻止GC收集其中一些对象。'
 - en: Tip
+  id: totrans-193
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The support for weak references in Android is version dependent. Prior to Android
     2.2, weak references were not implemented at all. Prior to Android 4.0, it can
     only be passed to `NewLocalRef`, `NewGlobalRef`, and `DeleteWeakGlobalRef`. From
     Android 4.0 onwards, Android has full support for weak references.
+  id: totrans-194
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 安卓对弱引用的支持取决于版本。在安卓2.2之前，弱引用根本没有实现。在安卓4.0之前，它只能传递给`NewLocalRef`、`NewGlobalRef`和`DeleteWeakGlobalRef`。从安卓4.0开始，安卓完全支持弱引用。
 - en: '**Assignment versus New<ReferenceType>Ref**: In the `referencetest.c` source
     code, we implemented the native `ReferenceAssignmentAndNew` method. This method
     illustrates the difference between assignment and allocating a new reference.'
+  id: totrans-195
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**赋值与New<ReferenceType>Ref的区别**：在`referencetest.c`源代码中，我们实现了本地`ReferenceAssignmentAndNew`方法。这个方法展示了赋值与分配新引用之间的区别。'
 - en: We passed the input jstring `pStringP` to the JNI function `NewGlobalRef` twice,
     to create two global references (`globalRefNew` and `globalRefNew2`), and assigned
     one of the global references to a variable `globalRefAssignment`. We then tested
     if they were all referencing to the same object.
+  id: totrans-196
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们将输入的jstring `pStringP` 两次传递给JNI函数 `NewGlobalRef`，以创建两个全局引用（`globalRefNew`
+    和 `globalRefNew2`），并将其中一个全局引用赋值给变量 `globalRefAssignment`。然后我们测试它们是否都引用了同一个对象。
 - en: 'Since `jobject` and `jstring` are actually pointers to void data type, we can
     print out their values as integers. Lastly, we invoked `DeleteGlobalRef` three
     times. The following is a screenshot of the Android logcat output:'
+  id: totrans-197
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 由于`jobject`和`jstring`实际上是void数据类型的指针，我们可以将它们的值作为整数打印出来。最后，我们调用了三次`DeleteGlobalRef`。以下是Android
+    logcat输出的截图：
 - en: '![How it works…](img/1505_02_11.jpg)'
+  id: totrans-198
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![它是如何工作的…](img/1505_02_11.jpg)'
 - en: The first three lines indicate that the input jstring `pStringP`, two global
     references `globalRefNew` and `globalRefNew2`, and the assigned jstring `globalRefAssignment`
     all reference to the same object. Lines five to eight of the output show the same
     value, which means all the references themselves are equivalent. Lastly, the first
     two calls of `DeleteGlobalRef` succeed, while the last one fails.
+  id: totrans-199
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 前三行表明，输入的jstring `pStringP`，两个全局引用 `globalRefNew` 和 `globalRefNew2`，以及赋值的jstring
+    `globalRefAssignment` 都引用了同一个对象。输出的第五到八行显示了相同的值，这意味着所有引用本身都是等价的。最后，前两次`DeleteGlobalRef`调用成功，而最后一次失败。
 - en: The `New<ReferenceType>Ref JNI` function actually locates the underlying object
     and then adds a reference to the object. It allows multiple references added for
     the same object. Note that although our sample execution shows the values of references
     created by `New<ReferenceType>Ref` are the same, it is not guaranteed. It is possible
     that two object pointers pointing to the same object and references referencing
     to the same object are associated with the two different pointers.
+  id: totrans-200
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`New<ReferenceType>Ref JNI`函数实际上会找到底层对象，然后为该对象添加一个引用。它允许为同一个对象添加多个引用。请注意，尽管我们的示例执行显示由`New<ReferenceType>Ref`创建的引用值相同，但这并不保证。两个指向同一对象的对象指针和引用同一对象的引用与两个不同的指针相关联是有可能的。'
 - en: It is recommended that you never rely on the value of a reference; you should
     use JNI functions instead. One example of this is to use `IsSameObject` and never
     use "`==`" to test if two references point to the same underlying object unless
     we test against `NULL`.
+  id: totrans-201
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 建议您永远不要依赖引用的值；你应该使用JNI函数。例如，使用`IsSameObject`，永远不要使用"`==`"来测试两个引用是否指向同一个底层对象，除非是与`NULL`进行比较。
 - en: The number of `Delete<ReferenceType>Ref` calls must match the number of `New<ReferenceType>Ref`
     invocations. Fewer calls will potentially cause a memory leak, while having more
     calls will fail, as shown in the preceding result.
+  id: totrans-202
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`Delete<ReferenceType>Ref`的调用次数必须与`New<ReferenceType>Ref`的调用次数相匹配。较少的调用可能会潜在地导致内存泄漏，而更多的调用则会失败，正如前面的结果所示。'
 - en: The assignment operation doesn't go through the VM, therefore it won't cause
     the VM to add a new reference.
+  id: totrans-203
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 赋值操作不会通过虚拟机，因此它不会导致虚拟机添加新的引用。
 - en: Note that although we used a global reference for illustration, the principles
     also apply to local and weak references.
+  id: totrans-204
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 请注意，虽然我们使用了全局引用来示例，但这些原则同样适用于局部引用和弱引用。
 - en: There's more…
+  id: totrans-205
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多内容...
 - en: There's another method to manage the local references with JNI functions `PushLocalFrame`
     and `PopLocalFrame`. Interested readers can refer to the JNI specification for
     more information.
+  id: totrans-206
   prefs: []
   type: TYPE_NORMAL
+  zh: 另外一种管理局部引用的方法是使用JNI函数 `PushLocalFrame` 和 `PopLocalFrame`。感兴趣的读者可以参考JNI规范以获取更多信息。
 - en: After attaching a native thread with `AttachCurrentThread`, the code running
     in the thread would not free the local references until the thread is detached.
     The local reference should be freed explicitly. In general, it is a good practice
     that we free local reference explicitly, as long as we don't need it any more.
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 在使用`AttachCurrentThread`将本地线程附加到原生线程后，线程中运行的代码在未分离线程之前不会释放局部引用。局部引用应该明确释放。通常，只要我们不再需要它，明确释放局部引用是一个好习惯。
 - en: Manipulating classes in JNI
+  id: totrans-208
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在JNI中操作类
 - en: The previous recipe discusses that Android JNI supports three different kinds
     of references. The references are used to access the reference data types, including
     string, class, instance object, and array. This recipe focuses on class manipulations
     in Android JNI.
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前的食谱讨论了Android JNI支持三种不同的引用。这些引用用于访问引用数据类型，包括字符串、类、实例对象和数组。这个食谱专注于Android JNI中的类操作。
 - en: Getting ready
+  id: totrans-210
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: The *Managing References in NDK* recipe should be read first before going through
     this recipe.
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 在阅读这个食谱之前，应该先阅读*在NDK中管理引用*的食谱。
 - en: How to do it…
+  id: totrans-212
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The following steps describe how to build a sample Android application that
     illustrates class manipulation in JNI:'
+  id: totrans-213
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤描述了如何构建一个示例Android应用程序，演示JNI中的类操作：
 - en: Create a project named `ClassManipulation`. Set the package name as `cookbook.chapter2`.
     Create an activity named `ClassManipulationActivity`. Under the project, create
     a folder named `jni`. Refer to the *Loading native libraries and registering native
     methods* recipe of this chapter if you want more detailed instructions.
+  id: totrans-214
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`ClassManipulation`的项目。将包名设置为`cookbook.chapter2`。创建一个名为`ClassManipulationActivity`的活动。在项目下，创建一个名为`jni`的文件夹。如果你需要更详细的说明，请参考本章中*加载本地库和注册本地方法*的食谱。
 - en: Create a file named `classtest.c` under the `jni` folder, then implement the
     `findClassDemo`, `findClassDemo2`, `GetSuperclassDemo`, and `IsAssignableFromDemo`
     methods. We can refer to the downloaded `ClassManipulation` project source code.
+  id: totrans-215
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下创建一个名为`classtest.c`的文件，然后实现`findClassDemo`、`findClassDemo2`、`GetSuperclassDemo`和`IsAssignableFromDemo`方法。我们可以参考下载的`ClassManipulation`项目源代码。
 - en: Modify `ClassManipulationActivity.java` by adding code to load the native library,
     declare native methods, and invoke native methods.
+  id: totrans-216
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 修改`ClassManipulationActivity.java`文件，添加代码以加载本地库，声明本地方法，并调用本地方法。
 - en: Create a `Dummy` class and a `DummySubClass` subclass that extends the `Dummy`
     class. Create a `DummyInterface` interface and a `DummySubInterface` subinterface,
     which extends the `DummyInterface`.
+  id: totrans-217
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个`Dummy`类和一个继承`Dummy`类的`DummySubClass`子类。创建一个`DummyInterface`接口和一个继承`DummyInterface`的`DummySubInterface`子接口。
 - en: Modify the `layout` XML file, add the `Android.mk` build file, and build the
     native library. Refer to steps 8 to 10 of the the *Loading native libraries and
     registering native methods* recipe of this chapter for details.
+  id: totrans-218
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 修改`layout` XML文件，添加`Android.mk`构建文件，并构建本地库。具体细节请参考本章中*加载本地库和注册本地方法*的步骤8至10。
 - en: We're now ready to run the project. We'll present the output while discussing
     each native method in the following section.
+  id: totrans-219
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们现在准备运行项目。在下一节中讨论每个本地方法时，我们将展示输出结果。
 - en: How it works…
+  id: totrans-220
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的…
 - en: 'This recipe demonstrates the manipulation of classes in JNI. We highlight a
     few points as follows:'
+  id: totrans-221
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个食谱演示了JNI中的类操作。我们突出以下几点：
 - en: '**Class descriptor**: A class descriptor refers to the name of a class or an
     interface. It can be derived by replacing the "`.`" character in Java with "`/`"
     in JNI programming. For example, the descriptor for class `java.lang.String` is
     `java/lang/String`.'
+  id: totrans-222
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**类描述符**：类描述符指的是类或接口的名称。它可以通过在JNI编程中将Java中的"`.`"字符替换为"`/`"来得到。例如，类`java.lang.String`的描述符是`java/lang/String`。'
 - en: '**FindClass and class loader**: The JNI function `FindClass` has the following
     prototype:'
+  id: totrans-223
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**FindClass和类加载器**：JNI函数`FindClass`具有以下原型：'
 - en: '[PRE21]'
+  id: totrans-224
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'It accepts a `JNIEnv` pointer and a class descriptor, and then locates a class
     loader to load the corresponding class. It returns a local reference to an initialized
     class, or `NULL` in case of failure. `FindClass` uses the class loader associated
     with the topmost method of the call stack. If it cannot find one, it will use
     the "system" class loader. One typical example is that after we create a thread
     and attach it to the VM, the topmost method of the call stack will be as follows:'
+  id: totrans-225
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 它接受一个`JNIEnv`指针和一个类描述符，然后定位到一个类加载器来加载相应的类。它返回一个初始化后的类的局部引用，如果失败则返回`NULL`。`FindClass`使用调用堆栈最顶层方法关联的类加载器。如果找不到，它会使用"系统"类加载器。一个典型的例子是，在我们创建一个线程并将其附加到虚拟机之后，调用堆栈的最顶层方法将是如下所示：
 - en: '[PRE22]'
+  id: totrans-226
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: This method is not part of our application code. Therefore the "system" class
     loader is used.
+  id: totrans-227
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这个方法不是我们应用程序代码的一部分。因此，使用的是"系统"类加载器。
 - en: Tip
+  id: totrans-228
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: A thread can be created at Java (called the managed thread or Java thread) or
     native code (called the native thread or non-VM thread). The native thread can
     be attached to a VM by calling the JNI function `AttachCurrentThread`. Once attached,
     the native thread works just like a Java thread, running inside a native method.
     It remains attached until the JNI function `DetachCurrentThread` is called.
+  id: totrans-229
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 线程可以在Java中创建（称为托管线程或Java线程），也可以在本地代码中创建（称为本地线程或非虚拟机线程）。通过调用JNI函数`AttachCurrentThread`，本地线程可以附加到虚拟机。一旦附加，本地线程就像Java线程一样运行，在本地方法内部工作。它将保持连接状态，直到调用JNI函数`DetachCurrentThread`。
 - en: 'In our `ClassManipulation` project, we illustrated `FindClass` with `findClassDemo`
     and `findClassDemo2` native methods. The `findClassDemo` method runs in a VM created
     thread. The `FindClass` call will locate the class loader properly. The `findClassDemo2`
     method creates a non-VM thread and attaches the thread to VM. It illustrates the
     case we described in the preceding section. The logcat output for calling the
     two native methods is as follows:'
+  id: totrans-230
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在我们的`ClassManipulation`项目中，我们用本地方法`findClassDemo`和`findClassDemo2`说明了`FindClass`。`findClassDemo`方法在虚拟机创建的线程中运行。`FindClass`调用将正确找到类加载器。`findClassDemo2`方法创建了一个非虚拟机线程并将该线程附加到虚拟机。它说明了我们在上一节中描述的情况。调用这两个本地方法的logcat输出如下：
 - en: '![How it works…](img/1505_02_12.jpg)'
+  id: totrans-231
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![工作原理…](img/1505_02_12.jpg)'
 - en: As shown in the output, the non-VM thread loads the `String` class successfully
     but not the `Dummy` class defined by us. The way to work around this issue is
     to cache a reference to the `Dummy` class in the `JNI_OnLoad` method. We'll provide
     a detailed example in the *Caching jfieldID, jmethodID, and referencing data to
     improve performance* recipe.
+  id: totrans-232
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如输出所示，非虚拟机线程成功加载了`String`类，但未能加载我们定义的`Dummy`类。解决此问题的方法是在`JNI_OnLoad`方法中缓存对`Dummy`类的引用。我们将在*缓存jfieldID、jmethodID和引用数据以提高性能*的菜谱中提供一个详细的例子。
 - en: '`GetSuperclass`: The JNI function `GetSuperclass` has the following prototype:'
+  id: totrans-233
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`GetSuperclass`：JNI函数`GetSuperclass`具有以下原型：'
 - en: '[PRE23]'
+  id: totrans-234
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: It helps us to find the superclass of a given class. If `clazz` is `java.lang.Object`,
     this function returns `NULL`; if it's an interface, it returns a local reference
     to `java.lang.Object`; if it's any other class, it returns a local reference to
     its superclass.
+  id: totrans-235
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 它可以帮助我们查找给定类的超类。如果`clazz`是`java.lang.Object`，这个函数返回`NULL`；如果是接口，它返回对`java.lang.Object`的本地引用；如果是其他任何类，它返回对其超类的本地引用。
 - en: 'In our `ClassManipulation` project, we illustrated `GetSuperclass` with the
     `GetSuperclassDemo` native method. We created a `Dummy` class and a `DummyInterface`
     interface in Java code, where `DummySubClass` extends `Dummy`, and `DummySubInterface`
     extends `DummyInterface`. In the native method, we then invoked `GetSuperclass`
     to `java.lang.Object`, `DummySubClass`, and `DummySubInterface` respectively.
     The following is a screenshot of the logcat output:'
+  id: totrans-236
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在我们的`ClassManipulation`项目中，我们用本地方法`GetSuperclassDemo`说明了`GetSuperclass`。我们在Java代码中创建了一个`Dummy`类和一个`DummyInterface`接口，其中`DummySubClass`扩展了`Dummy`，而`DummySubInterface`扩展了`DummyInterface`。在本地方法中，我们分别对`java.lang.Object`、`DummySubClass`和`DummySubInterface`调用`GetSuperclass`。以下是logcat输出的截图：
 - en: '![How it works…](img/1505_02_13.jpg)'
+  id: totrans-237
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![工作原理…](img/1505_02_13.jpg)'
 - en: As shown in the screenshot, `GetSuperclass` can find the superclass of `DummySubClass`
     successfully. In this native method, we used a utility function `nativeGetClassName`,
     where we called the `toString` method. We'll cover more about how to make such
     method calls in the *Calling instance and static methods in JNI* recipe.
+  id: totrans-238
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如截图所示，`GetSuperclass`可以成功找到`DummySubClass`的超类。在这个本地方法中，我们使用了实用函数`nativeGetClassName`，在那里我们调用了`toString`方法。我们将在*在JNI中调用实例和静态方法*的菜谱中介绍如何进行此类方法调用。
 - en: '`IsAssignableFrom`: The JNI function `IsAssignableFrom` has the following prototype:'
+  id: totrans-239
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`IsAssignableFrom`：JNI函数`IsAssignableFrom`具有以下原型：'
 - en: '[PRE24]'
+  id: totrans-240
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'This function returns `JNI_TRUE` if `cls1` can be safely casted to `cls2`,
     and `JNI_FALSE` otherwise. We demonstrated its usage with the native method `IsAssignableFromDemo`.
     We obtained a local reference to `DummySubClass`, and called `GetSuperclass` to
     get a local reference to `Dummy`. Then, we called `IsAssignableFrom` to test if
     we can cast `DummySubClass` to `Dummy` and vice versa. The following is a screenshot
     of the logcat output:'
+  id: totrans-241
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如果`cls1`可以安全地转换为`cls2`，此函数返回`JNI_TRUE`，否则返回`JNI_FALSE`。我们在本地方法`IsAssignableFromDemo`中演示了其用法。我们获得了对`DummySubClass`的本地引用，并调用`GetSuperclass`获取对`Dummy`的本地引用。然后，我们调用`IsAssignableFrom`来测试是否可以将`DummySubClass`转换为`Dummy`以及反之。以下是logcat输出的截图：
 - en: '![How it works…](img/1505_02_14.jpg)'
+  id: totrans-242
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![工作原理…](img/1505_02_14.jpg)'
 - en: As expected, the subclass can be safely cast to its superclass, but not the
     other way round.
+  id: totrans-243
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 如预期的那样，子类可以安全地转换为超类，但反之则不行。
 - en: Tip
+  id: totrans-244
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The JNI function `DefineClass` is not supported on Android. This is because
     the function requires the raw class data as input, and the Dalvik VM on Android
     doesn't use the Java bytecode or class files.
+  id: totrans-245
   prefs: []
   type: TYPE_NORMAL
+  zh: Android上不支持JNI函数`DefineClass`。这是因为该函数需要原始类数据作为输入，而Android上的Dalvik VM不使用Java字节码或类文件。
 - en: Manipulating objects in JNI
+  id: totrans-246
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在JNI中操作对象
 - en: The previous recipe shows how we can manipulate classes in Android JNI. This
     recipe describes how to manipulate instance objects in Android NDK programming.
+  id: totrans-247
   prefs: []
   type: TYPE_NORMAL
+  zh: 上一个菜谱展示了如何在Android JNI中操作类。这个菜谱描述了如何在Android NDK编程中操作实例对象。
 - en: Getting ready
+  id: totrans-248
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: 'The following recipes should be read first before going through this recipe:'
+  id: totrans-249
   prefs: []
   type: TYPE_NORMAL
+  zh: 在阅读这个菜谱之前，应该先阅读以下菜谱：
 - en: '*Managing references in JNI*'
+  id: totrans-250
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*在JNI中管理引用*'
 - en: '*Manipulating classes in JNI*'
+  id: totrans-251
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*在JNI中操作类*'
 - en: How to do it…
+  id: totrans-252
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'Now we''ll create an Android project with native methods demonstrating the
     usage of JNI functions related to instance objects. Perform the following steps:'
+  id: totrans-253
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们将创建一个带有本地方法的Android项目，演示与实例对象相关的JNI函数的使用。执行以下步骤：
 - en: Create a project named `ObjectManipulation`. Set the package name as `cookbook.chapter2`.
     Create an activity named `ObjectManipulationActivity`. Under the project, create
     a folder named `jni`. Please refer to the *Loading native libraries and registering
     native methods* recipe in this chapter, if you want more detailed instructions.
+  id: totrans-254
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个名为`ObjectManipulation`的项目。将包名设置为`cookbook.chapter2`。创建一个名为`ObjectManipulationActivity`的活动。在项目下，创建一个名为`jni`的文件夹。如果你需要更详细的说明，请参考本章中的*加载本地库和注册本地方法*的菜谱。
 - en: Create a file named `objecttest.c` under the `jni` folder, then implement the
     `AllocObjectDemo`, `NewObjectDemo`, `NewObjectADemo`, `NewObjectVDemo`, `GetObjectClassDemo`,
     and `IsInstanceOfDemo` methods. You can refer to the downloaded `ObjectManipulation`
     project source code.
+  id: totrans-255
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`jni`文件夹下创建一个名为`objecttest.c`的文件，然后实现`AllocObjectDemo`、`NewObjectDemo`、`NewObjectADemo`、`NewObjectVDemo`、`GetObjectClassDemo`和`IsInstanceOfDemo`方法。你可以参考下载的`ObjectManipulation`项目源代码。
 - en: Modify `ObjectManipulationActivity.java` by adding code to load the native library,
     declare the native methods, and invoke them.
+  id: totrans-256
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 修改`ObjectManipulationActivity.java`，添加加载本地库、声明本地方法并调用它们的代码。
 - en: Create a `Dummy` class, and a `DummySub` class which extends `Dummy`. Create
     a `Contact` class with two fields `name` and `age`, a constructor, and a `getContactStr`
     method.
+  id: totrans-257
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个`Dummy`类，以及一个继承自`Dummy`的`DummySub`类。创建一个具有两个字段`name`和`age`、一个构造函数以及一个`getContactStr`方法的`Contact`类。
 - en: Modify the `layout` XML file, add the `Android.mk` build file, and build the
     native library. Refer to steps 8 to 10 of the *Loading native libraries and registering
     native methods* recipe of this chapter for more details.
+  id: totrans-258
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 修改`layout` XML文件，添加`Android.mk`构建文件，并构建本地库。更多详细信息，请参考本章中*加载本地库和注册本地方法*的步骤8至10。
 - en: We're now ready to run the project. We'll present the output while discussing
     each native method in the following section.
+  id: totrans-259
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们现在准备运行项目。在下一节讨论每个本地方法时，我们将展示输出结果。
 - en: How it works…
+  id: totrans-260
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'This recipe presents various methods for manipulating objects in JNI:'
+  id: totrans-261
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个菜谱介绍了在JNI中操作对象的多种方法：
 - en: '**Create instance objects in the native code**: Four JNI functions can be used
     to create instance objects of a Java class in the native code, namely `AllocObject`,
     `NewObject`, `NewObjectA`, and `NewObjectV`. The `AllocObject` function creates
     an uninitialized object, while the other three methods take a constructor as an
     input parameter to create the object. The prototypes for the four functions are
     as follows:'
+  id: totrans-262
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**在本地代码中创建实例对象**：可以使用四个JNI函数在本地代码中创建Java类的实例对象，它们分别是`AllocObject`、`NewObject`、`NewObjectA`和`NewObjectV`。`AllocObject`函数创建一个未初始化的对象，而其他三种方法则将构造函数作为输入参数来创建对象。这四个函数的原型如下：'
 - en: '[PRE25]'
+  id: totrans-263
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: The `clazz` argument is a reference to the Java class of which we want to create
     an instance object. It cannot be an array class, which has its own set of JNI
     functions. `methodID` is the constructor method ID, which can be obtained using
     the `GetMethodID` JNI function.
+  id: totrans-264
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '`clazz`参数是我们想要创建实例对象的Java类的引用。它不能是一个数组类，数组类有其自己的JNI函数集。`methodID`是构造函数方法ID，可以通过使用`GetMethodID`
+    JNI函数获得。'
 - en: 'For `NewObject`, a variable number of arguments can be passed after `methodID`,
     and the function will pass them to the constructor to create the instance object.
     `NewObjectA` accepts an array of type `jvalue`, and passses it to the constructor.
     `jvalue` is a union type and is defined as follows:'
+  id: totrans-265
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE26]'
+  id: totrans-266
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: '`NewObjectV` passes an argument stored in `va_list` to the constructor. `va_list`,
     along with `va_start`, `va_end`, and `va_arg` enable us to access a variable number
     of input arguments for a function. The details are beyond the scope of this book.
     However, you can get a basic idea of how it works from the sample code provided.'
+  id: totrans-267
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1450,29 +1953,36 @@
     JNI function to create an instance object of the `Contact` class defined by us.
     We will then display the values of the name and age fields of all four `Contact`
     objects. The following is a screenshot of a sample run:'
+  id: totrans-268
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_15.jpg)'
+  id: totrans-269
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As shown, the instance object created by `AllocObject` is not initialized and
     therefore all fields contain the default value assigned by Java, while the other
     three methods create objects with the initial value passed by us.
+  id: totrans-270
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '`GetObjectClass`: This JNI function has the following prototype:'
+  id: totrans-271
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE27]'
+  id: totrans-272
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: It returns a local reference to the class of the instance object `obj`. The
     `obj` argument must not be `NULL`, otherwise it will cause the VM to crash.
+  id: totrans-273
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1480,26 +1990,32 @@
     to the `Contact` class and then called `AllocObject` to create an uninitialized
     object instance. In the Java code, we display the fields of the created object
     instance as follows:'
+  id: totrans-274
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_16.jpg)'
+  id: totrans-275
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As expected, the field values for the uninitialized instance `Contact` object
     are the default values assigned by Java.
+  id: totrans-276
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '`IsInstanceOf`: This JNI function call has the following prototype:'
+  id: totrans-277
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE28]'
+  id: totrans-278
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'It determines if the instance object `obj` is an instance of class `clazz`.
     We illustrated the usage of this function in the `IsInstanceOfDemo` native method.
     The method creates a local reference to the `Dummy` class and a local reference
@@ -1508,55 +2024,67 @@
     object references against each of the class references, making four checks in
     total. We send the output to logcat. A sample execution of this method gives the
     following result :'
+  id: totrans-279
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_17.jpg)'
+  id: totrans-280
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As the result shows, the `Dummy` instance object is an instance of the `Dummy`
     class but not `DummySub` class, while the `DummySub` instance object is an instance
     of the `Dummy` class and the `DummySub` class.
+  id: totrans-281
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: Manipulating arrays in JNI
+  id: totrans-282
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: JNI exposes strings, classes, instance objects, and arrays as reference types.
     This recipe will discuss arrays in JNI.
+  id: totrans-283
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-284
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'You should make sure you''ve read the following recipes before going through
     this recipe:'
+  id: totrans-285
   prefs: []
   type: TYPE_NORMAL
 - en: '*Managing references in JNI*'
+  id: totrans-286
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Manipulating classes in JNI*'
+  id: totrans-287
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-288
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: In this section, we will create a sample Android project that demonstrates how
     to manipulate arrays in JNI.
+  id: totrans-289
   prefs: []
   type: TYPE_NORMAL
 - en: Create a project named `ArrayManipulation`. Set the package name as `cookbook.chapter2`.
     Create an activity named `ArrayManipulationActivity`. Under the project, create
     a folder named `jni`. Refer to the *Loading native libraries and registering native
     methods* recipe of this chapter for more detailed instructions.
+  id: totrans-290
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
@@ -1564,48 +2092,58 @@
     `GetArrayLengthDemo`, `NewObjectArrayDemo`, `NewIntArrayDemo`, `GetSetObjectArrayDemo`,
     `GetReleaseIntArrayDemo`, `GetSetIntArrayRegionDemo`, and `GetReleasePrimitiveArrayCriticalDemo`
     native methods.
+  id: totrans-291
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify `ArrayManipulationActivity.java` by adding code to load the native library,
     declare the native methods, and invoke them.
+  id: totrans-292
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Create a `Dummy` class with a single integer field named `value`.
+  id: totrans-293
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify the layout XML file, add the `Android.mk` build file, and build the native
     library. Refer to steps 8 to 10 of the *Loading native libraries and registering
     native methods* recipe of this chapter for more details.
+  id: totrans-294
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: We're now ready to run the project. We'll present the output while discussing
     each native method in the following section.
+  id: totrans-295
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-296
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'Arrays are represented by `jarray` or its subtypes such as `jobjectArray` and
     `jbooleanArray`. Similar to `jstring`, they cannot be accessed directly by native
     code like C arrays do. JNI provides various functions for accessing arrays:'
+  id: totrans-297
   prefs: []
   type: TYPE_NORMAL
 - en: '**Create new arrays**: JNI provides `NewObjectArray` and `New<Type>Array` functions
     to create arrays for objects and primitive types. Their function prototypes are
     as follows:'
+  id: totrans-298
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE29]'
+  id: totrans-299
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'We demonstrate the usage of NewObjectArray in the native method `NewObjectArrayDemo`,
     where we create 10 instances of the `Dummy` class. The `length` parameter of the
     function indicates the number of objects to create, `elementType` is a reference
@@ -1614,15 +2152,18 @@
     implemented the `callNewObjectArrayDemo` method, which calls the `NewObjectArrayDemo`
     native method to create an array of 10 `Dummy` objects, all with the value field
     set to `5`. The execution result should look similar to the following screenshot:'
+  id: totrans-300
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_18.jpg)'
+  id: totrans-301
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As expected, the `value` field of all the objects created by `NewObjectArray`
     is `5`.
+  id: totrans-302
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1636,26 +2177,32 @@
     implemented a `callNewIntArrayDemo` method to call `NewIntArrayDemo` and display
     the integer array elements on the screen. The execution of `callNewIntArrayDemo`
     gives the following result:'
+  id: totrans-303
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_19.jpg)'
+  id: totrans-304
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As shown in the screenshot, the integer arrays are assigned with values from
     `0` to `9`.
+  id: totrans-305
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '`GetArrayLength`: This native function has the following prototype:'
+  id: totrans-306
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE30]'
+  id: totrans-307
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'It accepts a reference to `jarray` and returns its length. We demonstrated
     its usage in the native method `GetArrayLengthDemo`. In the Java code, we implemented
     the `callGetArrayLengthDemo` method, which creates three arrays, including a `double`
@@ -1663,10 +2210,12 @@
     calls the `GetArrayLengthDemo` native method to find the lengths for the three
     arrays. We output the array length to logcat in the native method. The sample
     execution output should look similar to the following screenshot:'
+  id: totrans-308
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_20.jpg)'
+  id: totrans-309
   prefs:
   - PREF_IND
   type: TYPE_IMG
@@ -1675,17 +2224,21 @@
     the first one retrieves a reference to an object element of an array, while the
     second one sets the element of an object array. The two functions have the following
     prototype:'
+  id: totrans-310
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE31]'
+  id: totrans-311
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: In the two functions, the argument `array` refers to the object array and `index`
     is the position of the element. While the `get` function returns a reference to
     the object element, the `set` function sets the element according to the `value`
     argument.
+  id: totrans-312
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1696,15 +2249,18 @@
     of three `Dummy` objects with values of `0`, `1`, `2`, and another `Dummy` object
     of value `100` to the native method. The execution result should look similar
     to the following screenshot:'
+  id: totrans-313
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_21.jpg)'
+  id: totrans-314
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As shown, the object at index `1` is replaced by the object with value `100`,
     and the original object of value `1` is returned.
+  id: totrans-315
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1712,19 +2268,23 @@
     to access arrays of primitive types. We demonstrate them separately using three
     different native methods, all using `jintarray` as an example. Arrays of other
     primitive types are similar to integers.'
+  id: totrans-316
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'Firstly, if we want to create a separate copy of `jintarray` in a native buffer,
     or only access a small portion of a large array, `GetIntArrayRegion`/ `SetIntArrayRegion`
     functions are the proper choices. These two functions have the following prototype:'
+  id: totrans-317
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE32]'
+  id: totrans-318
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: The two functions accept the same set of input parameters. The argument `array`
     refers to the `jintArray` we operate on, `start` is the start element position,
     `len` indicates the number of elements to get or set, and `buf` is the native
@@ -1732,6 +2292,7 @@
     `GetSetIntArrayRegionDemo`. The method accepts an input `jintArray`, copies three
     elements from index 1 to 3 of the array to a native buffer, multiplies their values
     by `2` at the native buffer, and copies the value back to index `0` to `2`.
+  id: totrans-319
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1739,10 +2300,12 @@
     initialize an integer array, pass the array to a native method `GetSetIntArrayRegionDemo`,
     and display the before and after values of all the elements. You should see an
     output similar to the following screenshot:'
+  id: totrans-320
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_22.jpg)'
+  id: totrans-321
   prefs:
   - PREF_IND
   type: TYPE_IMG
@@ -1753,23 +2316,28 @@
     from the native buffer back to the integer array, starting at index `0`. The final
     values for the three elements were therefore `2`, `4`, and `6`, and the last two
     elements remained unchanged as `3` and `4`.
+  id: totrans-322
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'Secondly, if we want to access a large array, then `GetIntArrayElements` and
     `ReleaseIntArrayElements` are the JNI functions for us. They have the following
     prototype:'
+  id: totrans-323
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE33]'
+  id: totrans-324
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: '`GetIntArrayElements` returns a pointer to the array elements, or `NULL` in
     case of a failure. The array input parameter refers to the array we want to access,
     and `isCopy` is set to `true` if a new copy is created after the function call
     finishes. The returned pointer is valid until `ReleaseIntArrayElements` is called.'
+  id: totrans-325
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1783,30 +2351,37 @@
     we want to copy values from the native buffer back to the original array, and
     whether we want to free the `elems` native buffer, the `mode` parameters can be
     `0`, `JNI_COMMIT`, or `JNI_ABORT`, as follows:'
+  id: totrans-326
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '| Copy values back | Yes | No |'
+  id: totrans-327
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| --- | --- | --- |'
+  id: totrans-328
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| Free native buffer |'
+  id: totrans-329
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| --- |'
+  id: totrans-330
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| Yes | `0` | `JNI`_ABORT |'
+  id: totrans-331
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| No | JNI_`COMMIT` | - |'
+  id: totrans-332
   prefs:
   - PREF_IND
   type: TYPE_TB
@@ -1817,14 +2392,17 @@
     method to initialize the input array and invoke the `GetReleaseIntArrayDemo` native
     method. The following is a screenshot of the phone display after executing the
     `callGetReleaseIntArrayDemo` method:'
+  id: totrans-333
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_23.jpg)'
+  id: totrans-334
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As expected, all integer elements in the original array are multiplied by `2`.
+  id: totrans-335
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -1839,10 +2417,12 @@
     method `GetReleasePrimitiveArrayCriticalDemo` along with the Java method `callGetReleasePrimitiveArrayCriticalDemo`.
     The implementations are similar to the second set of functions calls, and the
     display result is the same.
+  id: totrans-336
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: Accessing Java static and instance fields in the native code
+  id: totrans-337
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -1850,89 +2430,108 @@
     and return data back to Java. This is not the only way of sharing data between
     the native code and Java code. This recipe covers another method—accessing Java
     fields from the native code.
+  id: totrans-338
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-339
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'We''re going to cover how to access Java fields of different types, including
     primitive types, strings, instance objects, and arrays. The following recipes
     should be read first before reading this recipe:'
+  id: totrans-340
   prefs: []
   type: TYPE_NORMAL
 - en: '*Passing parameters and receiving returns in primitive types*'
+  id: totrans-341
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Manipulating strings in JNI*'
+  id: totrans-342
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Manipulating classes in JNI*'
+  id: totrans-343
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Manipulating objects in JNI*'
+  id: totrans-344
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Manipulating arrays in JNI*'
+  id: totrans-345
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Readers are also expected to be familiar with Java reflection API.
+  id: totrans-346
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-347
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'Follow these steps to create a sample Android project that demonstrates how
     to access Java static and instance fields from the native code:'
+  id: totrans-348
   prefs: []
   type: TYPE_NORMAL
 - en: Create a project named `AccessingFields`. Set the package name as `cookbook.chapter2`.
     Create an activity named `AccessingFieldsActivity`. Under the project, create
     a folder named `jni`. Refer to the *Loading native libraries and registering native
     methods* recipe of this chapter for more detailed instructions.
+  id: totrans-349
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Create a file named `accessfield.c` under the `jni` folder, then implement the
     `AccessStaticFieldDemo`, `AccessInstanceFieldDemo`, and `FieldReflectionDemo`
     native methods.
+  id: totrans-350
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify `AccessingFieldsActivity.java` by adding code to load the native library,
     declare native methods, and invoke them. In addition, add four instance fields
     and four static fields.
+  id: totrans-351
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Create a `Dummy` class with an integer instance field named `value` and an integer
     static field named `value2`.
+  id: totrans-352
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify the layout XML file, add the `Android.mk` build file, and build the native
     library. Refer to steps 8 to 10 of the *Loading native libraries and registering
     native methods* recipe of this chapter for more details.
+  id: totrans-353
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: We're now ready to run the project. We'll present the output while discussing
     each native method, in the following section.
+  id: totrans-354
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-355
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'This recipe discusses the access of fields (both static and instance fields)
     in Java from native code:'
+  id: totrans-356
   prefs: []
   type: TYPE_NORMAL
 - en: '**jfieldID data type**: `jfieldID` is a regular C pointer pointing to a data
@@ -1941,72 +2540,89 @@
     while `jfieldID` doesn''t have such a corresponding type in Java. However, JNI
     provides functions to convert the `java.lang.reflect.Field` instance to `jfieldID`
     and vice versa.'
+  id: totrans-357
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '**Field descriptor**: It refers to the modified UTF-8 string used to represent
     the field data type. The following table summarizes the Java field types and its
     corresponding field descriptors:'
+  id: totrans-358
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '| Java field type | Field descriptor |'
+  id: totrans-359
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| --- | --- |'
+  id: totrans-360
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `boolean` | `Z` |'
+  id: totrans-361
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `byte` | `B` |'
+  id: totrans-362
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `char` | `C` |'
+  id: totrans-363
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `short` | `S` |'
+  id: totrans-364
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `int` | `I` |'
+  id: totrans-365
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `long` | `J` |'
+  id: totrans-366
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `float` | `F` |'
+  id: totrans-367
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `double` | `D` |'
+  id: totrans-368
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `String` | `Ljava/lang/String;` |'
+  id: totrans-369
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `Object` | `Ljava/lang/Object;` |'
+  id: totrans-370
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `int[]` | `[I` |'
+  id: totrans-371
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `Dummy[]` | `[Lcookbook/chapter2/Dummy;` |'
+  id: totrans-372
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `Dummy[][]` | `[[Lcookbook/chapter2/Dummy;` |'
+  id: totrans-373
   prefs:
   - PREF_IND
   type: TYPE_TB
@@ -2015,22 +2631,27 @@
     `"L"`, followed by the class descriptor (refer to the *Manipulating classes in
     JNI* recipe for detailed information) and ends with "`;`". For arrays, the field
     descriptor starts with "`[`", followed by the descriptor for the element type.
+  id: totrans-374
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '**Accessing static fields**: JNI provides three functions to access static
     fields of a Java class. They have the following prototypes:'
+  id: totrans-375
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE34]'
+  id: totrans-376
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: To access a static field, the first step is to obtain the field ID, which is
     done by the first function listed here. In the method prototype, the `clazz` argument
     refers to the Java class at which the static field is defined, `name` indicates
     the field name, and `sig` is the field descriptor.
+  id: totrans-377
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2039,6 +2660,7 @@
     the eight Java primitive types or `Object`, and `fieldID` is `jfieldID` returned
     by calling the first method. For `set` functions, `value` is the new value that
     we want to assign to the field.
+  id: totrans-378
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2049,83 +2671,102 @@
     the get values to Android logcat, while in the Java code we display the value
     set by the native code to the phone screen. The following screenshot shows the
     logcat output:'
+  id: totrans-379
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_24.jpg)'
+  id: totrans-380
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'The phone display will look similar to the following screenshot:'
+  id: totrans-381
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_25.jpg)'
+  id: totrans-382
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As shown, the values we set at the Java code for the fields can be obtained
     by the native code; and the values set by the native method are reflected in the
     Java code.
+  id: totrans-383
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '**Accessing instance field**: Accessing instance fields is similar to accessing
     static fields. JNI also provides the following three functions for us:'
+  id: totrans-384
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE35]'
+  id: totrans-385
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: Again, we need to obtain the field ID first, before we can get and set the values
     for the field. Instead of passing the class reference to the `get` and `set` functions,
     we should pass the object reference.
+  id: totrans-386
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'The usage is shown in native method `AccessInstanceFieldDemo`. Again, we print
     the values of `get` in the native code to the logcat and display the modified
     field values on the phone screen. The following screenshot shows the logcat output:'
+  id: totrans-387
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_26.jpg)'
+  id: totrans-388
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'The phone display will look similar to the following screenshot:'
+  id: totrans-389
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_27.jpg)'
+  id: totrans-390
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: A similar interpretation to accessing static fields can be made on the results.
+  id: totrans-391
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '**Reflection support for field**: JNI provides two functions to support the
     interoperation with the Java Reflection API for `Field`. They have the following
     prototypes:'
+  id: totrans-392
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE36]'
+  id: totrans-393
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: The first function converts `java.lang.reflect.Field` to `jfieldID`, and then
     we can use the `set` and `get` JNI functions described previously. The argument
     field is an instance of `java.lang.reflect.Field`.
+  id: totrans-394
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: The second function does the reverse. It accepts a class reference, a `jfieldID`,
     and a `jboolean` variable indicating whether it is a static or an instance field.
     The function returns a reference to an object of `java.lang.reflect.Field`.
+  id: totrans-395
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2135,116 +2776,141 @@
     we pass the `Field` instance to the native code and use the returned `Field` instance
     to obtain the `field` value. The native code outputs the field value to logcat
     as follows:'
+  id: totrans-396
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_28.jpg)'
+  id: totrans-397
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'The Java code displays the value for another field on the phone screen as follows:'
+  id: totrans-398
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_29.jpg)'
+  id: totrans-399
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: Calling static and instance methods from the native code
+  id: totrans-400
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: The previous recipe covers how to access Java fields in NDK. Besides fields,
     a Java class also has methods. This recipe focuses on calling static and instance
     methods from JNI.
+  id: totrans-401
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-402
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The code examples require a basic understanding of the JNI primitive types,
     strings, classes, and instance objects. It is better to make sure you have read
     the following recipes before going through this recipe:'
+  id: totrans-403
   prefs: []
   type: TYPE_NORMAL
 - en: '*Passing parameters and receiving returns in primitive types*'
+  id: totrans-404
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Manipulating strings in JNI*'
+  id: totrans-405
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Manipulating classes in JNI*'
+  id: totrans-406
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Manipulating objects in JNI*'
+  id: totrans-407
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Accessing Java static and instance fields in native code*'
+  id: totrans-408
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Readers are also expected to be familiar with Java reflection API.
+  id: totrans-409
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-410
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The following steps can be followed to create a sample Android project that
     illustrates how to call static and instance methods from the native code:'
+  id: totrans-411
   prefs: []
   type: TYPE_NORMAL
 - en: Create a project named `CallingMethods`. Set the package name as `cookbook.chapter2`.
     Create an activity named `CallingMethodsActivity`. Under the project, create a
     folder named `jni`. Refer to the *Loading native libraries and registering native
     methods* recipe of this chapter for more detailed instructions.
+  id: totrans-412
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Create a file named `callmethod.c` under the `jni` folder, then implement the
     native methods `AccessStaticMethodDemo`, `AccessInstanceMethodDemo`, and `MethodReflectionDemo`.
+  id: totrans-413
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify `CallingMethodsActivity.java` by adding code to load the native library,
     declare the native methods, and invoke them.
+  id: totrans-414
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Create a `Dummy` class with an integer instance field named `value` and an integer
     static field named `value2`. In addition, create a `DummySub` class that extends
     `Dummy` with an additional String field called `name`.
+  id: totrans-415
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify the layout XML file, add the `Android.mk` build file, and build the native
     library. Refer to steps 8 to 10 of the *Loading native libraries and registering
     native methods* recipe of this chapter for more details.
+  id: totrans-416
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: We're now ready to run the project. We'll present the output while discussing
     each native method in the following section.
+  id: totrans-417
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-418
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'This recipe illustrates how to call the Java static and instance methods from
     the native code:'
+  id: totrans-419
   prefs: []
   type: TYPE_NORMAL
 - en: '**jmethodID data type**: Similar to `jfieldID`, `jmethodID` is a regular C
     pointer pointing to a data structure with details hidden from the developers.
     JNI provides functions to convert the `java.lang.reflect.Method` instance to `jmethodID`
     and vice versa.'
+  id: totrans-420
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
@@ -2256,42 +2922,52 @@
     should simply use "`()`", followed by the field descriptor of the return type.
     For constructors, "`V`" should be used to represent the return type. The following
     table lists a few Java methods and their corresponding method descriptors:'
+  id: totrans-421
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '| Java method | Method descriptor |'
+  id: totrans-422
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| --- | --- |'
+  id: totrans-423
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `Dummy(int pValue)` | `(I)V` |'
+  id: totrans-424
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `String getName()` | `()Ljava/lang/String;` |'
+  id: totrans-425
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `void setName(String pName)` | `(Ljava/lang/String;)V` |'
+  id: totrans-426
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '| `lont f(byte[] bytes, Dummy dummy)` | `([BLcookbook/chapter2/Dummy;)J` |'
+  id: totrans-427
   prefs:
   - PREF_IND
   type: TYPE_TB
 - en: '**Calling static methods**: JNI provides four sets of functions for native
     code to call Java methods. Their prototypes are as follows:'
+  id: totrans-428
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE37]'
+  id: totrans-429
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: The first function gets the method ID. It accepts a reference `clazz` to the
     Java class, a method name in a modified UTF-8 string format, and a method descriptor
     `sig`. The other three sets of functions are used to call the static methods.
@@ -2300,6 +2976,7 @@
     returned by the `GetStaticMethodID` function. The arguments to the Java method
     are passed one by one in `CallStatic<Type>Method`, or put into an array of `jvalue`
     as `CallStatic<Type>MethodA`, or put into the `va_list` structure as `CallStatic<Type>MethodV`.
+  id: totrans-430
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2311,18 +2988,22 @@
     initializes the `value2` static field to `100`, invokes the native method `AccessStaticMethodDemo`,
     and prints the final `value2` value on phone screen. The following screenshot
     shows the logcat output:'
+  id: totrans-431
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_30.jpg)'
+  id: totrans-432
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'The output of screen looks similar to the following screenshot:'
+  id: totrans-433
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_31.jpg)'
+  id: totrans-434
   prefs:
   - PREF_IND
   type: TYPE_IMG
@@ -2330,36 +3011,44 @@
     three different JNI functions to call the `set` method to modify the value. Finally,
     the phone display indicated that the final modified value is reflected in Java
     code.
+  id: totrans-435
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '*Calling instance methods*: Calling instance methods from the native code is
     similar to calling static methods. JNI also provides four sets of functions as
     follows:'
+  id: totrans-436
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE38]'
+  id: totrans-437
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'The usage of these four sets of functions is similar to that of the JNI functions
     for calling static methods, except that we need to pass a reference to the instance
     object instead of the class. In addition, JNI provides another three sets of functions
     for calling instance methods, as follows:'
+  id: totrans-438
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE39]'
+  id: totrans-439
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: These three sets of methods accept an extra argument `clazz` as compared to
     the three sets of functions earlier. The `clazz` argument can be a reference to
     the class that `obj` is instantiated from, or a superclass of `obj`. A typical
     use case is to call `GetMethodID` on a class to obtain a `jmethodID`. We have
     a reference to an object of the class's subclass, and then we can use the preceding
     functions to call the Java method associated by `jmethodID` with the object reference.
+  id: totrans-440
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2370,33 +3059,40 @@
     are defined in the `Dummy` superclass. In `CallingMethodsActivity.java`, we implemented
     the `callAccessInstanceMethodDemo` method to invoke the `AccessInstanceMethodDemo`
     native method. The following screenshot shows the logcat output:'
+  id: totrans-441
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_32.jpg)'
+  id: totrans-442
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As the results show, the `getName`, `setName`, `getValue`, and `setValue` methods
     are executed successfully.
+  id: totrans-443
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '**Reflection support for method**: Similar to fields, JNI also provides the
     following two functions to support reflection:'
+  id: totrans-444
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE40]'
+  id: totrans-445
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: The first function accepts a reference to the `java.lang.reflect.Method` instance,
     and returns its corresponding `jmethodID`. The returned `jmethodID` value can
     then be used to call the associated Java method. The second function does the
     reverse. It accepts a reference to the Java class, `jmethodID`, and `jboolean`
     indicating whether it's a static method or not, and returns a reference to `java.lang.reflect.Method`.
     The return value can be used in the Java code to access the corresponding method.
+  id: totrans-446
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2405,97 +3101,117 @@
     method to pass the `java.lang.reflect.Method` object of `getValue` to the native
     code, get the returned `setValue java.lang.reflect.Method` object, and invoke
     the `setValue` method with the returned object.
+  id: totrans-447
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'The native method outputs the return value of `getValue` method to logcat as
     follows:'
+  id: totrans-448
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_33.jpg)'
+  id: totrans-449
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'The Java code displays the `getValue` method return values before and after
     invoking `setValue` on the phone screen as follows:'
+  id: totrans-450
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_34.jpg)'
+  id: totrans-451
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: As expected, the native code can access the `getValue` method with the `Method`
     object passed from the Java code, and the Java code can call the `setValue` method
     with the `Method` object returned from the native method.
+  id: totrans-452
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: Caching jfieldID, jmethodID, and referencing data to improve performance
+  id: totrans-453
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
 - en: This recipe covers caching in Android JNI, which can improve the performance
     of our native code.
+  id: totrans-454
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-455
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'You should make sure you''ve read the following recipes before going through
     this recipe:'
+  id: totrans-456
   prefs: []
   type: TYPE_NORMAL
 - en: '*Accessing Java static and instance fields in native code*'
+  id: totrans-457
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Calling static and instance methods from native code*'
+  id: totrans-458
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-459
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The following steps detail how to build a sample Android application that demonstrates
     caching in JNI:'
+  id: totrans-460
   prefs: []
   type: TYPE_NORMAL
 - en: Create a project named `Caching`. Set the package name as `cookbook.chapter2`.
     Create an activity named `CachingActivity`. Under the project, create a folder
     named `jni`. Refer to the *Loading native libraries and registering native methods*
     recipe of this chapter for more detailed instructions.
+  id: totrans-461
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Create a file named `cachingtest.c` under the `jni` folder, then implement the
     `InitIDs`, `CachingFieldMethodIDDemo1`, `CachingFieldMethodIDDemo2`, and `CachingReferencesDemo`
     methods.
+  id: totrans-462
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify the `CachingActivity.java` file by adding code to load the native library,
     then declare and invoke the native methods.
+  id: totrans-463
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify the layout XML file, add the `Android.mk` build file, and build the native
     library. Refer to steps 8 to 10 of the *Loading native libraries and registering
     native methods* recipe of this chapter for details.
+  id: totrans-464
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Run the project on an Android device or emulator and monitor the logcat output
     with either eclipse or the `adb logcat -v time` command in your terminal.
+  id: totrans-465
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: At the `onCreate` method of `CachingActivity.java`, enable the `callCachingFieldMethodIDDemo1`
     method and disable the other demo methods. Start the Android application, and
     you should be able to see the following at logcat:![How to do it…](img/1505_02_35.jpg)
+  id: totrans-466
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
@@ -2503,20 +3219,24 @@
     the other demo methods and `InitIDs` method (at the static initializer). Start
     the Android application, and you should be able to see the following at logcat:![How
     to do it…](img/1505_02_36.jpg)
+  id: totrans-467
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Enable `callCachingReferencesDemo` at `CachingActivity.java` while commenting
     out other demo methods. Start the Android application, and you should be able
     to see the following at logcat:![How to do it…](img/1505_02_37.jpg)
+  id: totrans-468
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-469
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'This recipe discusses the usage of caching at JNI:'
+  id: totrans-470
   prefs: []
   type: TYPE_NORMAL
 - en: '**Caching field and method IDs**: Field and method IDs are internal pointers.
@@ -2524,29 +3244,35 @@
     Obtaining the field or method ID requires calling pre-defined JNI functions, which
     do symbolic lookups according to the name and descriptor. The lookup process typically
     requires several string comparisons and is relatively expensive.'
+  id: totrans-471
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Once the field or method ID is obtained, accessing the field or making native
     to Java calls is relatively quick. Therefore, a good practice is to perform lookup
     only once and cache the field or method ID.
+  id: totrans-472
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'There are two approaches to cache field and method IDs. The first approach
     caches at the class initializer. In Java, we can have something similar to the
     following:'
+  id: totrans-473
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE41]'
+  id: totrans-474
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: The static initializer is guaranteed to be executed before any of the class's
     methods. Therefore, we can ensure that the IDs required by the native method are
     valid when they're invoked. The usage of this approach is demonstrated in the
     `InitIDs` and `CachingFieldMethodIDDemo1` native methods and `CachingActivity.java`.
+  id: totrans-475
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2554,6 +3280,7 @@
     or method ID in a static variable, so that the ID is valid the next time the native
     method is invoked. The usage of this approach is demonstrated in the native methods
     `CachingFieldMethodIDDemo2` and `CachingActivity.java`.
+  id: totrans-476
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2565,6 +3292,7 @@
     ensure the class is not unloaded and loaded again. If the first approach is used,
     the static initializer is called automatically when the class is loaded again,
     so we never have to worry about the class being unloaded and loaded again.
+  id: totrans-477
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2574,6 +3302,7 @@
     field and method IDs, which are direct pointers, references are implemented using
     an indirect mechanism that is hidden from developers. Therefore, we need to rely
     on JNI functions to cache them.'
+  id: totrans-478
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
@@ -2582,16 +3311,19 @@
     valid until it is explicitly deleted. While **weak global** reference allows the
     underlying object to be garbage collected. Therefore, we'll need to do a validity
     check before using it.
+  id: totrans-479
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: The native method `CachingReferencesDemo` demonstrates how to cache a string
     reference. Note that while `DeleteGlobalRef` makes the global reference invalid,
     it doesn't assign `NULL` to the reference. We'll need to do this manually.
+  id: totrans-480
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: Checking errors and handling exceptions in JNI
+  id: totrans-481
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -2599,118 +3331,145 @@
     or invalid arguments (for example, passing a native UTF-8 string when the function
     is expecting a UTF-16 string). This recipe discusses how to handle errors and
     exceptions in JNI programming.
+  id: totrans-482
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-483
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The following recipes should be read first before proceeding with this recipe:'
+  id: totrans-484
   prefs: []
   type: TYPE_NORMAL
 - en: '*Manipulating strings in JNI*'
+  id: totrans-485
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Managing references in JNI*'
+  id: totrans-486
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Accessing Java static and instance fields in native code*'
+  id: totrans-487
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '*Calling static and instance methods from native code*'
+  id: totrans-488
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-489
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'Follow these steps to create a sample Android project that illustrates errors
     and exception handling in JNI:'
+  id: totrans-490
   prefs: []
   type: TYPE_NORMAL
 - en: Create a project named `ExceptionHandling`. Set the package name as `cookbook.chapter2`.
     Create an activity named `ExceptionHandlingActivity`. Under the project, create
     a folder named `jni`. Refer to the *Loading native libraries and registering native
     methods* recipe of this chapter for more detailed instructions.
+  id: totrans-491
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Create a file named `exceptiontest.c` under the j`n`i folder, then implement
     the `ExceptionDemo` and `FatalErrorDemo` methods.
+  id: totrans-492
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify the `ExceptionHandlingActivity.java` file by adding code to load the
     native library, then declare and invoke the native methods.
+  id: totrans-493
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify the layout XML file, add the `Android.mk` build file, and build the native
     library. Refer to steps 8 to 10 of the the *Loading native libraries and registering
     native methods* recipe of this chapter for more details.
+  id: totrans-494
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: We're now ready to run the project. We'll present the output while discussing
     each native method, in the following section.
+  id: totrans-495
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-496
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'This recipe discusses error checking and exception handling at JNI:'
+  id: totrans-497
   prefs: []
   type: TYPE_NORMAL
 - en: '**Check for errors and exceptions**: Many JNI functions return a special value
     to indicate failure. For example, the `FindClass` function returns `NULL` to indicate
     it failed to load the class. Many other functions do not use the return value
     to signal failure; instead an exception is thrown.'
+  id: totrans-498
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: Tip
+  id: totrans-499
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
 - en: Besides JNI functions, the Java code invoked by native code can also throw exceptions.
     We should make sure we check for such cases in order to write robust native code.
+  id: totrans-500
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'For the first group of functions, we can simply check the return value to see
     if an error occurs. For the second group of functions, JNI defines two functions
     to check for exceptions, as follows:'
+  id: totrans-501
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE42]'
+  id: totrans-502
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: 'The first function returns `JNI_TRUE` to indicate that an exception occurs,
     and `JNI_FALSE` otherwise. The second function returns a local reference to the
     exception. When the second function is used, an additional JNI function can be
     called to examine the details of the exception:'
+  id: totrans-503
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE43]'
+  id: totrans-504
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: The function prints the exception and a back trace of the stack to the logcat.
+  id: totrans-505
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: In the native method `ExceptionDemo`, we used both approaches to check for occurrence
     of exceptions and `ExceptionDescribe` to print out the exception details.
+  id: totrans-506
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
@@ -2723,116 +3482,140 @@
     exception handler. The normal control flow is therefore interrupted. In contrast,
     JNI exception doesn''t change the control flow, and we''ll need to explicitly
     check for exception and handle it properly.'
+  id: totrans-507
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: There are generally two ways to handle an exception. The first approach is to
     free the resources allocated at JNI and return. This will leave the responsibility
     of handling the exception to the caller of the native method.
+  id: totrans-508
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'The second practice is to clear the exception and continue executing. This
     is done through the following JNI function call:'
+  id: totrans-509
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE44]'
+  id: totrans-510
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: In the native method `ExceptionDemo`, we used the second approach to clear `java.lang.NullPointerException`,
     and the first approach to return `java.lang.RuntimeException` to the caller, which
     is the Java method `callExceptionDemo` at `ExceptionHandlingActivity.java`.
+  id: totrans-511
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'When an exception is pending, not all the JNI functions can be called safely.
     The following functions are allowed when there are pending exceptions:'
+  id: totrans-512
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '`DeleteGlobalRef`'
+  id: totrans-513
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`DeleteLocalRef`'
+  id: totrans-514
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`DeleteWeakGlobalRef`'
+  id: totrans-515
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`ExceptionCheck`'
+  id: totrans-516
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`ExceptionClear`'
+  id: totrans-517
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`ExceptionDescribe`'
+  id: totrans-518
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`ExceptionOccurred`'
+  id: totrans-519
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`MonitorExit`'
+  id: totrans-520
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`PopLocalFrame`'
+  id: totrans-521
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`PushLocalFrame`'
+  id: totrans-522
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`Release<PrimitiveType>ArrayElements`'
+  id: totrans-523
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`ReleasePrimitiveArrayCritical`'
+  id: totrans-524
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`ReleaseStringChars`'
+  id: totrans-525
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`ReleaseStringCritical`'
+  id: totrans-526
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: '`ReleaseStringUTFChars`'
+  id: totrans-527
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
 - en: They're basically exception check and handle functions, or functions that clear
     resources allocated at native code.
+  id: totrans-528
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: Note
+  id: totrans-529
   prefs:
   - PREF_IND
   - PREF_H3
@@ -2840,65 +3623,80 @@
 - en: Calling JNI functions other than the functions listed here can lead to unexpected
     results when an exception is pending. We should handle the pending exception properly
     and then proceed.
+  id: totrans-530
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '**Throw exceptions in the native code**: JNI provides two functions to throw
     an exception from native code. They have the following prototypes:'
+  id: totrans-531
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE45]'
+  id: totrans-532
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: The first function accepts a reference to a `jthrowable` object and throws the
     exception, while the second function accepts a reference to an exception class.
     It will create an exception object of the `clazz` class with the message argument
     and throw it.
+  id: totrans-533
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: In the `ExceptionDemo` native method, we used the `ThrowNew` function to throw
     `java.lang.NullPointerException` and a `Throw` function to throw `java.lang.RuntimeException`.
+  id: totrans-534
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: 'The following logcat output indicates how the exceptions are checked, cleared,
     and thrown:'
+  id: totrans-535
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_38.jpg)'
+  id: totrans-536
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: 'The last exception is not cleared at the native method. In the Java code, we
     catch the exception and display the message on the phone screen:'
+  id: totrans-537
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_39.jpg)'
+  id: totrans-538
   prefs:
   - PREF_IND
   type: TYPE_IMG
 - en: '**Fatal error**: A special type of error is the fatal error, which is not recoverable.
     JNI defines a function `FatalError`, as follows, to raise a fatal error:'
+  id: totrans-539
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE46]'
+  id: totrans-540
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'This function accepts a message and prints it to logcat. After that, the VM
     instance for the application is terminated. We demonstrated the usage of this
     function in the native method `FatalErrorDemo` and Java method `callFatalErrorDemo`.
     The following output is captured at logcat:'
+  id: totrans-541
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '![How it works…](img/1505_02_40.jpg)'
+  id: totrans-542
   prefs:
   - PREF_IND
   type: TYPE_IMG
@@ -2906,10 +3704,12 @@
     the native nor Java code, because `FatalError` never returns, and the VM instance
     is terminated. On my Android device, this does not lead the Android application
     to crash, but causes the application to freeze instead.
+  id: totrans-543
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: There's more...
+  id: totrans-544
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
@@ -2917,9 +3717,11 @@
     words, the native C++ exceptions do not propagate to Java world through JNI. Therefore,
     we should handle C++ exceptions within C++ code. Alternatively, we can write a
     C wrapper to throw an exception or return an error code to Java.
+  id: totrans-545
   prefs: []
   type: TYPE_NORMAL
 - en: Integrating assembly code in JNI
+  id: totrans-546
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
@@ -2927,54 +3729,66 @@
     is sometimes used to optimize the critical portion of code to achieve the best
     performance. This recipe does not intend to discuss how to program in assembly.
     It describes how to integrate assembly code in JNI programming instead.
+  id: totrans-547
   prefs: []
   type: TYPE_NORMAL
 - en: Getting ready
+  id: totrans-548
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: Read the *Passing parameters and receiving returns in primitive types* recipe
     before you continue.
+  id: totrans-549
   prefs: []
   type: TYPE_NORMAL
 - en: How to do it…
+  id: totrans-550
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'The following steps create a sample Android project that integrates the assembly
     code:'
+  id: totrans-551
   prefs: []
   type: TYPE_NORMAL
 - en: Create a project named `AssemblyInJNI`. Set the package name as `cookbook.chapter2`.
     Create an activity named `AssemblyInJNIActivity`. Under the project, create a
     folder named `jni`. Refer to the *Loading native libraries and registering native
     methods* recipe of this chapter for more detailed instructions.
+  id: totrans-552
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Create a file named `assemblyinjni.c` under the `jni` folder, then implement
     the `InlineAssemblyAddDemo` method.
+  id: totrans-553
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: 'Create a file named `tmp.c` under the `jni` folder, and implement the native
     method `AssemblyMultiplyDemo`. Compile the `tmp.c` code to an assembly source
     file named `AssemblyMultiplyDemo.s`, using the following command:'
+  id: totrans-554
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: '[PRE47]'
+  id: totrans-555
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: Modify the `AssemblyInJNIActivity.java` file by adding code to load the native
     library, then declare and invoke the native methods.
+  id: totrans-556
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: Modify the layout XML file, add the `Android.mk` build file, and build the native
     library. Refer to steps 8 to 10 of the *Loading native libraries and registering
     native methods* recipe of this chapter for details.
+  id: totrans-557
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
@@ -2982,6 +3796,7 @@
     method and disable the `callAssemblyMultiplyDemo` method. Run the project on an
     Android device or emulator. The phone display should look similar to the following
     screenshot:![How to do it…](img/1505_02_41.jpg)
+  id: totrans-558
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
@@ -2989,19 +3804,23 @@
     method and disable the `callInlineAssemblyAddDemo` method. Run the project on
     an Android device or emulator. The phone display should look similar to the following
     screenshot:![How to do it…](img/1505_02_42.jpg)
+  id: totrans-559
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
 - en: How it works…
+  id: totrans-560
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
 - en: 'This recipe demonstrates the usage of the assembly code to implement a native
     method:'
+  id: totrans-561
   prefs: []
   type: TYPE_NORMAL
 - en: '**Inline assembly at C code**: We can write inline assembly code for Android
     NDK development. This is illustrated in native method `InlineAssemblyAddDemo`.'
+  id: totrans-562
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
@@ -3011,18 +3830,22 @@
     this recipe is not about writing code in an assembly language, we use the Android
     NDK cross compiler to generate a native method `AssemblyMultiplyDemo` and call
     it from the Java method `callAssemblyMultiplyDemo`.'
+  id: totrans-563
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: 'We first write the native method `AssemblyMultiplyDemo` in `AssemblyMultiplyDemo.c`,
     then cross compile the code using the compiler with Android NDK, using the following:'
+  id: totrans-564
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '[PRE48]'
+  id: totrans-565
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: In the preceding command, `$ANDROID_NDK` is an environment variable pointing
     to the location of Android NDK. If you have followed the recipes in [Chapter 1](ch01.html
     "Chapter 1. Hello NDK"), *Hello NDK*, then this should have been configured correctly.
@@ -3035,16 +3858,20 @@
     don't assemble or link it. The `-o` option tells the compiler to output the assembly
     code to a file `<output_file_name>.s`. If no such option appears, the compiler
     outputs to a file named `<c_file_name>.s`.
+  id: totrans-566
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
 - en: '**Compile the assembly code**: Compiling assembly code is just like compiling
     C/C++ source code. As shown in the `Android.mk` file, we simply list the assembly
     file as a source file as follows:'
+  id: totrans-567
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
 - en: '[PRE49]'
+  id: totrans-568
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE49]'

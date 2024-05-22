@@ -1,45 +1,65 @@
 - en: Chapter 1. Hello NDK
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第1章. NDK你好
 - en: 'In this chapter, we will cover the following recipes:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖以下内容：
 - en: Setting up an Android NDK development environment in Windows
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Windows上搭建Android NDK开发环境
 - en: Setting up an Android NDK development environment in Ubuntu Linux
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Ubuntu Linux上搭建Android NDK开发环境
 - en: Setting up an Android NDK development environment in Mac OS
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Mac OS上搭建Android NDK开发环境
 - en: Updating Android NDK
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 更新Android NDK
 - en: Writing a Hello NDK program
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 编写一个Hello NDK程序
 - en: Introduction
+  id: totrans-7
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: Android NDK is a toolset that allows developers to implement a part of or an
     entire Android application in a native language, such as C, C++, and assembly.
     Before we start our journey to NDK, it is important to understand the advantages
     of NDK.
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: Android NDK是一个工具集，允许开发者在原生语言（如C、C++和汇编）中实现部分或整个Android应用程序。在我们开始NDK之旅之前，理解NDK的优势很重要。
 - en: First of all, NDK may improve application performance. This is usually true
     for many processor-bound applications. Many multimedia applications and video
     games use native code for processor-intensive tasks.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，NDK可能提高应用程序性能。这对于许多处理器受限的应用程序通常是正确的。许多多媒体应用程序和视频游戏使用原生代码处理处理器密集型任务。
 - en: The performance improvements can come from three sources. Firstly, the native
     code is compiled to a binary code and run directly on OS, while Java code is translated
     into Java byte-code and interpreted by Dalvik **Virtual Machine** (**VM**). At
@@ -47,17 +67,24 @@
     VM to analyze and optimize the Java byte-code while the program is running (for
     example, JIT can compile a part of the byte-code to binary code before its execution).
     But in many cases, native code still runs faster than Java code.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 性能提升可以来自三个源头。首先，原生代码被编译成二进制代码，直接在操作系统上运行，而Java代码则被翻译成Java字节码，由Dalvik **虚拟机**（**VM**）解释执行。在Android
+    2.2或更高版本中，Dalvik VM加入了一个**即时编译器**（**JIT**）来分析优化Java字节码（例如，JIT可以在执行前将部分字节码编译成二进制代码）。但在许多情况下，原生代码的运行速度仍然快于Java代码。
 - en: Tip
+  id: totrans-11
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Java code is run by Dalvik VM on Android. Dalvik VM is specially designed for
     systems with constrained hardware resources (memory space, processor speed, and
     so on).
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: Java代码在Android上的Dalvik VM中运行。Dalvik VM是专门为硬件资源受限的系统（如内存空间、处理器速度等）设计的。
 - en: The second source for performance improvements at NDK is that native code allows
     developers to make use of some processor features that are not accessible at Android
     SDK, such as NEON, a **Single Instruction Multiple Data** (**SIMD**) technology,
@@ -67,808 +94,1180 @@
     color space. The naive approach is to apply a conversion formula to every pixel
     (that is, over two million pixels). With NEON, we can process multiple pixels
     at one time to reduce the processing time.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: NDK性能提升的第二个来源是原生代码允许开发者使用Android SDK无法访问的一些处理器特性，例如NEON，这是一种**单指令多数据**（**SIMD**）技术，可以同时处理多个数据元素。一个特定的编码任务示例是对视频帧或照片的颜色转换。假设我们要将一个1920x1280像素的照片从RGB颜色空间转换为YCbCr颜色空间。最简单的方法是对每个像素应用转换公式（即超过两百万个像素）。使用NEON，我们可以一次处理多个像素，以减少处理时间。
 - en: The third aspect is that we can optimize the critical code at an assembly level,
     which is a common practice in desktop software development.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 第三点是，我们可以从汇编层面优化关键代码，这在桌面软件开发中是一种常见做法。
 - en: Tip
+  id: totrans-15
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The advantages of using native code do not come free. Calling JNI methods introduces
     extra work for the Dalvik VM and since the code is compiled, no runtime optimization
     can be applied. In fact, developing in NDK doesn't guarantee a performance improvement
     and can actually harm performance at times. Therefore, we only stated that it
     may improve the app's performance.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用原生代码的优势并非没有代价。调用JNI方法为Dalvik VM引入了额外的工作，并且由于代码是编译过的，无法应用运行时优化。实际上，使用NDK开发并不保证性能提升，有时甚至可能损害性能。因此，我们只是说它可能提高应用程序的性能。
 - en: The second advantage of NDK is that it allows the porting of existing C and
     C++ code to Android. This does not only speed up the development significantly,
     but also allows us to share code between Android and non-Android projects.
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: NDK的第二个优势是它允许将现有的C和C++代码移植到Android。这不仅显著加快了开发速度，还允许我们在Android和非Android项目之间共享代码。
 - en: Before we decide to use NDK for an Android app, it is good to know that NDK
     will not benefit most Android apps. It is not recommended to work in NDK simply
     because one prefers programming in C or C++ over Java. NDK cannot access lots
     of APIs available in the Android SDK directly, and developing in NDK will always
     introduce extra complexity into your application.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们决定为Android应用使用NDK之前，需要了解的是NDK并不会让大多数Android应用受益。仅仅因为个人偏好C或C++编程而非Java，并不建议使用NDK。NDK不能直接访问Android
+    SDK中提供的许多API，而且使用NDK进行开发总会为你的应用引入额外的复杂性。
 - en: With the understanding of the pros and cons of NDK, we can start our journey
     to Android NDK. This chapter will cover how to set up Android NDK development
     in Windows, Ubuntu Linux, and Mac OS. For developers who have set up an Android
     NDK development environment before, a recipe with detailed steps of how to update
     an NDK development environment is provided. At the end of the chapter, we will
     write a Hello NDK program with the environment setup.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 了解NDK的优缺点后，我们可以开始Android NDK的旅程。本章将介绍如何在Windows、Ubuntu Linux和Mac OS中设置Android
+    NDK开发。对于之前设置过Android NDK开发环境的开发者，提供了一个详细步骤的食谱，介绍如何更新NDK开发环境。在章节的最后，我们将使用设置好的环境编写一个Hello
+    NDK程序。
 - en: Setting up an Android NDK development environment in Windows
+  id: totrans-20
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Windows中设置Android NDK开发环境
 - en: In this recipe, we will explore how to set up an Android NDK development environment
     in Windows.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本节中，我们将探讨如何在Windows中设置Android NDK开发环境。
 - en: Getting ready
+  id: totrans-22
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Check the Windows edition and system type. An Android development environment
     can be set up on Windows XP 32-bit, Windows Vista 32- or 64-bit, and Windows 7
     32- or 64-bit.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查Windows版本和系统类型。Android开发环境可以在Windows XP 32位、Windows Vista 32位或64位以及Windows
+    7 32位或64位上设置。
 - en: 'Android development requires Java JDK 6 or above to be installed. Follow these
     steps to install and configure Java JDK:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: Android开发需要安装Java JDK 6或更高版本。按照以下步骤安装和配置Java JDK：
 - en: Go to the Oracle Java JDK web page at [http://www.oracle.com/technetwork/java/javase/downloads/index.html](http://www.oracle.com/technetwork/java/javase/downloads/index.html),
     and choose JDK6 or above for your platform to download.
+  id: totrans-25
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 访问Oracle Java JDK网页 [http://www.oracle.com/technetwork/java/javase/downloads/index.html](http://www.oracle.com/technetwork/java/javase/downloads/index.html)，选择适合你平台的JDK6或更高版本进行下载。
 - en: Double-click on the downloaded executable, and click through the installation
     wizard to finish the installation.
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 双击下载的可执行文件，按照安装向导点击以完成安装。
 - en: Go to **Control Panel** | **System and Security** | **System** | **Advanced
     system settings**. A **System Properties** window will pop up.
+  id: totrans-27
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 前往**控制面板** | **系统和安全** | **系统** | **高级系统设置**。将会弹出一个**系统属性**窗口。
 - en: Click on the **Environment Variables** button in the **Advanced** tab; another
     **Environment Variables** window will pop up.
+  id: totrans-28
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在**高级**选项卡中点击**环境变量**按钮；另一个**环境变量**窗口将会弹出。
 - en: Under **System variables**, click on **New** to add a variable with the name
     as `JAVA_HOME` and value as the path of the JDK installation root directory. This
     is shown as follows:![Getting ready](img/1505_01_01.jpg)
+  id: totrans-29
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在**系统变量**下，点击**新建**，添加一个名为`JAVA_HOME`的变量，其值为JDK安装根目录的路径。如下所示：![准备就绪](img/1505_01_01.jpg)
 - en: Under **System variables**, scroll to find the `PATH` (or `Path`) environment
     variable. Insert `%JAVA_HOME%\bin;` at the beginning of the value. If no `PATH`
     or `Path` variable exists, create a new variable with the value set to `%JAVA_HOME%\bin`.
     Click on **OK** all the way through to dismiss all windows.
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在**系统变量**下，滚动到`PATH`（或`Path`）环境变量。在值的开头插入`%JAVA_HOME%\bin;`。如果不存在`PATH`或`Path`变量，创建一个新变量，其值为`%JAVA_HOME%\bin`。一路点击**确定**，关闭所有窗口。
 - en: To verify whether JDK is installed and configured correctly, start a new command-line
     console, and enter `javac -version`. If JDK is configured correctly, you will
     get the Java version in the output.![Getting ready](img/1505_01_02.jpg)
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 要验证JDK是否已正确安装和配置，请启动一个新的命令行控制台，并输入`javac -version`。如果JDK配置正确，你将在输出中得到Java版本。![准备就绪](img/1505_01_02.jpg)
 - en: '**Cygwin** is a Linux-like environment for Windows to run software available
     on Linux. Android NDK development requires Cygwin 1.7 or higher installed to execute
     some Linux programs; for example, the GNU make.'
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: '**Cygwin**是Windows上的一个类Linux环境，用于运行Linux上可用的软件。Android NDK开发需要安装Cygwin 1.7或更高版本，以便执行某些Linux程序，例如GNU
+    make。'
 - en: Since NDK r7, the Windows NDK comes with a new `ndk-build.cmd` build script,
     which uses NDK's prebuilt binaries for GNU make, awk, and other tools. Therefore
     Cygwin is not required for building NDK programs with `ndk-build.cmd`. However,
     it is recommended that you still install Cygwin, because `ndk-build.cmd` is an
     experimental feature and Cygwin is still needed by the debugging script `ndk-gdb`.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 自NDK r7起，Windows NDK附带了一个新的`ndk-build.cmd`构建脚本，该脚本使用NDK预构建的GNU make、awk和其他工具的二进制文件。因此，使用`ndk-build.cmd`构建NDK程序时不需要Cygwin。但是，建议您仍然安装Cygwin，因为`ndk-build.cmd`是一项实验性功能，调试脚本`ndk-gdb`仍然需要Cygwin。
 - en: 'Follow these steps to install Cygwin:'
+  id: totrans-34
   prefs: []
   type: TYPE_NORMAL
+  zh: 按照以下步骤安装Cygwin：
 - en: Go to [http://cygwin.com/install.html](http://cygwin.com/install.html) to download
     `setup.exe` for Cygwin. Double-click on it after the download is complete in order
     to start the installation.
+  id: totrans-35
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 前往[http://cygwin.com/install.html](http://cygwin.com/install.html)下载Cygwin的`setup.exe`。下载完成后双击它以开始安装。
 - en: Click on **Next**, then select **Install from Internet**. Keep clicking on **Next**
     until you see the **Available Download Sites** list. Select the site that is close
     to your location, then click on **Next**:![Getting ready](img/1505_01_03.jpg)
+  id: totrans-36
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 点击**下一步**，然后选择**从互联网安装**。继续点击**下一步**，直到你看到**可用的下载站点**列表。选择离你位置最近的站点，然后点击**下一步**：![准备就绪](img/1505_01_03.jpg)
 - en: Look for GNU **make** under **Devel**, ensure it is version 3.81 or later, and
     **gawk** under **Base**. Alternatively, you can search for make and gawk using
     the **Search** box. Make sure both GNU make and gawk are selected to install,
     then click on **Next**. The installation can take a while to finish:![Getting
     ready](img/1505_01_04.jpg)
+  id: totrans-37
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在**开发**下查找GNU **make**，确保它是3.81或更高版本，以及在**基础**下的**gawk**。或者，您也可以使用**搜索**框搜索make和gawk。确保GNU
+    make和gawk都被选中安装，然后点击**下一步**。安装可能需要一段时间才能完成：![准备就绪](img/1505_01_04.jpg)
 - en: Eclipse is a powerful software **Integrated Development Environment** (**IDE**)
     with an extensible plugin system. It is the recommended IDE to develop Android
     apps. Go to [http://www.eclipse.org/downloads/](http://www.eclipse.org/downloads/),
     and download the Eclipse Classic or Eclipse IDE for Java developers. Extract the
     compressed file and it will be ready for use. Note that Android development requires
     Eclipse 3.6.2 (Helios) or greater.
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: Eclipse是一个功能强大的软件**集成开发环境**（**IDE**），具有可扩展的插件系统。它是开发Android应用的推荐IDE。前往[http://www.eclipse.org/downloads/](http://www.eclipse.org/downloads/)，下载Eclipse
+    Classic或适用于Java开发者的Eclipse IDE。解压压缩文件后即可使用。请注意，Android开发需要Eclipse 3.6.2（Helios）或更高版本。
 - en: Tip
+  id: totrans-39
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The Android developer website provides an Android Developer Tools bundle at
     [http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html).
     It includes the Eclipse IDE with the ADT plugin, and the Android SDK. We can download
     this bundle and skip the SDK installation described in steps 1 to 10 of the following
     *How to do it...* section.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: Android开发者网站在[http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html)提供了一个Android
+    Developer Tools捆绑包。它包括带有ADT插件的Eclipse IDE和Android SDK。我们可以下载这个捆绑包，并跳过以下*如何操作…*部分1到10步的SDK安装。
 - en: How to do it…
+  id: totrans-41
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: The following steps show you how to set up an Android NDK development environment
     in Windows. We will first set up an SDK development environment. Steps 1 to 10
     can be skipped if SDK is already set up.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤将展示如何在Windows中设置Android NDK开发环境。我们首先将设置一个SDK开发环境。如果已经设置好了SDK，可以跳过1到10步。
 - en: Start Eclipse. Select **Help** | **Install New Software**, and a window titled
     **Install** will pop up.
+  id: totrans-43
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动Eclipse。选择**帮助** | **安装新软件**，会弹出一个名为**安装**的窗口。
 - en: Click on the **Add…** button at the top-right will corner, and another window
     titled **Add Repository** will pop up.
+  id: totrans-44
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 点击位于右上角的**添加…**按钮，会弹出一个名为**添加仓库**的窗口。
 - en: In the **Add Repository** window, enter `ADT` for **Name** and [https://dl-ssl.google.com/android/eclipse/](https://dl-ssl.google.com/android/eclipse/)
     for **Location**. Then click on **OK**.
+  id: totrans-45
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在**添加仓库**窗口中，为**名称**输入`ADT`，为**位置**输入[https://dl-ssl.google.com/android/eclipse/](https://dl-ssl.google.com/android/eclipse/)。然后点击**确定**。
 - en: It may take a few seconds for Eclipse to load the software items from the ADT
     website. After loading, select **Developer Tools** and **NDK Plugins**, then click
     on **Next** to proceed:![How to do it…](img/1505_01_05.jpg)
+  id: totrans-46
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: Eclipse可能需要几秒钟从ADT网站加载软件项。加载后，选择**开发者工具**和**NDK插件**，然后点击**下一步**继续操作：![如何操作…](img/1505_01_05.jpg)
 - en: In the next window, a list of tools to be installed will be shown. Simply click
     on **Next**. Read and accept all the license agreements, then click on **Finish**.
+  id: totrans-47
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在下一个窗口中，将显示要安装的工具列表。只需点击 **下一步**。阅读并接受所有许可协议，然后点击 **完成**。
 - en: After installation finishes, restart **Eclipse** as prompted.
+  id: totrans-48
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装完成后，按照提示重启 **Eclipse**。
 - en: Download Android SDK from [http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html).
+  id: totrans-49
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从 [http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html)
+    下载 Android SDK。
 - en: Double-click on the installer to start the installation. Follow the wizard to
     finish the installation.
+  id: totrans-50
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 双击安装程序以开始安装。按照向导完成安装。
 - en: In Eclipse, select **Window** | **Preferences** to open the **Preferences**
     window. Select **Android** from the left panel, then click on **Browse** to locate
     the Android SDK root directory. Click on **Apply**, and then **OK**.![How to do
     it…](img/1505_01_06.jpg)
+  id: totrans-51
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 Eclipse 中，选择 **窗口** | **首选项** 打开 **首选项** 窗口。从左侧面板中选择 **Android**，然后点击 **浏览**
+    以定位 Android SDK 根目录。点击 **应用**，然后点击 **确定**。![如何操作…](img/1505_01_06.jpg)
 - en: Start **Android SDK Manager** at the Android SDK installation root directory.
     Select **Android SDK Tools**, **Android SDK Platform-tools**, at least one Android
     platform (the latest is preferred), **System Image**, **SDK Samples**, and **Android
     Support**. Then click on **Install**. in the next window, read and accept all
     the license agreements, then click on **Install**:![How to do it…](img/1505_01_07.jpg)
+  id: totrans-52
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 Android SDK 安装根目录下启动 **Android SDK 管理器**。选择 **Android SDK 工具**，**Android SDK
+    Platform-tools**，至少一个 Android 平台（最新版本为佳），**系统映像**，**SDK 示例** 和 **Android 支持**。然后点击
+    **安装**。在下一个窗口中，阅读并接受所有许可协议，然后点击 **安装**：![如何操作…](img/1505_01_07.jpg)
 - en: Go to [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)
     to download the latest version of Android NDK. Unzip the downloaded file.
+  id: totrans-53
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 访问 [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)
+    下载最新版本的 Android NDK。解压下载的文件。
 - en: Tip
+  id: totrans-54
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: '**Downloading the example code**'
+  id: totrans-55
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: '**下载示例代码**'
 - en: You can download the example code files for all Packt books you have purchased
     from your account at [http://www.packtpub.com](http://www.packtpub.com). If you
     purchased this book elsewhere, you can visit [http://www.packtpub.com/support](http://www.packtpub.com/support)
     and register to have the files e-mailed directly to you.
+  id: totrans-56
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 您可以从您在 [http://www.packtpub.com](http://www.packtpub.com) 的账户中下载您购买的所有 Packt
+    图书的示例代码文件。如果您在别处购买了这本书，可以访问 [http://www.packtpub.com/support](http://www.packtpub.com/support)
+    注册，我们会直接将文件通过电子邮件发送给您。
 - en: 'Open `Cygwin.bat` under the `cygwin` root directory. It contains the following
     content by default:'
+  id: totrans-57
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在`cygwin`根目录下打开`Cygwin.bat`文件。默认情况下，它包含以下内容：
 - en: '[PRE0]'
+  id: totrans-58
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Add the following content after `@echo off` before `C`:'
+  id: totrans-59
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `@echo off` 之后，`C` 之前添加以下内容：
 - en: '[PRE1]'
+  id: totrans-60
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'As an example, the file content on my machine is as follows; note that `Progra~1`
     is the short name for the `Program Files` folder:'
+  id: totrans-61
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 作为一个例子，我的机器上的文件内容如下；注意 `Progra~1` 是 `Program Files` 文件夹的短名称：
 - en: '[PRE2]'
+  id: totrans-62
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: Start Cygwin by double-clicking on `cygwin.bat`, then go to the `samples/hello-jni`
     directory in NDK. Type the command `ndk-build`. If the build is successful, it
     proves that the NDK environment is set up correctly:![How to do it…](img/1505_01_08.jpg)
+  id: totrans-63
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过双击 `cygwin.bat` 启动 Cygwin，然后进入 NDK 中的 `samples/hello-jni` 目录。输入命令 `ndk-build`。如果构建成功，这证明
+    NDK 环境已正确设置：![如何操作…](img/1505_01_08.jpg)
 - en: In Eclipse, select **Window** | **Preferences** to open the **Preferences**
     window. Click on **Android** from the left panel, and select **NDK** from the
     drop-down list. Click on **Browse** to locate the Android NDK root directory.
     Click on **OK** to dismiss the pop-up window. This enables us to build and debug
     Android NDK applications with the Eclipse NDK plugin:![How to do it…](img/1505_01_18.jpg)
+  id: totrans-64
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 Eclipse 中，选择 **窗口** | **首选项** 打开 **首选项** 窗口。从左侧面板中选择 **Android**，然后从下拉列表中选择
+    **NDK**。点击 **浏览** 以定位 Android NDK 根目录。点击 **确定** 关闭弹窗。这样我们就可以使用 Eclipse NDK 插件构建和调试
+    Android NDK 应用程序了：![如何操作…](img/1505_01_18.jpg)
 - en: How it works…
+  id: totrans-65
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: In this recipe, we first set up an Android SDK development environment and then
     the NDK development environment.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本教程中，我们首先设置 Android SDK 开发环境，然后是 NDK 开发环境。
 - en: Android NDK does not require installation. We downloaded NDK, and configured
     the path to make it more convenient to use.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: Android NDK 不需要安装。我们下载了 NDK，并配置了路径以便更方便地使用。
 - en: Cygwin is not required for Android SDK development, but is essential for NDK
     development because NDK uses some Linux tools that depend on Cygwin.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: Android SDK开发不需要Cygwin，但对于NDK开发来说却是必不可少的，因为NDK使用了一些依赖Cygwin的Linux工具。
 - en: '**NDK plugin in ADT:** NDK plugin for Eclipse is available in **Android Development
     Tools** (**ADT**), which allows us to build and debug Android NDK applications
     easily.'
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: '**ADT中的NDK插件：**Eclipse的NDK插件在**Android Development Tools** (**ADT**) 中可用，它使我们能够轻松构建和调试Android
+    NDK应用程序。'
 - en: Tip
+  id: totrans-70
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: The NDK plugin is only available for ADT 20.0.0 or later, which was released
     on June 2012\. You may want to update your Eclipse ADT in order to use the NDK
     plugin.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: NDK插件仅在ADT 20.0.0或更高版本中可用，该版本于2012年6月发布。您可能需要更新Eclipse ADT以使用NDK插件。
 - en: There's more…
+  id: totrans-72
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: We installed Eclipse IDE as a part of our development environment. Eclipse is
     the recommended IDE for developing Android applications, and it comes with lots
     of useful tools and utilities to help our development. However, it is not a compulsory
     component of the development environment.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将Eclipse IDE作为开发环境的一部分安装。Eclipse是开发Android应用程序推荐的IDE，它附带了许多有用的工具和实用程序以帮助我们的开发。然而，它并非开发环境的必需要素。
 - en: Setting up an Android NDK development environment in Ubuntu Linux
+  id: totrans-74
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Ubuntu Linux中设置Android NDK开发环境
 - en: This recipe depicts how to set up an Android NDK development environment in
     Ubuntu Linux.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 本文档描述如何在Ubuntu Linux中设置Android NDK开发环境。
 - en: Getting ready
+  id: totrans-76
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Check your Ubuntu version and make sure it is version 8.04 or later.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 检查您的Ubuntu版本，确保它是8.04或更高版本。
 - en: 'GNU C Library (`glibc`) 2.7 or above is required. It is usually installed with
     Linux by default. Two simple methods can check the version of `glibc`:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 需要 GNU C 库 (`glibc`) 2.7或更高版本。它通常随Linux默认安装。有两种简单的方法可以检查 `glibc` 的版本：
 - en: Start a terminal, and enter `ldd --version`. This will print the version of
     `ldd` and `glibc`:![Getting ready](img/1505_01_09.jpg)
+  id: totrans-79
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动一个终端，并输入 `ldd --version`。这将打印出 `ldd` 和 `glibc` 的版本：![准备工作](img/1505_01_09.jpg)
 - en: 'We can execute the library as an application. Start a terminal, locate the
     library location, and then enter the following command:'
+  id: totrans-80
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们可以将库作为应用程序执行。启动一个终端，找到库的位置，然后输入以下命令：
 - en: '[PRE3]'
+  id: totrans-81
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'The following output will be displayed:'
+  id: totrans-82
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 将显示以下输出：
 - en: '![Getting ready](img/1505_01_10.jpg)'
+  id: totrans-83
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![准备工作](img/1505_01_10.jpg)'
 - en: 'We need to enable 32-bit application execution if we are using a 64-bit machine.
     Start a terminal, and enter the following command:'
+  id: totrans-84
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果我们使用的是64位机器，需要启用32位应用程序执行。启动一个终端，并输入以下命令：
 - en: '[PRE4]'
+  id: totrans-85
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Install JDK 6 or above. At a terminal, enter the command `sudo apt-get install
     openjdk-6-jdk`, or alternatively we can enter `sudo apt-get install sun-java6-jdk`.
     After installation, we need to add the JDK path to the `PATH` environment variable
     by adding the following lines to `~/.bashrc`:'
+  id: totrans-86
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 安装JDK 6或更高版本。在终端中，输入命令 `sudo apt-get install openjdk-6-jdk`，或者也可以输入 `sudo apt-get
+    install sun-java6-jdk`。安装完成后，我们需要将JDK路径添加到 `PATH` 环境变量中，通过向 `~/.bashrc` 添加以下行来实现：
 - en: '[PRE5]'
+  id: totrans-87
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: We will use Eclipse as our IDE. Please refer to the *Setting up an Android NDK
     development environment in Windows* recipe for instructions.
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将使用Eclipse作为我们的IDE。请参考在Windows中设置Android NDK开发环境的食谱获取指导。
 - en: How to do it…
+  id: totrans-89
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'The following steps indicate the procedure of setting up an Android NDK development
     environment on Ubuntu Linux:'
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下步骤说明了在Ubuntu Linux上设置Android NDK开发环境的程序：
 - en: Follow steps 1 to 6 of the *Setting up an Android NDK development environment
     in Windows* recipe to install the ADT plugin for Eclipse.
+  id: totrans-91
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照在Windows中设置Android NDK开发环境的食谱中的步骤1到6来为Eclipse安装ADT插件。
 - en: Download Android SDK from [http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html),
     then extract the downloaded package.
+  id: totrans-92
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html)下载Android
+    SDK，然后解压下载的包。
 - en: 'Append the following lines to `~/.bashrc`:'
+  id: totrans-93
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将以下行追加到 `~/.bashrc`：
 - en: '[PRE6]'
+  id: totrans-94
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: Follow steps 9 and 10 of the *Setting up an Android NDK development environment
     in Windows* recipe to configure the SDK path at Eclipse, and download additional
     packages.
+  id: totrans-95
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照在Windows中设置Android NDK开发环境的食谱中的步骤9和10来配置Eclipse中的SDK路径，并下载额外的包。
 - en: Download the latest version of Android NDK from [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html),
     then extract the downloaded file.
+  id: totrans-96
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)下载最新的Android
+    NDK版本，然后解压下载的文件。
 - en: 'Change the lines that you appended to `~/.bashrc` in step 3:'
+  id: totrans-97
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更改在第3步中添加到 `~/.bashrc` 的行：
 - en: '[PRE7]'
+  id: totrans-98
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Start a new terminal, then go to the `samples/hello-jni` directory in NDK. Type
     the command `ndk-build`. If the build is successful, it proves that the NDK environment
     is set up correctly:![How to do it…](img/1505_01_13.jpg)
+  id: totrans-99
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动一个新的终端，然后进入NDK中的`samples/hello-jni`目录。输入命令`ndk-build`。如果构建成功，这证明NDK环境设置正确：![如何操作...](img/1505_01_13.jpg)
 - en: How it works…
+  id: totrans-100
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理...
 - en: We first set up Android SDK and then Android NDK. Ensure that the path is set
     properly, so that the tools can be accessed without referring to the SDK and NDK
     directories.
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们首先设置安卓SDK，然后是安卓NDK。确保路径设置正确，这样就可以在不引用SDK和NDK目录的情况下访问工具。
 - en: The `.bashrc` file is a startup file read by the bash shell when you start a
     new terminal. The export commands appended the Android SDK and NDK directory locations
     to the environment variable `PATH`. Therefore, every time a new bash shell starts,
     `PATH` is set properly for SDK and NDK tools.
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: '`.bashrc`文件是bash shell在启动新终端时读取的启动文件。export命令将安卓SDK和NDK目录位置追加到环境变量`PATH`中。因此，每次新的bash
+    shell启动时，都会正确设置SDK和NDK工具的`PATH`。'
 - en: There's more…
+  id: totrans-103
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多内容...
 - en: 'The following are a few more tips on setting up an NDK development environment:'
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是一些关于设置NDK开发环境的额外技巧：
 - en: '**Configure Path at Startup File**: We append to the SDK and NDK paths to the
     `PATH` environment variable at `~/.bashrc` file. This assumes that our Linux system
     uses the bash shell. However, if your system uses another shell, the startup file
     used may be different. The startup files used by some commonly used shells are
     listed as follows:'
+  id: totrans-105
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**在启动文件中配置路径**：我们在`~/.bashrc`文件中向`PATH`环境变量追加SDK和NDK的路径。这假设我们的Linux系统使用bash
+    shell。然而，如果你的系统使用其他shell，所使用的启动文件可能会有所不同。一些常用shell的启动文件如下所示：'
 - en: For C shell (`csh`), the startup file to use is `~/.cshrc`.
+  id: totrans-106
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 对于C shell (`csh`)，要使用的启动文件是`~/.cshrc`。
 - en: For `ksh`, the startup file to use can be obtained using the command `echo $ENV`.
+  id: totrans-107
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 对于`ksh`，要使用的启动文件可以通过命令`echo $ENV`获得。
 - en: For `sh`, the startup file to use is `~/.profile`. The user needs to log out
     of the current session and log in again for it to take effect.
+  id: totrans-108
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 对于`sh`，要使用的启动文件是`~/.profile`。用户需要退出当前会话并重新登录，才能使其生效。
 - en: '**Switch JDK**: In Android development, we can either use Oracle Java JDK or
     OpenJDK. In case we run into issues with any one of the JDKs, we can switch to
     another Java JDK, if we have installed both of them.'
+  id: totrans-109
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**切换JDK**：在安卓开发中，我们可以使用Oracle Java JDK或OpenJDK。如果我们遇到任何一个JDK的问题，如果我们安装了这两个JDK，我们可以切换到另一个Java
+    JDK。'
 - en: 'To check which JDK the system is currently using, use the following command:'
+  id: totrans-110
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 要检查系统当前使用的JDK，请使用以下命令：
 - en: '[PRE8]'
+  id: totrans-111
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'To switch between two JDKs, use the following command:'
+  id: totrans-112
   prefs:
   - PREF_IND
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 要在两个JDK之间切换，请使用以下命令：
 - en: '[PRE9]'
+  id: totrans-113
   prefs:
   - PREF_IND
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'The following is an example for switching to Oracle JDK 1.6.0:'
+  id: totrans-114
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 下面是一个切换到Oracle JDK 1.6.0的例子：
 - en: '[PRE10]'
+  id: totrans-115
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: Setting up an Android NDK development environment in Mac OS
+  id: totrans-116
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Mac OS上设置安卓NDK开发环境
 - en: This recipe describes how to set up an Android NDK development environment in
     Mac OS.
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 本文档介绍了如何在Mac OS上设置安卓NDK开发环境。
 - en: Getting ready
+  id: totrans-118
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Android development requires Mac OS X 10.5.8 or higher, and it works on the
     x86 architecture only. Ensure that your machine meets these requirements before
     getting started.
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 安卓开发需要Mac OS X 10.5.8或更高版本，并且只在x86架构上运行。在开始之前，请确保你的机器满足这些要求。
 - en: Register an Apple developer account, then go to [https://developer.apple.com/xcode/](https://developer.apple.com/xcode/)
     to download Xcode, which contains a lot of developer tools, including the `make`
     utility required for Android NDK development. After the download is complete,
     run the installation package and make sure that the **UNIX Development** option
     is selected for installation.
+  id: totrans-120
   prefs: []
   type: TYPE_NORMAL
+  zh: 注册一个Apple开发者账户，然后访问[https://developer.apple.com/xcode/](https://developer.apple.com/xcode/)下载Xcode，其中包含许多开发工具，包括安卓NDK开发所需的`make`工具。下载完成后，运行安装包并确保选择安装**UNIX
+    Development**选项。
 - en: 'As usual, Java JDK 6 or above is required. Mac OS X usually ships with a full
     JDK. We can verify that your machine has the required version by using the following
     command:'
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 与往常一样，需要Java JDK 6或更高版本。Mac OS X通常会附带完整的JDK。我们可以使用以下命令来验证你的机器是否拥有所需的版本：
 - en: '[PRE11]'
+  id: totrans-122
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: How to do it…
+  id: totrans-123
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作...
 - en: 'Setting up an Android NDK development environment on Mac OS X is similar to
     setting it up on Ubuntu Linux. The following steps explain how we can do this:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Mac OS X上设置安卓NDK开发环境与在Ubuntu Linux上设置类似。以下步骤说明我们如何进行操作：
 - en: Follow steps 1 to 6 of the *Setting up an Android NDK development environment
     in Windows* recipe to install the ADT plugin for Eclipse.
+  id: totrans-125
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 按照在Windows中设置Android NDK开发环境的*第1至6步*的食谱来安装Eclipse的ADT插件。
 - en: Download Android SDK from [http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html),
     then extract the downloaded package.
+  id: totrans-126
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html)下载Android
+    SDK，然后解压下载的包。
 - en: 'Append the following lines to `~/.profile`. If the file doesn''t exist, create
     a new one. Save the changes and log out of the current session:'
+  id: totrans-127
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将以下行追加到`~/.profile`。如果文件不存在，请创建一个新的。保存更改并退出当前会话：
 - en: '[PRE12]'
+  id: totrans-128
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: In Eclipse, select **Eclipse** | **Preferences** to open the **Preferences**
     window. Select **Android** from the left panel, then click on **Browse** to locate
     the Android SDK root directory. Click on **Apply**, and then **OK**.
+  id: totrans-129
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在Eclipse中，选择**Eclipse** | **Preferences**打开**Preferences**窗口。从左侧面板中选择**Android**，然后点击**Browse**定位到Android
+    SDK的根目录。点击**Apply**，然后点击**OK**。
 - en: In a terminal, start the Android SDK Manager at the `tools` directory by typing
     the command `android`. Select **Android SDK Tools**, **Android SDK Platform-tools**,
     at least one Android platform (the latest one is preferred), **System Image**,
     **SDK Samples**, and **Android Support**. Then click on **Install**. In the next
     window, read and accept all the license agreements, then click on **Install**.
+  id: totrans-130
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在终端中，通过在`tools`目录下输入命令`android`启动Android SDK Manager。选择**Android SDK Tools**、**Android
+    SDK Platform-tools**、至少一个Android平台（最好是最新版本）、**System Image**、**SDK Samples**和**Android
+    Support**。然后点击**Install**。在下一个窗口中，阅读并接受所有许可协议，然后点击**Install**。
 - en: Download Android SDK from [http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html),
     and then extract the downloaded package.
+  id: totrans-131
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html)下载Android
+    SDK，然后解压下载的包。
 - en: 'Change the lines that you appended to `~/.profile` in step 3:'
+  id: totrans-132
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更改你在第3步添加到`~/.profile`的行：
 - en: '[PRE13]'
+  id: totrans-133
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: Start a new terminal, then go to the `samples/hello-jni` directory in NDK. Type
     the command `ndk-build`. If the build is successful, it proves that the NDK environment
     is set up correctly.
+  id: totrans-134
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动一个新的终端，然后进入NDK中的`samples/hello-jni`目录。输入命令`ndk-build`。如果构建成功，这证明NDK环境设置正确。
 - en: How it works…
+  id: totrans-135
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: The steps to set up an Android NDK development environment on Mac OS X are similar
     to Ubuntu Linux, since both of them are Unix-like operating systems. We first
     installed Android SDK, then Android NDK.
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Mac OS X上设置Android NDK开发环境的步骤与Ubuntu Linux类似，因为它们都是类Unix操作系统。我们首先安装了Android
+    SDK，然后安装了Android NDK。
 - en: Updating Android NDK
+  id: totrans-137
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 更新Android NDK
 - en: When there is a new release of NDK, we may want to update NDK in order to take
     advantage of the new features or bug fixes with the new release. This recipe talks
     about how to update Android NDK in Windows, Ubuntu Linux, and Mac OS.
+  id: totrans-138
   prefs: []
   type: TYPE_NORMAL
+  zh: 当NDK有新版本发布时，我们可能想要更新NDK，以便利用新版本的新功能或错误修复。本食谱讲述如何在Windows、Ubuntu Linux和Mac OS中更新Android
+    NDK。
 - en: Getting ready
+  id: totrans-139
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备工作
 - en: Please read the previous recipes in this chapter, depending on the platform
     of your choice.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 根据你选择的平台，请阅读本章之前的食谱。
 - en: How to do it…
+  id: totrans-141
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'In Windows, follow these instructions to update Android NDK:'
+  id: totrans-142
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Windows中，按照以下说明更新Android NDK：
 - en: Go to [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)
     to download the latest version of Android NDK. Unzip the downloaded file.
+  id: totrans-143
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 访问[http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)下载最新版本的Android
+    NDK。解压下载的文件。
 - en: 'Open `Cygwin.bat` under the `cygwin` root directory. The content should be
     similar to the following code snippet, if you have previously configured NDK on
     the system:'
+  id: totrans-144
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开`cygwin`根目录下的`Cygwin.bat`。如果之前在系统上配置过NDK，内容应该与以下代码片段类似：
 - en: '[PRE14]'
+  id: totrans-145
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: Update `<NDK path>` from the old NDK path to the newly downloaded and decompressed
     location.
+  id: totrans-146
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将`<NDK path>`从旧的NDK路径更新到新下载和解压的位置。
 - en: 'In Ubuntu Linux, follow these instructions to update Android NDK:'
+  id: totrans-147
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Ubuntu Linux中，按照以下说明更新Android NDK：
 - en: Download the latest version of Android NDK from [http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html),
     then extract the downloaded file.
+  id: totrans-148
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 从[http://developer.android.com/tools/sdk/ndk/index.html](http://developer.android.com/tools/sdk/ndk/index.html)下载最新版本的Android
+    NDK，然后解压下载的文件。
 - en: 'If we have followed the *Setting up an Android NDK development environment
     in Ubuntu Linux* recipe, the following content should appear at the end of `~/.bashrc`:'
+  id: totrans-149
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果我们遵循了*在Ubuntu Linux中设置Android NDK开发环境*的食谱，以下内容应该出现在`~/.bashrc`的末尾：
 - en: '[PRE15]'
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: Update the `ANDROID_NDK` path to the newly downloaded and extracted Android
     NDK folder.
+  id: totrans-151
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 更新 `ANDROID_NDK` 路径到新下载并解压的 Android NDK 文件夹。
 - en: In Mac OS, the steps are almost identical to Ubuntu Linux, except that we need
     to append the path to `~/.profile` instead of `~/.bashrc`.
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 Mac OS 中，步骤几乎与 Ubuntu Linux 完全相同，除了我们需要将路径追加到 `~/.profile` 而不是 `~/.bashrc`。
 - en: How it works…
+  id: totrans-153
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: NDK installation is completed by simply downloading and extracting the NDK file,
     and configuring the path properly. Therefore, updating NDK is as simple as updating
     the configured path to the new NDK folder.
+  id: totrans-154
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过简单下载并解压 NDK 文件，并正确配置路径，完成 NDK 安装。因此，更新 NDK 就像将配置的路径更新到新的 NDK 文件夹一样简单。
 - en: There's more…
+  id: totrans-155
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: Sometimes, updating NDK requires updating SDK first. Since this book focuses
     on Android NDK, explaining how to update SDK is beyond the scope of this book.
     You can refer to the Android developer website at [http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html),
     for details on how to do it.
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 有时，更新 NDK 需要先更新 SDK。由于本书专注于 Android NDK，因此解释如何更新 SDK 超出了本书的范围。你可以访问 [http://developer.android.com/sdk/index.html](http://developer.android.com/sdk/index.html)
+    的 Android 开发者网站，了解如何操作的详细信息。
 - en: At times, we may feel the need to use an old version of NDK to build certain
     applications because of compatibility issues. Therefore, it may be useful to keep
     multiple versions of Android NDK and switch between them by changing the path
     or simply using the full path to refer to a specific version of NDK.
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 有时，由于兼容性问题，我们可能需要使用旧版本的 NDK 来构建某些应用程序。因此，保留多个版本的 Android NDK 并通过更改路径或在引用特定版本的
+    NDK 时使用完整路径之间切换可能很有用。
 - en: Writing a Hello NDK program
+  id: totrans-158
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 编写一个 Hello NDK 程序
 - en: With the environment set up, let's start writing the code in NDK. This recipe
     walks through a Hello NDK program.
+  id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 环境设置好后，让我们开始编写 NDK 中的代码。本食谱将带你完成一个 Hello NDK 程序的编写。
 - en: Getting ready
+  id: totrans-160
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: The NDK development environment needs to be set up properly before starting
     to write the Hello NDK program. Please refer to previous recipes in this chapter,
     depending upon the platform of your choice.
+  id: totrans-161
   prefs: []
   type: TYPE_NORMAL
+  zh: 在开始编写 Hello NDK 程序之前，需要正确设置 NDK 开发环境。请根据你选择的平台参考本章前面的内容。
 - en: How to do it…
+  id: totrans-162
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'Follow these steps to write, compile, and run the Hello NDK program:'
+  id: totrans-163
   prefs: []
   type: TYPE_NORMAL
+  zh: 按照以下步骤编写、编译并运行 Hello NDK 程序：
 - en: Start Eclipse, and select **File** | **New** | **Android Project**. Enter `HelloNDK`
     as the value for **Project Name**. Select **Create new project in workspace**.
     Then click on **Next**:![How to do it…](img/1505_01_14.jpg)
+  id: totrans-164
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动 Eclipse，选择 **文件** | **新建** | **Android 项目**。将 `HelloNDK` 作为 **项目名称** 的值。选择
+    **在 workspace 中创建新项目**。然后点击 **下一步**：![如何操作…](img/1505_01_14.jpg)
 - en: In the next window, select an Android version that you want to target. Usually,
     the latest version is recommended. Then click on **Next**.
+  id: totrans-165
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在下一个窗口中，选择你想要定位的 Android 版本。通常推荐使用最新版本。然后点击 **下一步**。
 - en: In the next window, specify your package name as `cookbook.chapter1`. Select
     the **Create Activity** box, and specify the name as `HelloNDKActivity`. Set the
     value for **Minimum SDK** as `5 (Android 2.0)`. Click on **Finish**:![How to do
     it…](img/1505_01_15.jpg)
+  id: totrans-166
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在下一个窗口中，将你的包名指定为 `cookbook.chapter1`。勾选 **创建 Activity** 的复选框，并将名称指定为 `HelloNDKActivity`。将
+    **最低 SDK** 的值设置为 `5 (Android 2.0)`。点击 **完成**：![如何操作…](img/1505_01_15.jpg)
 - en: In the Eclipse package explorer, right-click on the `HelloNDK` project, and
     select **New** | **Folder**. Enter the name `jni` in the pop-up window, then click
     on **Finish**:![How to do it…](img/1505_01_17.jpg)
+  id: totrans-167
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 Eclipse 包资源管理器中，右键点击 `HelloNDK` 项目，选择 **新建** | **文件夹**。在弹出的窗口中输入名称 `jni`，然后点击
+    **完成**：![如何操作…](img/1505_01_17.jpg)
 - en: 'Right-click on the newly-created `jni` folder under the `HelloNDK` project.
     Select **New** | **File**, enter `hello.c` as the value for **File name**, then
     click on **Finish**. Type the following code in the `hello.c` file:'
+  id: totrans-168
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `HelloNDK` 项目下新创建的 `jni` 文件夹上右键点击。选择 **新建** | **文件**，输入 `hello.c` 作为 **文件名**
+    的值，然后点击 **完成**。在 `hello.c` 文件中输入以下代码：
 - en: '[PRE16]'
+  id: totrans-169
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Right-click on the `jni` folder. Select **New** | **File**, enter `Android.mk`
     as the value for **File name**, then click on **Finish**. Type the following code
     in the `Android.mk` file:'
+  id: totrans-170
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在 `jni` 文件夹上右键点击。选择 **新建** | **文件**，输入 `Android.mk` 作为 **文件名** 的值，然后点击 **完成**。在
+    `Android.mk` 文件中输入以下代码：
 - en: '[PRE17]'
+  id: totrans-171
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: Start a terminal, go to the `jni` folder, and type `ndk-build` to build the
     `hello.c` program as a native library.
+  id: totrans-172
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 启动终端，进入 `jni` 文件夹，并输入 `ndk-build` 以构建 `hello.c` 程序为本地库。
 - en: 'Edit the `HelloNDKActivity.java` file. The file should contain the following
     content:'
+  id: totrans-173
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编辑 `HelloNDKActivity.java` 文件。该文件应包含以下内容：
 - en: '[PRE18]'
+  id: totrans-174
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: Right-click on the `HelloNDK` project in Eclipse. Select **Run As** | **Android
     Application**. Your Android phone or emulator will be displayed with something
     similar to the following screenshot:![How to do it…](img/1505_01_16.jpg)
+  id: totrans-175
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在Eclipse中右键点击`HelloNDK`项目。选择**运行方式** | **Android应用程序**。你的Android手机或模拟器将显示类似于以下截图的内容：![如何操作…](img/1505_01_16.jpg)
 - en: How it works…
+  id: totrans-176
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: This recipe demonstrated how to write a Hello NDK program on Android.
+  id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: 本文档展示了如何在Android上编写一个Hello NDK程序。
 - en: '**Native code**: The Hello NDK program consists of both the native C code and
     Java code. The native function `naGetHelloNDKStr` returns the `Hello NDK` string
     to the caller, as indicated in both the native code function definition and Java
@@ -877,14 +1276,18 @@
     agree with the package and class name of the Java class from which the native
     method is called, while the method name must be the same as the method name declared
     in that Java class.'
+  id: totrans-178
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**原生代码**：Hello NDK程序由原生C代码和Java代码组成。原生函数`naGetHelloNDKStr`将`Hello NDK`字符串返回给调用者，这一点在原生代码函数定义和Java代码方法声明中都有体现。原生函数名称必须遵循特定的模式，包括包名、类名和方法名。包和类名必须与调用原生方法的Java类的包和类名一致，而方法名必须与该Java类中声明的方法名相同。'
 - en: This helps the Dalvik VM to locate the native function at runtime. Failing to
     follow the rule will result in `UnsatisfiedLinkError` at runtime.
+  id: totrans-179
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这有助于Dalvik VM在运行时定位原生函数。如果不遵循该规则，将在运行时导致`UnsatisfiedLinkError`。
 - en: The native function has two parameters, which are standard for all native functions.
     Additional parameters can be defined based on needs. The first parameter is a
     pointer to `JNIEnv` , which is the gateway to access various JNI functions. The
@@ -894,90 +1297,128 @@
     parameter is a reference to the object on which the native method is invoked.
     We will discuss JNI in detail in [Chapter 2](ch02.html "Chapter 2. Java Native
     Interface"), *Java Native Interface*.
+  id: totrans-180
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 原生函数有两个参数，这是所有原生函数的标准。可以根据需要定义额外的参数。第一个参数是指向`JNIEnv`的指针，这是访问各种JNI函数的门户。第二个参数的含义取决于原生方法是静态方法还是实例方法。如果是静态方法，第二个参数是对定义方法的类的引用。如果是实例方法，第二个参数是对调用原生方法的对象的引用。我们将在[第2章](ch02.html
+    "第2章. Java Native Interface")，*Java Native Interface*中详细讨论JNI。
 - en: '**Compilation of the native code**: The Android NDK build system frees developers
     from writing `makefile`. The build system accepts an `Android.mk` file, which
     simply describes the sources. It will parse the file to generate `makefile` and
     do all the heavy lifting for us.'
+  id: totrans-181
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**原生代码编译**：Android NDK构建系统让开发者无需编写`makefile`。该构建系统接受一个`Android.mk`文件，该文件简单描述了源代码。它会解析该文件以生成`makefile`，并为我们完成所有繁重的工作。'
 - en: We will cover details of how to write the `Android.mk` file or even write our
     own `makefile` in [Chapter 3](ch03.html "Chapter 3. Build and Debug NDK Applications"),
     *Build and Debug NDK Applications*.
+  id: totrans-182
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 我们将在[第3章](ch03.html "第3章. 构建和调试NDK应用程序")，*构建和调试NDK应用程序*中详细介绍如何编写`Android.mk`文件，甚至编写我们自己的`makefile`。
 - en: Once we compile the native code, a folder named `libs` will be created under
     our project and a `libhello.so` library will be generated under the `armeabi`
     subdirectory.
+  id: totrans-183
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 一旦我们编译了原生代码，项目下将会创建一个名为`libs`的文件夹，并在`armeabi`子目录下生成一个`libhello.so`库。
 - en: '**Java code**: Three steps are followed to call the native method:'
+  id: totrans-184
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '**Java代码**：调用原生方法遵循三个步骤：'
 - en: '**Load the native library**: This is done by calling `System.loadLibrary("hello")`.
     Note that instead of `libhello`, we should use `hello`. The Dalvik VM will fail
     to locate the library if `libhello` is specified.'
+  id: totrans-185
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**加载原生库**：这是通过调用`System.loadLibrary("hello")`完成的。请注意，我们应该使用`hello`而不是`libhello`。如果指定了`libhello`，Dalvik
+    VM将无法定位库。'
 - en: '**Declare the method**: We declare the method with a native keyword to indicate
     that it is a native method.'
+  id: totrans-186
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**声明方法**：我们使用native关键字声明方法，以指示它是一个原生方法。'
 - en: '**Invoke the method**: We call the method just like any normal Java method.'
+  id: totrans-187
   prefs:
   - PREF_IND
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '**调用方法**：我们像调用任何普通的Java方法一样调用该方法。'
 - en: There's more…
+  id: totrans-188
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多内容...
 - en: 'The name of a native method is lengthy and writing it manually is error-prone.
     Fortunately, the `javah` program from JDK can help us generate the header file,
     which includes the method name. The following steps should be followed to use
     `javah`:'
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: 原生方法的名称较长，手动编写容易出错。幸运的是，JDK 中的`javah`程序可以帮助我们生成包含方法名称的头文件。要使用`javah`，应遵循以下步骤：
 - en: Write the Java code, including the native method definition.
+  id: totrans-190
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编写 Java 代码，包括原生方法定义。
 - en: Compile the Java code and make sure the class file appears under the `bin/classes`/
     folder of our project.
+  id: totrans-191
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编译 Java 代码，并确保类文件出现在我们项目的`bin/classes`/文件夹下。
 - en: 'Start a terminal and go to the `jni` folder, and enter the following command:'
+  id: totrans-192
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开一个终端，进入`jni`文件夹，并输入以下命令：
 - en: '[PRE19]'
+  id: totrans-193
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'In our `HelloNDK` example, the command should be as follows:'
+  id: totrans-194
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 在我们的`HelloNDK`示例中，命令应如下所示：
 - en: '[PRE20]'
+  id: totrans-195
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'This will generate a file named `hello.h` with its function definition as follows:'
+  id: totrans-196
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这将生成一个名为`hello.h`的文件，其函数定义如下：
 - en: '[PRE21]'
+  id: totrans-197
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
