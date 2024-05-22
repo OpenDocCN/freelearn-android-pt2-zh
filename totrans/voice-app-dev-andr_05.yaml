@@ -1,0 +1,578 @@
+- en: Chapter 5. Form-filling Dialogs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Many speech-enabled apps use one-shot dialogs like the ones described in the
+    previous chapter. Do you feel that speech interfaces can go further than that?
+    Can you imagine more complex interactions in which several items of information
+    have to be elicited from the user for a wide variety of purposes, for example,
+    to launch apps, query databases, start web services or web services mashups, and
+    a lot more?
+  prefs: []
+  type: TYPE_NORMAL
+- en: These types of dialog are similar to form-filling in a traditional web application.
+    By the end of this chapter you should be able to implement simple form-filling
+    dialogs in order to obtain the data necessary to access a web service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Form-filling dialogs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'A form-filling dialog can be seen in terms of a number of slots to be filled.
+    For example, in the case of a flight booking app, the system may have to fill
+    five slots: destination, arrival date, arrival time, departure date, and departure
+    time. In a simple form-filling dialog each slot is processed one at a time and
+    the relevant questions are asked until all the slots have been filled. At that
+    point the app can look up the required flight and present the results to the user.
+    The following is an example of how a dialog might proceed and how status of the
+    slots changes as the dialog progresses.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'App: Welcome to the Flight Information Service. Where would you like to travel
+    to?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Caller: London.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Slot | Destination | Arrival date | Arrival time | Departure date | Departure
+    time |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Value | London | unknown | unknown | unknown | unknown |'
+  prefs: []
+  type: TYPE_TB
+- en: 'App: What date would you like to fly to London?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Caller: The 10th of July.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Slot | Destination | Arrival date | Arrival time | Departure date | Departure
+    time |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Value | London | 07/10/2013 | unknown | unknown | unknown |'
+  prefs: []
+  type: TYPE_TB
+- en: Frames can also have conditions attached to the slots, for example, if it is
+    a return journey, then values would also be required for the slots of the return
+    leg.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In a more complex dialog the user can fill more than one slot at a time, as
+    in the following example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'App: Welcome to the Flight Information Service. Where would you like to travel
+    to?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Caller: I would like to fly to London on Friday.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Slot | Destination | Arrival date | Arrival time | Departure date | Departure
+    time |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Value | London | 21/06/2013 | unknown | unknown | unknown |'
+  prefs: []
+  type: TYPE_TB
+- en: As the user has already provided the arrival date in response to the destination
+    question, that slot can be filled and the system can skip the arrival question.
+    However, to process the caller's input in this example more complicated grammars
+    would be required, as discussed in [Chapter 6](ch06.html "Chapter 6. Grammars
+    for Dialog"), *Grammars for Dialog*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing form-filling dialogs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In order to implement form-filling dialogs it is necessary to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create a data structure to represent the slots that will hold the information
+    that the system has to elicit from the user.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Develop an algorithm to process the slots, extracting the required prompts for
+    each of them.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'VoiceXML ([http://www.w3.org/TR/voicexml20/](http://www.w3.org/TR/voicexml20/))
+    provides a useful structure for this task in terms of forms containing fields
+    that represent the different items of information (slots) required to complete
+    the form. The following code is an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The preceding example shows an app that asks for two pieces of information:
+    destination and date. To ask for destination, it uses the prompt `where would
+    you like to travel to?`, and to ask for the date it synthesizes `what day would
+    you like to travel?`. Each piece of data is acquired sequentially by reprompting
+    the user until all the information is collected. In VoiceXML this is done using
+    the **Form Interpretation Algorithm** (**FIA**) which is further described in
+    [http://www.w3.org/TR/voicexml20/#dml2.1.6](http://www.w3.org/TR/voicexml20/#dml2.1.6).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: While implementing a complete VoiceXML approach to form-filling is beyond the
+    scope of this book, in the remainder of this chapter we will show how to create
+    a simple form-filling app that makes use of a similar data structure and algorithm.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**You can also try…**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can create your own VoiceXML dialogs using **Voxeo Evolution** ([http://evolution.voxeo.com/](http://evolution.voxeo.com/)).
+    You can sign up for a free developer account and then you will be able to create
+    your own VoiceXML applications that will be assigned a Skype number that you can
+    use to interact with them. Note that this is not directly useful for Android applications
+    but will provide insight into VoiceXML and how it works as a dialog scripting
+    language.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You might also wish to investigate the use of JVoiceXML ([http://jvoicexml.sourceforge.net/](http://jvoicexml.sourceforge.net/))
+    to build a complete VoiceXML parser in Java. The code for an initial implementation
+    for android can be found here: [http://sourceforge.net/p/jvoicexml/code/HEAD/tree/branches/android/](http://sourceforge.net/p/jvoicexml/code/HEAD/tree/branches/android/)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Threading
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will use XML files for various purposes in the remaining chapters and have
+    encapsulated the common code in the `XMLLib` library. One important issue involves
+    threading. When launching an app, a thread is created to run the code. This thread
+    is responsible for the actions that involve updating the user interface, so it
+    is sometimes called the **UI thread**. Carrying out very expensive operations
+    in the UI thread, such as downloading files, carrying out HTTP requests, opening
+    socket connections, or accessing databases, might block the UI thread for a long
+    time, making it unresponsive and freezing updates of the interface. For this reason
+    from Android 3 (HoneyComb) onwards, when trying to perform a networking operation
+    on the main thread of an Android app, the `android.os.NetworkOnMainThreadException`
+    is raised.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android provides several ways to enable communication between background threads
+    and the UI thread as explained here: [http://developer.android.com/guide/components/processes-and-threads.html](http://developer.android.com/guide/components/processes-and-threads.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One of the alternatives is to use an asynchronous task (`AsyncTask`). The `AsyncTask`
+    runs all the time-consuming operations in the background and publishes the results
+    in the UI thread. The documentation for `AsyncTask` can be found here: [http://developer.android.com/reference/android/os/AsyncTask.html](http://developer.android.com/reference/android/os/AsyncTask.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In short, when an asynchronous task is executed it undergoes four stages which
+    can be controlled with the methods: `onPreExecute` before the task is executed,
+    `doInBackground` that performs the background computation right after `onPreExecute`,
+    `onProgressUpdate` that displays the progress of the operation (for example, in
+    a progress bar in the user interface), and `onPostExecute`, that is invoked when
+    the background computation is finished.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: XMLLib
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In our library (`sandra.libs.util.xmllib` in the code bundle), the `RetrieveXMLTask`
+    (see `RetrieveXMLTask.java`) is responsible for fetching an XML file from the
+    web and saving its content in a String to be further processed. It is declared
+    in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It has been defined as an asynchronous task (`AsyncTask`) that receives a collection
+    of Strings as input parameters. It does not produce any type of progress values
+    (void), and produces a String as a result of the background computation (<parameters,
+    progress, result>). In our case, the String input is the URL to retrieve the XML
+    file, and the String result is the XML code in the file. The reading of the XML
+    file from the specified URL is done as a background task in the `doInBackground`
+    method that uses other private methods that open the HTTP connection and read
+    the byte streams (`saveXmlInString` and `readStream`). Take a look at the `doInBackground`
+    and `saveXMLInString` methods in the code bundle (`XMLLib` project, `RetrieveXMLTask.java`).
+    There is a nice tutorial on how to make an asynchronous HTTP request at: [http://mobiledevtuts.com/android/android-http-with-asynctask-example/](http://mobiledevtuts.com/android/android-http-with-asynctask-example/)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: As it can be observed, the management of exceptions in `RetrieveXMLTask` is
+    carried out in a special way, as there is an attribute called `exception` that
+    is used to save the possible exceptions raised during the connection or reading
+    operations (the `doInBackground` method). The management of such exceptions is
+    carried out once the asynchronous task is completed (in the `onPostExecute` method).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once the background task is finished, we need to provide our results back to
+    the calling class using the `onPostExecute` method. In order to do so, we define
+    the interface `XML AsyncResponse` (see `XML AsyncResponse.java`) with the abstract
+    method `processXMLContents`. The idea is that the class that invokes the asynchronous
+    task implements the interface providing the code for the `processXMLContents`
+    method, and `onPostExecute` delegates the processing of the output to this method
+    (see the `onPostExecute` method in the code bundle: `sandra.libs.util.xmllib.RetrieveXMLTask`).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: FormFillLib
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To build a form-filling app, we must specify a data structure such as the one
+    in the flight example. To do this, we define two classes: `Form` and `Field`.
+    As shown in the UML diagram, a `Form` has a collection of Fields, and a `Field`
+    has five attributes; a name, a string representing the prompt that the app will
+    use to ask for the piece of data, two strings representing the prompts to be used
+    when the app does not understand the user''s response to the initial prompt (`nomatch`),
+    or does not hear it (`noinput`), and the value that has been understood by the
+    app.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![FormFillLib](img/5297OS_05_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'For example, the `Field` flight setting could have the following values for
+    its attributes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**name:** **Destination**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**prompt:** **What is your destination?**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**nomatch:** **Sorry, I did not understand what you said**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**noinput:** **Sorry, I could not hear you**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**value:** **Rome** (when the user has said **Rome** in response to the system
+    prompt)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This structure will suffice to build an app of the type we are discussing in
+    this chapter. It is only necessary to create as many objects of the `Field` class
+    as slots to be filled, and a `Form` that contains a collection of the fields in
+    the desired order. This can be easily done programmatically in Java, however it
+    is not very reader-friendly and it is difficult for the programmer to change some
+    parameters like the system prompts.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To solve this, we will implement a subset of the VoiceXML standard to create
+    easy-to-read XML files containing the structure of the dialog. Then, we will use
+    the `VXMLParser` class to automatically parse the XML files and translate them
+    into objects for the `Field` and `Form` classes. Finally, a `DialogInterpretation`
+    class will use these objects to manage the interaction.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: This does not make the VoiceXML design completely independent from the app.
+    The apps need to know which pieces of information it is necessary to process and
+    these are indicated as fields in the VoiceXML file. Thus, the developer can change
+    anything in the VoiceXML except for the number and name of the fields.
+  prefs: []
+  type: TYPE_NORMAL
+- en: VXMLParser
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There are different ways to implement parsers in Android, mainly using DOM,
+    SAX, or a Pull parser. Android recommends the use of the `XMLPullParser` class
+    ([http://developer.android.com/reference/org/xmlpull/v1/XmlPullParser.html](http://developer.android.com/reference/org/xmlpull/v1/XmlPullParser.html)),
+    as it has been designed for better performance and simplicity. XML pull parsing
+    allows streaming parsing, where the process can be interrupted and resumed at
+    any time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to parse VXML files, we create an `XMLPullParser` to read the XML contents,
+    and repeatedly invoke the method `next()` to retrieve the next event, until the
+    event is `END_DOCUMENT`. This way, we process the `START_TAG`, `TEXT`, and `END_TAG`
+    events to respectively manage the situations in which the system encounters a
+    starting tag, processes the text inside a tag, or encounters a closing tag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We create a new `Form` object when the system encounters the <form> tag. As
+    the idea of the parser is to process a single form, if there were several forms
+    in the file, we would only keep track of the last one. This is done by keeping
+    only one instance of the `Form` class as an attribute of the `VXMLParser` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With respect to fields, their names are extracted by parsing the attributes
+    of the <field> tag. Then, we also save the information about the `prompt`, `nomatch`,
+    and `noinput` prompts when their corresponding VoiceXML tags are encountered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Any class using the VoiceXML parser can invoke the `parseVXML` method (see `sandra.libs.dm.fomfilllib.VXMLParser`)
+    to obtain the form created when parsing the data. The parser employs the `FormFillLibException`
+    class in order to carry out a more fine-grained control of exceptions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: DialogInterpreter
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The `DialogInterpreter` resembles the FIA algorithm in VoiceXML. It visits
+    all the fields in sequential order until the app obtains a speech recognition
+    result for each of them. In each field, it synthesizes the prompt and listens
+    for the user input. If speech recognition is successful, then it moves to the
+    next field, if not, the system repeats the process for the current field. The
+    following pseudo code describes the interpreter behavior:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The behavior described in the pseudo code is developed in the `DialogInterpreter`
+    class. This class uses different attributes to control the interpretation: the
+    `Form` that must be interpreted, an integer `currentPosition` that represents
+    the position of the field that must be interpreted in the list of the form''s
+    fields, two strings with prompts for the `nomatch` and `noinput` events (that
+    will be replaced by the ones parsed from the VoiceXML file if there are any available),
+    and a `HashMap` that contains the results of the interpretation in the form of
+    pairs of strings <field name, field value>.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Interpretation starts when the `startInterpreting` method is invoked. The form
+    to be interpreted is provided, the `currentPosition` is initialized to 0 and the
+    `interpretCurrentField` is invoked. The `interpretCurrentField` method does not
+    encapsulate all the behavior shown in the pseudocode for `interpret field i`,
+    as it is necessary to use different methods to control the various ASR events.
+    Thus, `interpretCurrentField` only controls the first part: it plays the field
+    prompt and starts ASR. Then, the methods `processAsrResults` and `processAsrErrors`
+    from `ASRLib` are used to account for the different events. The former controls
+    the case in which the ASR understands something from the user''s input, saves
+    its value in the `Hashmap` of results and invokes the `moveToNextField` method.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The latter controls the case in which there is an error in ASR, if the error
+    code is `ERROR_NO_MATCH` or `ERROR_SPEECH_TIMEOUT` (`nomatch` or `noinput`), the
+    corresponding prompts are synthetized and the field is interpreted again. If the
+    error is due to network problems, the interpretation is stopped. You can take
+    a look at this method in the code bundle (`sandra.libs.dm.formfilllib.DialogInterpreter`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `moveToNextField` method is similar to the pseudocode shown earlier: it
+    moves the position of the current field forward while the field does not have
+    a value. If there is a field without a value, it is interpreted, if there are
+    no more fields to interpret, the interpretation is finished and the `processDialogResults`
+    method is invoked.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `processDialogResults` method is abstract so that any subclass of `DialogInterpreter`
+    can provide its own code to process the results of the interpretation. In the
+    next section, we will show an app that uses the `FormFillLib` library and implements
+    this method to use the results of the dialog to invoke a web service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**You can also try…**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Another interesting alternative is to code the structure of the dialog in different
+    data structures in the Java code. This is the approach followed in the *Pizza
+    Ordering App* example (Chapter 15) from Deitel, P., Deitel, H., Deitel, A. and
+    Morgano, M., *Android for Programmers: An App-Driven Approach*, Prentice Hall
+    2011, which you can find here: [http://ptgmedia.pearsoncmg.com/imprint_downloads/informit/bookreg/9780132121361/android_15_speech_final_a.pdf](http://ptgmedia.pearsoncmg.com/imprint_downloads/informit/bookreg/9780132121361/android_15_speech_final_a.pdf).'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The advantage of the approach that we are using is that we provide different
+    libraries to parse and manage the interaction, which are reusable by any app that
+    requires an interface with a basic form-filling dialog. Thus, it is a general
+    purpose approach in which the details for each particular app are supplied in
+    a simple VoiceXML file. An example is shown in the next section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: MusicBrain app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'To illustrate how to use the `FormFillLib` we will develop an app that asks
+    the user for the pieces of data necessary to query a web service. The relations
+    between the classes in the app and the libraries described in this chapter are
+    shown in the following class diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![MusicBrain app](img/5297OS_05_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Apps are no longer standalone isolated applications; usually they combine their
+    own resources with data and functionalities gathered from third-party web services.
+    Recently, many web applications have published APIs (Application Programming Interfaces)
+    that allow interested developers to use them in their own apps. This integration
+    can be as complex as desired, involving multiple sources. These are known as mashups.
+    For example, a travel mashup can integrate Google maps to indicate geographical
+    locations with Flickr to show pictures of the relevant tourist attractions while
+    at the same time checking for good restaurants in FoodSpotting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A list of a wide range of available APIs can be found at: [http://www.programmableweb.com](http://www.programmableweb.com).
+    Some of these (for example, Amazon, Google, and Facebook) require you to register
+    in order to use their APIs. Others can only be used by licensed partners, and
+    some are open and available for public (usually non-profit) use.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: For the `MusicBrain` app (`sandra.examples.formfill.musicbrain`) we will use
+    the **MusicBrainZ** public API. MusicBrainZ ([http://musicbrainz.org/](http://musicbrainz.org/))
+    is an open music encyclopedia that contains metadata for music. It allows the
+    user to query about areas (music from a certain place), artists or groups, albums,
+    and releases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The MusicBrain app provides information about albums released between two dates
+    whose title contains a certain text. A sample interaction with the app is the
+    following excerpt:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: App> **Please say a word of the album title**
+  prefs: []
+  type: TYPE_NORMAL
+- en: User> robot
+  prefs: []
+  type: TYPE_NORMAL
+- en: App> **Please say a starting date for the search**
+  prefs: []
+  type: TYPE_NORMAL
+- en: User > 1970
+  prefs: []
+  type: TYPE_NORMAL
+- en: App> **Please say a final date for the search**
+  prefs: []
+  type: TYPE_NORMAL
+- en: User> 2000
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The result of the preceding interaction produces the result as shown in the
+    following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![MusicBrain app](img/5297OS_05_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The form-filling dialog is started when the activity is created in `MusicBrain.java`.
+    This involves retrieving the VoiceXML file, parsing it, and interpreting it to
+    obtain the three pieces of data (word in title, starting year and final year)
+    that will be used to query the MusicBrainZ web service. The VoiceXML code is as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the dialog is over, the app queries MusicBrainZ and obtains an XML with
+    all the albums whose titles contain the word uttered by the user, then the XML
+    is parsed and filtered to keep just the albums released between the dates selected.
+    Finally the information is shown to the user in the GUI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Web services usually provide the results in XML or JSON. We have used the XML
+    version of MusicBrainZ because it is more stable in this particular API, though
+    you might be interested in considering other options when using other web services.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The speech dialog is controlled with the `startDialog`, `processXMLContents`,
+    and `processDialogResults` methods. The `startDialog` method initializes the ASR
+    and TTS engines (using the `ASRLib` and `TTSLib` libraries described in the previous
+    chapters) and starts retrieving the VoiceXML file. As explained earlier, when
+    the VoiceXML file is retrieved, the `processXMLContents` method is invoked. As
+    there are two possible XML files being retrieved in the app (the VoiceXML with
+    the dialog, and the XML with the results from the web service), the `processXMLContents`
+    method checks what is the current XML being processed and starts the corresponding
+    parsing procedure. Finally, the `processDialogResults` method is invoked when
+    the VoiceXML parsing is finished. This method queries MusicBrainZ using the word
+    inside the album title uttered by the user during the dialog. Take a look at the
+    `startDialog` and `processDialogResult` methods in the code bundle (`MusicBrain.java`,
+    `MusicBrain` project).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The results of the query to the web service are coded in an XML file with the
+    structure explained in [http://musicbrainz.org/doc/Development/XML_Web_Service/Version_2/Search#Release](http://musicbrainz.org/doc/Development/XML_Web_Service/Version_2/Search#Release).
+    This file is parsed in the method `parseMusicResults`. This method makes use of
+    the `MusicBrainParser` class (see `MusicBrainParser.java`) in which we have implemented
+    an `XMLPullParser`. The parser iterates through the XML file obtaining a collection
+    of albums. To do so, we have defined the `Album` class, which contains information
+    about each album title, interpreter, release date, country, and label.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We use alert dialogs to show the reasons for parsing, ASR, or TTS errors. This
+    way, the user will be better aware of the fact that the app is not working because
+    of ill-formed XMLs or Internet connection problems. The method used to create
+    them is `createAlert` (in `MusicBrain.java`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the XML file has been parsed into a collection of `Album` objects, these
+    are filtered using the `filterAlbums` method (`MusicBrain.java`). This way, from
+    all the albums whose title contains the desired word, we only take into account
+    those that were released between the dates provided by the user. If the recognition
+    results cannot be parsed as dates, then all albums are considered.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the albums have been filtered, we show them on the GUI with the method
+    `showResults`. It is not necessary to sort the albums a posteriori, as we have
+    saved them in a `TreeSet`, a collection that allows us to avoid duplicates and
+    to save its elements in order. To do so, we override the `equals` method in `Album.java`
+    using code to compare if two albums are equal (we check whether they have the
+    same title and interpreter), and we create a custom comparator in `AlbumComparator.java`
+    that compares the albums according to their release date so that they can be sorted
+    from the most to the least recent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter has shown how to implement form-filling dialogs in which the app
+    engages in simple conversations with the user in order to retrieve several pieces
+    of data which can later be used to provide advanced functionalities to the user
+    through web services or mashups.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `FormFillLib` contains the classes to retrieve and parse an XML definition
+    of the dialog structure into Java objects. These objects are employed to control
+    the oral interaction with the user. This library makes it possible to easily build
+    any form-filling dialog in an Android app by specifying its structure in a simplified
+    VoiceXML file accessible on the Internet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `MusicBrain` app shows how to use the library to gather information from
+    the user through a spoken conversation to query a web service. In this case, the
+    app asks the user for a word and two dates which are used to query the MusicBrainZ
+    open music encyclopedia for albums with the word in their title and those released
+    between the specified dates. The example also shows how to parse and filter the
+    results provided by the web service so that they can be presented to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this example the ASR input is not restricted, but in many applications it
+    is desirable to limit the vocabulary or phrases that the user might employ. In
+    [Chapter 6](ch06.html "Chapter 6. Grammars for Dialog"), *Grammars for Dialog*,
+    we will study how to use grammars that impose some limits on the input while at
+    the same time allowing quite complex structures as well as adding semantics to
+    provide an interpretation of the input.
+  prefs: []
+  type: TYPE_NORMAL

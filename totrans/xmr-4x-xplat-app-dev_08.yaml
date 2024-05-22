@@ -1,0 +1,603 @@
+- en: Chapter 8. Contacts, Camera, and Location
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Some of the most vital features used by mobile applications today are based
+    on the new types of data that can be collected by our devices. Features such as
+    a device's GPS location and camera are staples in modern applications such as
+    Instagram or Twitter. It's difficult to develop an application and not use some
+    of these functionalities. So, let's explore our options for taking advantage of
+    this functionality with Xamarin.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will do the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introduce the Xamarin.Mobile library
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Read the address book on Android and iOS
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Retrieve the GPS location of our device
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Pull photos from the camera and photo library
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introducing Xamarin.Mobile
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To simplify the development of these features across multiple platforms, Xamarin
+    has developed a library called **Xamarin.Mobile**. It delivers a single API for
+    accessing the contacts, GPS location, heading of the screen, camera, and photo
+    library for iOS, Android, and even Windows platforms. It also takes advantage
+    of **Task Parallel Libraries** (**TPL**) to deliver a modern C# API that will
+    make developers more productive than their native alternatives would. This gives
+    you the ability to write nice, clean, asynchronous code using the `async` and
+    `await` keywords in C#. You can also reuse the same code in iOS and Android, apart
+    from a few differences that are required by the Android platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To install Xamarin.Mobile, open the **Xamarin Component Store** in **Xamarin
+    Studio** and add the **Xamarin.Mobile** component to a project, as shown in the
+    following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introducing Xamarin.Mobile](img/image00242.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Before we dig further into using Xamarin.Mobile, let''s review the namespaces
+    and functionality available with the library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`Xamarin.Contacts`: This contains classes that enable you to interact with
+    the full address book. It includes everything from the contact''s photo, phone
+    numbers, address, e-mail, website, and so on.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Xamarin.Geolocation`: This, combined with the accelerometer, gives you access
+    to the device''s GPS location, including the altitude, heading, longitude, latitude,
+    and speed. You can track the device''s position explicitly or listen for GPS position
+    changes over time.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Xamarin.Media`: This grants access to the device''s cameras (if there are
+    more than one) and built-in photo library. This is an easy way to add photo selection
+    capabilities to any application.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Xamarin.Mobile is an open source project with the standard Apache 2.0 license.
+    You can contribute to the project or submit issues to the GitHub page at [https://github.com/xamarin/Xamarin.Mobile](https://github.com/xamarin/Xamarin.Mobile).
+    Feel free to use Xamarin.Mobile in your applications, or fork and modify it for
+    your own purposes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will be adding lots of features to the XamSnap sample application,
+    built in earlier chapters. You may wish to visit [Chapter 6](part0055.xhtml#aid-1KEEU2
+    "Chapter 6. XamSnap for Android"), *XamSnap for Android*, if needed, or refer
+    to the sample source code included with this book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Accessing contacts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To begin our exploration of what Xamarin.Mobile offers, let's access the address
+    book within a Xamarin application. Let's improve the add friend feature of XamSnap
+    by loading friends from the user's contact list. Make sure to add Xamarin.Mobile
+    to the project from the Component Store for both the iOS and Android projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Navigate to the `XamSnap` portable class library. First, we will need to split
+    apart the `IWebService` interface, by moving one method to a new `IFriendService`
+    interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, in `FriendViewModel`, we will need to use the new `IFriendService` interface
+    instead of the old one:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we need to implement `IFriendService` in the iOS project to allow it to
+    load from a device''s contact list. Navigate to the `XamSnap.iOS` project and
+    add a new class implementing `IFriendService`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: In order to use Xamarin.Mobile to load contacts, you must first create an `AddressBook`
+    object. Next, we have to call `RequestPermissions` in order to ask the user for
+    permission to access the address book. This is an important step, since it is
+    required by iOS devices before an application can access the user's contacts.
+    This prevents potentially nefarious applications from retrieving contacts without
+    the user's knowledge.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we use `foreach` over the `AddressBook` object and create instances of
+    the `User` object that our existing application already understands. This is a
+    great example of how the MVVM design pattern is great at separating layers. When
+    we swap out logic at the model layer, the UI continues to work properly without
+    any changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we need to modify our `AppDelegate.cs` file to use our `ContactsService`
+    as the `IFriendService` interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you were to compile and run the application at this point, you would be
+    greeted by the standard iOS popup requesting access to contacts, as shown in the
+    following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Accessing contacts](img/image00243.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If you accidentally hit **Don't Allow**, you can change this setting by navigating
+    to **Settings** | **Privacy** | **Contacts** on the device. In the iOS Simulator,
+    you can also reset all privacy prompts in the simulator by closing the application
+    and going to **Settings** | **General** | **Reset** | **Reset Location & Privacy**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If our app is granted the correct access, we should be able to see a list of
+    contacts without modifying any code in the UI layer of our application. The following
+    screenshot shows the default list of contacts in the iOS Simulator:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Accessing contacts](img/image00244.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Retrieving contacts on Android
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In a very similar fashion, we can retrieve a list of contacts in Android with
+    Xamarin.Mobile. All of the APIs in Xamarin.Mobile are identical in Android, with
+    the exception of the requirement to pass `Android.Content.Context`  in a few places.
+    This is because many native Android APIs require a reference to the current activity
+    (or to another context such as `Application`) in order to function properly. To
+    begin, create a standard Android Application project by navigating to **Android**
+    | **Android Application** in Xamarin Studio. Make sure to add Xamarin.Mobile to
+    the project from the Component Store.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Add an Android equivalent of the `IFriendService` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: This code, calling Xamarin.Mobile, is identical to what we did on the code for
+    iOS, except that here, `Application.Context` had to be passed for the Android
+    `Context` in the constructor for `AddressBook`. Our code changes are complete;
+    however, if you ran the application right now, an exception would be thrown. Android
+    requires permission in the manifest file, which will notify the user of its access
+    to the address book when downloaded from Google Play.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We must modify the `AndroidManifest.xml` file and declare one permission as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open the project options for the Android project.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Select the **Android Application** tab under **Build**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Under the **Required permissions** section, check **ReadContacts**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **OK** to save your changes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now if you run the application, you will get a list of all the contacts on
+    the device, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Retrieving contacts on Android](img/image00245.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Looking up GPS location
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Using Xamarin.Mobile to track a user's GPS location is as simple as accessing
+    their contacts. There is a similar process for setting up access on iOS and Android,
+    but in the case of location, you don't have to request permission from code. iOS
+    will automatically show the standard alert requesting permission. Android, on
+    the other hand, merely requires a manifest setting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As an example, let's add functionality to our XamSnap application that tags
+    GPS location to messages within a chat conversation. You can think of this as
+    tagging a location to a photo, as in other apps. Make sure to add Xamarin.Mobile
+    to the project from the Component Store.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s implement a `Location` class for storing latitude and longitude:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, let''s add a `Location` property to the `Message` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, let''s create a new `ILocationService` interface for querying a GPS location:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We now need to update the `MessageViewModel` class to use the location service
+    and tag the GPS location on new messages:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, let''s implement the `ILocationService` interface for iOS. Create a new
+    class in the iOS project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: What we did here was to first create a `Geolocator` object if needed. This delays
+    the iOS permission popup until you actually go to send a message. We then used
+    `async`/`await` to query for a GPS location with a three second timeout. We logged
+    the location that was found and created a new `Location` object for use in the
+    rest of our application. If any errors occurred, we made sure to log them and
+    return `null` for our instance of `Location`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, register our new service in `AppDelegate.cs`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Finally, there is a setting in our `Info.plist` file that is required by iOS
+    for accessing a user's location and that also gives the developer the option to
+    display a message in the permission popup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Open the `Info.plist` file and change it as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Click the **Source** tab.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click the plus button on the **Add new entry** row.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: In the dropdown, choose **Location When In Use Usage Description**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Enter text for the user in the **Value** field.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'If you compile and run the application, you should see an iOS permission prompt
+    when adding a new message, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Looking up GPS location](img/image00246.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If you watch the console log in Xamarin Studio, you will be able to see the
+    GPS coordinates being added to the `Message` object. For this to actually work,
+    you will have to deploy to a physical iOS device to see the GPS location returned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing GPS location on Android
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Just as in the previous section, using Xamarin.Mobile for GPS location is almost
+    identical to the APIs we used in iOS. First, we will need to create an `ILocationService`
+    as before, only needing to change one line of code from that we created for iOS:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, also register our new service in `Application.cs` :'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again, this looks identical to the code for iOS, except for the constructor
+    for `Geolocator`. If you ran the application at this point, it would start with
+    no errors. However, no events would be fired from the `Geolocator` object. We
+    first need to add permission to access the location from the Android Manifest
+    file. It is also a good idea to start the locator in `OnResume` and stop it in
+    `OnPause`. This will conserve the battery by stopping the GPS location when this
+    activity is no longer on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s create an `AndroidManifest.xml` file and declare two permissions, as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open the project options for the Android project.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Select the **Android Application** tab under **Build**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **Add Android manifest**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Under the **Required permissions** section, check **AccessCoarseLocation** and
+    **AccessFineLocation**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **OK** to save your changes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now if you compile and run the application, you will get the GPS location tagged
+    to new messages sent. Most Android emulators have an option for emulating GPS
+    location. The x86 HAXM emulator is found under the dots menu at the bottom, then
+    **Extended Controls | Location**, as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Implementing GPS location on Android](img/image00247.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Accessing the photo library and camera
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The last major feature of Xamarin.Mobile is the ability to access photos in
+    order to give users the ability to add their own content to your applications.
+    Using a class called `MediaPicker`, you can pull photos from the device's camera
+    or photo library and optionally display your own UI for the operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s modify `MessageViewModel` to support photos. First, add the following
+    property:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we need to modify the following lines in the `SendMessage` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we will need to modify the UI layer to prompt for photos. Open `MessagesController.cs`
+    and add the following variables to the top of the class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `ViewDidLoad` method, we will need to set up the `MediaPicker` and a
+    new `UIBarButtonItem` to choose a photo:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We are using the `UIActionSheet` class here to prompt the user to decide whether they
+    want to take a new photo or open an existing one. Now let''s implement the `OnActionSheetClicked`
+    method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using `MediaPicker` is pretty straightforward; you merely have to call `GetTakePhotoUI`
+    or `GetPickPhotoUI` to retrieve a `MediaPickerController` instance. Then, you
+    can call `PresentViewController` to display the controller modally over the top
+    of the current controller. After calling `GetResultAsync` we use the resulting
+    `MediaFile` object to pass the path of the photo to our ViewModel layer. It is
+    also necessary to use a `try-catch` block, in case the user cancels and calls `DismissViewController`
+    to hide the modal.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we need to modify `UITableViewSource` to display photos:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'One last case we need to handle is in the `ViewWillAppear` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we did not make this change, the list of photos would refresh after choosing
+    a photo, which could cause some odd behavior.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You should now be able to run the app and select a photo to be viewed on the
+    screen. The following screenshot shows a nice default photo from the iOS simulator
+    that I selected from the photo library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Accessing the photo library and camera](img/image00248.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Accessing photos on Android
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In comparison to iOS, we have to use a slightly different pattern on Android
+    to retrieve photos from the camera or photo library. A common pattern in Android
+    is that it calls `StartActivityForResult` to launch an activity from another application.
+    When this activity is completed, `OnActivityResult` will be called to notify your
+    activity that the action is complete. Because of this, Xamarin.Mobile could not
+    use the same APIs on Android as on iOS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s modify our Android layouts to handle photos. Add a new `ImageButton`
+    in `Messages.axml` before `EditText`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then add the `android:layout_toRightOf="@+id/photoButton"` attribute to `EditText`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we need to modify both `MyMessageListItem` and `TheirMessageListItem`
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: In both of these cases, it is a lot easier to just modify the Android XML, as
+    the designer is sometimes a bit finicky when adding new views to the left or right
+    of existing views.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s add a couple of member variables to the top of `MessagesActivity.cs`
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, let''s rearrange the `OnCreate` method as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: What we are doing here is creating an `AlertDialog` when the `photoButton` is
+    clicked. This is identical to what we did on iOS, giving the option for the user
+    to either take a photo or choose one from their existing photo library. We have
+    also moved the click handler of `sendButton` to a `Send` method so we can reuse
+    it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s implement the `OnTakePhoto` and `OnChoosePhoto` methods needed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: In each case, we make a call to `GetPickPhotoUI` or `GetTakePhotoUI` in order
+    to get an instance of an Android `Intent` object. This object is used to start
+    new activities within an application. `StartActivityForResult` will also start
+    the `Intent` object, expecting a result to be returned from the new activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we need to implement `OnActivityResult` in order to handle what will
+    happen when the new activity is completed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: If this is successful, we retrieve a `MediaFile` and pass its path to our ViewModel
+    layer. We call our `Send` method that we set up earlier, which sends the message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'One other detail we need is to add the following code to our `OnResume` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: This prevents some odd behavior when the user navigates away to a new activity
+    to choose a photo and then returns. It is very similar to what we had to do on
+    iOS.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For these changes to work, we need to modify our `AndroidManifest.xml` file
+    and declare two permissions as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open the project options for the Android project.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Select the **Android Application** tab under **Build**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **Add Android manifest**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Under the **Required permissions** section, check **Camera** and **WriteExternalStorage**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **OK** to save your changes.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'You should now be able to run the application and send photos as messages,
+    as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Accessing photos on Android](img/image00249.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we discovered the Xamarin.Mobile library and how it can accelerate
+    common tasks in a cross-platform way. We retrieved contacts from the address book
+    and set up GPS location updates over time. Lastly, we loaded photos from the camera
+    and photo library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After completing this chapter, you should have a complete grasp of the Xamarin.Mobile
+    library and the common functionality it provides for cross-platform development.
+    It gives clean, modern APIs that offer `async`/`await` functionality that can
+    be accessed across iOS, Android, and Windows Phone. Accessing contacts, GPS, and
+    photos across platforms is very straightforward with Xamarin.Mobile.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we'll create a real web service using Windows Azure to
+    drive our XamSnap application. We will use a feature called Azure Functions and
+    implement push notifications on iOS and Android.
+  prefs: []
+  type: TYPE_NORMAL

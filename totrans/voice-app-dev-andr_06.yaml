@@ -1,0 +1,547 @@
+- en: Chapter 6. Grammars for Dialog
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You will have noticed that the inputs in the form-filling dialogs studied in
+    the previous chapter were restricted to single words and phrases. This chapter
+    introduces the use of grammars to interpret more complex inputs and also to extract
+    their meaning. Two types of grammars in common use for commercial applications
+    are hand-crafted grammars for input that is predictable and well-defined, and
+    statistical grammars for more robust performance with the less well-formed input
+    typical of conversational speech.
+  prefs: []
+  type: TYPE_NORMAL
+- en: By the end of this chapter, you should be able to develop apps that support
+    more extended user input, making use of hand-crafted as well as statistical grammars.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Grammars for speech recognition and natural language understanding
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Grammars can be used for two different purposes in speech-based apps that are
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Speech recognition**: In this case, grammars (also known as language models)
+    specify the words and phrases that the recognizer can expect. For example, if
+    the system is dealing with cities, it should not try to recognize numbers. Speech
+    recognition grammars, as defined by W3C available at [http://www.w3.org/TR/speech-grammar/](http://www.w3.org/TR/speech-grammar/),
+    can either be specified explicitly by the developer (hand-crafted grammars) or
+    can be computed from language data (statistical grammars). Speech recognition
+    grammars help to make speech recognition more accurate.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Natural language understanding**: The idea is to take the output of the recognizer
+    and assign a semantic interpretation (or meaning) to the words. This can be done
+    in several ways. One method involves determining the structure of the sentence
+    (syntactic analysis) and then assigning a semantic interpretation (or meaning)
+    to this structure. Alternatively, the semantic interpretation may be extracted
+    directly from the sentence without going through the syntactic analysis stage.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Currently, the Google speech recognition API does not support the use of grammars
+    specified by the developer for speech recognition and the only possible language
+    models are `LANGUAGE_MODEL_FREE_FORM` and `LANGUAGE_MODEL_WEB_SEARCH`, which are
+    built into the API. In the applications to be presented in this chapter, we will
+    carry out speech recognition as in the previous chapters and then filter the recognition
+    results and keep only those results that conform to the grammar and use them to
+    obtain a semantic interpretation of the user's input.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**You may also try…**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Although it is currently not possible to use grammars within Android's `RecognizerIntent`,
+    it is possible to use third-party options. Visit our web page for further details.
+  prefs: []
+  type: TYPE_NORMAL
+- en: NLU with hand-crafted grammars
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Designing a grammar involves predicting the different things the user might
+    say and creating rules to cover them. Grammar design is an iterative process of
+    creating an initial grammar, collecting data to test the grammar against actual
+    user input, adding some phrases and removing others, and so on until the coverage
+    of the grammar is as complete as possible. There are various tools to help with
+    the design of grammars. For example, Nuance provides the Nuance Grammar Builder
+    which can be used to test the coverage of a grammar, to check that the test phrases
+    receive the correct semantic interpretation, and to test for over-generation that
+    is, detect any unnecessary or unexpected phrases in the input ([http://evolution.voxeo.com/library/grammar/grammar-gsl.pdf](http://evolution.voxeo.com/library/grammar/grammar-gsl.pdf)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are different languages for specifying speech grammars, the most popular
+    are XML and **Augmented BNF** (**ABNF**), defined by W3C available at [http://www.w3.org/TR/speech-grammar/](http://www.w3.org/TR/speech-grammar/),
+    **Java Script Grammar Format** (**JSGF**) which is used by the Java Speech API,
+    and **Grammar Specification Language** (**GSL**), a format that is proprietary
+    to Nuance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will use the XML format and present a library that is able
+    to parse simple XML grammars for their use in form-filling dialog like the ones
+    studied in the previous chapter. Developing a full XML grammar processor is beyond
+    the scope of this book, but additional information about the functionalities that
+    it should have can be found in the W3C Speech Recognition Grammar Specification
+    available at [http://www.w3.org/TR/speech-grammar/#S5](http://www.w3.org/TR/speech-grammar/#S5).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is a simple grammar using some of the tags from the XML grammar
+    format. This grammar can recognize the sentence *show flights to London*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As can be seen, the grammar is structured in terms of rules. The `<grammar>`
+    tag indicates the starting element (or root) of the grammar which is labeled as
+    `flight_query`. The first rule after the `<grammar>` tag must have the same name
+    as the root element. This rule consists of two items: the word `show` and the
+    word `flights`, which cover the first two words of the string to be processed.
+    The third part is a reference `<ruleref>` to another rule called `destination`.
+    This rule contains the words `to London`. Thus by applying all the rules staring
+    at the root, we can process the string *show flights to London*.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The rule reference is useful when there might be several alternatives; in this
+    case, several alternative destinations. The `<one-of>` tag allows the specification
+    of alternative items. So, for example, we could expand the destination rule as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Indeed, as the word *to* is common to all the phrases in this rule, we could
+    create a further rule reference to city words, as shown in the following more
+    extensive grammar. In this way, a complex hierarchy of rules can be created to
+    specify a wide range of possible input.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Sometimes, words or phrases may be optional or they may be repeated more than
+    once. The `repeat` attribute allows the use of repetitions using the following
+    specifications, in which `n` and `m` are natural numbers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For example, for a five digit postal code, the item should be as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`<item repeat="0-1">` indicates that a certain item is optional. In the following
+    grammar, the `flight_query`, `flights`, and `time` rules specify optional elements.
+    This means that a valid input requires only `origin`, `destination`, and `depart_day`
+    and the other information is optional.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Given a combination of the various tags and attributes, we can create a grammar
+    to allow inputs such as the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: I would like a flight from Paris to New York on Monday morning
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Show me flights from London to Paris on Tuesday
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: From New York to London on Monday afternoon
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: From Paris to London on Wednesday
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following is a grammar that can be used to process these and a wide range
+    of other alternative inputs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`<tag>` is used to return a value for an item that is different from the words
+    recognized in the input. This is useful for dealing with synonyms where words
+    with the same meaning should return a single value instead of the literal words
+    recognized, or to return a value that is more useful in other components of the
+    app. The following is a simple example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, if the word `Monday` is processed, the value `M` is returned.
+  prefs: []
+  type: TYPE_NORMAL
+- en: More generally, an app may not need a complete transcription of the input to
+    be able to carry out further processing of what the user said, as it could be
+    enough and even more efficient to use some intermediate (semantic) representation
+    using the `<tag>` tag. Usually, semantic interpretation tags follow the W3C format
+    presented in [www.w3.org/TR/semantic-interpretation/](http://www.w3.org/TR/semantic-interpretation/),
+    which is parsed and processed as ECMAScript objects. This means that it is possible
+    to include small excerpts of code within semantic tags.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this chapter, we will carry out a very simple treatment of semantics by specifying
+    plain text tags. For example, in the previous grammar we have included tags that
+    specify the code for the main airport of each city so that the semantic interpretation
+    for `destination` is *CDG* (the code for Charles de Gaulle airport) when the sentence
+    contains *to Paris*, and that for `departure_time` is *p.m* if the user says *in
+    the afternoon*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Statistical NLU
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Hand-crafted grammars are time consuming to develop and prone to errors. Considerable
+    linguistic and engineering expertise is required to develop a grammar with good
+    coverage and optimized performance. Moreover, the rules of a hand-crafted grammar
+    cannot easily cope with the irregular input that is characteristic of spontaneous
+    spoken language. For example, given the recognized words *I would like a um flight
+    from Paris to New York on Monday no Tuesday afternoon*, our grammar would fail
+    since *um* and *no* are not specified in the rules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A statistical grammar is an alternative to a hand-crafted grammar. Statistical
+    grammars are learned from data and involve collecting and annotating large amounts
+    of relevant language data. Statistical grammars can cope with irregular input
+    as they do not have to match the input exactly but rather assign probabilities
+    indicating the extent to which a structure or a semantic interpretation matches
+    the input. There are different types of statistical grammar. For the purposes
+    of this chapter, we are interested in a grammar that returns a semantic interpretation
+    as its result given either the input of a text string or the results from the
+    speech recognition component.
+  prefs: []
+  type: TYPE_NORMAL
+- en: One of the disadvantages of statistical grammars is that they require a large
+    amount of training data. While corpora of language data have been collected for
+    a wide variety of real-world applications, these are not publicly available and
+    the costs of purchasing them would be prohibitive for individual developers. Even
+    if the data were available, considerable effort would be required to annotate
+    and train the grammar. Currently there are few APIs available for statistical
+    semantic grammars but one possibility is a web service provided by **Maluuba**
+    ([www.maluuba.com](http://www.maluuba.com)), a company that has developed a personal
+    assistant of the same name for Android devices as well as an API for its statistical
+    semantic grammars.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Maluuba API (known as `nAPI`) extracts three types of information from
+    an input that are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Category**: It signifies the main topic of the sentence, for example, weather,
+    travel, entertainment, and navigation. Currently, there are 22 categories covered
+    under it.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Action**: It explains a specific action or intent to be accomplished within
+    the category, for example, weather has actions such as `WEATHER_STATUS` for checking
+    the weather and `WEATHER_DETAILS` for detailed weather information such as wind
+    speed and humidity.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Entities**: It gives a key piece of information that has to be extracted,
+    for example, location, dateRange, and time.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The result is returned as a structured object. The following is an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**User input**: what''s the weather in Belfast for tomorrow'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Maluuba**: {"entities":{"dateRange":[{"start":"2013-05-09","end":"2013-05-10"}],"location":["belfast"]},"action":"WEATHER_STATUS","category":"WEATHER"}'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that in addition to identifying categories, actions, and entities, the
+    grammar also resolves relative references such as *tomorrow* (this example was
+    submitted on 8 May, 2013). Also, the input does not have to be fully grammatical
+    as long as entities can be identified from the input. So, a sentence such as *Weather
+    Belfast tomorrow* would return the same result.
+  prefs: []
+  type: TYPE_NORMAL
+- en: NLULib
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We have implemented a library for natural language understanding that contains
+    classes and methods to process hand-crafted and statistical grammars. We have
+    created the NLU class (`NLU.java`) to encapsulate both, but they could be processed
+    in isolation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Processing XML grammars
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '`HandCraftedGrammar.java` contains the methods for parsing an XML speech grammar,
+    checking whether a phrase is valid in the grammar, and obtaining its semantic
+    representation. We consider a subset of the tags in the XML format, concretely:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Tag | Description | Possible subtags | Possible attributes (attributes marked
+    with * are mandatory) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <grammar> | Specifies the highest level container | <rule> | root* |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <rule> | Specifies valid sequences and structures of words and phrases |
+    <one-of><item><ruleref> | id* |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <one-of> | Specifies a set of alternatives | <one-of><item><ruleref> |  
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <item> | Specifies valid sequencesContains the literals and semantic tags
+    | <tag><one-of><item><ruleref> | repeat |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <tag> | Specifies semantic information in the form of a literal |   |   |'
+  prefs: []
+  type: TYPE_TB
+- en: '| <ruleref> | Specifies a reference to another rule |   | uri* |'
+  prefs: []
+  type: TYPE_TB
+- en: The constructor parses the XML into java objects (see the `parse` method in
+    the code bundle in `sandra.libs.nlu.nlulib.HandCraftedGrammar`) and translates
+    the grammar into a regular java expression (see `computeRegularExpression` in
+    `sandra.libs.nlu.nlulib.HandCraftedGrammar` in the code bundle).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `parse` method uses `XmlPullParser` to read the XML code into objects, in
+    a similar fashion to the VXML parser developed in the previous chapter, but using
+    arrays to keep track of the nested items, as in this case we can have identical
+    tags nested (for example, see the previously mentioned example of `flights` wherein
+    several `<item>` tags are included within another `<item>` tag).
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this case, we have created the classes `Alternative`, `Item`, `Rule`, `Repeat`,
+    and `RuleReference` to save the results of parsing `one-of`, `item without a repeat
+    argument`, `rule`, `item with repeat argument`, and `rule-ref` tags respectively.
+    The `GrammarElement` class has been defined as a superclass for the rest, so that
+    when a certain class has a collection of any of the other elements, it can use
+    the `GrammarElement` class as a wildcard. For example, the `Alternative` class
+    contains a collection of `GrammarElement` that represents the different alternatives
+    available.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The result of the parsing is a collection of `Rule` objects, which is saved
+    as an attribute of the `HandCraftedGrammar` class. The rules are saved in a `HashMap`
+    in which the keys are their IDs. For example, the structure resulting from parsing
+    the flights rule in the example grammar is represented in the following figure.
+    Note that in order to simplify the generation of regular expressions that facilitate
+    semantic parsing, we do not process the grammar on the fly during recognition
+    but instead parse it into Java objects before the recognition starts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Processing XML grammars](img/5297_06_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: At this point, the `HandCraftedGrammar` constructor has parsed the XML grammar
+    into Java objects with the `parse` method. Then, it uses the objects to compute
+    a regular expression that represents the grammar using the `computeRegularExpression`
+    method. Regular expressions are another way of representing the same information,
+    but they have the advantage that we can directly match the sentences introduced
+    by the user with the grammar using the `Pattern` and `Matcher` classes from the
+    `java.util.regex` API (a tutorial of this API can be found at [http://docs.oracle.com/javase/tutorial/essential/regex/](http://docs.oracle.com/javase/tutorial/essential/regex/)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The use of Java objects as a middle step between the XML and the regular expression
+    makes it easier to process the high amount of nested elements and rule references,
+    and allows to generate the regular expression in a bottom-up procedure, starting
+    from the simplest items to the most complex rules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `computeRegularExpression` method (see the code bundle) obtains the regular
+    expression corresponding to the root rule and all the rules to which it makes
+    reference using the `getRegExpr()` method for each element. This method transforms
+    the information contained in `GrammarElement` into the regular expression syntax.
+    For example, the translation of the structure in the previous figure is `( (a
+    flight) | (flights) ) {0, 1}`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The case of `RuleReference` objects is special because they are translated using
+    the wildcard "`xxREFurixx`", where `uri` is the name of the rule being referred
+    to. For example, the `depart_day` rule is translated as `xxREFtimexx`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `solveReferences` method in the `HandCraftedGrammar` class is used to resolve
+    all the references. To do so, the regular expression for the whole grammar is
+    obtained by gradually resolving the references starting from the root. The result
+    for the complete grammar is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: This method also keeps track of the semantic tags. Initially, they are assigned
+    to their corresponding items, for example, the semantic representation `JFK` is
+    assigned to its item. However, they must be assigned to their corresponding rule
+    in order to be interpretable (that is, to `city` and then to `destination`). In
+    order to do so, we use the `SemanticParsing` class that allows linking tags to
+    rules.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As the regular expression will be the only mechanism used to check the validity
+    of the incoming phrases and loses the structure of the rules, the `SemanticParsing`
+    class has a position attribute that allows us to determine the group of the regular
+    expression that should match the text that triggers a tag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Java regular expressions enable the different subclasses of `GrammarElement`
+    to obtain partial matching results of elements grouped by parentheses, for example,
+    in the previous regular expression the whole matched sentence is in position 0,
+    `(((Show me)|(I would like)|(Are there any)){0,1})` is in position 1, `((Show
+    me)|(I would like)|(Are there any))` is in position 2, `(Show me)` is in position
+    3, `(Are there any)` is in position 5, and `(on ((Monday)|(Tuesday)|(Wednesday)))`
+    is in position 20.
+  prefs: []
+  type: TYPE_NORMAL
+- en: What we do with the `SemanticParsing` objects is to match the semantic tags
+    with each of these groups. This way, the `SemanticParsing` object for the `depart_time`
+    rule indicates that the matching group is in position 20, and that the semantic
+    is `M` if the expression is `on Monday`, similarly `T` for `on Tuesday`, and `W`
+    for `on Wednesday`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Thus, the semantic representation for the sentence *Show me flights from Paris
+    to New York on Tuesday morning* is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `obtainSemantics` method (see `HandCraftedGrammar.java` in the code bundle)
+    is used to check whether an input matches the grammar, and if it does, what its
+    semantic representation is. This method raises an exception if the grammar is
+    not initialized, that is, if the regular expression of the grammar has not been
+    computed yet (for example, if there was any problem in the constructor with the
+    format of the grammar).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To validate an incoming phrase, we use a Java matcher that automatically checks
+    whether the phrase is compatible with the regular expression. To do so, we ignore
+    whitespaces and use lowercases, as observed in the following piece of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Then, we use the `groupCount` and `group` attribute of the `Matcher` Java class
+    in order to get the phrases that match each of the groups in the regular expression,
+    where a group is each of the patterns between parentheses. This information is
+    then compared with the semantic information and the expected positions saved in
+    the `SemanticParsing` objects, and the semantic representation is saved in a string
+    that is the output of the `obtainSemantics` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Processing statistical grammars
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'To use Maluuba, you need to sign up for a developer''s account. Go to Maluuba''s
+    developer''s website ([http://dev.maluuba.com/](http://dev.maluuba.com/)), and
+    click on the tab **Sign up now and receive API access immediately**. Sign up is
+    associated with a Google, Facebook, or GitHub account. Complete the form and then
+    you will be directed to a page where you can create an app. Click on **Create
+    an app** and you will be asked for an **App name** and **App description**. For
+    current purposes, enter something simple, for example, `flights` for **App name**
+    and some text for the description, and you will be given an API key. You can now
+    use this key to send natural language queries to Maluuba, either through your
+    browser or from an Android app. Test the access to the API through your browser
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`NLU.java` sends a string to Maluuba to obtain a semantic interpretation. You
+    can change the `KEY` attribute to use your developer key. To access the grammar,
+    it uses `XMLLib` described in the previous chapter, so that the URL is accessed
+    safely by means of an asynchronous task.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The result is passed to the invoking method as a string. For example, for the
+    phrase *I would like to go to London*, it returns the following values:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The GrammarTest app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The `GrammarTest` app (`sandra.examples.nlu.grammartest`) illustrates how to
+    use `NLULib`. It has a simple GUI in which the user selects the type of grammar
+    to be used (hand-crafted or statistical), and can also select the **Check text**
+    or **Check ASR** button to obtain a semantic representation of the input.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the case of **Check text**, the input is typed into a `TextView` box using
+    the keyboard. In the case of **Check ASR**, the app recognizes an oral input and
+    produces the result for a 10-best list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the case of handcrafted grammar, an XML grammar is read from the specified
+    location. The default grammar used is the one presented previously. If the input
+    (either the input text or each of the N-best results) is in the grammar, it shows
+    a valid message and the semantic representation, if not, it shows an invalid message
+    (these messages are not hard-coded, but retrieved from the `Strings` file).
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the case of statistical grammar, the Maluuba service is used. In this case,
+    we do not pose any restrictions on the inputs, so all phrases are considered valid,
+    and a semantic interpretation is shown for each of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This app is useful for developers who wish to become familiar with the grammar
+    design process. The following figure shows two screenshots of the app using a
+    handcrafted (left) and a statistical (right) grammar:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The GrammarTest app](img/5297_06_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'This chapter has shown how to create and use grammars to check whether the
+    user''s input conforms to the words and phrases required by the app. Grammars
+    are also used to extract a semantic representation from the user''s input in terms
+    of concepts relevant for the app. Two types of grammar were presented: a hand-crafted
+    grammar designed by the developer to match the requirements of the app, and a
+    statistical grammar learned from a large corpus of relevant data. Hand-crafted
+    grammars are useful for input that is predictable and well-defined, whereas statistical
+    grammars provide more robust performance and can handle a wider range of input
+    that may be less well-formed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the chapters so far, the examples have assumed that the language used is
+    English and that the interface is speech-only. [Chapter 7](ch07.html "Chapter 7. Multilingual
+    and Multimodal Dialogs"), *Multilingual and Multimodal Dialogs*, will look at
+    how to build apps that make use of languages other than English and other modalities
+    in addition to speech.
+  prefs: []
+  type: TYPE_NORMAL

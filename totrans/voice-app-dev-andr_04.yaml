@@ -1,0 +1,530 @@
+- en: Chapter 4. Simple Voice Interactions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Wouldn't it be great if you could just speak to your mobile device to ask it
+    for information or to get it to do something? This chapter looks at simple voice
+    interactions that allow you to do just this. Two tutorial examples will show you
+    how to implement a query to search for information as well as a request to launch
+    one of the apps on your device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Speech recognition is not perfect, thus it is interesting to implement some
+    mechanisms to choose only the best recognition results. In previous chapters,
+    we studied how to obtain confidence measures. In this chapter, we will cover two
+    new mechanisms: similarity measures to compare the recognized input with what
+    the user said, and confirmations to directly ask the user if the system understood
+    correctly.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: By the end of this chapter, you should be able to develop simple voice interactions
+    to request information and carry out commands on your device. You should also
+    be aware of how to use similarity measures and confirm what the user has said.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Voice interactions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As discussed in [Chapter 1](ch01.html "Chapter 1. Speech on Android Devices"),
+    *Speech on Android Devices*, Google Voice Actions are simple interactions in which
+    the user speaks a question or a command and the app responds with an action or
+    a verbal response (or a combination of both).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The following are examples of similar interactions with a simple structure
+    and involving a small number of turns:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 1
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'User: BBC News'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'App: (launches BBC News)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Example 2
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'App: What is your query?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'User: What is the capital of France?'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'App: (returns web pages about Paris and France)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The interactions are simple in the following ways:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Limited dialog management**: The interactions consist of at most two or three
+    turns.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Limited spoken language understanding**: The user is restricted to inputs
+    consisting of single words or phrases, such as the name of a website or of an
+    app, or a stretch of text that can be handled by the Google search engine.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: VoiceSearch app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'This app illustrates the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When clicking on the **Press the button to speak** option, the user is prompted
+    to say some words.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The user speaks some words.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`VoiceSearch` initiates a search query based on the words spoken by the user.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The opening screen has a button asking the user to press and speak. On pressing
+    the button, the next screen displays the Google speech prompt **What is your query?**
+    The results are displayed in a browser window.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this case, the app uses the two libraries developed previously: `TTSLib`
+    (see [Chapter 2](ch02.html "Chapter 2. Text-to-Speech Synthesis"), *Text-to-Speech
+    Synthesis*) and `ASRLib` (see [Chapter 3](ch03.html "Chapter 3. Speech Recognition"),
+    *Speech Recognition*). Their `jar` files are included in the `libs` folder of
+    the `VoiceSearch` project. The ASR methods are used to recognize the user input
+    and use it as the search criterion. The TTS is employed to provide spoken feedback
+    to the user about the status of the app.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This app combines the code that was already presented for the `TTSWithLib` ([Chapter
+    2](ch02.html "Chapter 2. Text-to-Speech Synthesis"), *Text-to-Speech Synthesis*)
+    and the `ASRWithLib` ([Chapter 3](ch03.html "Chapter 3. Speech Recognition"),
+    *Speech Recognition*) apps. It uses an instance of TTS as in `TTSWithLib`, and
+    the same methods for ASR in `ASRWithDemo`. It also provides visual feedback on
+    whether the app is listening to the user or not by changing the color and text
+    of the button.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once the ASR produces a result, it is used to carry out a Google search using
+    a web search intent, as shown in the `processAsrResults` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: As can be observed, the app always initiates a web search using the best result.
+    However, the system might have misrecognized what the user said, in which case
+    the search launched would be incorrect. In order to avoid this situation, it is
+    possible to make use of confirmations. An introduction to confirmations and a
+    simple example using the `VoiceSearch` app will be presented at the end of this
+    chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: VoiceLaunch app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The functionality of this app is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: When clicking on the **Press to speak** button, the user is prompted for the
+    name of an app.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The user says the name of an app.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`VoiceLaunch` compares the recognized input against the names of all the apps
+    installed in the device, and launches the one whose name is the most similar.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'An application like `VoiceLaunch` does not require any interface, as the user
+    could just speak the name of the app they want to be launched. However, for illustration
+    purposes, we have created a simple interface in which the user can choose the
+    values of two parameters: a similarity threshold and a similarity criterion, as
+    shown in the following screenshot. The screenshot shows the scenario in which
+    the user has asked to launch **Email**. `VoiceLaunch` shows the screen in the
+    figure and launches the **Email** application (the one with the highest similarity,
+    in this case **1.00**):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![VoiceLaunch app](img/5297_04_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We have introduced the technique of similarity criteria to show how to improve
+    on the results from the ASR. For example, when you have a list of keywords that
+    you want to recognize, but you cannot restrict the ASR to listen only for those
+    words, it is possible that the recognition results are not exactly equivalent
+    to the keywords you expected. For example, if your keywords are ice cream flavors,
+    you may consider *chocolate*, *strawberry*, and *vanilla*, but if your ASR is
+    not restricted, the recognition result for *strawberry* could be *cranberry*.
+    If your app is expecting an exact match, it would discard the recognition result.
+    However with a similarity measure, your app would know that the user said something
+    similar to *strawberry*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In `VoiceLaunch`, the similarity criterion is used to control how the app measures
+    the similarity between the name recognized and the names of the apps installed
+    in the device. The similarity threshold is employed so that an app is not launched
+    if its name is not similar enough to what was recognized from the user input.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We consider the following two options for computing similarity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Orthographic similarity**: `VoiceLaunch` computes Levenshtein distance between
+    the words. This metric considers the distance between words A and B as the minimum
+    number of character insertions, deletions, or substitutions that must be carried
+    out in A to obtain B. `VoiceLaunch` translates the distance value into a value
+    of similarity between 0 and 1.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Phonetic similarity**: `VoiceLaunch` uses the *Soundex* algorithm to compute
+    the phonetic similarity between the names. The implementation used is only valid
+    for English, which is why the `VoiceLaunch` app is only available in this language.
+    In this way, words that sound the same would be considered to be similar even
+    if their spelling is different. The similarity is also measured using the interval
+    from 0 to 1.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'There are many alternatives to the distances considered: Euclidean distance,
+    Jaccard index, Hamming distance, Sorensen similarity index, or Metaphone.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Usually homophones have a similar spelling, so the values for orthographic
+    and phonetic similarity are almost the same, for example, *to* and *too*, or *flower*
+    and *flour*. As can be observed, phonetic similarity is more convenient when working
+    with ASR results, while orthographic similarity is better when working with results
+    from text where misspellings are more frequent. The following table shows some
+    examples:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Similarity criteria | Sample word pairs |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '|   | Addition – Edition | Flower - Flour | Plane – Plain | Browser – Mail
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Orthographic similarity | 0.75 | 0.66 | 0.60 | 0.00 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Phonetic similarity | 0.75 | 1.00 | 1.00 | 0.00 |'
+  prefs: []
+  type: TYPE_TB
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A small Java project to make tests is available on the book's web page. You
+    can make your own tests using the `ComparisonTest` java project. In order to use
+    it, you must include the apache library for Soundex, and include the words to
+    be compared as run parameters. To include the library using Eclipse, right-click
+    on **Project** | **Properties** | **Libraries** | **Add external JARs**. To run
+    the project, right-click on **Run as** | **Run configurations** and in the **Arguments**
+    tab under **Program arguments**, include the two words separated by a space (for
+    example, `to too`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The code that deals with the ASR and TTS is similar to the `VoiceSearch` app.
+    However, after the recognition is completed, `VoiceLaunch` must find apps that
+    are similar to the recognized words of the user and launch the one which is the
+    most similar. This is done in the `processAsrResults` method (take a look at it
+    in the code bundle in the `VoiceLaunch.java` file under the `VoiceLaunch` project),
+    which invokes the methods `getSimilarAppsSorted` and `launchApp` that will be
+    described in the following pages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Have you noticed that…**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The use of the ASR library in all the apps enables them to have a similar structure,
+    in which the processing of the recognized information is carried out in the `processAsrResults`
+    method. For example, in the `VoiceSearch` app it started a search with the recognized
+    criteria, while in `VoiceLaunch` it gets the list of similar apps installed and
+    launches the most similar one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additionally, `VoiceLaunch` must store and manage information about the apps
+    available on the device. In order to do this efficiently without losing the legibility
+    of the code, we have created an auxiliary class named `MyApp` (you can find it
+    in the code bundle, in `VoiceLaunch.java` under the `VoiceLaunch` project), in
+    which for each app we save its user-friendly name (for example, Adobe Reader),
+    its package name recognizable by Android (for example, com.adobe.reader), and
+    its similarity with the user input (a value from 0 to 1, for example, 0.7).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As it is necessary to sort the installed apps, we also define a comparator
+    for the objects of the `MyApp` class. Comparators return a negative number if
+    the first element is smaller than the second, 0 if they are equal, and a positive
+    number if the first is higher than the second. They can then be employed to sort
+    collections from the minimum to the maximum value. In our case, we want to sort
+    a collection of `MyApps` from the highest to the lowest similarity. Thus, we multiply
+    the results of the comparator of the similarity values by -1 to get the results
+    in the reverse order:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: As stated before, `VoiceLaunch` uses the method `getSimilarAppsSorted` to obtain
+    the list of apps in the device sorted by similarity, but it only takes into account
+    those apps whose similarity with the recognized name is higher than the specified
+    threshold.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As can be observed in the code bundle (in `VoiceLaunch.java` under the `VoiceLaunch`
+    project), the process is carried out through the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A list of all the installed apps is retrieved from the Package Manager.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: For each app in the list, its similarity with the recognized name is computed
+    using the algorithm chosen by the user in the GUI. If the similarity value obtained
+    is higher than the threshold, the name, package name, and similarity values for
+    the app are saved by creating an instance of the `MyApp` class, which is added
+    to the `similarApps` collection.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'The `similarApps` collection is sorted using our similarity comparator: `Collections.sort(similarApps,
+    new AppComparator());`'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The information is saved in the log, so that the developer can be aware of which
+    apps were considered in terms of similarity.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**You can also try…**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: An additional method could be used so that the system does not choose one of
+    the similarity measures and selects the most similar app taking into account the
+    results of both the methods, for example, using a weighted voting approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Depending on the similarity algorithm employed, `getSimilarAppsSorted` invokes
+    one of the following methods: `compareOrthographic` or `comparePhonetic` (see
+    `VoiceLaunch.java` under the `VoiceLaunch` project in the code bundle). The former
+    computes orthographic distance using the Levenshtein measure, the latter computes
+    the phonetic distance using the Soundex algorithm.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: To compute Levenshtein distance, we use the `LevenshteinDistance.java` class
+    in the `com.voicedemos` package. It is based on the code proposed by wikibooks
+    available at [http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Java](http://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Java),
+    to which we have added the code to translate the distance to a similarity value
+    between 0 and 1.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To compute the phonetic distance, we use the Soundex implementation provided
+    by Apache Commons available at [http://commons.apache.org/proper/commons-codec/index.html](http://commons.apache.org/proper/commons-codec/index.html).
+    In order to do this, we have added the `jar` file corresponding to `commons-code-1.8
+    lib` to the `libs` folder of the `VoiceLaunch` project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The input parameters of the two similarity calculation methods are two strings,
+    corresponding to the name of the app under consideration and the recognized input.
+    These strings were previously normalized by erasing spaces and using lowercase:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A more sophisticated normalization could be carried out in order to cope with
+    the situation in which the user says just one word of a two word name, for example,
+    *kindle* instead of *kindle reader*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Once the apps are ordered, the most similar app is launched using the `launchApp`
+    method, which uses `launchintent` with the package name of the app (you can find
+    it in the `VoiceLaunch.java` file in the code bundle).
+  prefs: []
+  type: TYPE_NORMAL
+- en: VoiceSearchConfirmation app
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Confirmations are a very important aspect of a transactional dialog and are
+    also used extensively by humans in service transactions to ensure that everything
+    has been understood correctly. Since the current speech recognition technology
+    cannot guarantee that the app heard exactly what the user said, the app should
+    confirm what the user wants, especially if the next action could result in unrecoverable
+    consequences. However, confirmations should be used judiciously as they prolong
+    the interaction and can be annoying for the user if they are overused.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `VoiceSearchConfirmation` app has the same functionality as `VoiceSearch`,
+    but it confirms the search criteria before performing the search. Two sample interactions
+    with this app are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Confirmation scenario**: This scenario is characterized by the following
+    steps:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The user pushes the button to talk and says *Weather in Belfast*.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The system understands *Weather in Belfast* and asks *Did you say weather in
+    Belfast?*
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The user pushes the button to talk and says *Yes*.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The system launches a search with *Weather in Belfast* as the criterion.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '**Negation scenario**: It is characterized by the following steps:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The user pushes the button to talk and says *Weather in Granada*.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The system understands *Weather in Canada* and asks *Did you say weather in
+    Canada?*
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The user pushes the button to talk and says *No*.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The dialogue goes back to step 1 until the user is satisfied.
+  prefs:
+  - PREF_IND
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The `processResults` method is invoked any time the ASR recognizes something
+    from the user input. Thus, in order to provide the app with confirmation capabilities,
+    it is necessary to distinguish whether the method was invoked after recognizing
+    the search criterion or whether it recognized the yes/no response from a confirmation
+    request. In order to do this, we introduce the new attribute `searchCriterion`
+    that stores the criterion recognized. If it is null, we try to recognize a new
+    criterion, if not, we confirm its value. You can take a look at the code in the
+    `VoiceSearchConfirmation.java` file under the `VoiceSearchConfirmation` project
+    of the code bundle.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Other similarity measures and techniques**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Other similarity measures and techniques for enhancing the results returned
+    by the Google speech recognizer are described in the book by Greg Milette and
+    Adam Stroud called *Professional Android™ Sensor Programming* in Chapter 17\.
+    Among the techniques discussed are:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using stemming to improve word spotting, that is, reducing words to their roots
+    by removing suffixes, for example, reducing walk, walks, walked, and walking to
+    the same root.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Phonetic indexing, that is, matching words that are similar in terms of how
+    they sound, for example, being able to return *apple* if the recognizer returns
+    the similarly sounding word *appeal*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Matching using Lucene, a search engine library designed for searching text.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In this chapter, we have shown how to develop simple voice interactions using
+    the Google speech recognition and TTS APIs. The first example showed how to take
+    an input of some words from the user and initiate a search query. The second example
+    involved using speech to launch apps on the device. Here we introduced the technique
+    of using similarity measures to compare the recognition of the user''s input with
+    what might have been said. Two different measures were illustrated: orthographic
+    similarity and phonetic similarity. The final example showed how to use confirmations
+    in order to check with the user that the system had recognized the input correctly.
+    These techniques, along with the use of confidence scores introduced in the previous
+    chapter, are useful tools for the development of speech-enabled apps.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, these interactions are limited in two ways. Firstly, they do not involve
+    the use of dialog state information to control the interaction and to determine
+    what the app should say and do. The app's behavior is hard-coded within the particular
+    voice action. Secondly, the interactions restrict the user to a simple one word
+    or a short phrase input. More complex dialogs require both a representation of
+    the dialog state and more advanced spoken language understanding. [Chapter 5](ch05.html
+    "Chapter 5. Form-filling Dialogs"), *Form-filling Dialogs* shows how to include
+    a representation of dialog state in order to provide more flexible dialog management,
+    while [Chapter 6](ch06.html "Chapter 6. Grammars for Dialog"), *Grammars for Dialog*
+    shows how to use grammar to allow more advanced spoken language understanding.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As far as confirmations are concerned, we have presented a very naive solution
+    for the case in which only a single piece of data has to be confirmed. In the
+    next chapters, we will study how to create a more sophisticated behavior in which
+    several pieces of data can be confirmed as well as confirmation policies that
+    take into account recognition confidences. We will also introduce an approach
+    that does away with the need to push the button to talk.
+  prefs: []
+  type: TYPE_NORMAL

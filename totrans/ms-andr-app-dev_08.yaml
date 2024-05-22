@@ -1,0 +1,1073 @@
+- en: Chapter 8. Databases and Loaders
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will create a SQLite database following a database contract
+    and perform read/write operations using a database called **DAO** (**Data Access
+    Object**). We will also explain the difference between a query and a raw query.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You will learn what a content provider is and how to create it, which will allow
+    us to make this database accessible from `CursorLoader`. We will access the content
+    provider through a content resolver and query different tables of the database
+    at the same time, and you will learn how to use a join query in a content provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With `CursorLoader` **,** we'll be able to synchronize a list view with a database
+    by creating a mechanism, where if we store or modify any data in the database,
+    the changes will automatically be reflected in our view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To finish, we will add the popular feature pull to refresh in order to update
+    the content on demand. So, in this chapter, the following topics will be covered:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating the database
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Database Contract
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Database Open Helper
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Database Access Object
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating and accessing content providers
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Content Provider
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Content Resolver
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Syncing the database with UI
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: CursorLoader
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: RecyclerView and CursorAdapter
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Pull to refresh
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating the database
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To understand how databases work in Android, we will continue working on our
+    example app, `MasteringAndroidApp`, creating a database to store the job offers
+    that will be used to see the content in offline mode. This means that if we open
+    the app once, the job offers will be kept in the device allowing us to see the
+    information if opened without an Internet connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are four mechanisms to persist data in Android:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Shared preferences**: These preferences are used to store basic information
+    in a key-value structure'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**The internal storage**: This storage saves files that are private to your
+    app'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**The external storage**: This storage saves files which can be shared with
+    other apps'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**The SQLite database**: This database, based on the popular SQL, allows us
+    to write and read information in a structured way'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We can create simple structures, such as one-table databases, as well as complex
+    structures with more than one table. We can combine the output of different tables
+    to create complex queries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will create two tables so as to show how to create a join query using the
+    content provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There will be a table for the companies, with the company ID, some information
+    about them, name, website, extra information, and so on. A second table will include
+    the job offers; this will also need to contain a column with the companies' IDs.
+    If we want to have a tidy structure rather than having a big table with numerous
+    fields, it's preferable to have the company information in the company table and
+    the job offer in the job table, with just a reference to the company.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We won't alter the data structure in Parse for the sake of clarity and in order
+    to focus on SQLite. Therefore, we will download the content and manually split
+    the company and the job offer data, inserting them into separate tables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Our company table will have the following structure:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| RowId | Name | Image_link |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 0 | Yahoo | …. |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 1 | Google | … |'
+  prefs: []
+  type: TYPE_TB
+- en: The `rowId` column is automatically added by Android, so we don't need to specify
+    this column during the creation of the table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following table is the table of job offers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| RowId | Title | Description | Salary | Location | Type | Company_id |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 24 | Senior Android.. | 2x developers | 55.000 | London,UK | permanent |
+    1 |'
+  prefs: []
+  type: TYPE_TB
+- en: '| 25 | Junior Android.. | Dev with experience on.. | 20.000 | London,UK | permanent
+    | 0 |'
+  prefs: []
+  type: TYPE_TB
+- en: 'We will create a view as a result of joining these two tables; here, the join
+    will be based on the `company_id`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Title | Description | Salary | Location | Type | Company ID | Name | Image_link
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- | --- | --- | --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Senior Android | 2x developers.. | 55.000 | London,UK | permanent | 1 | Google
+    | … |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Junior Android | Dev with experience on.. | 20.000 | London,UK | permanent
+    | 0 | Yahoo | … |'
+  prefs: []
+  type: TYPE_TB
+- en: This view will allow us to obtain all the data that we need in a single row.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The database contract
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The database contract is a class where we define the name of our database and
+    the name for all the tables and columns as constants.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It serves two purposes: firstly, it is a good way to have an idea of the structure
+    of the database at first sight.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To create a database package and the `DatabaseContract.java` class, use the
+    following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Secondly, using a reference to the constant avoids mistakes and allows us to
+    make only one change in the value of a constant and propagate this over our entire
+    app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For instance, while creating this table in the database, we need to use the
+    SQL sentence, `CREATE TABLE "name"…`; what we will do is use the name of the table
+    from the contract with `CREATE TABLE DatabaseContract.CompanyTable.TABLE_NAME…`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The database contract is just the first step. It doesn't create a database;
+    it's just a file that we use as a schema. To create the database, we need the
+    help of `SQLiteOpenHelper`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The database open helper
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The open helper is a class that manages the creation and updating of the database.
+    Updating is an important aspect that we need to keep in mind. Consider that we
+    upload an app to Play Store, and after some time, we want to change the structure
+    of the database. For instance, we want to add a column to a table without losing
+    the data that the users of previous versions have stored in the old schema. Uploading
+    a new version to Play Store, which deletes the previous information when the user
+    updates our app, is not good for user experience at all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To know when a database needs to be updated, we have a static integer with
+    the database version that we have to manually increase if we alter the database,
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We need to create a `DatabaseOpenHelper` class that extends `SQLiteOpenHelper`.
+    While extending this class, we are asked to implement two methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`SQLiteOpenHelper` will automatically call `onCreate` when we create an object
+    of this class. However, it will only call this if the database is not created
+    before and only once. In the same way, it will call `onUpgrade` when we increase
+    the database version. That''s why we need to send the params with the database
+    name and the current version when we create an object of this class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s start with the creation of the database; the `onCreate` method needs
+    to execute a SQL sentence on the database to create the table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will define these sentences in static variables, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: By default, Android creates a `column_id` column, which is unique and autoincremental
+    in every row; therefore, we don't need to create a column ID in the companies
+    table.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As you can see, we also have the commas and types in the variable to avoid
+    mistakes. It''s very common to miss a comma or make a mistake when writing the
+    sentence directly, and it''s very time consuming to find the error:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ve seen how to create our tables, now we have to manage the update. In
+    this case, we will simply drop the previous information and create the database
+    again because there is no important information in the table. Once the app is
+    opened after the update, it will download the job offers again and populate the
+    new database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our complete version of the class will appear as the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Database Access Object
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: '**Database Access** **Object**, commonly known as **DAO**, is an object that
+    manages all access to the database from the app. Conceptually, it''s a class in
+    the middle of the database and our app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Database Access Object](img/4887_08_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: It's a pattern usually used in **J2EE** (**Java 2 Enterprise Edition**) on the
+    server side. In this, the implementation of the database can be changed and added
+    an extra layer of independency to, thus allowing the change in database implementation
+    without changing any data in the app. Even if we do not change the implementation
+    of the database in Android, (it will always be a SQLite database retrieved through
+    `SQLiteOpenHelper`), it still makes sense to use this pattern. From a structural
+    point of view, we will have all our database access operations in the same place.
+    Also, using a DAO as a singleton with synchronized methods prevents issues such
+    as trying to open the database from two different places at the same time, which
+    can be locked if we are writing. Of course, the possibility to retrieve this singleton
+    from anywhere in the app makes access to the database really easy as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next section, we'll take a look at how to create a content provider,
+    which is an element that can replace our DAO object; however, content providers
+    are tedious to implement if what we want is to just store and read data from the
+    database. Let's continue with `MasteringAndroidApp`, creating a class called `MasteringAndroidDAO`,
+    which will store the job offers and companies and show the information from the
+    database in order to have an offline-working app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This class will be a singleton with two public synchronized methods: one to
+    store job offers (in the job offer table and the company table) and another to
+    read them. Even if we split the information into two tables, while reading we
+    will merge it again so that we can keep displaying the job offers with our current
+    adapter without making major changes. Through this, you will learn how to join
+    two tables in a query.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If a method is synchronized, we guarantee that it can''t be executed from two
+    places at the same time. Therefore, use the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will start with the `storeOffers()` method. The first thing that we need
+    to do is open the database with `DatabaseOpenHelper`, and after this we need to
+    start a transaction in the database. We will store a list of items, so it doesn''t
+    make sense to perform a transaction for each item. It''s much more efficient if
+    we open a transaction, perform all the insert operations that we need, and end
+    the transaction after this, committing all the changes in a batch:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Don't forget to close the database at the end with `db.close()`. Otherwise,
+    it will remain open and consume resources, and we will get an exception if we
+    try to open it again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we only had to insert data in a single table, we would only need to create
+    a `ContentValue` object—a key-value object built based on the columns that we
+    want to store—and call `db.insert(contentValue)`. However, our example is a little
+    bit more complicated. To store a job offer, we need to know the company ID, and
+    to obtain this ID, we need to ask our database if the company is already stored
+    on it. If it's not, we need to store it and know which ID was assigned to it because,
+    as we mentioned before, the ID is automatically generated and increased.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To find out if the company is already on the table, we need to perform a query
+    searching all the rows to see if any row matches the name of the company that
+    we are searching. There are two ways of performing a query: `query()` and `rawQuery()`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Performing a query
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A query needs the following parameters:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`tableColumns`: This is the projection. We might want to return the columns
+    that we want to return in the cursor in the whole table. In this case, it will
+    be null, equivalent to `SELECT * FROM`. Alternatively, we might want to return
+    just one column, `new String[]{"column_name"}`, or even a raw query. (here, `new
+    String[]{SELECT ….}`).'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`whereClause`: Usually, the `"column_name > 5"` condition is used; however,
+    in case the parameters are dynamic, we use `"column_name > ?"`. The question mark
+    is used to specify the position of the parameters, which will come under the following
+    `whereArgs` parameters.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`whereArgs`: These are the parameters inside the `where` clause that will replace
+    the question marks.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`groupBy` (`having`, `orderby`, and `limit`): These are the rest of the params,
+    which can be null if not used.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In our case, this is how we will ask if a company exists on the database. It
+    will return a cursor with just one column, which is all we need to obtain the
+    ID:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The benefit of using `QueryBuilder` instead of `rawQuery` is the protection
+    against SQL injections. At the same time, it's less prone to error. Performance-wise,
+    it does not have any advantage as it creates `rawQuery` internally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using a raw query
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A raw query is just a string with the SQL query. In our example, it would be
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: In most cases, a raw query is more readable and needs less code to be implemented.
+    In this case, a user with bad intentions could add more SQL code in the `whereArgs`
+    variable to obtain more information, produce an error, or delete any data. It
+    doesn't prevent SQL injection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing cursors
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When we call `query()` or `rawQuery()`, the result is returned in a cursor.
+    A cursor is a collection of rows with many methods to access and iterate it. It
+    should be closed when no longer used.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The shortest way to iterate a cursor is to call `moveToNext()` in a loop, which
+    is a method that returns false if there is no next:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: To read this information, we have different methods, such as `getString()`,
+    which receives the index of the column of the value needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To know if a company is already on the table, we can execute a query, which
+    will return a collection of rows with just one column of integers with the ID.
+    If there is a result, the ID will be in the column with the `0` index:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Another option is to define the column with the name of the company as unique
+    and to specify to ignore the conflicts using `insertWithOnConflict`. This way,
+    if the company is already on the database or just inserted, it will return the
+    ID:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can create a method for the query and get the ID from the cursor if there
+    is a result. If not, the result will be `-1`. Before storing the job offer, we
+    will check if the company exists. If not, we will store the company, and the ID
+    will be returned during the insert:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Before testing this, it would be ideal to have the method to read from the database
+    ready so that we can check that everything is stored correctly. The idea is to
+    query both tables at the same time with a join query so as to get back a cursor
+    with all the fields that we need.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In SQL, this would be a `SELECT * FROM job_offer_table JOIN company_table ON
+    job_offer_table.company_id = company_table.rowid …` query.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We need to do this in a query using the name of the tables from the database
+    contract. This is how it will look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next step is to create a job offer object from a cursor row and add it
+    to the job offer list:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For this example, we will clear the database when we add new data. For this,
+    we will create a method in `MasteringAndroidDAO`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once the database access object has all the methods that we will need, we have
+    to move to `ListFragment` and implement the logic. The ideal flow would be to
+    first show the data from the database and fire the download to get the new job
+    offers. In the background, the offers will be updated and the list will be refreshed
+    when the update is finished. We will do this with the content provider and a cursor
+    loader that connects the database automatically with the list view. For this example,
+    to test the DAO, we will simply show the data from the database if there is no
+    internet connection or get a new list of job offers. When the new list is downloaded,
+    we will clear the database and store the new offers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we wanted to build a system that keeps a history of the job offers instead
+    of clearing the database, what we would have to do is check if there are any new
+    offers coming from the server that are not stored already in the database and
+    save only the new offers. This can be easily done by creating a new column with
+    the ID from Parse so that we can compare job offers with a unique identifier.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To check if there is an Internet connection, we will ask the connectivity manager
+    using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the `onCreateView` method, we need to ask whether or not there is a connection.
+    If there is a connection, we can download a new list of offers, which will be
+    shown and stored in the database, thus clearing the previous offers:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: At the moment, we will create the adapter with a new list of elements. If we
+    want to update the list view on the screen with new job offers and we use this
+    method, it will restart the adapter, which will make the list empty for a second
+    and move the scrolling position to the top. We shouldn't create an adapter to
+    refresh the list; the existing adapter should update the list of elements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To do this, we would have to create an `updateElements()` method in the adapter
+    that replaces the current list of offers and calls `notifiyDataSetChanged()`,
+    causing the adapter to refresh all the elements. If we know exactly how many elements
+    we have updated, we can use `notifyItemInserted()` or `notifyRangeItemInserted()`
+    to update and animate only the new elements added, which works more efficiently
+    than `notifyDataSetChanged()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is no need to do this synchronization of the view with the data manually.
+    Android provides us with `CursorLoader`, a mechanism that connects the list view
+    with the database directly. So, all we need to do is store the new offers in the
+    database, and the list view will automatically reflect our changes. However, all
+    of this automation comes at a cost; it needs a content provider to work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Content providers
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'A content provider is very similar to the concept of a DAO; it is an interface
+    between the data and the app that allows different apps to exchange information.
+    We can decide whether we want it to be public or not, whether we want other apps
+    to be able to get data from it, and whether it will only be used internally in
+    our app. The data can be stored in a database such as the one we are about to
+    create. It can be stored in files; for instance, if we want access to videos or
+    pictures from the gallery, we''ll use an Android built-in media content provider.
+    Alternatively, it can be obtained from the network:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Content providers](img/4887_08_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: A content provider must be declared in the manifest as it is a component of
+    our app and also specify whether or not it will be accessible to other apps, which
+    is controlled by the attribute exported. Let's start by creating our own content
+    provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To create a content provider, create a `MAAProvider` class and extend `ContentProvider`.
+    We will be asked to implement the following methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `OnCreate` method will be called when the provider is started; it will initialize
+    all the elements required for the provider to work. The provider will start at
+    the same time as the application. The system knows which provider to start because
+    it's defined in the manifest. The next four methods are the methods to access
+    and manage the data. The final method returns the MIME type of the object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As we mentioned before, there are different content providers in the phone that
+    we can use; for example, we can access the SMS, contacts, or media items from
+    the gallery using a content provider. So, there must be a way to identify and
+    access each one of them. This is done with a **URI** (**Uniform Resource Identifier**),
+    which is a string similar to a URL that we use to go to a website in the browser.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A URI is composed of a prefix, `"content://"`, followed by a string identifier,
+    called authority. It is usually the name of the class plus the package `"com.packtpub.masteringandoridapp.MAAProvider"`
+    followed by a slash and the name of the table, for instance `"/company_table"`.
+    It is also followed optionally by a slash and the number of the row inside the
+    table `"/2"`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Therefore, the complete URI for the company table will be `"content://com.packtub.masteringandroidapp.MAAProvider/company_table`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The complete URI for the company with ID number 2 will be `"content://com.packtub.masteringandroidapp.MAAProvider/company_table/2"`.
+    This URI would be represented as `company_table/#` in a general way, where `#`
+    will be replaced by an integer.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Given that we have two different tables and a third one, which is the result
+    of the join (which can be accessed to get all the elements on the table or to
+    get a single row), we have six possible URIs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`content://com.packtub.masteringandroidapp.MAAProvider/company_table`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`content://com.packtub.masteringandroidapp.MAAProvider/company_job_offer`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`content://com.packtub.masteringandroidapp.MAAProvider/offer_join_company`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`content://com.packtub.masteringandroidapp.MAAProvider/company_table/#`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`content://com.packtub.masteringandroidapp.MAAProvider/company_job_offer/#`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`content://com.packtub.masteringandroidapp.MAAProvider/offer_join_company/#`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We have only one content provider; in theory, this provider can implement the
+    `query`, `insert`, `update`, `delete`, and `getType` methods for all six URIs,
+    each with six different implementations. Therefore, when we perform `myMAAProvider.insert(URI
+    …)`, we will need to have an `if` statement to see which of the tables needs an
+    insert and choose the right implementations. It would be something similar to
+    this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see by comparing the strings, this doesn't seem right, and if we
+    add a URI with an integer at the end, we would need some mechanism to verify that
+    `"company_table/2"` corresponds to the general URI, `"company_table/#"`. This
+    is why we have `UriMatcher`. `UriMatcher`, which will contain a list of the possible
+    URL's associated with an integer. So, when it receives a URI, it will tell us
+    which integer to use while using string patterns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After creating `UriMatcher` and defining all the possible cases, we can just
+    add the possible cases to `UriMatcher` and call `UriMatcher.match(Uri uri)`, which
+    will return an integer with the case. All we need to do is a switch to check which
+    case we are in:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can start implementing the query method to get a list of offers merged with
+    companies and set it to the adapter to check that everything is working well so
+    far. We need to have the following variable with the database:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will be assigned in `onCreate` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Also, in the query method, we need to create a query for the six possibilities,
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We need to do this with the `DBOpenHelper.OFFER_JOIN_COMPANY` variable defined
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To access a content provider, we will use `ContentResolver`. It is a general
+    instance that provides access to all the content providers available as well as
+    to CRUD operations (create, read, update, and delete):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To use the content resolver, we need a URI for the content provider. We can
+    create it from a string variable right before making the call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: Alternatively, we can define a list of URI in the provider as a static variable
+    access to them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we try to run this code now, we would get the error, '*failed to find provider
+    info for com.packtub.masteringandroidapp.MAAProvider*'. This means that the system
+    can't find the provider because we haven't added it to the manifest yet.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To add a provider, we need to add the `<provider>` element within the `<application>`
+    tag; it needs the path and name of our provider and the authority. In our case,
+    both are the same:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Even if we display the data with `CursorLoader` and do not use the list of
+    offers content, it wouldn''t be a bad idea to create a temporary method that displays
+    the list of offers from the content provider. It helps ensure that the content
+    provider is accessible and returns the expected data before going further down
+    in the `CursorLoader` road:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'By replacing the call to `showOffersFromDB()` with `showOffersFromContentProvider()`,
+    we should see exactly the same information in the same order:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `CursorLoader` object can be easily implemented once the provider is created.
+    At this stage, we can say that most of the job is done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sync database with UI
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When we use `CursorLoader` with a content provider, the data returned in the
+    cursor is directly connected with the data in the database in such a way that
+    one change in the database is reflected instantly in the UI. When we have this
+    system working, all we need to worry about is storing the data in the database
+    and updating the data. When we have this system ready, we will discuss how to
+    implement the popular pull to refresh system to update the job offers at the time
+    the user wants. The goal is to add a new job offer in Parse, pull the list to
+    refresh, and see the new element come instantly, all handled in the background
+    through the content provider.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing CursorLoader
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To complete this goal, the next step is to create `CursorLoader`. We talked
+    about loaders previously in the book; as we mentioned, they are a mechanism to
+    load data in the background. This one specifically will return the data in a cursor
+    and load it from a content provider. It will also refresh the data when any change
+    in the source is detected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To start using `CursorLoader`, our Activity or Fragment—`FragmentList` in our
+    case—needs to implement `LoaderManager.LoaderCallback<Callback>`. This interface
+    will ask us to implement the following methods:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s start with the first method—`onCreateLoader`. This method receives an
+    integer ID as a parameter, which will be the ID of our loader. We can have more
+    than one loader working in the same activity, so we will assign an ID to them
+    in order to be able to identify them. Our loader will be defined as:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `OnCreateLoader` method will be executed when we tell `LoaderManager` to
+    initialize our loader. This can be done in `onCreateView()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This method has to create all the different loaders that can be initialized
+    (they can be different types of loaders); in our case, we will only have one,
+    which will be `CursorLoader`. It will query the table and join the offers'' table
+    with the companies'' table as a result. The string with the content URI has been
+    defined previously in `MAAProvider`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we tell the loader manager to initialize our loader, it automatically
+    creates it and starts running the query to the database; asynchronously, it will
+    call the second method implemented, which is `onLoadFinished`. In this method,
+    as an example, we can retrieve the cursor and display the data, just as we did
+    before while getting the cursor from the content resolver. By moving the code
+    that we use to create the job offer from the course to a static method in the
+    `JobOffer` class, our `onLoadFinished` method will look similar to the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: This solution queries the database in the background and asynchronously displays
+    the result, but it is still far from perfect. We will iterate through the cursor
+    to create a list of objects, and after this, we will send the list to the adapter,
+    which is iterating over the list again to create the elements. What if we had
+    an adapter that could build the list directly from the cursor? The solution to
+    our problem exists, and it's called CursorAdapter. However, before moving to this,
+    we need to implement the third method, which is still pending.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The third method, `onLoaderReset`, is called when the data is not valid. This
+    could happen, for instance, if the source has changed. It removes the reference
+    to the cursor, preventing memory leaks and is commonly used along with `CursorAdapter`.
+    This one is the easiest of the three to implement. In our example, we can leave
+    it empty; we won''t have any memory leak because we will not use our cursor outside
+    the method. If we were using `CursorAdapter`, there would be a reference to it
+    outside our `onLoadFinished` method and we would need to set the adapter to `null`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: RecyclerView and CursorAdapter
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `CursorAdapter` class creates an adapter based on a cursor and is intended
+    to be used with `ListsView`. It extends from `BaseAdapter`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The cursor passed to the adapter must have a column named `_id`. To do this,
+    we don't need to change our database; we can simply rename the field from `rowid`
+    to `_id` in the `CursorLoader` creation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is an example of a basic `CursorAdapter`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once it is created, we can pass it the new cursor in `onLoadFinished`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: This solution is perfect if you are working with `ListView`; unfortunately,
+    `RecyclerView` works with `RecyclerView.Adapter` and is not compatible with `BaseAdapter`.
+    Therefore, the `CursorLoader` class can't be used with `RecyclerViews`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'At this point, we have two alternatives: one is to find an open source solution,
+    such as `CursorRecyclerAdapter` ([https://gist.github.com/quanturium/46541c81aae2a916e31d#file-cursorrecycleradapter-java](https://gist.github.com/quanturium/46541c81aae2a916e31d#file-cursorrecycleradapter-java))
+    and include this class in our app.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The second option is to create our own. To do this, we will create a `JobOfferCursorAdapter`
+    class which extends from `RecyclerView.Adapter<JobOffersAdapter.MyViewHolder>`.
+    This class, as with `JobOfferAdapter`, will have the `onCreateView` and `onBindView`
+    methods. They are implemented in the same way, with the exception that the job
+    offers are in a cursor and not in a list. To get `JobOffer` from a cursor row,
+    we will create an extra method called `getItem(int position)`. Apart from this,
+    we need the `getCount` method, which will return the cursor size, and a `changeCursor`
+    method, which will allow us to change the cursor in the adapter. Take a look at
+    the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `getItem` method needs to get `Joboffer` from a row in the cursor. To do
+    this, we first need to move the cursor to this position with the `moveToPosition(int
+    position)` method, and after this, we can extract the values for this row:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With this method ready, we can implement the rest of the functionality on the
+    adapter based on the previous `JobOffersAdapter`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With our own `CursorAdapter` adapted to `RecyclerView` completed, we are ready
+    to create the cursor and set the appropriate cursor when our loader manager has
+    finished. In `OncreateView`, we will retrieve new data from the server and upload
+    the view with the current data at the same time:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To display the data, we will change the cursor after the loader manager has
+    finished:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This works perfectly fine when there is previous data in the database. However,
+    if we try to uninstall the app and run this the first time, we will see that the
+    list is empty. Also, looking at the logs, we can see that we are storing the new
+    job offers in the background correctly:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'What is happening here is that the changes in our database are not currently
+    being detected, but this is very easy to fix when we use `CursorLoaders`. There
+    is no need to manually register a content observer or restart the loader; we can
+    set a listener in the cursor that `CursorLoader` uses and simply notify it when
+    we make any change in the database. In our provider, we can set the notification
+    URI to the cursor:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Whenever the database changes, we can call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As a result, `CursorLoader` will automatically refresh the list. If we were
+    doing the insert, update, or delete operations from the content provider, we could
+    have had this line just before these operations to notify of any content change.
+    In our example, we will simply add it manually after we have stored the new data
+    in the database coming from Parse. You can use the following code for this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can now uninstall the App and install it again, and we will see that the
+    list is empty for a few seconds while the offers are downloaded in the background.
+    As soon as the download finishes, the cursor loader will refresh the list, and
+    all the offers will appear. To put the icing on the cake, we will implement the
+    *pull-to-refresh* feature.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing pull to refresh with SwipeRefreshLayout
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: With this feature, the user can refresh the list at any time, by scrolling up
+    when the list view is at the top. This is a popular feature seen in apps, such
+    as Gmail and Facebook.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introducing pull to refresh with SwipeRefreshLayout](img/4887_08_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: To achieve this functionality, Google released a component called `SwipeRefreshLayout`,
+    which is included in the v4 support library. Prior to *revision 21* of this library,
+    this was displayed as a horizontal line at the top of the screen that changed
+    colors. Later, it was changed to a circle with a semicircle that rotates with
+    the swipe movement.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use this, we need to wrap our list with this element in the view:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can create a class variable called `mSwipeRefreshLayout` and set an `onRefresh`
+    listener that will be called when the user wants to refresh:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When the data is downloaded, we need to call `setRefresh` with the `false`
+    value to stop the circle spinning forever:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'While refreshing, it should look similar to the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introducing pull to refresh with SwipeRefreshLayout](img/4887_08_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can also change the colors of the arrow while rotating with the `SwipeRfreshLayout`
+    and `setColorScheme()` methods. Just define three colors in the XML and set the
+    three IDs of the different colors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have achieved our goal. There is an easy way to test if the whole system
+    works, from `SwipeToRefreshLayout` to the background Parse request, content provider,
+    database, and cursor loader. We can open the app, and while we are on the list
+    screen, we will go to Parse and create a new job offer, return to the app, and
+    swipe to refresh. We should see the new job offer appearing after the refresh.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, you learned how to create a database, use a database contract,
+    and a database open helper. We saw the pattern of the DAO and made basic operations
+    with it. Additionally, we replaced the DAO with a content provider, explaining
+    how the URI matcher works and accessing it through a content resolver.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This allowed us to use `CursorLoader` with our own implementation of `CursorAdapter`,
+    which is compatible with `RecyclerView`, to have a system where the UI is synchronized
+    with the database. To finish the chapter, we saw how to use the popular feature,
+    pull to refresh, to update the content on demand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will take a look at how to add push notifications to
+    our application as well as analytics services with an overview of the differences
+    between the current analytics and push notification options available in the market.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,643 @@
+- en: Chapter 3. Code Sharing Between iOS and Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Xamarin's tools promise to share a good portion of your code between iOS and
+    Android while taking advantage of the native APIs on each platform where possible.
+    Doing so is an exercise in software engineering more than a programming skill
+    or having the knowledge of each platform. To architect a Xamarin application for
+    enabling code sharing, it is a must to separate your application into distinct
+    layers. We'll cover the basics as well as specific options to consider certain
+    situations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The MVVM design pattern for code sharing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Project and solution organization strategies
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Portable Class Libraries (PCLs)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Preprocessor statements for platform-specific code
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Dependency Injection (DI) simplified
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Inversion of Control (IoC)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Learning the MVVM design pattern
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The **Model-View-ViewModel** (**MVVM**) design pattern was originally invented
+    for **WPF** (**Windows Presentation Foundation**) applications using **XAML**
+    for separating the UI from business logic and taking full advantage of **data
+    binding**. Applications architected in this way have a distinct ViewModel layer
+    that has no dependencies on its user interface. This architecture in itself is
+    optimized for unit testing as well as cross-platform development. Since an application's
+    ViewModel classes have no dependencies on the UI layer, you can easily swap an
+    iOS user interface for an Android one and write tests against the ViewModel layer.
+    The MVVM design pattern is also very similar to the MVC design pattern discussed
+    in the previous chapters.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The MVVM design pattern includes the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Model**: The model layer is the backend business logic driving the application
+    and any business objects to go along with it. This can be anything from making
+    web requests to a server to using a backend database.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**View**: This layer is the actual user interface seen on the screen. In case
+    of cross-platform development, it includes any platform-specific code for driving
+    the user interface of the application. On iOS, this includes controllers used
+    throughout an application and on Android, an application''s activities.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**ViewModel**: This layer acts as the glue in MVVM applications. The ViewModel
+    layers coordinate operations between the View and Model layers. A ViewModel layer
+    will contain properties that the view will get or set, and functions for each
+    operation that can be made by the user on each view. The ViewModel will also invoke
+    operations on the Model layer if needed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following diagram shows the MVVM design pattern:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Learning the MVVM design pattern](img/image00209.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: It is important to note that the interaction between the View and ViewModel
+    layers is traditionally created by data binding with WPF. However, iOS and Android
+    do not have built-in data binding mechanisms, so our general approach throughout
+    this book will be to manually call the ViewModel layer from the view. There are
+    a few frameworks out there that provide data binding functionality such as **MVVMCross**
+    and **Xamarin.Forms**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To understand this pattern better, let's implement a common scenario. Let's
+    say we have a search box on the screen and a search button. When the user enters
+    some text and clicks on the button, a list of products and prices will be displayed
+    to the user. In our example, we will use the **async** and **await** keywords
+    that are available in C# 5 to simplify asynchronous programming.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To implement this feature, we would start with a simple `model` class (also
+    called a `business` object) as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we would implement our Model layer for retrieving products based on the
+    search term. This is where the business logic is performed, expressing how the
+    search needs to actually work. This is seen in the following lines of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is important to note here that the `Product` and `ProductRepository` class
+    are both considered as part of the Model layer of a cross-platform application.
+    Some may consider `ProductRepository` as a **service** that is generally a self-contained
+    class for retrieving data. It is a good idea to separate this functionality into
+    two classes. The `Product` class's job is to hold information about a product,
+    while `ProductRepository` is in charge of retrieving products. This is the basis
+    for the **single responsibility principle**, which states that each class should
+    only have one job or concern.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we would implement a `ViewModel` class as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: From here, your platform-specific code starts. Each platform would handle managing
+    an instance of a `ViewModel` class, setting the `SearchTerm`property, and calling
+    `Search` when the button is clicked. When the task completes, the user interface
+    layer would update a list displayed on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you are familiar with the MVVM design pattern used with WPF, you might notice
+    that we are not implementing `INotifyPropertyChanged` for data binding. Since
+    iOS and Android don't have the concept of data binding, we omitted this functionality.
+    If you plan on having a WPF or Windows UWP version of your mobile application
+    or are using a framework that provides data binding, you should implement support
+    for it where needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'To learn more about `INotifyPropertyChanged`, check out this article on MSDN:
+    [https://msdn.microsoft.com/en-us/library/system.componentmodel.inotifypropertychanged](https://msdn.microsoft.com/en-us/library/system.componentmodel.inotifypropertychanged)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Comparing project organization strategies
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You might be asking yourself at this point, how do I set up my solution in Xamarin
+    Studio to handle shared code and also have platform-specific projects? Xamarin.iOS
+    applications can only reference Xamarin.iOS class libraries; so, setting up a
+    solution can be problematic. There are several strategies for setting up a cross-platform
+    solution, each with its own advantages and disadvantages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Options for cross-platform solutions are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**File Linking**: For this option, you would start with either a plain .NET
+    4.0 or .NET 4.5 class library containing all the shared code. You would then have
+    a new project for each platform you want your app to run on. Each platform-specific
+    project would have a subdirectory with all of the files linked in from the first
+    class library. To set this up, add the existing files to the project, and select
+    the **Add a link to the file** option. Any unit tests can run against the original
+    class library. The advantages and disadvantages of file linking are as follows:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Advantages**: This approach is very flexible. You can choose to link or not
+    link certain files and can also use preprocessor directives such as `#if IPHONE`.
+    You can also reference different libraries on Android versus iOS.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disadvantages**: You have to manage a file''s existence in three projects:
+    core library, iOS, and Android. This can be a hassle if it is a large application
+    or if many people are working on it. This option is also a bit outdated since
+    the arrival of shared projects.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Cloned Project Files**: It is very similar to file linking, the main difference
+    being that you have a class library for each platform in addition to the main
+    project. By placing the iOS and Android projects in the same directory as the
+    main project, the files can be added without linking. You can easily add files
+    by right-clicking on the solution and selecting **Display Options** | **Show All
+    Files**. Unit tests can run against the original class library or the platform-specific
+    versions:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Advantages**: This approach is just as flexible as file linking, but you
+    don''t have to manually link any files. You can still use preprocessor directives
+    and reference different libraries on each platform.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disadvantages**: You still have to manage a file''s existence in three projects.
+    There is additionally some manual file arranging required to set this up. You
+    also end up with an extra project to manage on each platform. This option is also
+    a bit outdated since the arrival of shared projects.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Shared Project**: Beginning in Visual Studio 2013, Microsoft created the
+    concept of shared projects to enable code sharing between Windows 8 and Windows
+    Phone apps. Xamarin has also implemented shared projects in Xamarin Studio as
+    another option for enabling code sharing. Shared projects are virtually the same
+    as file linking, in that adding a reference to a shared project effectively adds
+    its files to your project:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Advantages**: This approach is the same as file linking, but a lot cleaner
+    since your shared code is in a single project. Xamarin Studio also provides a
+    dropdown to toggle between each referencing project, so you can see the effect
+    of preprocessor statements in your code.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disadvantages**: Since all files in a shared project get added to each platform''s
+    main project, it can get ugly to include platform specific code in a shared project.
+    Preprocessor statements can quickly get out of hand if you have a large team,
+    or have team members that don''t have a lot of experience. A shared project also
+    doesn''t compile to a DLL, so there is not a way to distribute this kind of project
+    without the source code.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Portable Class Libraries**: This is the most optimal option once you are
+    more experienced with Xamarin; you begin the solution by making a **portable**
+    class library (**PCL**) project for all your shared code. This is a special project
+    type that allows multiple platforms to reference the same project, allowing you
+    to use the smallest subset of C# and the .NET framework available in each platform.
+    Each platform-specific project would reference this library directly, as well
+    as any unit test projects:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Advantages**: All your shared code is in one project, and all platforms use
+    the same library. Since preprocessor statements aren''t possible, PCL libraries
+    generally have cleaner code. Platform specific code is generally abstracted away
+    by interfaces or abstract classes.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Disadvantages**: You are limited to a subset of .NET depending on how many
+    platforms you are targeting. Platform specific code requires use of **dependency
+    injection**, which can be a more advanced topic for developers not familiar with
+    it.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Setting up a shared project
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: To understand each option completely and what situations call for, let's define
+    a solution structure for both shared projects and portable class libraries. Let's
+    use the product search example from earlier in the chapter and set up a solution
+    for each approach.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To set up a shared project, perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open Xamarin Studio and start a new solution.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Select a new **Single View App** under the **Multiplatform | App** section.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the app `ProductSearch`, and select **Use Shared Library**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Complete this new project wizard and Xamarin Studio will generate three projects:
+    `ProductSearch`, `ProductSearch.Droid`, and `ProductSearch.iOS`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add the `Product`, `ProductRepository`, and `ProductViewModel` classes to the
+    `ProductSearch` project from earlier in this chapter. You will need to add `using
+    System.Threading.Tasks;` and `using System.Linq;` where needed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **Build** | **Build All** from the menu at the top to double-check
+    everything, and you have successfully set up a cross-platform solution.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'When all is done, you will have a solution tree that looks something like what
+    you can see in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Setting up a shared project](img/image00210.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Shared projects are a great place to start when getting started with cross-platform
+    development. You can't go wrong with them, and they give you ultimate flexibility
+    with the ability to use `#if` throughout your shared code. The only times shared
+    projects might not be the best fit would be if you need to distribute the shared
+    project to others or have a very large team or code base. Preprocessor directives
+    can definitely get out of hand if left unchecked.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: In Visual Studio, the project template for a cross-platform application can
+    be found under **Cross-platform | Blank App (Native Shared)**. One thing to note
+    is that it will also generate a Windows Phone project, which you can simply remove
+    if not needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Working with portable class libraries
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A **portable class library** (**PCL**) is a C# library project that is able
+    to be supported on multiple platforms including iOS, Android, Windows, Windows
+    Store apps, Windows phone, Silverlight, and Xbox 360\. PCLs have been an effort
+    by Microsoft to simplify development across different versions of the .NET framework.
+    Xamarin has also added support on iOS and Android for PCLs. Many popular cross-platform
+    frameworks and open source libraries are starting to develop PCL versions such
+    as Json.NET and MVVMCross.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To set up a shared project, perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Open Xamarin Studio and start a new solution.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Select a new **Single View App** under the **Multiplatform | App** section.
+    Or in Visual Studio, **Cross-platform | Blank App (Native Portable)**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the app `ProductSearch`, and select **Use Portable Library**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Complete this new project wizard and Xamarin Studio will generate three projects:
+    `ProductSearch`, `ProductSearch.Droid`, and `ProductSearch.iOS`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add the `Product`, `ProductRepository`, and `ProductViewModel` classes to the
+    `ProductSearch` project from earlier in the chapter. You will need to add `using
+    System.Threading.Tasks;` and `using System.Linq;` where needed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click on **Build** | **Build All** from the menu at the top to double-check
+    everything, and you have successfully set up a PCL cross-platform solution.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: PCLs are the way to go if you need to share your project as a DLL or NuGet package.
+    It also helps you keep platform-specific concerns separate as it forces you to
+    use an interface or base class along with **Dependency Injection (DI)**. Similar
+    issues would arise if you needed to use a native library such as the Facebook
+    SDK on iOS or Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: At the time of writing, Microsoft has just released .NET Core and the new .NET
+    Standard. This will affect the way PCLs work in the future, but should not break
+    existing Xamarin.iOS and Xamarin.Android projects. It will, however, enable you
+    to share code with .NET Core and ASP.NET Core projects going forward.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using preprocessor statements
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When using shared projects, one of your most powerful tools is the use of preprocessor
+    statements. If you are unfamiliar with them, C# has the ability to define preprocessor
+    variables such as `#define IPHONE`, and then using `#if IPHONE` or `#if !IPHONE`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following is a simple example of using the technique:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: In Xamarin Studio, you can define preprocessor variables in your project's options
+    under **Build** | **Compiler** | **Define Symbols**, delimited with semicolons.
+    These will be applied to the entire project. Be warned that you must set up these
+    variables for each configuration setting in your solution (**Debug** and **Release**);
+    it can be an easy step to miss. You can also define these variables at the top
+    of any C# file by declaring `#define IPHONE`, but they will only be applied within
+    the C# file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s go over another example, assuming we want to implement a class to open
+    URLs on each platform:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The preceding example is a perfect candidate for using preprocessor statements,
+    since it is very specific to each platform and is a fairly simple function. To
+    implement the method on iOS and Android, we will need to take advantage of some
+    native APIs. Refactor the class to look as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The preceding class supports three different types of projects: Android, iOS,
+    and a standard Mono or .NET framework class library. In the case of iOS, we can
+    perform the functionality with static classes available in Apple''s APIs. Android
+    is a little more problematic, and requires an `Activity` object for launching
+    a browser natively. We get around this by modifying the input parameters on Android.
+    Lastly, we have a plain .NET version that uses `Process.Start()` to launch a URL.
+    It is important to note that using the third option would not work on iOS or Android
+    natively, which necessitates our use of preprocessor statements.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using preprocessor statements is not normally the cleanest or the best solution
+    for cross-platform development. They are generally best used in a tight spot or
+    for very simple functions. Code can easily get out of hand and can become very
+    difficult to read with many `#if` statements, so it is always better to use it
+    in moderation. Using inheritance or interfaces is generally a better solution
+    when a class is mostly platform specific.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Simplifying dependency injection
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: '**Dependency injection** at first seems like a complex topic, but for the most
+    part it is a simple concept. It is a design pattern aimed at making your code
+    within your applications more flexible so that you can swap out certain functionality
+    when needed. The idea builds around setting up dependencies between classes in
+    an application so that each class only interacts with an interface or base/abstract
+    class. This gives you the freedom to override different methods on each platform
+    when you need to fill in native functionality.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The concept originated from the **SOLID** object-oriented design principles,
+    which is a set of rules you might want to research if you are interested in software
+    architecture. The **D** in SOLID stands for **dependencies**. Specifically, the
+    principle declares that a program should depend upon abstractions, not concretions
+    (concrete types).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To build upon this concept, let''s walk through the following example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's assume we need to store a setting in an application that determines if
+    the sound is on or off.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now let''s declare a simple interface for the setting: `interface ISettings
+    { bool IsSoundOn { get; set; } }`.'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: On iOS, we'd want to implement this interface using the `NSUserDefaults` class.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Likewise, on Android, we would implement this using `SharedPreferences`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Finally, any class that needs to interact with this setting would only reference
+    `ISettings` so that the implementation could be replaced on each platform.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'For reference, the full implementation of this example would look like the
+    following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now you would potentially have a `ViewModel` class that would only reference
+    `ISettings` when following the MVVM pattern. It can be seen in the following snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using a ViewModel layer for such a simple example is not necessarily needed,
+    but you can see it would be useful if you needed to perform other tasks such as
+    input validation. A complete application might have a lot more settings and might
+    need to present the user with a loading indicator. Abstracting out your setting's
+    implementation has other benefits that add flexibility to your application. Let's
+    say you suddenly need to replace `NSUserDefaults` on iOS with an iCloud version
+    instead; you can easily do so by implementing a new `ISettings` class and the
+    remainder of your code will remain unchanged. This will also help you target new
+    platforms such as Windows UWP, where you may choose to implement `ISettings` in
+    a platform-specific way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing Inversion of Control
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You might be asking yourself at this point of time, how do I switch out different
+    classes such as the `ISettings` example? **Inversion of Control** (**IoC**) is
+    a design pattern meant to complement the dependency injection and solve this problem.
+    The basic principle is that many of the objects created throughout your application
+    are managed and created by a single class. Instead of using the standard C# constructors
+    for your `ViewModel` or `Model` classes, a service locator or factory class would
+    manage them throughout the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are many different implementations and styles of IoC, so let''s implement
+    a simple service locator class to use throughout the remainder of this book as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: This class is inspired by the simplicity of XNA/MonoGame's `GameServiceContainer`
+    class, and follows the **service locator** pattern. The main differences are the
+    use of generics and the fact that it is a static class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To use our `ServiceContainer` class, we would declare the version of `ISettings`
+    or other interfaces that we want to use throughout our application by calling
+    `Register`, as seen in the following lines of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: On iOS, you could place this registration code in either your `static void Main()`
+    method or in the `FinishedLaunching` method of your `AppDelegate` class. These
+    methods are always called before the application is started.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'On Android, it is a little more complicated. You cannot put this code in the
+    `OnCreate` method of your activity that is acting as the main launcher. In some
+    situations, the Android OS can close your application, but restart it later in
+    another activity. This situation would cause your application to crash, as it
+    would try to access services from our container that was not registered yet. The
+    guaranteed safe place to put this is in a custom Android `Application` class,
+    which has an `OnCreate` method that is called prior to any activities being created
+    in your application. The following lines of code show the use of the `Application`
+    class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To pull a service out of the `ServiceContainer` class, we could rewrite the
+    constructor of the `SettingsViewModel` class, as shown in the following lines
+    of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Likewise, you would use the generic `Resolve` method to pull out any `ViewModel`
+    classes you would need to call from within controllers on iOS or activities on
+    Android. This is a great, simple way to manage dependencies within your application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There are, of course, some great open source libraries out there that implement
+    IoC for C# applications. You might consider switching to one of them if you need
+    more advanced features for service location, or just want to graduate to a more
+    complicated IoC container.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here are a few libraries that have been used with Xamarin projects:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**TinyIoC**: [https://github.com/grumpydev/TinyIoC](https://github.com/grumpydev/TinyIoC)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Ninject**: [http://www.ninject.org/](http://www.ninject.org/)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**MvvmCross**: [https://github.com/MvvmCross/MvvmCross](https://github.com/MvvmCross/MvvmCross)
+    includes a full MVVM framework as well as IoC'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Autofac**:[https://autofac.org](https://autofac.org)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned about the MVVM design pattern and how it can be
+    used to better architect cross-platform applications. We compared several project
+    organization strategies for managing a Xamarin Studio solution containing both
+    iOS and Android projects. We went over portable class libraries as the preferred
+    option for sharing code and how to use preprocessor statements as a quick and
+    dirty way to implement platform-specific code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After completing this chapter, you should be up to speed with several techniques
+    for sharing code between iOS and Android applications using Xamarin Studio. Using
+    the MVVM design pattern will help you separate your shared code and code that
+    is platform specific. We also covered several options for setting up cross-platform
+    Xamarin solutions. You should also have a firm understanding of using the dependency
+    injection and Inversion of Control to give your shared code access to the native
+    APIs on each platform. In our next chapter, we will begin with writing a cross-platform
+    application and dive into using these techniques.
+  prefs: []
+  type: TYPE_NORMAL

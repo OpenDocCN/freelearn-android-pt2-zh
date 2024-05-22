@@ -1,0 +1,801 @@
+- en: Chapter 4. XamSnap - A Cross-Platform App
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The best way to truly learn a programming skill, in my opinion, is to take on
+    a simple project that requires you to exercise that skill. This gives new developers
+    a project where they can focus on the concepts they are trying to learn without
+    the overhead of fixing bugs or following customer requirements. To increase our
+    understanding of Xamarin and cross-platform development, let's develop a simple
+    app called XamSnap for iOS and Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Our sample application concept
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The Model layer of our application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Mocking a web service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The ViewModel layer of our application
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Writing unit tests
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Starting our sample application concept
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The concept is simple: a simple clone of the popular chat application, Snapchat.
+    There are several popular applications like this in the Apple App Store, probably
+    due to the cost of text messaging and support for devices such as the iPod Touch
+    or iPad. This should be a neat real-world example that could be useful for users,
+    and will cover specific topics in developing applications for iOS and Android.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before starting with the development, let''s list the set of screens that we''ll
+    need:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Login / sign up**: This screen will include a standard login and sign-up
+    process for the user.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**List of conversations**: This screen will include a button to start a new
+    conversation.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**List of friends**: This screen will provide a way to add new friends when
+    we start a new conversation.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Conversation**: This screen will have a list of messages between you and
+    another user, and an option to reply.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Camera**: In addition to text messages, Snapchat has the ability to send
+    photos. We will add the option to use the device''s camera or photo library for
+    sending photos.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'So a quick wireframe layout of the application would help us grasp a better
+    understanding of the layout of the app. The following figure shows the set of
+    screens to be included in your app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Starting our sample application concept](img/image00211.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Developing our model layer
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Since we have a good idea of what the application is, the next step is to develop
+    the business objects or model layer of this application. Let's start out by defining
+    a few classes that would contain the data to be used throughout the app. It is
+    recommended, for the sake of organization, to add these to a `Models` folder in
+    your project.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s begin with a class representing a user. The class can be created as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Pretty straightforward so far; let''s move on to create classes representing
+    a conversation and a message as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that we are using strings as identifiers for the various objects; this
+    will simplify our integration with a backend running as an Azure Function in later
+    chapters. `UserName` is the value that would be set by the application to change
+    the user that the object is associated with.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s go ahead and set up our solution by performing the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Start by creating a new solution as a new **Multiplatform | App | Single View
+    App** project for iOS and Android.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the project `XamSnap` and make sure **Use Portable Class Library** is selected.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: You could also choose to use a **Shared Project** for this project, but I've
+    chosen to use a portable class library instead.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Click **Create** to create your solution in the designated directory.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Just as in previous chapters, the steps for Visual Studio are a bit different.
+    You will need to create a solution as a Portable Class Library, and *then* add
+    the iOS and Android projects. Do not forget to add a reference to the PCL in both
+    the iOS and Android projects.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Writing a mock web service
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Many times when developing a mobile application, you may need to begin the development
+    of your application before the real backend web service is available. To prevent
+    the development from halting entirely, a good approach would be to develop a mock
+    version of the service. This is also helpful when you need to write unit tests,
+    or are waiting on another team to develop the backend for your app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, let''s break down the operations our app will perform against a web
+    server. The operations are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Login with a username and password.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Register a new account.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Get the user's list of friends.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Add friends by their usernames.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Get a list of the existing conversations for the user.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Get a list of messages in a conversation.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Send a message.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now let''s define an interface that offers a method for each scenario. The
+    method is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you see, we're simplifying any asynchronous communication with a web service
+    by leveraging the **TPL** (**Task Parallel Library**) from the .NET base class
+    libraries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since communicating with a web service can be a lengthy process, it is always
+    a good idea to use the `Task<T>` class for these operations. Otherwise, you could
+    inadvertently run a lengthy task on the user interface thread, which would prevent
+    user inputs during the operation. `Task` is definitely needed for web requests,
+    since users could easily be using a cellular Internet connection on iOS and Android,
+    and it will give us the ability to use the `async` and `await` keywords down the
+    road.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'If you are not familiar with async/await for simplified asynchronous programming
+    in C#, it would be helpful to review the subject on MSDN at: [https://msdn.microsoft.com/en-us/library/mt674882.aspx](https://msdn.microsoft.com/en-us/library/mt674882.aspx)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s implement a **fake** service that implements this interface. Place
+    classes such as `FakeWebService` in the `Fakes` folder of the project. Let''s
+    start with the class declaration and the first method of the interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: We started off with a `SleepDuration` property to store a number in milliseconds.
+    This is used to simulate an interaction with a web server, which can take some
+    time. It is also useful for changing the `SleepDuration` value in different situations.
+    For example, you might want to set this to a small number when writing unit tests
+    so that the tests execute quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we implemented a simple `Sleep` method to return a task that introduces
+    a delay of a number of milliseconds. This method will be used throughout the fake
+    service to cause a delay on each operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Finally, the `Login` method merely used an `await` call on the `Sleep` method
+    and returned a new `User` object with the appropriate `Name`. For now, any username
+    or password combination will work; however, you may wish to write some code here
+    to check specific credentials.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s implement a few more methods to continue our `FakeWebService` class
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: For each of these methods, we kept in mind exactly the same pattern as the `Login`
+    method. Each method will delay and return some sample data. Feel free to mix up
+    the data with your own values.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s implement the `GetConversations` method required by the interface
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Basically, we just create a new array of the `Conversation` objects with arbitrary
+    IDs. We also make sure to match up the `UserName` values with what we used on
+    the `User` objects so far.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, let''s implement `GetMessages` to retrieve a list of messages as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Once again, we are adding some arbitrary data here, and mainly making sure that
+    `UserId` and `ConversationId` match our existing data so far.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'And finally, we will write one more method to send a message as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Most of these methods are very straightforward. Note that the service doesn't
+    have to work perfectly; it should merely complete each operation successfully
+    with a delay. Each method should also return test data of some kind to be displayed
+    in the UI. This will give us the ability to implement our iOS and Android applications
+    while filling in the web service later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, we need to implement a simple interface for persisting application settings.
+    Let''s define an interface named `ISettings` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: We are making `ISettings` synchronous, but you might want to set up the `Save`
+    method to be asynchronous and return `Task` if you plan on storing settings in
+    the cloud. We don't really need this with our application since we will only be
+    saving our settings locally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Later on, we''ll implement this interface on each platform using Android and
+    iOS APIs. For now, let''s just implement a fake version that will be used later
+    when we write unit tests. Implement the interface with the following lines of
+    code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that the fake version doesn't actually need to do anything; we just need
+    to provide a class that will implement the interface and not throw any unexpected
+    errors.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This completes the Model layer of the application. Here is a final class diagram
+    of what we have implemented so far:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Writing a mock web service](img/image00212.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Writing the ViewModel layer
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we have our model layer implemented, we can move on to write the ViewModel
+    layer. The ViewModel will be responsible for presenting each operation to the
+    UI and offering properties to be filled out by the View layer. Other common responsibilities
+    of this layer are input validation and simple logic to display busy indicators.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, it would be a good idea to include the `ServiceContainer` class
+    from the previous chapter in our `XamSnap` PCL project, as we will be using it
+    through our ViewModels to interact with the Model layer. We will be using it as
+    a simple option to support dependency injection and Inversion of Control; however,
+    you may use another library of your preference for this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Normally, we start off by writing a base class for all the ViewModel layers
+    within our project. It''s a good place to put some parts of the code that are
+    used by all the subclasses, for example: notification changes, methods, or commonly
+    used interfaces.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Place the following code snippet in a new `ViewModels` folder within your project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `BaseViewModel` class is a great place to place any common functionality
+    that you plan on reusing throughout your application. For this app, we only need
+    to implement a way to indicate if the ViewModel layer is busy. We provided a property
+    and an event that the UI will be able to subscribe to and display a wait indicator
+    on the screen. We also added some fields for the services that will be needed.
+    Another common feature that could be added would be validation for user inputs;
+    however, we don't really need it for this application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing our LoginViewModel class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now that we have a base class for all of the ViewModel layers, we can implement
+    ViewModel for the first screen in our application, the **Login** screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s implement a `LoginViewModel` class as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In this class, we implemented the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We subclassed `BaseViewModel` to get access to `IsBusy` and the fields containing
+    common services
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We added the `UserName` and `Password` properties to be set by the View layer
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We added a `User` property to be set when the log in process is completed
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We implemented a `Login` method to be called from View, with validation on `UserName`
+    and `Password` properties
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We set `IsBusy` during the call to the `Login` method on `IWebService`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: We set the `User` property by awaiting the result from `Login` on the web service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Basically, this is the pattern that we'll follow for the rest of the ViewModels
+    in the application. We provide properties for the View layer to be set by the
+    user's input, and methods to call for various operations. If it is a method that
+    could take some time, such as a web request, you should always return `Task` and
+    use the `async` and `await` keywords.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Note that we used a `try` and `finally` block for setting `IsBusy` back to `false`.
+    This will ensure it gets reset properly even when an exception is thrown. We plan
+    on handling the error in the View layer, so we can display a native popup to the
+    user displaying a message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing our RegisterViewModel class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Since we have finished writing our `ViewModel` class to log in, we will now
+    need to create one for the user's registration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s implement another ViewModel to register a new user:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'These properties will handle inputs from the user. Next, we need to add a `Register`
+    method as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `RegisterViewModel` class is very similar to the `LoginViewModel` class,
+    but it has an additional `ConfirmPassword` property for the UI to set. A good
+    rule to follow for when to split up the ViewModel layer's functionality is to
+    always create a new class when the UI has a new screen. This helps to keep your
+    code clean and somewhat follow the **single responsibility principle**for your
+    classes. The **SRP** states that a class should only have a single purpose or
+    responsibility. We'll try to follow this concept to keep our classes small and
+    organized, which can be more important than usual when sharing code across platforms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing our FriendViewModel class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Next on the list is a ViewModel layer to work with a user's friend list. We
+    will need a method to load a user's friend list and add a new friend.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s implement the `FriendViewModel` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we''ll need a method to load friends. This method is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we''ll need a method to add a new friend, and then update the list
+    of friends contained locally:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Again, this class is fairly straightforward. The only thing new here is that
+    we added some logic to update the list of friends and sort them within our client
+    application and not the server. You could also choose to reload the complete list
+    of friends if you have a good reason to do so.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Implementing our MessageViewModel class
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Our final required ViewModel layer will be handling messages and conversations.
+    We need to create a way to load conversations and messages, and send a new message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s start implementing our `MessageViewModel` class as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, let''s implement a method to retrieve a list of conversations as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Similarly, we need to retrieve a list of messages within a conversation. We
+    will need to pass the conversation ID to the service as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we need to write some code to send a message and update the local
+    list of messages as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: This concludes the ViewModel layer of our application and the entirety of the
+    shared code used on iOS and Android. For the `MessageViewModel` class, you could
+    have also chosen to put `GetConversations` and `Conversations` properties in their
+    own class, since they could be considered as a separate responsibility, but it
+    is not really necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is the final class diagram of our ViewModel layer:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Implementing our MessageViewModel class](img/image00213.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Writing unit tests
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Since all the code we've written so far is not dependent on the user interface,
+    we can easily write unit tests against our classes. This step is generally taken
+    after the first implementation of a `ViewModel` class. Proponents of **Test Driven
+    Development** (**TDD)** would recommend writing tests first and implementing things
+    afterward, so choose which method is best for you. In either case, it is a good
+    idea to write tests against your shared code before you start using them from
+    the View layer, so you catch bugs before they hold up your development on the
+    UI.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Xamarin projects take advantage of an open source testing framework called **NUnit**.
+    It was originally derived from a Java testing framework called **JUnit**, and
+    is the de-facto standard for unit testing C# applications. Xamarin Studio provides
+    several project templates for writing tests with **NUnit**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Setting up a new project for unit tests
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Let''s set up a new project for unit tests by performing the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Add a new **NUnit Library** **Project** to your solution, found under the **Other
+    | .Net** section in Xamarin Studio. If using Visual Studio, create a .NET class
+    library and add the NUnit NuGet package.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Name the project as `XamSnap.Tests` to keep things consistent.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Right-click on the project references and choose **Edit References**.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Under the **Projects** tab, add a reference to **XamSnap**, your existing portable
+    class library.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Now, open the `Test.cs` file and notice the following required attributes that
+    make up a unit test using NUnit:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`using NUnit.Framework`: This attribute is the main statement to be used to
+    work with NUnit'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[TestFixture]`: This decorates a class to indicate that the class has a list
+    of methods for running tests'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[Test]`: This decorates a method to indicate a test'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'In addition to the required C# attributes, there are several others that are
+    useful for writing tests and they are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`[TestFixtureSetUp]`: This decorates a method that runs before all the tests
+    contained within a text fixture class.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[SetUp]`: This decorates a method that runs before each test in a test fixture
+    class.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[TearDown]`: This decorates a method that runs after each test in a test fixture
+    class.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[TestFixtureTearDown]`: This decorates a method that runs after all the tests
+    in a text fixture class have been completed.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[ExpectedException]`: This decorates a method that is intended to throw an
+    exception. It is useful to test cases that are supposed to fail.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`[Category]`: This decorates a test method and can be used to organize different
+    tests; for example, you might categorize fast and slow tests.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Writing assertions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The next concept to learn about writing tests with NUnit is learning how to
+    write **assertions**. An assertion is a method that will throw an exception if
+    a certain value is not true. It will cause a test to fail and give a descriptive
+    explanation as to what happened. NUnit has a couple of different sets of APIs
+    for assertions; however, we will use the more readable and fluent version of the
+    APIs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The basic syntax of fluent-style API is using the `Assert.That` method. The
+    following example shows the this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Likewise, you can assert the opposite:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Or any of the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Assert.That(myVariable, Is.GreaterThan(0));
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Assert.That(myBooleanVariable, Is.True);
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Assert.That(myObject, Is.Not.Null);
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Feel free to explore the APIs. With code completion in Xamarin Studio, you should
+    be able to discover useful static members or methods on the `Is` class to use
+    within your tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Before we begin writing specific tests for our application, let''s write a
+    static class and method to create a global setup to be used throughout our tests;
+    you can rewrite `Test.cs` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: We'll use this method throughout our tests to set up fake services in our Model
+    layer. Additionally, this replaces the existing services so that our tests execute
+    against new instances of these classes. This is a good practice in unit testing
+    to guarantee that no old data is left behind from a previous test. Also notice
+    that we set `SleepDuration` to `0`. This will make our tests run very quickly.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Begin by creating a `ViewModels` folder in your test''s project and adding
+    a class named `LoginViewModelTests` as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice our use of a `SetUp` method. We recreate the objects used in every test
+    to make sure that no old data is left over from the previous test runs. Another
+    point to note is that you must return a `Task` when using `async`/`await` in a
+    test method. Otherwise, NUnit would not be able to know when a test completes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To run the test, use the NUnit menu found docked to the right of Xamarin Studio
+    by default. Go ahead and run the test by using the **Run Test** button that has
+    a gear icon; you should get a successful result similar to what is shown in the
+    following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Writing assertions](img/image00214.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'You can also view the **Test Results** pane, which will show extended details
+    if a test fails; as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Writing assertions](img/image00215.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If using Visual Studio, you will need to install the **NUnit Test Adapter**
+    extension from the Visual Studio gallery. You can find this option under the **Tools
+    | Extensions and Updates** menu. The unit test runner in Visual Studio is just
+    as intuitive as Xamarin Studio; however, it only supports MsTest out of the box.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To see what happens when a test fails, go ahead and modify your test to assert
+    against an incorrect value as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You will get a very descriptive error in the **Test Results** pane, as shown
+    in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Writing assertions](img/image00216.jpeg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Now let''s implement another test for the `LoginViewModel` class; let''s make
+    sure we get the appropriate outcome if the username and password is blank. The
+    test is implemented as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we run the test as is, we will get an exception and the test will fail.
+    Since we expect an exception to occur, we can decorate the method to make the
+    test pass only if an exception occurs, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Note that in our view model a generic `Exception` type is thrown if a **field
+    is blank**. You can also change the type of expected exception in cases where
+    it is a different exception type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: More tests are included with the sample code along with this book. It is recommended
+    to write tests against each public operation on each `ViewModel` class. Additionally,
+    write tests for any validation or other important business logic. I would also
+    recommend writing tests against the Model layer; however, it is not needed in
+    our project yet since we only have fake implementations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we went over the concept for a sample application that we will
+    be building throughout this book called XamSnap. We also implemented the core
+    business objects for the application in the Model layer. Since we do not have
+    a server to support this application yet, we implemented a fake web service. This
+    gives us the flexibility to move forward with the app without building a server
+    application. We also implemented the ViewModel layer. This layer will expose operations
+    in a simple way to the View layer. Finally, we wrote tests covering the code we've
+    written so far using NUnit. Writing tests against shared code in a cross-platform
+    application can be very important, as it is the backbone of more than one application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After completing this chapter, you should have completed the shared library
+    for our cross-platform application in its entirety. You should have a very firm
+    grasp on our application's architecture and its distinct Model and ViewModel layers.
+    You should also have a good understanding on how to write fake versions of parts
+    of your application that you may not be ready to implement quite yet. In the next
+    chapter, we will implement the iOS version of XamSnap.
+  prefs: []
+  type: TYPE_NORMAL

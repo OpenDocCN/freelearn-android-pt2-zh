@@ -1,0 +1,617 @@
+- en: Chapter 7. Image Handling and Memory Management
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will take a look at how to show images downloaded from a
+    URL. We will discuss how to do this using the Android native SDK as well as the
+    commonly used third-party libraries. We will consider key concepts and features
+    such as download, compression, cache systems, and storage in memory or disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will also discuss what a nine patch is and how to create it, and we will
+    speak about the different size and density folder for drawables by introducing
+    vector drawables.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The final section will be focused on memory management. Identifying memory leaks
+    in our app is a critical task, which usually happens while working with images.
+    We will take a look at the common mistakes that can lead to these leaks as well
+    as general tips on how to prevent them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Displaying images from the network
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The traditional way
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Volley ImageDownloader
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Picasso
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Images
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Vector drawables
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Animated vector drawables
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Nine patch
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Memory management
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Detecting and locating leaks
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Preventing leaks
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Downloading images
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Downloading an image and displaying it with the help of `ImageView` can be done
+    in a single line. Since Android development started, this is something that every
+    developer has done. Android is a technology that is more than five years old,
+    so we can expect this technique to be quite advanced and to find-third party solutions
+    that facilitate it. That said, this book wouldn't be called *Mastering Android*
+    if it didn't explain the process of downloading an image and displaying it without
+    any third-party library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It is good to use the latest library in your apps, but it is better to understand
+    the solution that you are implementing, and it is even better to be able to build
+    this library yourself.
+  prefs: []
+  type: TYPE_NORMAL
+- en: While working with images, we need to handle everything from network connection
+    to the downloading of array bytes and their conversion to **Bitmap**. On some
+    occasions, it makes sense to store the images on a disk so that the next time
+    we open the app, these images will already be there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Even if we are able to display an image, the matter doesn't finish here; we
+    should be able to manage the downloading of images inside a list view. The downloading,
+    storing, and displaying of systems need to be in sync for the app to work without
+    glitches and have a fluent list that can scroll without problems. Keep in mind
+    that when we scroll through a list, the views are recycled. This means that if
+    we scroll fast, we might start the downloading of an image. By the time this download
+    finishes, the view will not be visible on the screen anymore, or it will be recycled
+    in another view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The traditional way of downloading images
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To display an image without using any third-party libraries (an image hosted
+    on the Internet with a URL), we need to establish a connection using `HttpURLConnection`.
+    We would need to open an input stream and consume the information, which can be
+    transformed into a Bitmap image with the factory method, `BitmpapFactory.decodeStream(InputStream
+    istream)`. We could convert it from an input stream to a file so that the image
+    could be stored in the disk and accessed later. For the moment, let's try to download
+    it first and convert it into a Bitmap image, which we will keep in the memory
+    and show in `ImageView`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will show the logo of the company in `OfferDetailActivity` for every offer.
+    Remember that in Parse, we created a database, and with it we created a field
+    called `imageLink`. You just need to fill that field with the URL of the logo
+    of that company.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The traditional way of downloading images](img/4887_07_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We need to have the image link in `OfferDetailActivity`; for this, we need
+    to send an extra parameter in the intent in `JobOfferAdapter` for when we tap
+    on a card. Use the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The method in charge of the image download will be a static method that can
+    be called from anywhere in the app. This method will be placed in the `ImageUtils`
+    class inside a package called `utils`. We will first check whether the URL is
+    correct, and after this, we will consume the content from `HttpURLConnection`,
+    converting the input stream into a Bitmap image as we explained before:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will create a method called `displayImageFromUrl()` that receives `ImageView`
+    and a string with the link to do all the work instead of having all this logic
+    inside `onCreate`. In `onCreate`, we just need to retrieve the parameters and
+    call the method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At this stage, we can be tempted to call `ImageUtils.getImage(link)` and set
+    Bitmap to `ImageView`. However, we are missing one thing; we can''t just call
+    the method that opens a network connection in the main activity thread. We need
+    to do this in the background, or we would get an exception. An `AsyncTask` method
+    is a nice solution to this problem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Depending on the shape and background of the images used, it will look better
+    with the `ImageView` attribute, `scaleType`, with the `centerInside` or `centerCrop`
+    value. The `CenterInside` value will scale down the image to ensure that it fits
+    in the recipient while keeping the proportions. The `CenterCrop` value will scale
+    up the image until it fills the smallest side of the recipient. The rest of the
+    image will go out of the bounds of `ImageView`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the beginning of the chapter, I mentioned that this could have been done
+    just with a single line of code, but as you can see, doing it by ourselves takes
+    much more than one line and involves different concepts such as background threading,
+    `HttpURLConnection`, and so on. This is just the beginning; we implemented the
+    simplest possible scenario. If we were setting the image in the same way in the
+    rows of a list view, we would have problems. One of these problems would be firing
+    infinite `AsyncTask` calls while scrolling. This could be controlled if we had
+    a queue with a maximum number of `AsyncTask` and a cancellation mechanism to ignore
+    or cancel the requests of the views that are not on the screen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we launch the `AsyncTask`, we have a reference to `ImageView`, and in `PostExecute`,
+    we set `Bitmap` to it. This downloading operation can take some time so that `ImageView`
+    can be recycled while scrolling. This means that we are downloading an image for
+    `ImageView` that is recycled in a different position on the list to display a
+    different element. For instance, if we had a list of contacts with their faces,
+    we would see the faces of people with the wrong names. To solve this, what we
+    can do is set the String with the image link to `ImageView` as a tag, `myImageView.setTag(link)`.
+    If the view is recycled, it will have a different item with a new link; therefore,
+    we can check in `onPostExecute`, just before displaying the image, whether the
+    link that we have now is the same as the one in the `ImageView` tag.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These are two common problems and their respective solutions, but we haven't
+    finished here. The most tedious thing, if we continue down this road, is to create
+    a cache system. Depending on the application and on the situation, we might want
+    to permanently store a downloaded image. For instance, if we were creating a music
+    app with a list of your favorite albums, it would make sense to store the cover
+    of an album in the disk. If you are going to see the list of favorites every time
+    you open the app and we know that the cover is not going to change, why not store
+    the image permanently so that the next time we open the app, it loads much quicker
+    and doesn't consume any data? For the user, it would mean seeing the first screen
+    loaded instantly all the time and be a huge improvement to the user's experience.
+    To do this, we need to download the image on a file and have a third method to
+    read the image from the file later, including the logic to check whether we already
+    have this image downloaded or it's the first time that we have asked for it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Another example can be a newsfeed reader app. We know that the images are going
+    to change almost every day, so there is no point in keeping them on the disk.
+    However, we might still want to keep them in memory while navigating through the
+    app not to download them again in the same session while coming back to an activity
+    from another. In this case, we need to keep an eye on the memory usage.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's time to introduce some third-party libraries to help us with this topic.
+    We can start with Volley, the same Volley that we implemented for network requests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Downloading images with Volley
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Volley offers two mechanisms to request images. The first mechanism, `ImageRequest`,
+    is very similar to what we have just done with an `AsyncTask` using Volley''s
+    request queue and resizing the image on demand. This is the constructor for a
+    request:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `maxWidth` and `maxHeight` params will be used to resize the image; if
+    we don''t want to resize, we can set the value to `0`. This is a method in our
+    example used to fetch the image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The second mechanism, the really interesting one, is `ImageLoader`. It handles
+    multiple requests at the same time and is the mechanism to use in a list view
+    for the reasons we explained in the previous section. We can create the cache
+    mechanism that we want it to use—memory or disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It works using a special type of `ImageView: NetworkImageView`. When the `ImageLoader`
+    object is ready, we can simply download an image with one line using `NetworkImageView`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'It allows us to perform different operations such as setting a default image
+    or setting an image in case the request fails. Use the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The complexity here, if there is any, comes when we implement `ImageLoader`.
+    First, we need to create it in the same way that we did with `RequestQueue` in
+    the `Application` class so that it can be accessed from anywhere in our app:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The constructor needs a cache implementation. Google is an example of a memory-based
+    cache whose size is equal to three screens worth of images:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see that choosing between cache implementations is a manual process;
+    we have to create the class with the implementation required and set it in the
+    constructor of `ImageLoader`. That is why, the next library that we are going
+    to see was a revolution when it came out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing Picasso
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The same people that created `OkHttp` brought Picasso to the Android community.
+    Picasso allows us to download and display an image in one line of code without
+    creating an `ImageLoader` and with a cache implementation that automatically works
+    using disk and memory. It includes image transformation, `ImageView` recycling,
+    and request cancellations. All of this is free. It is unbelievable what the people
+    at Square are bringing to the community.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If this is not enough, the debug mode will display indicators in the images,
+    a small triangle in the corner with different colors to indicate when we download
+    an image for the first time (which is when it comes from the network), when it
+    comes from the memory cache, and when it comes from the disk cache:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introducing Picasso](img/4887_07_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Mastering images
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are two concepts that we must cover in this book before finishing this
+    chapter about images. As you know, the images can be placed in multiple folders
+    depending on the density of the screen—from low-density `drawable-ldpi` to high-density
+    `drawable-hdpi`, extra extra-extra high-density `drawable-xxxhdpi`, and possibly
+    more in the future. When we do this, we need to consider whether we want top quality
+    images in all screens or a light APK. Replicating images will increase the size
+    of our installer. This problem will disappear with the following component introduced
+    in Android 5.0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Vector drawables
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: These drawables are based on vector graphics; vector graphics can be scaled
+    up and scaled down without losing any quality. With this, we just need a single
+    drawable, and it will have excellent quality no matter the screen we use for it,
+    be it an Android watch or an Android TV.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Vector drawables are defined in the same way that we define a shape—in an XML
+    file. This is a simple `vectordrawable.xml` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that the vector tag has a height and a width; if we set this drawable in
+    `ImageView` and the size is smaller than the container, it will look pixelated.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You may be asking yourself, where do we get the `pathData` attribute from?
+    You will probably have a `.svg` image, a format for scalable graphics. This image
+    can be opened with a text editor, and you should be able to see something similar
+    to the path data here:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Google provides a pack of material design icons, and these icons come with an
+    SVG version; with this, you can start adding infinite scalable images to your
+    app. The path that we displayed is a media player icon from this pack of icons.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Vector drawables](img/4887_07_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Vector drawable will be added to the design support libraries, so it will be
+    possible to use it with the previous versions of Android, not only 5.0.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next component might not be included in the design support library, so we
+    will have to consider if we want to use it or not, depending on how extensive
+    version 5.0 and above is. In any case, it's worth explaining it because sooner
+    or later, it will be seen more due to its amazing results.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Animating with AnimatedVectorDrawable
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: As the name suggests, `AnimatedVectorDrawable` is a vector drawable with animations,
+    and it is an important feature. These animations are not only rotation, scale,
+    alpha, and so on, which are the ones we have seen previously in Android; these
+    animations also allow us to transform the `pathData` attribute of the drawable.
+    This means that we can have an image that changes shape or one that converts into
+    another image.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This brings an infinite number of UI possibilities. For instance, we could have
+    a play button converted into a semicircle that keeps spinning as a progress bar
+    or a play button that transforms into a pause button.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can define traditional animations, such a rotation, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here''s how we can define the shape transformation from a triangle to a rectangle:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To combine them together in an `AnimatedVectorDrawable` object, execute the
+    following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is restricted to the paths with the same length and the same length of
+    commands.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Working with the nine patch
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Before explaining what a nine patch is, I will show you when it's needed. If
+    we were doing a messaging application and we had to display what a user writes
+    inside a chat bubble, we could think about creating `TextView` and setting an
+    image of a message bubble as a background. If the message is very long, this is
+    what happens without and with a nine patch background respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Working with the nine patch](img/4887_07_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We can see that the first image is stretched, and it looks bad; however, we
+    don't want to stretch the borders. What we want is to keep the borders the same
+    but make the text area taller or wider depending on the message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A nine patch image is an image that can be resized based on its content, but
+    it involves leaving some areas without any stretching. It can be created from
+    an image in a PNG file. Basically, it's the same PNG file with one pixel extra
+    on every side and saved with the extension, `.9.png`. When we place this in the
+    `drawable` folder, Android will know that in the extra pixel, there is information
+    to know which areas to stretch and which ones to not.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you look at the image, you will see that the extra pixel lines to the left
+    and to the top are used to specify which content is scalable, and the lines to
+    the bottom and to the right are used to specify which space can be filled. We
+    want to fill the box completely, but we only want to scale a certain part to the
+    left.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Working with the nine patch](img/4887_07_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Android provides a tool to create these nine patch images, and you can find
+    them in your SDK folder under `tools`. Just open `draw9patch` and drag an image
+    into it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Working with the nine patch](img/4887_07_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Memory management
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Every Java developer has heard of the **garbage collector** (**GC**); this is
+    a mechanism that automatically frees the resources in memory for us. On some occasions,
+    we can prevent the garbage collector from freeing some resources; if the resources
+    keep growing, we will inevitably see `OutOfMemoryError`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If this happens, we need to locate the leak and then stop it. In this section,
+    we will take a look at how to locate the source of the problem and a series of
+    good practices to prevent this from happening.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is not something to look into only when an error has occurred; our app
+    might have leaks, not big enough to be detected with a quick test, that can lead
+    to an error in a device with a smaller memory heap. Therefore, it's good to do
+    a quick check on the memory levels before releasing an app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Detecting and locating leaks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Android Studio provides a quick way to check the memory status. At the bottom
+    window, you will find a tab called **Memory** next to `logcat` and the **ADB**
+    logs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Detecting and locating leaks](img/4887_07_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If you click on the small truck icon, which we call the garbage collector, you
+    will see how the free memory increases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Don't take this as a reference to the free memory because the heap is dynamic.
+    This means that the heap can be 64 MB at first; we have 60 MB allocated and 4
+    MB free, but we allocate 10 MB more. The heap can grow higher, and we will end
+    up having a 128 MB heap, with 70MB allocated and 58 MB free.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To detect a leak, we need to take the reference of the memory allocated. Click
+    on the garbage collector constantly and navigate through the app, open and close
+    activities, load images, scroll the lists, and perform these actions multiple
+    times. If the allocated memory keeps growing and never goes down, it means that
+    we are leaking memory and preventing some resources from being collected. We can
+    roughly locate in which activity or fragment the leak is happening as we will
+    see the increase always at the same point (assuming we don't have more than one
+    leak).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To locate the source more precisely, we need to use **Android Device** **Monitor**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Detecting and locating leaks](img/4887_07_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Select your app process and click on **Update Heap**:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Detecting and locating leaks](img/4887_07_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Once this is selected, we can see the allocations of the objects; this will
+    be a good lead in case of bitmap or thread leaks:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Detecting and locating leaks](img/4887_07_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If we still have no clear idea of what is leaking the memory, we can click on
+    the **Dum HPROF** file button and open this file with **MAT**, a memory analyzer
+    tool from Eclipse. We will have to download Eclipse for this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When we import the file, we can double-click in our process and click on **List
+    Objects**, which will identify what is happening. For instance, we can see how
+    many objects we have in an activity and how much heap is being used:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Detecting and locating leaks](img/4887_07_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Preventing leaks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Better than fixing a memory leak is to not have it in the first place. If, during
+    development, we keep in mind the most common causes of leaks, this will save us
+    problems in the future.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Activity and context references
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Activity references are one of the main causes of this problem. It's very common
+    to send a reference of our activity to a download listener or to an event listener.
+    If a reference to our activity is held in another object, this will prevent the
+    garbage collector from freeing our activity. For instance, if we change the orientation,
+    our activity will be created again by default, and the old activity with the old
+    orientation will be destroyed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Remember to unsubscribe from the listeners in the `onDestroy` method of our
+    Activity and keep an eye on the objects where you send the Context; this is a
+    strong reference to our Activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using WeakReference
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: By default, when we create an object in Java, it is created with a hard reference.
+    Objects different from null with hard references won't be garbage collected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: An object that contains only weak references will be garbage collected in the
+    next cycle. The same object can have more than one reference; therefore, if we
+    need to use an object temporarily, we can create a weak reference to it, and when
+    the hard references are removed, it will be garbage collected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This is a real-world example included in the Facebook SDK source code. They
+    create a custom popup called **ToolTipPopup**, which looks similar to the following
+    image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Using WeakReference](img/4887_07_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'This popup needs an anchor view, and this anchor view is referenced with a
+    weak reference:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: The reason behind this is that by the time the popup is shown, we don't need
+    the anchor view anymore. Once the popup is displayed, the anchor view can be set
+    to null or made to disappear, and it won't affect us. Therefore, with a weak reference,
+    if the original anchor view is destroyed and loses its hard references, it will
+    also free the weak referenced object in the `ToolTipPopup` class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, you learned how to download an image without any help from
+    third-party libraries in order to understand their usage. An overview of Volley
+    and Picasso leaves us ready to implement any app with perfect handling. We also
+    spent some time with images that are added into our app, such as vector drawables
+    and nine patch images. To finish the chapter, we saw how to manage memory problems
+    in our app, and more importantly, how to prevent them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will create an SQLite database. We will export this
+    database through a content provider and sync the UI data with this content provider
+    through `CursorLoader`.
+  prefs: []
+  type: TYPE_NORMAL

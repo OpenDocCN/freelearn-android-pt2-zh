@@ -1,0 +1,634 @@
+- en: Chapter 4. Concurrency and Software Design Patterns
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As a developer, you not only have to write code that works, but also to use
+    existing solutions whenever possible so that you can maintain your code better
+    in the future. If other developers ever have to work on your project, they will
+    quickly understand what you are doing. We can achieve this thanks to software
+    design patterns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to understand the patterns correctly, we need a basic overview of how
+    concurrency works in Android. We will clarify what a UI thread is and talk about
+    the different mechanisms used to delay events in a thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will cover the most commonly used patterns in Android, which will help us
+    further understand Android features and development techniques and become better
+    developers.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Concurrency
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Handlers and threads
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: AsyncTask
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Service
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: IntentService
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Loader
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Patterns in Android
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Singleton
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Adapter and holder
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Observer
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Concurrency in Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'If you are an Android user, you are probably aware of ANR messages. It might
+    not ring a bell for you, so take a look at the following image:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Concurrency in Android](img/4887_04_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: '**Activity Not Responding** (**ANR**) happens when there is code running in
+    the UI or main thread that blocks user interaction for more than 5 seconds.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Android, an application runs a single thread, called the User Interface thread.
+    We will explain what a thread is in a way that even readers with no programming
+    background will understand. We can visualize a thread as a column of instructions
+    or messages executed by the CPU. These instructions come from different places;
+    they come from our application as well as the OS. This thread is used to handle
+    the response from the user, lifecycle methods, and system callbacks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The CPU processes messages sequentially, one after another; if it's busy, the
+    message will wait in a queue to be executed. Therefore, if we perform long operations
+    in our application and send many messages to the CPU, we will not let UI messages
+    be executed, and this will result in the mobile not responding for the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Concurrency in Android](img/4887_04_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The solution to this problem seems obvious: if one thread isn''t enough, we
+    can use more than one. For instance, if we make a network request, this will be
+    done in another thread, and when it finishes, it will communicate with the main
+    thread to display the data that was requested.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Only the main or UI thread can access the UI; so, if we perform any background
+    calculations in another thread, we have to tell the main thread to display the
+    result of these calculations because we can't do it directly from there.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Handlers and threads
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The messages that we have described previously run in a queue called `MessageQueue`,
+    which is unique to each thread. A handler can send messages to this queue. When
+    we create a handler, it is associated with the `MessageQueue` of the thread where
+    it is created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A handler is used for two situations:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sending a delayed message to the same thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sending a message to another thread
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'This is why, in our `SplashActivity`, we will use the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: When you create a new `Handler()` method, ensure that you import the `Android.OS`
+    handler.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Here, we used the `postDelayed(Runnable, time)` method to send a message with
+    a delayed time. In this case, the message is a runnable object that represents
+    a command than can be executed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When there is a method inside the `runOnUIThread()` activity that allows us
+    to send a runnable object to the UI thread, you don't need to create a handler
+    to communicate with it. This is very useful when we have the context of the activity
+    and want to run something on the UI, for example posting updates to the UI from
+    a task that's being executed in the background.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we look at the Android source code of the method, we can see that it simply
+    uses a handler to post the runnable object in the UI thread:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Usually, threads are manually created when we want to perform a long task in
+    the background and want to manage parallel thread executions. Threads have a `run()`
+    method where the instructions are executed and must be started after its creation
+    in order to start executing `run()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The drawback of creating threads and handlers to perform background tasks is
+    its manual handling, and if we have many of them, we could easily end up with
+    an application that is impossible to read. Android has other mechanisms to perform
+    tasks, such as `AsyncTask`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing AsyncTasks
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This is probably something you saw at the beginner level, but we will take a
+    look at it from the concurrency perspective. An `Asynctask` is based on a thread
+    and a handler and is meant to be an easy way to perform a job in the background
+    and post UI updates.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'An `AsyncTask` needs to be subclassed to be used, and it has four methods that
+    can be overridden: `onPreExecute`, `doInBackground`, `onProgressUpdate`, and `onPostExecute`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `OnPreExecute` method is called before doing any work in the background;
+    this means that it's still on the UI thread and is used to initialize variables
+    and progress before starting the task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `doInBackground` method is executed in the background thread. Here, you
+    can call `onProgressUpdate`, which posts an update to the UI thread, for instance,
+    by increasing the value of `ProgressBar` to display the progress of the task.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last method, `onPostExecute`, is called when the background task is finished
+    and is running on the UI thread.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s consider as an example: an `AsyncTask` that takes *x* seconds to be
+    completed in the background, updating the progress every second. The progress
+    bar object is sent as a parameter in the constructor, and the number of seconds
+    is sent as a parameter in the execute method, which is retrieved in `doInBackground`.
+    Note that in the following code, the `<Integer,Integer,Void>` types refer to the
+    types of input parameters, progress update, and on-post execute, respectively:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Having created an `AsyncTask` class, here''s how we can execute it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we execute more than one `AsyncTask` at a time, they will run sequentially
+    by default in versions from Android 3.0 onward. If we want to run them in parallel,
+    we will have to create an executor and call `executeOnExecutor()` with the `THREAD_POOL_EXECUTOR`
+    parameter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As for limitations, we should mention that `AsyncTask` always has to be executed
+    from the main thread and that you can't call `execute()` twice in the same object;
+    therefore, they cannot loop.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Understanding services
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: An `AsyncTask` is ideal while downloading a file or performing any short operation
+    where you want to notify the UI when the task is finished. However, there are
+    situations in Android where you need to perform a very long task that might not
+    need UI interaction. For instance, you can have an application that opens a socket
+    (a direct channel) with the server to stream audio for a radio listening app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A service will run even if the app is not on the screen; it runs in the background
+    but uses the main thread by default. Therefore, if we want to perform long tasks,
+    we need to create a thread inside the service. It has to be declared in the manifest,
+    and it can also be used from another application if we declare it public.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As opposed to `AsyncTask`, services can be triggered from any thread; they are
+    triggered with the `onStartService()` method and stopped with `onStopService()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Optionally, services could be bound to a component; once you bind the components,
+    `onBind()` is called. When binding takes place, we have an interface available
+    to the component to interact with the service.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A type of service – IntentService
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '`IntentService` is a subclass of `services` that can be triggered from an intent.
+    It creates a thread and includes callbacks to know when the task is finished.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The idea behind `IntentService` is that if you don't need to run a task in parallel,
+    it is easier to implement a service that receives intents and manages them sequentially
+    with a notification when the job is done.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Services run constantly as we call `onStart`; however, `IntentService` is created
+    but runs in small intervals, only from when it receives the intent and until it
+    finishes the tasks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As a real example, we can think of an application that needs to perform short
+    tasks in the background when the app is not on the screen. This could be the case
+    of a newsreader app that stores the news in your device to give you offline access
+    to it. It could be an app from a newspaper that publishes articles daily, allowing
+    users to read them when they are in a plane or in commute on a train without a
+    network connection.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The idea would be that when the article is published, users receive a push notification
+    while the app is in the background. This notification will trigger an intent to
+    download the article so that without any extra user interaction, the article is
+    there the next time they open the app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Downloading the article is a small and repetitive task that needs to be done
+    when the app is in the background, in a thread, and without the need to be in
+    parallel, which is the perfect scenario for `IntentService`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing loaders
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: To finish with the concurrency section, we will have a quick overview of the
+    `Loader` class. The purpose of a loader is to make it easier to asynchronously
+    load data in an activity and, therefore, in a fragment. From Android 3.0 onward,
+    every activity has `LoaderManager` to manage the loaders used in it. In an application
+    based on fragment navigations, it is possible to perform background operations
+    at the activity level even when you switch between fragments.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Loaders load data from a source; when this source changes, it automatically
+    refreshes the information, which is why loaders are perfect to use with a database.
+    For instance, once we connect the loader to a database, this database can be modified,
+    and the change will be captured by the loader. This will allow us to refresh the
+    UI, instantly reflecting the changes to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In [Chapter 8](ch08.html "Chapter 8. Databases and Loaders"), *Databases* *and
+    Loaders*, we will implement `CursorLoader` to query the database that we will
+    create in `MasteringAndroidApp`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The importance of patterns
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: When a software developer has to develop a feature or a component with a certain
+    functionality, it can usually be done in different ways; it can be done with different
+    code or with a different structure. It is very likely that the same problem has
+    been solved by other developers so many times that the solution is abstracted
+    from particular implementations and transformed into a pattern. Rather than invent
+    the wheel again, it is preferable to know and implement these patterns.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When developing on Android, we use patterns every day even if we aren't aware
+    of it. Most of the time, we use implementations of the patterns built in Android.
+    For instance, when we want to perform a click on a button and set `OnClickListener`—in
+    other words, wait for the `onClick()` method to be called—we use an observer pattern
+    implementation. If we create a popup, `AlertDialog`, we use `AlertDialog.Builder`,
+    which uses the `Builder` pattern. There are many examples, but what we want is
+    to be able to implement these solutions to our own problems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are different types of patterns grouped in four categories, and these
+    are some examples of the ones that we find while developing Android apps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creation
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Singleton
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Builder
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Factory method
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Behavioral
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Observer
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Strategy
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Iterator
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Structural
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Adapter
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Façade
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Decorator
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Concurrency
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Lock
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Scheduler
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Read-write lock
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: To complete `MasteringAndroidApp`, we have to implement patterns from the first
+    three groups. With respect to the fourth group (concurrency), we need to have
+    an idea of concurrency in Android, but we will not implement a concurrency pattern
+    ourselves.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Patterns are usually represented by UML diagrams.
+  prefs: []
+  type: TYPE_NORMAL
+- en: According to Wikipedia ([http://en.wikipedia.org/wiki/Class_diagram](http://en.wikipedia.org/wiki/Class_diagram)),
+    "*in software engineering, a class diagram in the Unified Modeling Language (UML)
+    is a type of static structure diagram that describes the structure of a system
+    by showing the system's classes, their attributes, operations (or methods), and
+    the relationships among objects*".
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Singleton pattern
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The software design pattern, Singleton, restricts the creation of an object
+    to a single instance. The idea is to access this single object globally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This pattern is implemented by creating the object if has not been created
+    before or returning the existing instance if created. Following is the UML diagram:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Singleton pattern](img/B04887_04_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: On certain occasions, we want an object to be globally accessible, and we want
+    it to be unique in our app. For instance, while using Volley, we want to maintain
+    a unique request queue to have all the requests in the same queue, and we want
+    it to be accessed globally because we will need to add a request from any fragment
+    or activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here is a basic example of a singleton implementation:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: To understand the implementation, remember that in Java, a static variable is
+    associated with the class and not with the object. In the same way, a static method
+    can be called without creating an instance of the class.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Having a static method means that it can be called from anywhere in our app.
+    We can call `MySingleton.getInstance()`, and it will always return the same instance.
+    The first time, it will create it and return it; the subsequent times, it will
+    return the one created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is a downside to using singleton and testing frameworks; we will talk
+    about this in [Chapter 11](ch11.html "Chapter 11. Debugging and Testing on Android"),
+    *Debugging and Testing on Android*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Singleton in the Application class
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We can adapt a Singleton implementation to Android. Given that the `onCreate`
+    method in the `Application` class is called only once when we open our app and
+    that the `Application` object won't be destroyed, we can implement the `getInstance()`
+    method in our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Upon applying these changes, our application class will look similar to the
+    following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, I can call `MAAplication.getInstance()` from anywhere in the app and create
+    member variables in the application class that can be accessed globally via the
+    singleton `MAAplication` object. For instance, in the case of Volley, I can create
+    `RequestQueue` in `OnCreate()` and then retrieve it at any time from the `MAAplication`
+    object. Execute the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Following this approach, we have one singleton, which is our `Application` class;
+    the rest of the globally accessible objects are member variables. The other option
+    is to create a new singleton class to store the volley requests queue and one
+    new request singleton for every globally accessed object needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Don't use this approach to persist data in the `Application` class. For example,
+    if we go to the background by clicking on the home button, Android might need
+    memory after a while and will kill the app. So, the next time you open the app,
+    a new instance will be created even if it looks as though we are returning to
+    the previous instance. This is fine if you initialize all the variables in `onCreate`
+    again and don't modify their state later. Avoid having setters to ensure this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The Observer pattern
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This pattern is widely used in Android. Most of the network libraries that we
+    discussed implement this pattern, and if you are an Android developer, you have
+    surely used it plenty of times—we need to implement it even to detect a click
+    on a button.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The observer pattern is based on an object, the observer, which registers other
+    objects to notify them of a state change; here, the objects listening to the state
+    changes are the *observers*. This pattern can be used to create a publish/subscribe
+    system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The Observer pattern](img/B04887_04_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The following is an implementation of a pattern that registers multiple observes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The observer, as you will notice, can be any object that implements the interface—`ObserverInterface`.
+    This interface is defined in the observed object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we compare this to the way that we handle a click on a button in Android,
+    we perform `myButton.setOnClickListener(observer)`. Here, we add an observer that
+    waits for the click; this observer implements the `OnClick()` method, which is
+    the method that notifies in our case.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Looking at Volley, when we create a network request, we have to specify two
+    listeners as a parameter: `Response.Listener` and `Response`. `ErrorListener`,
+    which call `onResponse()` and `onErrorResponse()`, respectively. This is a clear
+    implementation of the observer pattern.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will implement an example of a variant of the observer pattern, a publish/subscribe
+    pattern, in [Chapter 6](ch06.html "Chapter 6. CardView and Material Design"),
+    *CardView and Material Design*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introducing the Adapter pattern
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The **Adapter** is an element that we use in Android while creating `ListView`
+    or `ViewPager`, but it is also a well-known design pattern. We will take a look
+    at the definition of both and their relationship.
+  prefs: []
+  type: TYPE_NORMAL
+- en: On one hand, an Adapter as a design pattern is one that acts as a bridge between
+    two incompatible interfaces. It allows two different interfaces to work together.
+    It's the same concept as a real-world adapter, such as an SD card to micro SD
+    card adapter, which allows two incompatible systems to work together. As the diagram
+    shows, the adapter is called with the new required method, but internally, it
+    calls the old method from the *adaptee*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Introducing the Adapter pattern](img/4887_04_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: On the other hand, an Adapter from `android.widget.Adapter` is an object that
+    we use to create the view for every row on a list or for every page in a view
+    pager. Therefore, it adapts the data, a set of elements, and a set of views.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To implement an adapter, we have to extend `BaseAdapter` and override the `getView()`
+    and `getCount()` methods. With these two methods, the adapter will know how many
+    views it has to create and how the views are created.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will go further into this topic in the next chapter while working with `ListViews`,
+    and we will talk about the `ViewHolder` pattern, which is a particular pattern
+    used in Android while working with Adapters and lists.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: At the end of this chapter, you should be able to understand concurrency in
+    Android and all the different mechanisms to work with it. You should know that
+    there is a main thread where the UI is updated and that we can create background
+    threads to perform other tasks. You must also know the difference between having
+    the app perform a task in the background (in other words, not on the screen) and
+    having the app perform tasks in a background thread. You should also know the
+    importance of software design patterns and be able to implement some of them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will take a look at how to work with list views, we
+    will implement an adapter, and we will discover a new pattern, `ViewHolder`, which
+    will be the key to understanding the difference between `ListView` and `RecyclerView`
+    introduced in Android Lollipop.
+  prefs: []
+  type: TYPE_NORMAL

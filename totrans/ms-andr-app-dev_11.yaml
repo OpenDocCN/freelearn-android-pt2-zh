@@ -1,0 +1,781 @@
+- en: Chapter 11. Debugging and Testing on Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, you will learn how to debug in Android, an essential practice
+    to save time in finding and fixing problems while developing our application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will learn how to create automated tests that can test the click of a button
+    or the outcome of a single method. This is a set of tests that you can run in
+    Android Studio to ensure that every time you develop a new feature, you don't
+    break any of the existent ones.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You will also learn how to use **Robolectric** for unit tests and Espresso for
+    integration tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At the end of the chapter, we will discuss how to test the UI with millions
+    of random clicks using Monkey, how to record sequences of clicks through the app,
+    and how to configure tests based on these recordings with MonkeyTalk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Logs and the debug mode
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Testing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unit tests with Robolectric
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Integration tests with Espresso
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: UI Testing
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Random clicks with MonkeyRunner
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Recording clicks with MonkeyTalk
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Continuous Integration
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Logs and the debug mode
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We couldn't finish the book without mentioning logs and how to debug to solve
+    problems while developing. Developing in Android can be more than just copying
+    and pasting from Stack Overflow if you know how to solve your own problems.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The debug mode and logs are mechanisms used to help the developer identify where
+    the problems are. With time, every developer improves and uses these techniques
+    less frequently, but at the beginning, it's quite common to have an app full of
+    logs. We don't want users to be able to see the log when the app is released,
+    and we don't want to remove logs manually and then add them again when we release
+    a new version. We will take a look at how to avoid this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Working with logs
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The log class is used to print out messages and errors, which we can read in
+    real time using `LogCat`. This is an example of how to log a message:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `Log` class has five methods, and they are used to have a different level
+    of priority on the logs. This allows us to filter by priority in `LogCat`. There
+    are situations when we display different logs, for instance, to see the number
+    of job offers we download in every request. If we have a crash in our app, logs
+    of the type error are our priority at this moment, and we want to hide other logs
+    with less priority to find the error as soon as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The five priorities are (from low to high) verbose, debug, information, warning,
+    and error. (`Log.v` , `Log.d`, `Log.i`, `Log.w`, and `Log.e`)
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can filter by process with the bar at the top of the logging window. We can
+    filter by priority and by keyword, and we can create custom filters by tag, process
+    ID, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Working with logs](img/B04887_11_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: If the logs don't appear or they are old and not refreshing, try to open the
+    dropdown to the right, select **No** **filters**, and then select **Show only
+    selected application** again. This forces the console to refresh.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Working with logs](img/B04887_11_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'To finish with logs, we will create a wrapper and use a third-party library
+    with the idea to be able to disable all the logs in the project by just changing
+    the value of a Boolean. To do this, we simply create a class with the same methods
+    of the `Log` class that depend on this Boolean value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: We need to use this wrapper every time we want to write a log—`MyLogger.d()`
+    instead of `Log.d()`. This way, if we change the value of the Boolean `LOG` in
+    the `MyLogger` class, it will stop all the logs in our project at the same time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It is recommended to use the value from the `BuildConfing.DEBUG` variable:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will be true if our app is in the debug mode, and it will be false when
+    we release the app. So, we don't need to remember to turn the logs off in release
+    mode, and there is no risk of a log appearing to the final user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using Timber, the log wrapper
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Timber is a log wrapper created by Jake Wharton that takes the log to an advanced
+    level, allowing us to have different log behaviors using the log tree concept.
+    Take a look at the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'One of the advantages of using timber is that we don''t need to write a tag
+    in our logs more than once in the same activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our trees can have different behaviors; for instance, I might want to disable
+    logs in the release mode, but I still want to handle errors; so, I will plant
+    an error tree that will report the error to Parse:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Debugging our app
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Logs can be used to find problems while developing, but if we master the debug
+    mode, we will find this practice much quicker.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'While we are in the debug mode, we can set breakpoints in the code. With these
+    breakpoints, we specify a line of code where we want the execution to stop to
+    show us the values of the variables at that moment. To set a breakpoint, simply
+    double-click on the left-hand side bar:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging our app](img/B04887_11_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We set a debug point in the response of the method that gets the job offer.
+    We can launch the debug mode from the top bar:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging our app](img/B04887_11_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If we run the app in **Debug** mode, Android studio will pause the execution
+    when it reaches this point:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Debugging our app](img/B04887_11_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Android Studio will automatically prompt the **Debugger** window, where we will
+    be able to see the variables at the point of execution. We can see in the preceding
+    screenshot the job offer list and navigate to see what every offer has inside.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The important features here are the green **Play** button to the left, which
+    continues the execution of our app until the next breakpoint, and the red square,
+    which exits the debug mode and continues with the execution of the app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We also have different controls available to move to the next line, into a
+    method, or outside the method. For instance, consider that we have a breakpoint
+    in the first line of the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: In this case, **Step Over**, which is the blue arrow pointing downward, will
+    move our execution to the next line. If we click on **Step Into**, the blue arrow
+    pointing to the bottom-right corner, we will get into the `getInstace()` method.
+    With a combination of these controls, we can control the flow in realtime.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the debug mode explained, we can now move on to automated tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Testing on Android
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: A new functionality is not complete without being tested first. We, as developers,
+    have fallen many times into the trap of submitting code changes without writing
+    a passing test first, only to find that the expected behavior was broken on future
+    iterations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We learned the hard way that writing tests boosts our productivity, increases
+    code quality, and helps us release more often. For this reason, Android provided
+    several tools to help us test our apps from the early stages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the following two sections, we will talk about my favorite setup, Robolectric
+    for unit testing and Espresso for integration testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unit tests with Robolectric
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Until Robolectric, writing unit tests meant that we had to run them on a real
+    device or an emulator. This process could take several minutes as Android build
+    tools have to package the testing code, push it to the connected device, and then
+    run it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Robolectric alleviates this problem by enabling us to run our unit tests in
+    the JVM of our workstation without the need for an Android device or emulator.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To include Robolectric using Gradle, we can add the following dependency to
+    our `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: We use `testCompile` to specify that we want this dependency to be included
+    in our test project. For the test project, the default source directory is `src/test`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Robolectric configuration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'At the time of writing, Robolectric version 3.0 supports the following Android
+    SDKs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Jelly Bean, SDK version 16
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Jelly Bean MR1, SDK version 17
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Jelly Bean MR2, SDK version 18
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: KitKat, SDK version 19
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Lollipop, SDK version 21
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'By default, the tests will run against `targetSdkVersion` defined in the `AndroidManifest`
+    file. If you want to run the tests against a different SDK version or if your
+    current `targetSdkVersion` is not supported by Robolectric, you can override it
+    manually using a properties file located at `src/test/resources/robolectric.properties`
+    with the following content:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Our first unit test
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We''ll begin by setting up a very simple and common scenario: a welcoming activity
+    with a **Login** button that navigates the user to a login activity. The layout
+    for the welcome activity is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'On the `WelcomeActivity` class, we''ll simply set the login button to start
+    the login activity:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: In order to test this, we can ensure that we start `LoginActivity` by sending
+    the correct `Intent`. Because Robolectric is a unit-testing framework, `LoginActivity`
+    will not actually be started, but we'll be able to check whether the framework
+    captured the correct intent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will create the test file, `WelcomeActivityTest.java`, in the correct
+    package within the `src/test/java/` path. Robolectric depends on JUnit 4, so we
+    will start by specifying Robolectric''s Gradle test runner and some extra configuration
+    that the framework will use to find the `AndroidManifest` resources and assets.
+    Run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we can write our first test. We''ll begin by creating and bringing the
+    welcome activity to the foreground:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that we have an instance of `WelcomeActivity`, it''s easy to click on the
+    login button:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we have to verify that the framework captured the intent that would
+    have started `LoginActivity`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `shadowOf` static method returns a `ShadowActivity` object that stores
+    most of the interactions with the current activity under test. We need to use
+    the `@Test` annotation, which tells JUnit that the method can be run as a test
+    case. Putting everything together, we have the following test class (`WelcomeActivityTest.java`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Running unit tests
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Before being able to run the unit tests, we need to select the correct **Test
+    Artifact** in Android Studio. To do so, we will open the **Build Variants** toolbar
+    and select the **Unit Tests** artifact, as displayed in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Running unit tests](img/B04887_11_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now, from the **Project** window, we can run the tests by right-clicking on
+    the test classes and selecting the **Run** option. Ensure that there are no spaces
+    in the project path; otherwise, Robolectric will throw an exception prior to execution
+    of the unit tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Running unit tests](img/B04887_11_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can also run unit tests from the command line. To do so, call the `test`
+    task command with the `--continue` option:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: This option is ideal if we have a continuous integration system configured,
+    such as Jenkins, Travis, or wercker.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the end of the Robolectric section. Next, we'll discuss integration
+    testing with **Espresso**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Integration tests with Espresso
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Due to the very nature of Android and the vast amount of devices out there,
+    we can never be certain of how the app might behave when we release it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We naturally tend to manually test our app on as many different devices as possible,
+    which is a tedious process that we have to repeat on every release that we do.
+    In this section, we'll briefly discuss Espresso and how we can write tests that
+    will run on a real device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Espresso configuration
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Before writing our first integration test, we need to install and configure
+    our test environment. Perform the following steps:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: From Android SDK Manager, we need to select and install **Android Support Repository**
+    from the **Extras** folder, as shown in the following screenshot:![Espresso configuration](img/B04887_11_08.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create the folder for our integration tests code; this should be located at
+    `app/src/androidTest`.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We''ll also need to specify a few dependencies in the project''s `build.gradle`.
+    Use the following code:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Recently, Android added support for JUnit 4 style test cases. To use this,
+    we''ll add `AndroidJUnitRunner` as the default test instrumentation runner in
+    the `build.gradle` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Writing an integration test
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'For this example, we''ll continue from where we left off with Robolectric;
+    we''ll write a test for `LoginActivity`. For this activity, we''ll set a simple
+    layout with two `EditTexts` and a sign-in button. Run the following code (`activity_login.xml`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In `LoginActivity`, when the user clicks on the sign-in button, we''ll send
+    the credentials to the splash activity using the following code (`LoginActivity.java`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: For this test, we'll type the user credentials in the two input fields and verify
+    that we bundle them correctly in the intent.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will create the `LoginActivityTest.java` test file in the correct
+    package within the `src/test/androidTest/` path. We''ll use JUnit 4, so we will
+    start by specifying the `AndroidJUnit4` test runner. Use the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Another distinction to Robolectric is that in Espresso, we need to specify
+    a rule that will prepare the activity under test. For this, use the following
+    command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we can start writing the test. First, we''ll need to type the login details
+    in the two input fields:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we will send the intent by clicking on the sign-in button:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, we have to verify that the captured intent contains the login credentials:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Putting everything together, we will have the following test class (`LoginActivityTest.java`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: Running integration tests
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Similar to what we did with Robolectric, to run integration tests, we need
+    to switch to the correct **Test Artifact** in Android Studio. To do so, we will
+    open the **Build Variants** toolbar and select the **Android Instrumentation Tests**
+    artifact:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Running integration tests](img/B04887_11_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Now, from the **Project** window, we can run the tests by right-clicking on
+    the test classes and selecting the **Run** option.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can also run integration tests from the command line. To do so, we will
+    call the `connectedCheck` (or `cC`) task:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Using a command line is the preferred way if we have a continuous integration
+    system with a connected device or emulator. Once we write enough integration tests,
+    we can easily deploy and run them on hundreds of real devices using services such
+    as **Testdroid**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Running integration tests](img/B04887_11_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Testing from a UI perspective
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The testing that we will do now is similar to the kind of tests that a person
+    using the app could do. In fact, in companies that have **QA** (**Quality Assurance**),
+    people use these tools as a complement to manual testing.
+  prefs: []
+  type: TYPE_NORMAL
+- en: UI tests can be automated as well, but they differ from unit and integration
+    tests; these are actions performed on the screen, from clicking on a button to
+    completing a registration process with recorded events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will start with stress testing using **The Monkey**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Launching The Monkey
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The Monkey is a program that can be launched from the command line with ADB.
+    It generates random events in our device or emulator, and using a seed, we can
+    reproduce the same random events. To clarify, let's consider an example with numbers.
+    Imagine that I execute Monkey and it produces random numbers from 1 to 10; if
+    I launched it again, I would get different numbers. When I execute The Monkey
+    with a seed (this seed is a number), I get a set of different numbers from 1 to
+    10, and if I launch it again with the same seed, I will get the same numbers.
+    This is useful because if we use a seed to generate random events and have a crash,
+    we can fix this crash and run the same seed again to ensure that we fixed the
+    problem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These random events can vary from clicks and scroll gestures to system level
+    events (such as volume up, volume down, screenshot, and so on) We can limit the
+    number of the events and the type as well as the packages in which we run it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The basic syntax in the terminal is the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you have never used ADB, you can find in it the `platform-tools` folder
+    inside the Android SDK directory wherever it is installed in your system:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we open a terminal and navigate to this directory, we can write the following
+    line of code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: When you try to use `adb` and the output is `command not found`, you can restart
+    `adb` with `adb kill-server`, `adb start-server`, and `use ./adb` (*dot slash
+    adb*) if you use Linux or Mac.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can increase the number of events to `5000` or produce infinite events,
+    but it is always recommended to set a limit of numbers; otherwise, you will have
+    to restart the device to stop The Monkey. When you execute the command, you will
+    be able to see the random events produced, and it will indicate the seed used
+    in case you want to repeat the same chain of events:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Launching The Monkey](img/B04887_11_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Depending on the app, we might need to adjust the time between events with the
+    throttle milliseconds property in order to simulate a real user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: With the next testing tool, we will do a different kind of UI testing with the
+    purpose of following a flow. An example of this would be if we have a registration
+    process composed of three screens with different forms and want to record a test
+    where a user fills up the form and continues through the three screens logically.
+    In this case, The Monkey will not really help; with a very big number of events,
+    it will eventually complete all the input fields with random characters and click
+    on the buttons to move to the next screen, but this is not exactly what we want.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Recording UI tests with MonkeyTalk
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The purpose of recording a sequence of tests such as the registration process
+    is to have this test saved in order to be able to run it again when we make changes
+    to our code. We might have to modify the network requests of the registration
+    process without changing the UI, so these tests are perfect. We can just run them
+    after finishing the modifications, and we don't have to manually complete the
+    registration or fill the forms ourselves. We are not being lazy here; if we have
+    hundreds of tests, this will be a lot of effort for one person. Also, with automated
+    tests, we can ensure that the sequence of events is always the same.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**MonkeyTalk** is a free and open source tool, which comes in two versions;
+    we''ll be using the community version for our example.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A list comparing the community and professional versions can be seen on their
+    website at [https://www.cloudmonkeymobile.com/monkeytalk](https://www.cloudmonkeymobile.com/monkeytalk).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'MonkeyTalk can be used on real devices and emulators. It works by recording
+    a list of events while we are in *Record mode*:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Recording UI tests with MonkeyTalk](img/B04887_11_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Once we enter this record mode by clicking on **Record** in the tool, every
+    event will be recorded in an order, with the action performed and the argument
+    used. In the preceding screenshot, we can see how tapping on `TextView` and writing
+    some input on it are recoded as two events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We could create this in a script file, and MonkeyTalk will reproduce it; so,
+    we have the option to create our own sequence of events without recording. For
+    the preceding events, we will write a script such as the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we click on the **Play now** button, we will see all these steps executed
+    on any device. We could record the scripts on an Android phone and play them on
+    an iOS device.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Apart from recording and playing scripts, we can have verification commands.
+    For instance, if we had a button that cleared all the input fields, we can add
+    a verification command during the script using `currentValue`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: This will report the result of the verification during execution, so we will
+    be able to check whether all our verifications are passed correctly. For example,
+    clicking on the button to clear the forms would need a click listener that clears
+    every input text. If, for some reason, we make modifications and the IDs of the
+    elements change, a MonkeyTalk test will report the problem with a command failed
+    verification.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Wouldn't it be nice to have a tool that runs these UI tests for us, along with
+    unit and integration tests, every time we make changes in our app? This solution
+    exists, and it's called **Continuous Integration**.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Continuous integration
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: It is not our intention to explain how to build a continuous integration system
+    because it's out of the scope of this book and it is not usually the job of an
+    Android developer to set up the environment. However, you should be aware of what
+    it is and how it works as it's directly related with Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A good suite of automated tests is always better combined with CI or a continuous
+    integration solution. This solution will allow us to build and test our application
+    every time there is a code change.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is the way most companies with big projects work. If they have a team of
+    developers, the code is usually shared in a repository, and they build a CI system
+    connected to the repository. Every time a developer makes and commits a change
+    to the repository, the collection of tests is executed, and if the result is successful,
+    a new Android executable file (**APK**) is built.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is done to minimize the risk of problems. In a big application, which takes
+    years to be developed with different people working on it, it would be impossible
+    for a new developer to start making changes without breaking or changing any of
+    the existing features. This is because either not all the people in the project
+    know what all the code is for, or the code is just so complex that modifying a
+    component alters others.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If you are interested in implementing this solution, we can point you to **Jenkins**,
+    originally called Hudson at [https://wiki.jenkins-ci.org/display/JENKINS/Meet+Jenkins](https://wiki.jenkins-ci.org/display/JENKINS/Meet+Jenkins).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Continuous integration](img/B04887_11_13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Apart from testing and building our app, Jenkins will generate a test cover
+    report, which will allow us to know the percentage of our code that is covered
+    by unit and integration tests.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we started learning how to use logs in our app in an advanced
+    way, and we took a quick overview of the debugging process. We explained what
+    tests are and how to create unit and integration tests with Robolectric and Espresso,
+    respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We also created UI tests, starting with stress tests with the The Monkey, then
+    generating random events, and later started testing with MonkeyTalk, recording
+    event flows that can be played again verifying the output. To finish, we spoke
+    about continuous integration to discover how companies put together the tests
+    and the building system for an Android app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, which is the last chapter of this book, we will take a
+    look at how to monetize our app, how to build the app using different build flavors,
+    and obfuscating the code, leaving it ready to be uploaded to App Store.
+  prefs: []
+  type: TYPE_NORMAL

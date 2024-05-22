@@ -1,0 +1,540 @@
+- en: Chapter 9. Push Notifications and Analytics
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: We will start the chapter by talking about push notifications. You will learn
+    how to implement custom solutions with notifications using Google Cloud Messaging,
+    both on the server side and app side. Then, we will add notifications with Parse
+    to our example. To finish with notifications, we will display our custom notifications
+    using `NotificationCompat`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the second half of the chapter, we will talk about analytics. Having analytics
+    to track what the user does in our app is essential to know how the user behaves,
+    allowing us to identify patterns and improve the experience. We will implement
+    one example with Parse and take an overview of the most popular solutions in the
+    market.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Push notifications
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Sending and receiving with GCM
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Notifications from Parse
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: NotificationCompat
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Analytics
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Analytics with Parse
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Error report
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Push notifications
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Push notifications are important to engage users and provide real-time updates.
+    They are useful to remind the user that there is an action pending. For instance,
+    in the **Qkr!** app created by MasterCard, one can order food and drink in some
+    restaurants, and if the user hasn't paid after a considerable period of time,
+    they send a notification to remind the user that he/she needs to pay before leaving
+    the restaurant.
+  prefs: []
+  type: TYPE_NORMAL
+- en: They also work very well when we need to tell the user that we have new content
+    or that other users have sent them a message. Any change that happens on the server
+    side and requires informing the user is the perfect scenario to use notifications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Notifications can also be sent locally from our own app; for example, we can
+    schedule an alarm and show a notification. They don't necessarily have to be sent
+    from a server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: They are shown at the top of the screen in the status bar, in a place called
+    the notification area.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Push notifications](img/4887_09_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The minimum information required for a notification is an icon, a title, and
+    detail text. With the arrival of material design, we can customize the notifications
+    in different ways; for instance, we can add different actions to them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Push notifications](img/4887_09_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If we scroll down from the top of the screen, we will show the notification
+    drawer where we can see all the information displayed by the notifications:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Push notifications](img/4887_09_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Notifications shouldn't be used as part of two-way channel communication. If
+    our app needs constant communication with the server, as in the case of messaging
+    apps, we should consider using sockets, XMPP, or any other messaging protocol.
+    In theory, notifications are not reliable, and we can't control when exactly they
+    will be received.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, don't abuse notifications; they are a good reason for a user to uninstall
+    your app. Try to keep them to a minimum and use them only when necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: You can assign a priority level to a notification, and Android Lollipop onward,
+    you can filter the notifications you want to receive based on this priority level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: These are the key points and concepts you should have in mind while working
+    with notifications. Before going into more theory, we will practice sending notifications
+    to our app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Sending and receiving notifications using GCM
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: There are different solutions on the market to send push notifications; one
+    of these is Parse, which has a friendly control panel where anyone can easily
+    send push notifications. We will use Parse as an example, but first, it's good
+    to understand how this works internally and how we can build our own system to
+    send notifications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**GCM** (**Google Cloud Messaging**) uses push notifications, which we will
+    send to our mobile. Google has servers called GCM connection servers that handle
+    this process. If we want to send a push notification, we need to tell these servers
+    first, and they will send it to our device later. We need to create a server or
+    use a third-party server, which will communicate with the GCM servers over HTTP
+    or XMPP as the communication can be done using both protocols.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Sending and receiving notifications using GCM](img/4887_09_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As we said earlier, we can't control exactly when a message is received because
+    we have no control over the GCM server. It queues the message and dispatches it
+    when the device is online.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To create our custom solution, the first thing we need to do is enable the messaging
+    services on our app from the Google developers' website at [https://developers.google.com/mobile/add?platform=android](https://developers.google.com/mobile/add?platform=android).
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Sending and receiving notifications using GCM](img/4887_09_05.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: After you create the app, enable GCM messaging, and you will be provided with
+    a Sender ID and a Server API Key. The sender ID was previously known as project
+    number.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we want to receive GCM messages, we need to register our client, which is
+    our mobile app, with this project. To do this, our app will use the GCM API to
+    register and obtain a token as confirmation. When this is done, the GCM servers
+    will know that your device is ready to receive push notifications from this particular
+    project/sender.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Sending and receiving notifications using GCM](img/4887_09_06.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We need to add the play services to use this API:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The registration is done through the **Instance ID** API, calling `instanceID.getToken`
+    with the `SenderID` as a parameter:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We need to call this asynchronously and keep a Boolean variable in our app
+    to remember whether we have been successfully registered. Our token can change
+    with time, and we''ll know when it happens with the `onRefreshToken()` callback.
+    The token needs to be sent to our server:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Once this is done, we need to create a `GCMListener` and add some permissions
+    to the Android manifest:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: '`GCMListener` will contain the `onMessageReceived` method, which will be called
+    when we receive any message.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This is all we need from the client side; for the server side, we won't go into
+    details in this book because it totally depends on the technology and the language
+    chosen. There are different code snippets and scripts to send the notifications
+    for Python, Grails, Java, and so on, which are easy to find on the Web.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We don''t really need a server to send a notification because we can communicate
+    directly with GCM. All we need to do is send a `POST` request to [https://gcm-http.googleapis.com/gcm/send](https://gcm-http.googleapis.com/gcm/send).
+    This can easily be done using any online `POST`-sending service, such as [http://hurl.it](http://hurl.it)
+    or Postman, a Google Chrome extension used to send network requests. This is how
+    our request needs to look:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: '![Sending and receiving notifications using GCM](img/4887_09_07.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Continuing with `MasteringAndroidApp`, we will implement push notifications
+    with Parse.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Push notifications with Parse
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: For our example, we will stick to Parse. The main reason is that we don't need
+    to worry about the server side, and we don't have to create an app in the Google
+    developer console with this solution. Another good reason is that it has a nice
+    built-in control panel to send this notification, and we can target different
+    users if we have been tracking users with different parameters in advance.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Push notifications with Parse](img/4887_09_08.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'With Parse, we don''t need to create a GCM listener. Instead, it uses a service
+    that is already included in the Parse library, and we just need to register a
+    subscriber for this service. All we need to do is add the permissions and receivers
+    to our app, and we are ready to go:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Ensure that the last two permissions match your package name. The receivers
+    need to go inside the `application` tag:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To listen for notifications, we can register a subscriber in the `OnCreate`
+    method of our `Application` class:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, it's ready. Simply go to the Parse web, select the **Push** tab, and click
+    on **+ Send a push**. You can specify the audience, if you want to send it immediately
+    or with a delay, and other parameters. It will keep a track of the push sent and
+    indicate the people it was sent to.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Push notifications with Parse](img/4887_09_09.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'If you see **1** in the **Pushes Sent** column and then take a look at the
+    notification in your device, all is correct. The notification in your device should
+    look as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Push notifications with Parse](img/4887_09_10.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Using NotificationCompat
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: At the moment, we can see the default notification, which is created by the
+    Parse receiver. However, we can set our own receiver and create nicer notifications
+    with `NotificationCompat`. This component was introduced in the support v4 library,
+    displaying notifications with the latest features in Android L and M as well as
+    in previous versions until API 4.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In a few words, what we need to do is create a notification with the help of
+    `NotificationCompat.Builder` and pass this notification to the system with `NotificationManager.notify()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This will show our notification. The title, text, and icon are mandatory; if
+    we don''t add these three properties, the notification won''t be shown. To start
+    using our custom receiver, we need to specify in the manifest the register that
+    we want to use, instead of the Parse push receiver:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: We discussed how to show custom notifications with `NotificationCompat`. Notifications
+    have their own design guidelines, and they are an important part of material design.
+    It is recommended to have a look at these guidelines and keep them in mind while
+    using this component in your app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You can find the guidelines at [http://developer.android.com/design/patterns/notifications.html](http://developer.android.com/design/patterns/notifications.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The importance of analytics
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: It's very important to know what the user does with your app. Analytics help
+    us understand which screens are most visited, which products the users buy in
+    our app, and why certain users drop out during the registration process along
+    with obtaining information pertaining to gender, location, age, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can even track crashes that users have in our app along with information
+    about the device model, android version, crash logs, and so on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: This data helps us improve user experience, for instance, if we see that the
+    user is not behaving with the app as we anticipated. It helps define our product;
+    if we have different features in our app, we can determine which is the most used.
+    It helps us know the audience, which can be beneficial for marketing purposes.
+    With crash reports, it's easier to keep the app free of bugs and crashes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We will use Parse as an example to start tracking some events.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Analytics with Parse
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Without adding any extra code and only with the `Parse.init()` method that we
+    are already calling, we have some statistics in the Parse console under the **Analytics**
+    tab.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Analytics with Parse](img/4887_09_11.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: In the **Audience** section, we can see the active installations and the active
+    users displayed daily, weekly, and monthly. This is useful to understand how many
+    users we have and how many of them are active. If we want to know how many uninstalled
+    the app, we can look at the **Retention** section.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will track some events and crashes to display information in these two sections,
+    but first, we will take a look at **Explorer**. If you click on the **Explorer**
+    button on the left, you should see the following option:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Analytics with Parse](img/4887_09_12.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: This will show a table where we can see different options to filter the data
+    from our app. As soon as we start tracking events and actions, there will be more
+    columns here, and we will be able to create complex queries.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'By default, if we click on run query, we will see the following image of a
+    table:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Analytics with Parse](img/4887_09_13.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: It shows all the information available under the default columns; no extra columns
+    are needed for now. We can see all the different request types along with the
+    OS, OS version, and version of our app.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We can work with the filter to produce different outputs. Some interesting outputs
+    could be, for instance, sorting and grouping by app version so as to have an idea
+    of how many people are using each version.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we were using the same Parse database for different platforms, such as Android
+    and iOS, we could filter by platform.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Here''s an example of filtering by OS version, where we can see all the Android
+    versions that our users are currently using:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Analytics with Parse](img/4887_09_14.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: To gather more data about when and how often the app is opened, we can add the
+    following line in the `oncreate` method of our splash screen or first activity.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is an example of an event that we can track, but when we generally speak
+    about event tracking, we refer to custom events. For example, if we want to track
+    which job offer is the most visited, we will track an event in `JobOfferDetailActivity`
+    with the title of the article visited. We can also track this event in the `onlick`
+    listener when a row is clicked on to open the offer. There is no fixed rule for
+    this; the implementations may vary. However, we need to know that the objective
+    is to track the event when the offer is seen.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The code to choose the option where we track the event in the `OnCreate` method
+    of `OfferDetailActivity` will look similar to the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `trackEventInBackground` method launches a background thread to create the
+    network upload request for us. The parameters are sent as a `Map` string with
+    a maximum of eight.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If we visit different offers at different times and go to the analytics explorer
+    section, we can easily create a query to see the number of times that each job
+    offer was opened.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Analytics with Parse](img/4887_09_15.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: By grouping the data by dimension, which comprises the different parameters
+    that we send with the event tracking, and using an aggregate of a count, we can
+    get a count of every job offer visited.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we will take a look at how to take advantage of this event tracking to
+    use Parse as an error report tool.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The error report
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Reporting crashes when our app is distributed is essential to maintain an app
+    free of bugs and crashes. There are hundreds of Android devices on the market
+    and different situations in which even the best QA person or tester would slip-up
+    while releasing the app, and we end up with an app that crashes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We need to assume that our app is going to crash. We must code as best as we
+    can, but if a crash happens, we need to have the tools in place to report and
+    fix it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Parse allows us to track errors using the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: However, this solution will only allow us to track errors in a controlled piece
+    of code. For instance, let's say that we have a network request and it returns
+    an error. This scenario can be handled easily; we just track the event with the
+    error response from the server.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is a problem when we have `NullPointerException` in our app, which is
+    when we have a crash because something unexpected happened that we can't detect
+    in the code. For instance, if the link of the image of a job is null and I try
+    to read the link without checking whether the attribute is null or not, I will
+    get `NullPointerException`, and the app will crash.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'How can we track this if we do not control the part of the code where it happens?
+    Fortunately, we have tools on the market that do this for us. HockeyApp is a tool
+    that helps distribute beta versions and collect live crash reports. This is a
+    tool that shows the error reports of our apps in a web panel. It''s really easy
+    to integrate; all we need is to add the following to the library:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, we need to call the following method to report errors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `APP_ID` would be found when you upload the APK to hockey or when you create
+    a new app manually on the hockey website.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The error report](img/4887_09_16.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'Once we know `App_ID` and register for crashes, if we have a crash, we will
+    see a list with the number of occurrences, as in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![The error report](img/4887_09_17.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: We'll finish with analytics by saying that Parse is just one of the alternatives;
+    it's very common to use Google analytics as well, which is included in the Google
+    Play service library. Google analytics allow us to create more complex reports,
+    for instance funnel tracking to see how many users we drop during a long registration
+    process, and we can see the data in different charts and histograms.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you belong to a large organization, take a look at Adobe Omniture. It's an
+    enterprise tool that helps you track different events as variables and then creates
+    formulas to display these variables. It also allows you to combine your mobile
+    analytics with data from other departments such as sales, marketing, and customer
+    service. From my personal experience, the companies that I have seen using Omniture
+    have a person working full time on the analytics study. In this case, all the
+    developer needs to know is how to implement the SDK and track events; it's not
+    a developer's task to create complex reports.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, you learned how to add notifications to our app. We implemented
+    push notifications with Parse and discussed how to create our custom notifications
+    service using Google Cloud Messaging, with all the code needed on the client side
+    and tools to test the server side. In the second half of the chapter, we introduced
+    analytics, explaining why they are important, and tracked events with Parse. An
+    important aspect in the analytics world is the error report. We tracked the errors
+    in our apps using Parse and HockeyApp as well. To finish, we took an overview
+    of other analytics solutions, such as Google Analytics and Adobe Omniture.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter, we will work with location services and learn how to add
+    `MapView` to our example, displaying a Google map with location markers.
+  prefs: []
+  type: TYPE_NORMAL

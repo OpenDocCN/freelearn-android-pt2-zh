@@ -1,0 +1,438 @@
+- en: Chapter 7. Multilingual and Multimodal Dialogs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In all of the examples so far, the language used has been English and the mode
+    of interaction has been mainly speech. This chapter shows how to incorporate other
+    languages into apps. The chapter also looks at how to build apps that make use
+    of several modalities, for example, combining speech with visual displays.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multilinguality
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 2](ch02.html "Chapter 2. Text-to-Speech Synthesis"), *Text-to-Speech
+    Synthesis* and [Chapter 3](ch03.html "Chapter 3. Speech Recognition"), *Speech
+    Recognition*, we have provided the groundwork to enable you to develop multilingual
+    applications easily. With the `TTSLib` library ([Chapter 2](ch02.html "Chapter 2. Text-to-Speech
+    Synthesis"), *Text-to-Speech Synthesis*) you can specify the language used for
+    speech synthesis. Now we only need to make some small improvements to the `ASRLib`
+    ([Chapter 3](ch03.html "Chapter 3. Speech Recognition"), *Speech Recognition*)
+    to make it accept different languages for speech recognition (as it was set originally
+    to the device's default). To do this, we have created the `ASRMultilingualLib`
+    (in `sandra.libs.asr.asrmultilinguallib`) in the code bundle).
+  prefs: []
+  type: TYPE_NORMAL
+- en: We cannot expect that all languages will be available in the user's implementation
+    of voice recognition. Thus, before setting a language it is necessary to check
+    whether it is one of the supported languages, and if not, to set the currently
+    preferred language.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To do this, a `RecognizerIntent.ACTION_GET_LANGUAGE_DETAILS` ordered broadcast
+    is sent that returns a Bundle from which the information about the preferred language
+    (`RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE`) and the list of supported languages
+    (`RecognizerIntent.EXTRA_SUPPORTED_LANGUAGES`) can be extracted. This involves
+    modifying the `ASR.java` file a little in the `ASRMultilingualLib` library.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now in the `listen` method, there is a check to make sure the language selected
+    is available in the speech recognizer, and then the new `startASR` method is invoked.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `startASR` method contains basically the same code as in the `listen` method
+    of the previous version of the library, where the `RecognizerIntent` was created
+    to start listening. However, it introduces a new parameter for the intent in which
+    the language used for recognition is specified, as shown in the following code
+    line which is invoked from the `startASR` method:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: To check the languages available on your device, you can click on **Google Voice
+    Search/Voice Search Settings**, and click on **Language** to see the full list.
+    The corresponding codes are two-letter lowercase ISO 639-1 language codes as specified
+    in [http://en.wikipedia.org/wiki/List_of_ISO_639-1_codes](http://en.wikipedia.org/wiki/List_of_ISO_639-1_codes).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `listen` method has been changed to check the availability of the language.
+    In order to do so, it uses an intent `RecognizerIntent.ACTION_GET_LANGUAGE_DETAILS`,
+    which is broadcast. To deal with the broadcast, two new classes to the `ASRMultilingualLib`
+    have been introduced: `LanguageDetailsChecker`, which is the `BroadCastReceiver`,
+    and `OnLanguageDetailsListener`, an interface used to specify the method that
+    processes the results of the broadcast. These classes, which handle the details
+    of retrieving language-related information, are from the `gast-lib` project ([https://github.com/gast-lib](https://github.com/gast-lib))
+    and are described in the book *Professional Android™ Sensor Programming* by *Greg
+    Milette* and *Adam Stroud*, *Wrox*, *2012*. In the `listen` method, the broadcast
+    intent is created and sent, and the `OnLanguageDetailsListener` interface is used
+    to specify what to do when the broadcast has been processed. In our case there
+    is a check to see whether the language matches any of the available ones and then
+    the recognition is started.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: After we have made the described changes in the `ASRLib`, we are ready to develop
+    apps in which the user specifies a language in which speech is recognized and
+    synthesized. As an example, we have developed the `SillyParrot` app, as shown
+    in the following figure. It asks for a language and on recognizing what the user
+    wants, plays back the best match in the language selected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Multilinguality](img/5297_07_01.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: After trying the `SillyParrot` app, you might have noticed that it is a bit
+    strange that the GUI remains in English after you have selected another language.
+    We will go further into the synchronization of the visual and oral parts of the
+    app in the section about multimodality, but we will start now by making sure they
+    are both in the same language. In order to do that, we will take advantage of
+    the `res` folder, which holds `xml` files that contain information that can be
+    referenced from the activities.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The process of implementing an app which is responsive to different languages
+    is usually described as localization of an application. One of the main issues
+    in localization is to provide text messages in different languages, but images,
+    layouts and other resources can also be localized (take a look at the tutorial
+    in this web page to see an example with localized images: [http://www.icanlocalize.com/site/tutorials/android-application-localization-tutorial/](http://www.icanlocalize.com/site/tutorials/android-application-localization-tutorial/)).
+    To do this it is necessary to include the files in specific directories that indicate
+    the language code.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If the locale of a device is `es-ES` and the code makes reference to the string
+    `R.string.mymessage`, Android will look for it in the following directories, in
+    the specified order:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`res/values-es-rES/strings.xml`'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`res/values-es/strings.xml`'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '`res/values/strings.xml`'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Thus, if you are in Mexico and the default locale of your device is `es-MX`,
+    then it will not match the default Spanish from Spain (option 1), but it will
+    match the generic Spanish (option 2). If you are in Chicago and the locale of
+    your device is `en-US`, then it will try to find the string in the default directory
+    (option 3).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: '**Don''t forget default resources!**'
+  prefs: []
+  type: TYPE_NORMAL
+- en: We cannot expect that all locales are available in our user's devices (see an
+    explanation here [http://developer.android.com/reference/java/util/Locale.html](http://developer.android.com/reference/java/util/Locale.html)),
+    thus it is very important not to forget the default resources, as Android will
+    load them from `res/values/` whenever there is no xml file available for the desired
+    locale.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A good design practice is to include all messages in the target language in
+    the default folder, where it is the one that we expect most users will employ,
+    and then try to create as few resource files as possible for the other languages.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Say, for example, we have identified that our app must support the following
+    languages: English as spoken in US and Canada, Spanish as spoken in US, and French
+    as spoken in Canada, with US English being the main language. In this case, the
+    strings in US English should be in the default folder (`res/values/strings.xml`).
+    Then, only specific messages that are different in Canadian English would be included
+    in a `res/values/en-rCA/strings.xml` folder, so there is no need to replicate
+    all the strings for both locales. A similar process happens with Spanish and French,
+    which can be included in `res/values-ES/` and `res/values-fr/` folders, and later
+    be localized to `res/values-es-rUS` or `res/values-fr-rCA/` if other varieties
+    need to be considered. Android provides a checklist to plan how to localize your
+    apps, which you can find at: [http://developer.android.com/distribute/googleplay/publish/localizing.html](http://developer.android.com/distribute/googleplay/publish/localizing.html).
+    Pay attention to include the `r` before the country code as well as using `-`
+    instead of `_` when creating the directories.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the `Parrot` app we have improved `SillyParrot` by automatically adapting
+    to the device locale (`Locale.getDefault().getDisplayLanguage();`) following the
+    structure described in the previous paragraph. Take a look at the directory structure
+    of the project in the code bundle. In the Android developers guide ([http://developer.android.com/guide/topics/resources/localization.htm](http://developer.android.com/guide/topics/resources/localization.htm))
+    there are examples of how to test localized apps in different languages, though
+    you will need to try with different languages in a physical device to test the
+    speech recognition part.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multimodality
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: An application may be considered multimodal if it uses several input and/or
+    output modalities. In this sense, all the apps presented in this book are multimodal,
+    as they use voice as well as a GUI either in the output or input.
+  prefs: []
+  type: TYPE_NORMAL
+- en: However, in the previous examples the modalities were not synchronized or used
+    to provide alternative ways for handling the same bits of information. For example,
+    in the `MusicBrain` app in [Chapter 5](ch05.html "Chapter 5. Form-filling Dialogs"),
+    *Form-filling Dialogs* the input was oral and the output visual, and in the `SimpleParrot`
+    app described in this chapter, the input and output are oral (requiring speech
+    recognition and synthesis) and visual (selecting a language and the **push to
+    speak** button in the input and **toasts** for output), but they correspond to
+    different elements in the interface.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In this section, we will describe how to develop multimodal applications in
+    which the modalities can be seamlessly combined to input or output data, so the
+    user can select the most convenient modality to use at any particular time.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To do so, we build on the `FormFillLib` library presented in [Chapter 5](ch05.html
+    "Chapter 5. Form-filling Dialogs"), *Form-filling Dialogs*, augmenting it by considering
+    the synchronization of the oral fields with different elements in the GUI. This
+    way, the user can fill in all the different elements in the GUI by either clicking
+    or using speech.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The main idea is to create a correspondence between the fields in the voice
+    form and the different elements in the GUI. We have considered the combinations
+    of voice and GUI elements shown in the following table, so that when one of the
+    elements in the pair is filled, the other is assigned a value accordingly. For
+    example, if the user is prompted to choose an option and does it orally, the corresponding
+    radio button or element in a list will be selected in the GUI. Similarly, if the
+    element is chosen in the radio button or list, the user will not be asked for
+    it orally.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Description | Voice Field | GUI Element |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Open input in which the user may write a long text or provide it orally |
+    The results from the Google Speech Recognizer can be used directly | Text field
+    ( `EditText`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Restricted input in which the user may select between alternative options
+    | A hand-crafted grammar should be used to restrict the options | Group of radio
+    buttons ( `RadioGroup`) or lists ( `ListView` or `Spinner`) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Restricted `yes`/`no` type inputs | A hand-crafted grammar should be used
+    to restrict the options to `yes`/`no` and equivalents (for example, `true`/`false`)
+    | Check boxes (`CheckBox`) |'
+  prefs: []
+  type: TYPE_TB
+- en: As can be observed in the table, it is important to introduce grammars, because
+    the speech input must only accept the options provided by the GUI. This is why
+    we have also augmented the capabilities of the VXML parser presented in [Chapter
+    5](ch05.html "Chapter 5. Form-filling Dialogs"), *Form-Filling Dialogs* to take
+    grammars into account.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In order to do this, the new `MultimodalFormFillLib` library (see `sandra.libs.dm.multimodalformfilllib`
+    in the code bundle) incorporates several changes with respect to the `FormFillLib`
+    library, which are also pointed out as comments in the code bundle. The next figure
+    shows an activity diagram summarizing how oral dialogs are interpreted in the
+    new library. The shaded parts are the main changes with respect to the interpreter
+    presented in [Chapter 5](ch05.html "Chapter 5. Form-filling Dialogs"), *Form-filling
+    Dialogs*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Multimodality](img/5297_07_02.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: As can be observed in the preceding diagram, in the `MultimodalFormFillLib`
+    library not all recognition results are considered valid in all situations. If
+    we look at the table introduced previously; if an oral field corresponds to a
+    radio button, check box or list in the GUI, we should restrict the valid values
+    for the field to the options provided. For example, if our app presents a selection
+    list of ice-cream flavors containing chocolate, vanilla, and strawberry, then
+    the only valid recognition results when the user is asked what flavor he prefers
+    should be one of those three. This way, the user can either select a flavor on
+    the screen or say the flavor orally, and the app will automatically update the
+    other modality (fill the oral field or select an option in the GUI respectively).
+  prefs: []
+  type: TYPE_NORMAL
+- en: This restriction is implemented by means of grammars. Now, each field contains
+    information about its grammar wherever one has been indicated (for example, there
+    is no need to indicate a grammar for text fields with an unrestricted input).
+    When the field is visited by the `DialogInterpreter`, if there is a grammar, the
+    recognized phrase is only considered if it is valid in the grammar; if not, it
+    is treated as a no match.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For simplicity, we only consider whether the value is valid or not according
+    to the grammar, and not its semantic value. However, this could be done if the
+    `isValid` method in the `Field` class did not compute only a Boolean value, but
+    processed the semantics in some way (for example, by following the guidelines
+    presented in [Chapter 6](ch06.html "Chapter 6. Grammars for Dialog"), *Grammars
+    for Dialog*).
+  prefs: []
+  type: TYPE_NORMAL
+- en: In `VXMLParser.java` file, we have included `<grammar>` as a possible tag to
+    be parsed. This tag has a mandatory `src` attribute indicating its location. When
+    the parser encounters the tag, it invokes the `setGrammar` method in the `Field`
+    class, passing the grammar `src` as a parameter. In `Field.java`, we have included
+    methods to retrieve the XML contents of the grammar and to parse and query them.
+    The `setGrammar` method invokes `retrieveGrammar`, which accesses the `url` (the
+    `src` attribute contained a URL) or reads the grammar from the `assets` folder
+    (the `src` attribute contained just the name of the grammar) and obtains the contents
+    in a String. Then the `processXMLContents` method initializes the handcrafted
+    grammar using the library `NLULib` developed in [Chapter 6](ch06.html "Chapter 6. Grammars
+    for Dialog"), *Grammars for Dialog*. If no grammar is indicated for a specific
+    field, then any recognition result is accepted without subsequent filtering.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have added another method in `Field.java` file called `isValid`, which can
+    be used to check whether a phrase is valid in the grammar. When no grammar is
+    used, the `isValid` method returns `true` regardless of the value.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The behavior described is coded in the `processAsrResults` method of the `DialogInterpreter`
+    class, in which we have included the code to check if any of the recognition results
+    in the N-best list obtained by the recognizer is valid in the grammar. If so,
+    then the process moves to the next field, if not, it remains in the same field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When we used the speech-only interface in previous chapters, there was no possibility
+    for the user to delete one of the fields for which he had already provided information.
+    This is not the case with a multimodal interface, as the user may change already
+    provided items in the GUI. We have changed the method `moveToNextField` in the
+    `DialogInterpreter` class, so that the condition for the end of the dialog is
+    not that all fields have been visited, but that all fields are filled (their value
+    is not `null`). The method that checks whether all fields in a form are filled
+    (`allFieldsFilled`) has been included in the `Form` class. Also, it considers
+    the list of fields to be circular, so that, when the last field is encountered,
+    if there are unfilled fields it continues with the first.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that grammars are ready to be considered, we can look at multimodality.
+    We have created the `MultimodalDialogInterpreter` class, a subclass of `DialogInterpreter`
+    that contains a collection of `MultimodalElement` objects. These objects contain
+    pairs of oral and GUI fields that must be synchronized.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Firstly, we make sure that the changes in the oral part have an impact in the
+    GUI. The method `oraltoGui` (abstract in `DialogInterpreter`, implemented in `MultimodalDialogInterpreter`)
+    is invoked each time a field is filled orally (see the `processResults` method
+    in `DialogInterpreter`) in order to show its value in the GUI. This method checks
+    the type of visual element that corresponds to the oral field and shows the information
+    accordingly by invoking the corresponding method. In list views and spinners it
+    selects one item, in a radio group it checks one of the radio buttons, in a text
+    field it writes a text, or it selects or deselects a checkbox as described in
+    the previous table showing combinations of voice fields and GUI elements.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Secondly, we make sure that the changes in the visual part have an impact in
+    the oral part. Thus if an element has been filled in the GUI, the app should not
+    ask for it orally. The `guiToOral` method in the `MultimodalDialogInterpreter`
+    class is invoked to save the values retrieved from the GUI in the oral fields.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As an example of the use of the `MultimodalFormFillLib`, we present the `SendMessage`
+    app, shown in the next figure, in which the user fills some pieces of information
+    either orally, or using the GUI, or with both. It is a mock app, as it does not
+    read the contacts from the user''s contacts list and does not send any message,
+    as the focus of this chapter is on the interface. However this can be done following
+    the instructions provided here: [http://developer.android.com/training/contacts-provider/retrieve-names.html](http://developer.android.com/training/contacts-provider/retrieve-names.html)
+    and using the `SMSManager` for sending SMS, or an Intent with `ACTION_SEND` and
+    `EXTRA_EMAIL` to send e-mails by just changing the implementation of the `populateContactList`
+    and `sendMessage` methods in `SendMessage.java` file.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Multimodality](img/5297_07_03.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'The `SendMessage` app reads the `VXML` file that contains the structure of
+    the oral dialog from the `assets` folder as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: As can be observed in the `VXML` file and the GUI, there are four pieces of
+    information required from the user; the recipient, whether he wants an acknowledgment
+    of receipt, the urgency of the message (normal or urgent), and the message to
+    be sent. We have used all the different GUI elements supported. As can be observed
+    in the VXML code, all fields have grammars assigned except for the `message`.
+    The `contact_grammar` accepts the contact names, the `ack_grammar` accepts phrases
+    that can be translated to Boolean values such as `yes`, `no`, `true`, or `false`,
+    the `urgency_grammar` contains the two possible values `normal` and `urgent`,
+    and the `message` field does not indicate a grammar so that it accepts the best
+    recognition result allowing the user to talk freely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The VXML could also be read from the web as in [Chapter 5](ch05.html "Chapter 5. Form-filling
+    Dialogs"), *Form-filling Dialogs*, but as it is so coupled with the GUI it is
+    unlikely to change much, so it can be stored more conveniently in the `assets`
+    folder. For example, we take into account that the valid values for the oral input
+    are the same as the options shown visually in the GUI. In the previous screenshot,
+    the radio buttons show the text **Normal** and **Urgent**, and thus, the corresponding
+    oral field should only accept the values `urgent` and `normal`. Developers must
+    bear in mind that this poses a considerable restriction on the VXML and grammar
+    files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `SendMessage` class is a subclass of `MultimodalDialogInterpreter`. In the
+    `onCreate` method it invokes the `initializeGUI` and `startDialog` methods. The
+    former initializes all the GUI elements, which must invoke the `guiToOral` method
+    in their listeners (as the oral part must be changed after the changes in the
+    GUI). The latter parses the oral form, sets the correspondences between the oral
+    and visual elements (`setMultimodalCorrespondence`), and starts the oral interaction.
+    The oral dialog controls the end of the interaction. When the `processDialogResults`
+    is invoked, the user is informed about the success of the interaction (in a real
+    setting, this method would actually send the message).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note that the oral part will not be ready until the `vxml` file is read and
+    parsed. This is why the GUI must wait for this process to be finished before trying
+    to update the oral part. This is taken into account when setting the GUI elements
+    (in the `setContactList`, `setAckCheckBox`, `setUrgencyRadioGroup`, and `setMessageEditText`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next screenshot shows an excerpt from a sample interaction with the `SendMessage`
+    app where the final state of the GUI is as shown in the previous screenshot. In
+    the example, the user selects to receive an acknowledgement of receipt and to
+    send the message urgently. This information is saved by the system in the oral
+    fields. As can be observed in the screenshot, the user is not asked for these
+    pieces of information orally. Then, the user speaks the name of the recipient.
+    As it is one of the valid contacts, it is accepted and shown in the GUI in the
+    corresponding selection list.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Finally, the user provides the message, and the result is shown in the GUI
+    without being previously filtered by a grammar as shown in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Multimodality](img/5297OS_07_04.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: This chapter has shown how to include languages other than English into apps,
+    using resources associated with different locale settings. We also looked at how
+    to synchronize the oral and visual modalities so that users can combine them when
+    interacting with the apps.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In the next chapter we will describe how to design virtual personal assistants
+    that can engage in conversation and perform a range of tasks on your device.
+  prefs: []
+  type: TYPE_NORMAL
