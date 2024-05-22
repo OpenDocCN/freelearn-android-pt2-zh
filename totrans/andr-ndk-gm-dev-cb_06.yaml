@@ -1,46 +1,68 @@
 - en: Chapter 6. Unifying OpenGL ES 3 and OpenGL 3
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第 6 章. 统一 OpenGL ES 3 和 OpenGL 3
 - en: 'In this chapter, we will cover:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将涵盖：
 - en: Unifying the OpenGL 3 core profile and OpenGL ES 2
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 统一 OpenGL 3 核心配置文件和 OpenGL ES 2
 - en: Initializing the OpenGL 3 core profile on Windows
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在 Windows 上初始化 OpenGL 3 核心配置文件
 - en: Initializing OpenGL ES 2 on Android
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在 Android 上初始化 OpenGL ES 2
 - en: Unifying GLSL 3 and GLSL ES 2 shaders
+  id: totrans-5
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 统一 GLSL 3 和 GLSL ES 2 着色器
 - en: Manipulating geometry
+  id: totrans-6
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 操作几何图形
 - en: Unifying vertex arrays
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 统一顶点数组
 - en: Creating a wrapper for textures
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 为纹理创建一个包装器
 - en: Creating a canvas for immediate rendering
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建一个用于即时渲染的画布
 - en: Introduction
+  id: totrans-10
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 引言
 - en: No doubt, any game needs to render some graphics. In this chapter, we will learn
     how to create a portable graphics rendering subsystem for your game. The chapter
     is titled *Unifying OpenGL ES 3 and OpenGL 3*; however, in this book we deal with
@@ -49,81 +71,123 @@
     will allow us to port applications between two versions of OpenGL API easily.
     Second, we can create a simple but very effective wrapper to abstract both APIs
     from the game code, so that we are able to develop our games on a desktop PC.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 毫无疑问，任何游戏都需要渲染一些图形。在本章中，我们将学习如何为你的游戏创建一个可移植的图形渲染子系统。章节标题为《统一 OpenGL ES 3 和 OpenGL
+    3》；然而，在本书中我们处理的是可移植开发，因此我们从 OpenGL 3 桌面 API 开始我们的教程。这有两个目的。首先，OpenGL 3 几乎是 OpenGL
+    ES 3 的超集。这将允许我们轻松地在两个 OpenGL API 版本之间移植应用程序。其次，我们可以创建一个简单但非常有效的包装器，来抽象游戏代码中的两个
+    API，这样我们就能在桌面 PC 上开发我们的游戏。
 - en: Note
+  id: totrans-12
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: OpenGL ES 3 support was introduced in Android 4.3 and Android NDK r9\. However,
     all of the examples in this book are backwards-compatible with the previous version
     of this mobile API, OpenGL ES 2.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL ES 3 的支持在 Android 4.3 和 Android NDK r9 中引入。然而，本书中的所有示例都向下兼容此移动 API 的前一个版本，即
+    OpenGL ES 2。
 - en: OpenGL itself is a huge topic which merits a dedicated book. We recommend starting
     with *The OpenGL Programming Guide*, *Pearson Publications* (the red book).
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL 本身是一个庞大的主题，值得专门用一本书来讲述。我们建议从《OpenGL 编程指南》，*Pearson 出版物*（红书）开始学习。
 - en: Unifying the OpenGL 3 core profile and OpenGL ES 2
+  id: totrans-15
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 统一 OpenGL 3 核心配置文件和 OpenGL ES 2
 - en: 'Let''s implement a thin abstraction layer on top of OpenGL 3 and OpenGL ES
     2, to make our high-level code unaware of the particular GL version that our application
     runs on. This means that our game code can be completely unaware whether it runs
     on a mobile or a desktop version of OpenGL. Take a look at the following diagram:'
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们在 OpenGL 3 和 OpenGL ES 2 之上实现一个薄的抽象层，使我们的高级代码不知道应用程序运行的具体 GL 版本。这意味着我们的游戏代码可以完全不知道它是在移动版还是桌面版的
+    OpenGL 上运行。请看以下图表：
 - en: '![Unifying the OpenGL 3 core profile and OpenGL ES 2](img/7785_06_1.jpg)'
+  id: totrans-17
   prefs: []
   type: TYPE_IMG
+  zh: '![统一 OpenGL 3 核心配置文件和 OpenGL ES 2](img/7785_06_1.jpg)'
 - en: The part that we are going to implement in this chapter is within the **High-level
     API** rectangle.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将在本章中实现的部分位于**高级 API** 矩形内。
 - en: Getting ready
+  id: totrans-19
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: In [Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
     a Virtual Filesystem*, we created an example `3_AsyncTexture`, where we learned
     how to initialize OpenGL ES 2 on Android using Java. Now we use `GLView.java`
     from that example to initialize a rendering context on Android. No EGL from Android
     NDK is involved, so our examples will run on Android 2.1 and higher.
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[第 4 章](ch04.html "第 4 章. 组织虚拟文件系统")，*组织虚拟文件系统*中，我们创建了一个示例 `3_AsyncTexture`，我们学习了如何在
+    Android 上使用 Java 初始化 OpenGL ES 2。现在我们使用该示例中的 `GLView.java` 在 Android 上初始化一个渲染上下文。不涉及来自
+    Android NDK 的 EGL，因此我们的示例将在 Android 2.1 及更高版本上运行。
 - en: How to do it…
+  id: totrans-21
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'In the previous recipe, we mentioned the `sLGLAPI` struct. It contains pointers
     to OpenGL functions that we load at startup dynamically. The declaration can be
     found in `LGLAPI.h`, and it starts like in the following code:'
+  id: totrans-22
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在上一个教程中，我们提到了 `sLGLAPI` 结构。它包含在启动时动态加载的 OpenGL 函数的指针。声明可以在 `LGLAPI.h` 中找到，它从以下代码开始：
 - en: '[PRE0]'
+  id: totrans-23
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'A variable is defined to hold a pointer to this structure:'
+  id: totrans-24
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 定义一个变量来保存指向此结构的指针：
 - en: '[PRE1]'
+  id: totrans-25
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'This means we have to call all OpenGL functions through pointers contained
     in `LGL3`. For example, following is the code for `OnDrawFrame()` from the `2_OpenGLES2`
     example:'
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这意味着我们必须通过包含在 `LGL3` 中的指针调用所有 OpenGL 函数。例如，以下是来自 `2_OpenGLES2` 示例的 `OnDrawFrame()`
+    的代码：
 - en: '[PRE2]'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: A bit more complicated than a simple `glClear(GL_COLOR_BUFFER_BIT)` call, so
     why would we need it? Depending on how your application links to OpenGL on different
     platforms, `glClear`-like entities can be represented in two ways. If your application
@@ -137,114 +201,170 @@
     `glClearDepth(double Depth)`, only to find out that OpenGL ES 2 has no direct
     equivalent for them. That is why we need a collection of pointers to OpenGL functions
     we can change at will.
+  id: totrans-28
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 比简单的`glClear(GL_COLOR_BUFFER_BIT)`调用复杂一点，那么为什么我们需要它呢？根据你的应用程序在不同平台上链接到OpenGL的方式，`glClear`类的实体可以以两种方式表示。如果你的应用程序是动态链接到OpenGL的，那么像`glClear`这样的全局符号由持有从`.DLL/.so`库中检索的函数指针的全局变量表示。你的应用程序也可能静态链接到某些OpenGL包装库，正如在Android上使用`-lGLESv2`和`-lGLESv3`开关在`LOCAL_LDLIBS`中所做的那样。在这种情况下，`glClear()`将是一个函数，而不是一个变量，你不能更改它包含的代码。此外，如果我们查看某些OpenGL
+    3函数，例如`glClearDepth(double Depth)`，却发现OpenGL ES 2没有直接等效的函数，事情就会变得更加复杂。这就是为什么我们需要一个可以随意更改的OpenGL函数指针集合。
 - en: 'On Android, we define a thunk function:'
+  id: totrans-29
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在Android上，我们定义了一个thunk函数：
 - en: '[PRE3]'
+  id: totrans-30
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'This function emulates the `glClearDepth()` call of OpenGL 3 using the `glClearDepthf()`
     call of OpenGL ES 3\. Now things are simple again. There are some GL3 functions
     that cannot be trivially emulated on GLES3\. We can now easily implement empty
     stubs for them, for example:'
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这个函数模拟了OpenGL 3的`glClearDepth()`调用，使用了OpenGL ES 3的`glClearDepthf()`调用。现在事情又变得简单了。有些GL3函数不能在GLES3中轻易模拟。现在我们可以轻松地为它们实现空的存根，例如：
 - en: '[PRE4]'
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: Unimplemented features in this case will disable some rendering capabilities;
     but the application will run fine, while gracefully degrading on GLES2\. Some
     more complicated aspects, such as multiple render targets using `glBindFragDataLocation()`,
     will still require us to select different shader programs and code paths for OpenGL
     3 and OpenGL ES 2\. However, this is now doable.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 在此情况下，未实现的功能将禁用一些渲染能力；但应用程序将正常运行，在GLES2上优雅降级。一些更复杂的内容，例如使用`glBindFragDataLocation()`的多重渲染目标，仍然需要我们为OpenGL
+    3和OpenGL ES 2选择不同的着色器程序和代码路径。然而，现在这是可行的。
 - en: How it works…
+  id: totrans-34
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'The `sLGLAPI` binding code is implemented in the `GetAPI()` function. The Windows
     version that was described in previous recipes was simple `.DLL` loading code.
     The Android version is even simpler. Since our application is linked statically
     with the OpenGL ES 2 library, we just assign function pointers to the fields of
     `sLGLAPI`, except the calls that are not present in OpenGL ES 2:'
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: '`sLGLAPI`绑定代码在`GetAPI()`函数中实现。之前描述的Windows版本是简单的`.DLL`加载代码。Android版本甚至更简单。由于我们的应用程序是静态链接到OpenGL
+    ES 2库的，我们只需将函数指针分配给`sLGLAPI`的字段，除了在OpenGL ES 2中不存在的调用：'
 - en: '[PRE5]'
+  id: totrans-36
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Instead, we use stubs for them, as described previously:'
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 相反，我们使用之前描述的存根：
 - en: '[PRE6]'
+  id: totrans-38
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'Now the usage of OpenGL is entirely transparent, and our application is completely
     unaware of what flavor of OpenGL is actually in use. Look at the `OpenGL3.cpp`
     file:'
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在OpenGL的使用完全是透明的，我们的应用程序完全不知道实际使用的是哪种OpenGL版本。看看`OpenGL3.cpp`文件：
 - en: '[PRE7]'
+  id: totrans-40
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: This code runs identically on Windows and Android.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 这段代码在Windows和Android上运行完全相同。
 - en: There's more…
+  id: totrans-42
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'The Android version of the `2_OpenGLES2` example can be built with the following
     commands:'
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用以下命令可以构建`2_OpenGLES2`示例的Android版本：
 - en: '[PRE8]'
+  id: totrans-44
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'Running the app will paint the entire screen in red, and output the surface
     size into the system log:'
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 运行应用程序将整个屏幕涂成红色，并将表面大小输出到系统日志中：
 - en: '[PRE9]'
+  id: totrans-46
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: There are other differences in OpenGL 3 Core Profile, OpenGL ES 2, and OpenGL
     ES 3 that cannot be abstracted by mimicking all of the API function calls. This
     includes different syntax of GLSL shaders, and the mandatory usage of vertex array
     objects (VAO) in OpenGL 3.2 Core Profile, which are absent from OpenGL ES 2.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 在OpenGL 3 Core Profile、OpenGL ES 2和OpenGL ES 3之间还存在其他无法通过模仿所有API函数调用来抽象的差异。这包括GLSL着色器的不同语法，以及在OpenGL
+    3.2 Core Profile中必须使用的顶点数组对象（VAO），这在OpenGL ES 2中是不存在的。
 - en: See also
+  id: totrans-48
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: Unifying the GLSL 3 and GLSL ES 2 shaders
+  id: totrans-49
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 统一GLSL 3和GLSL ES 2着色器
 - en: Manipulating geometry
+  id: totrans-50
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 操作几何图形
 - en: Unifying vertex arrays
+  id: totrans-51
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 统一顶点数组
 - en: Creating a wrapper for textures
+  id: totrans-52
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建纹理的包装器
 - en: Initializing the OpenGL 3 core profile on Windows
+  id: totrans-53
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Windows上初始化OpenGL 3核心配置文件
 - en: OpenGL 3.0 introduced the idea of features deprecation. Some features could
     be marked as deprecated and could be removed from the specification in later versions.
     For example, immediate mode rendering via `glBegin` `()/glEnd` `()` was marked
@@ -252,8 +372,11 @@
     many OpenGL implementations retain the deprecated functionality. For example,
     they want to be able to provide a way for users of modern OpenGL versions to access
     the features from old APIs.
+  id: totrans-54
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL 3.0 引入了功能弃用的概念。某些功能可能被标记为弃用，并在后续版本中从规范中移除。例如，通过 `glBegin` `()/glEnd`
+    `()` 的立即模式渲染在OpenGL标准版本3.0中被标记为弃用，并在版本3.1中移除。然而，许多OpenGL实现保留了弃用的功能。例如，它们希望为使用现代OpenGL版本的用户提供一种访问旧API功能的方法。
 - en: Starting from the OpenGL Version 3.2, a new mechanism was introduced to allow
     the user to create a rendering context of particular version. Each version allows
     **backwards-compatible**, or **core profile** contexts. A backwards-compatible
@@ -263,32 +386,47 @@
     OpenGL versions. Since the goal of this book is to provide a way to develop mobile
     applications on a desktop, this similarity in feature sets will come in handy.
     Let's find out how we can create a core profile context manually on Windows.
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 从OpenGL版本3.2开始，引入了一种新机制，允许用户创建特定版本的渲染上下文。每个版本都允许**向后兼容**或**核心配置文件**上下文。向后兼容的上下文允许使用所有标记为弃用的功能。核心配置文件上下文移除了弃用的功能，使API更干净。此外，OpenGL
+    3核心配置文件比之前的OpenGL版本更接近移动OpenGL ES 2。由于本书的目标是提供一种在桌面上开发移动应用程序的方法，这种功能集的相似性将非常有用。让我们找出如何在Windows上手动创建核心配置文件上下文。
 - en: Note
+  id: totrans-56
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: For readers with Unix or Mac desktop computers, we recommend using the GLFW
     library for OpenGL context creation, available at [http://www.glfw.org](http://www.glfw.org).
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于使用Unix或Mac桌面计算机的读者，我们建议使用GLFW库来创建OpenGL上下文，该库可在[http://www.glfw.org](http://www.glfw.org)获取。
 - en: Getting ready
+  id: totrans-58
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: More information on core and compatibility context can be found on the official
     OpenGL page at [http://www.opengl.org/wiki/Core_And_Compatibility_in_Contexts](http://www.opengl.org/wiki/Core_And_Compatibility_in_Contexts).
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 有关核心和兼容性上下文的更多信息可以在官方OpenGL页面找到，链接为[http://www.opengl.org/wiki/Core_And_Compatibility_in_Contexts](http://www.opengl.org/wiki/Core_And_Compatibility_in_Contexts)。
 - en: How to do it…
+  id: totrans-60
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: There is an OpenGL extension named `WGL_ARB_create_context` that can create
     an OpenGL context of a specific version on Windows, which is available at [http://www.opengl.org/registry/specs/ARB/wgl_create_context.txt](http://www.opengl.org/registry/specs/ARB/wgl_create_context.txt).
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 有一个名为 `WGL_ARB_create_context` 的OpenGL扩展，可以在Windows上创建特定版本的OpenGL上下文，相关信息可在[http://www.opengl.org/registry/specs/ARB/wgl_create_context.txt](http://www.opengl.org/registry/specs/ARB/wgl_create_context.txt)找到。
 - en: 'The trick is that we can get a pointer to the `wglCreateContextAttribsARB()`
     function, which can create a core profile context, only from an existing valid
     OpenGL context. This means we have to initialize OpenGL twice. Firstly, we create
@@ -297,358 +435,534 @@
     use the extension function to create an OpenGL context of the specified version
     and with the desired flags. The following is the code we use to create an OpenGL
     rendering context:'
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 技巧在于，我们只能从现有的有效OpenGL上下文中获取到 `wglCreateContextAttribsARB()` 函数的指针，该函数可以创建核心配置文件上下文。这意味着我们必须初始化OpenGL两次。首先，我们使用
+    `glCreateContext()` 创建一个临时的兼容性上下文，并获取到 `wglCreateContextAttribsARB()` 扩展函数的指针。然后，我们继续使用扩展函数创建指定版本和所需标志的OpenGL上下文。以下是我们用于创建OpenGL渲染上下文的代码：
 - en: Note
+  id: totrans-63
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The `sLGLAPI` structure contains pointers to all the OpenGL functions we use.
     Read the previous recipe *Unifying the OpenGL 3 core profile and OpenGL ES 2*
     for implementation details.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: '`sLGLAPI` 结构包含我们使用的所有OpenGL函数的指针。阅读之前的菜谱 *统一OpenGL 3核心配置文件和OpenGL ES 2* 以了解实现细节。'
 - en: '[PRE10]'
+  id: totrans-65
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'The first time this function is called, it reaches the `else` block and creates
     an OpenGL backwards-compatible context. When you retrieve a valid pointer to the
     `wglCreateContextAttribsARB()` function, save it in the `sLGLAPI` structure, and
     call `CreateContext()` again. This time the first `if` block takes control:'
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 第一次调用此函数时，它会进入`else`块并创建一个向后兼容的OpenGL上下文。当你获取到有效的`wglCreateContextAttribsARB()`函数指针时，将其保存在`sLGLAPI`结构中，并再次调用`CreateContext()`。这次第一个`if`块将接管控制：
 - en: '[PRE11]'
+  id: totrans-67
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'The `lglCreateContext()` call is just a wrapper for an OS-specific API call,
     `wglCreateContext()` in this case:'
+  id: totrans-68
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`lglCreateContext()`调用只是针对特定操作系统API调用的封装，在本例中是`wglCreateContext()`：'
 - en: '[PRE12]'
+  id: totrans-69
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'This function is wrapped into the `CreateContextFull()` function, which selects
     an appropriate pixel format and makes the context current:'
+  id: totrans-70
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这个函数被包装在`CreateContextFull()`函数中，它选择适当的像素格式并使上下文成为当前：
 - en: '[PRE13]'
+  id: totrans-71
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: It returns the created OpenGL rendering context, `HGLRC` on Windows, and updates
     pointers in `LGL3` structure to correspond to the created context.
+  id: totrans-72
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 它返回创建的OpenGL渲染上下文，在Windows上是`HGLRC`，并更新`LGL3`结构中的指针以对应创建的上下文。
 - en: Note
+  id: totrans-73
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: The previously described function has many side effects, and some functional
     programmers claim it is inconsistent. Another approach is to return a new `HGLRC`
     together with the new `LGL3` (or as a part of new `LGL3`), so you can make it
     current later at your own will, and still has an access to the old context. We
     will leave this idea as an exercise for the reader.
+  id: totrans-74
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 之前描述的函数有许多副作用，一些函数式程序员认为它不一致。另一种方法是返回一个新的`HGLRC`以及新的`LGL3`（或者作为新`LGL3`的一部分），这样你可以在稍后自行决定使其成为当前上下文，并且仍然可以访问旧的上下文。我们将这个想法留给读者作为一个练习。
 - en: The function `Reload()`, previously mentioned, reloads pointers to OpenGL functions
     in the `sLGLAPI` structure. This indirection is important since we need to emulate
     the behavior of some OpenGL 3 functions on OpenGL ES 2.
+  id: totrans-75
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 之前提到的`Reload()`函数重新加载了`sLGLAPI`结构中的OpenGL函数指针。这种间接调用很重要，因为我们需要模拟OpenGL 3函数在OpenGL
+    ES 2上的行为。
 - en: 'Pixel format selection also uses another OpenGL extension: `WGL_ARB_pixel_format`
     available at [http://www.opengl.org/registry/specs/ARB/wgl_pixel_format.txt](http://www.opengl.org/registry/specs/ARB/wgl_pixel_format.txt).'
+  id: totrans-76
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 像素格式选择还使用了另一个OpenGL扩展：`WGL_ARB_pixel_format`，可在[http://www.opengl.org/registry/specs/ARB/wgl_pixel_format.txt](http://www.opengl.org/registry/specs/ARB/wgl_pixel_format.txt)找到。
 - en: 'That means we have to choose and set the pixel format twice. The code is as
     follows:'
+  id: totrans-77
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这意味着我们必须选择并设置像素格式两次。代码如下：
 - en: '[PRE14]'
+  id: totrans-78
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Try to use the extension if the valid pointer is available:'
+  id: totrans-79
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果有效的指针可用，请尝试使用该扩展：
 - en: '[PRE15]'
+  id: totrans-80
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'Alternatively, fall back to the pixel format selection function provided by
     WinAPI:'
+  id: totrans-81
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 或者，退回到WinAPI提供的像素格式选择函数：
 - en: '[PRE16]'
+  id: totrans-82
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: How it works…
+  id: totrans-83
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它的工作原理是…
 - en: 'The `Reload()` function loads `opengl32.dll` and gets pointers to certain WGL
     ([http://en.wikipedia.org/wiki/WGL_(API)](http://en.wikipedia.org/wiki/WGL_(API)))
     functions:'
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Reload()`函数加载`opengl32.dll`并获取某些WGL函数的指针（[http://en.wikipedia.org/wiki/WGL_(API)](http://en.wikipedia.org/wiki/WGL_(API))）：'
 - en: '[PRE17]'
+  id: totrans-85
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'The `GetAPI()` function is much bigger but still trivial. The following are
     just a few lines to give you the idea:'
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: '`GetAPI()`函数要大得多，但仍然很简单。以下是一些代码行，以给你一个大概的想法：'
 - en: '[PRE18]'
+  id: totrans-87
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'The complete source code is in the `1_OpenGL3` folder. You can build it with
     `make`:'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 完整的源代码在`1_OpenGL3`文件夹中。你可以使用`make`来构建它：
 - en: '[PRE19]'
+  id: totrans-89
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'This example opens a window with a red background and prints lines similar
     to:'
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 本示例打开一个背景为红色的窗口，并打印出类似于以下内容的行：
 - en: '[PRE20]'
+  id: totrans-91
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: The OpenGL context version matches the version specified in the call to `glCreateContextAttribsARB()`.
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL上下文版本与`glCreateContextAttribsARB()`调用中指定的版本相匹配。
 - en: There's more…
+  id: totrans-93
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: Setting a pixel format of a window more than once is not allowed in WinAPI.
     Hence, we use a temporary invisible window to create the first rendering context
     and retrieve the extensions. Check out the file `OpenGL3.cpp` from the `1_OpenGL3`
     example for further implementation details.
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 在WinAPI中不允许多次设置窗口的像素格式。因此，我们使用一个临时的不可见窗口来创建第一个渲染上下文并获取扩展。查看`1_OpenGL3`示例中的`OpenGL3.cpp`文件，了解进一步的实现细节。
 - en: See also
+  id: totrans-95
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Unifying the OpenGL 3 core profile and OpenGL ES 3*'
+  id: totrans-96
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*统一OpenGL 3核心配置文件和OpenGL ES 3*'
 - en: Initializing OpenGL ES 2 on Android
+  id: totrans-97
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 在Android上初始化OpenGL ES 2。
 - en: 'Initialization of OpenGL on Android is straightforward when compared to Windows.
     There are two possibilities to create an OpenGL rendering context in the Android
     NDK: use EGL API ([http://en.wikipedia.org/wiki/EGL_(API)](http://en.wikipedia.org/wiki/EGL_(API)))
     from NDK directly, or create a wrapper Java class based on `android.opengl.GLSurfaceView`.
     We will choose the second option.'
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 与Windows相比，Android上的OpenGL初始化非常直接。在Android NDK中创建OpenGL渲染上下文有两种方法：直接使用来自NDK的EGL
+    API（[http://en.wikipedia.org/wiki/EGL_(API)](http://en.wikipedia.org/wiki/EGL_(API)）），或者基于`android.opengl.GLSurfaceView`创建一个包装Java类。我们将选择第二种方法。
 - en: Getting ready
+  id: totrans-99
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Make yourself familiar with the interface of the `GLSurfaceView` class at [http://developer.android.com/reference/android/opengl/GLSurfaceView.html](http://developer.android.com/reference/android/opengl/GLSurfaceView.html).
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 熟悉`GLSurfaceView`类的接口，请访问[http://developer.android.com/reference/android/opengl/GLSurfaceView.html](http://developer.android.com/reference/android/opengl/GLSurfaceView.html)。
 - en: How to do it…
+  id: totrans-101
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'We extend the `GLSurfaceView` class in the following way:'
+  id: totrans-102
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们以下列方式扩展了`GLSurfaceView`类：
 - en: '[PRE21]'
+  id: totrans-103
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'The `init()` method selects the `RGB_888` pixel format for a frame buffer:'
+  id: totrans-104
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`init()`方法为帧缓冲区选择`RGB_888`像素格式：'
 - en: '[PRE22]'
+  id: totrans-105
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: 'This inner class performs EGL calls to create an OpenGL rendering context:'
+  id: totrans-106
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这个内部类执行EGL调用以创建OpenGL渲染上下文：
 - en: '[PRE23]'
+  id: totrans-107
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'The `ConfigChooser` class deals with pixel formats. We omit all error checks
     here in the book; however, a more robust implementation can be found in the `GLView.java`
     file of the `2_OpenGLES2` example:'
+  id: totrans-108
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`ConfigChooser`类处理像素格式。在本书中我们省略了所有错误检查；然而，在`2_OpenGLES2`示例的`GLView.java`文件中可以找到一个更健壮的实现：'
 - en: '[PRE24]'
+  id: totrans-109
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'Default values for our pixel format chooser are:'
+  id: totrans-110
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们像素格式选择器的默认值为：
 - en: '[PRE25]'
+  id: totrans-111
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: 'Allocate and read the array of minimally matching EGL configurations:'
+  id: totrans-112
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 分配并读取最小匹配EGL配置的数组：
 - en: '[PRE26]'
+  id: totrans-113
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Choose the best matching one:'
+  id: totrans-114
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 选择最佳匹配项：
 - en: '[PRE27]'
+  id: totrans-115
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Select configurations with the specified values for depth buffer and stencil
     buffer bits:'
+  id: totrans-116
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 选择具有指定深度缓冲区和模板缓冲区位的配置：
 - en: '[PRE28]'
+  id: totrans-117
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'We need at least `mDepthSize` and `mStencilSize` bits for depth and stencil:'
+  id: totrans-118
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们至少需要`mDepthSize`和`mStencilSize`位来进行深度和模板处理：
 - en: '[PRE29]'
+  id: totrans-119
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'We want an exact match for red/green/blue/alpha bits:'
+  id: totrans-120
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们希望红/绿/蓝/透明位有一个完全匹配：
 - en: '[PRE30]'
+  id: totrans-121
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'Use the helper method to look for matching configurations:'
+  id: totrans-122
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 使用辅助方法查找匹配的配置：
 - en: '[PRE31]'
+  id: totrans-123
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'The `Renderer` class delegates frame rendering callbacks to our NDK code:'
+  id: totrans-124
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Renderer`类将帧渲染回调委托给我们的NDK代码：'
 - en: '[PRE32]'
+  id: totrans-125
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: How it works…
+  id: totrans-126
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'Frame rendering callbacks are declared in `App13Activity.java`:'
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: 帧渲染回调在`App13Activity.java`中声明：
 - en: '[PRE33]'
+  id: totrans-128
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'They are JNI calls that are implemented in the `Wrappers.cpp` file:'
+  id: totrans-129
   prefs: []
   type: TYPE_NORMAL
+  zh: 它们是`Wrappers.cpp`文件中实现的JNI调用：
 - en: '[PRE34]'
+  id: totrans-130
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'Allocate a new `sLGLAPI` structure and reload the pointers to OpenGL functions:'
+  id: totrans-131
   prefs: []
   type: TYPE_NORMAL
+  zh: 分配一个新的`sLGLAPI`结构并重新加载OpenGL函数的指针：
 - en: '[PRE35]'
+  id: totrans-132
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: 'Update the surface size. We don''t need to do anything else here, since `SetSurface()`
     will be called right after it:'
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 更新表面大小。在这里我们不需要做其他任何事情，因为`SetSurface()`将在其后立即被调用：
 - en: '[PRE36]'
+  id: totrans-134
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'Invoke our platform-independent frame rendering callback:'
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 调用我们与平台无关的帧渲染回调：
 - en: '[PRE37]'
+  id: totrans-136
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: Now we can put out rendering code in the `OnDrawFrame()` callback and use it
     on Android.
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们可以将渲染代码放在`OnDrawFrame()`回调中，并在Android上使用它。
 - en: There's more…
+  id: totrans-138
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'To use the previously discussed code, you have to add this line into the `AndroidManifest.xml`
     file:'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 要使用之前讨论的代码，您需要在`AndroidManifest.xml`文件中添加这一行：
 - en: '[PRE38]'
+  id: totrans-140
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: 'Furthermore, you have to link your native application with either OpenGL ES
     2 or the OpenGL ES 3 library. Put the `-lGLESv2` or `-lGLESv3` switch into your
     `Android.mk` file, like this:'
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，您需要将本地应用程序与OpenGL ES 2或OpenGL ES 3库链接。在您的`Android.mk`文件中放入`-lGLESv2`或`-lGLESv3`开关，如下所示：
 - en: '[PRE39]'
+  id: totrans-142
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: Note
+  id: totrans-143
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: There is a third possibility to do it. You can omit static linking, open the
     `libGLESv2.so` shared library via the `dlopen()` call, and retrieve pointers to
     OpenGL functions using the `dlsym()` function. This is useful if you are developing
     a versatile renderer for OpenGL ES 2 and OpenGL ES 3, and want to tune everything
     at runtime.
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 还有一种方法可以做到这一点。您可以省略静态链接，通过`dlopen()`调用打开`libGLESv2.so`共享库，并使用`dlsym()`函数获取OpenGL函数的指针。如果您正在开发适用于OpenGL
+    ES 2和OpenGL ES 3的通用渲染器，并希望运行时调整一切，这很有用。
 - en: See also
+  id: totrans-145
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Unifying the OpenGL 3 core profile and OpenGL ES 2*'
+  id: totrans-146
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*统一OpenGL 3核心配置和OpenGL ES 2*'
 - en: Unifying the GLSL 3 and GLSL ES 2 shaders
+  id: totrans-147
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 统一GLSL 3和GLSL ES 2着色器
 - en: OpenGL 3 provides support for OpenGL Shading Language. In particular, OpenGL
     3.2 Core Profile supports the GLSL 1.50 Core Profile. On the other hand, OpenGL
     ES 2 provides support for GLSL ES Version 1.0, and OpenGL ES 3 supports GLSL ES
@@ -656,498 +970,734 @@
     we have to abstract in order to write portable shaders. In this recipe, we will
     create a facility to downgrade desktop OpenGL shaders, to become shaders compatible
     with OpenGL ES Shading Language 1.0.
+  id: totrans-148
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL 3支持OpenGL着色语言。特别是，OpenGL 3.2 Core Profile支持GLSL 1.50 Core Profile。另一方面，OpenGL
+    ES 2支持GLSL ES版本1.0，而OpenGL ES 3支持GLSL ES 3.0。这三个GLSL版本之间有轻微的语法差异，为了编写可移植的着色器，我们必须对这些差异进行抽象化处理。在本教程中，我们将创建一个设施，以将桌面OpenGL着色器降级，使其与OpenGL
+    ES着色语言1.0兼容。
 - en: Note
+  id: totrans-149
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: OpenGL ES 3 has backwards-compatible support for OpenGL ES Shading Language
     1.0\. For this purpose, we put `#version 100` at the beginning of our shaders.
     However, if your application targets only the most recent OpenGL ES 3, you can
     use the marker `#version 300 es` and avoid some conversions. Refer to the specification
     of OpenGL ES Shading Language 3.0 for more details at [http://www.khronos.org/registry/gles/specs/3.0/GLSL_ES_Specification_3.00.4.pdf](http://www.khronos.org/registry/gles/specs/3.0/GLSL_ES_Specification_3.00.4.pdf).
+  id: totrans-150
   prefs: []
   type: TYPE_NORMAL
+  zh: OpenGL ES 3对OpenGL ES着色语言1.0提供了向后兼容支持。为此，我们在着色器开头放置了`#version 100`。然而，如果你的应用程序只针对最新的OpenGL
+    ES 3，你可以使用标记`#version 300 es`并避免一些转换。更多详细信息，请参考OpenGL ES着色语言3.0的规格说明书，在[http://www.khronos.org/registry/gles/specs/3.0/GLSL_ES_Specification_3.00.4.pdf](http://www.khronos.org/registry/gles/specs/3.0/GLSL_ES_Specification_3.00.4.pdf)。
 - en: Getting ready
+  id: totrans-151
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Specifications of different GLSL language versions can be downloaded from the
     official OpenGL website at [http://www.opengl.org](http://www.opengl.org). The
     GLSL 1.50 specification is found at [http://www.opengl.org/registry/doc/GLSLangSpec.1.50.09.pdf](http://www.opengl.org/registry/doc/GLSLangSpec.1.50.09.pdf).
+  id: totrans-152
   prefs: []
   type: TYPE_NORMAL
+  zh: 可以从官方OpenGL网站[http://www.opengl.org](http://www.opengl.org)下载不同版本的GLSL语言规格说明书。GLSL
+    1.50规格说明书可以在[http://www.opengl.org/registry/doc/GLSLangSpec.1.50.09.pdf](http://www.opengl.org/registry/doc/GLSLangSpec.1.50.09.pdf)找到。
 - en: Specifications for GLSL ES can be downloaded from the Khronos website at [http://www.khronos.org](http://www.khronos.org).
     The GLSL ES 1.0 specification is available at [http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf).
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: GLSL ES的规格说明书可以从Khronos网站[http://www.khronos.org](http://www.khronos.org)下载。GLSL
+    ES 1.0规格说明书可在[http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf](http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf)获取。
 - en: How to do it…
+  id: totrans-154
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'Let''s take a look at two sets of simple vertex and fragment shaders. The one
     for GLSL 1.50 is:'
+  id: totrans-155
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让我们看看两组简单的顶点和片段着色器。适用于GLSL 1.50的是：
 - en: '[PRE40]'
+  id: totrans-156
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: 'And the other pair of shaders is for GLSL ES 1.0:'
+  id: totrans-157
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 另一对着色器是针对GLSL ES 1.0的：
 - en: '[PRE41]'
+  id: totrans-158
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: 'The following table is the summary of some differences between three versions
     of OpenGL API, which need abstracting:'
+  id: totrans-159
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 下表是OpenGL API三个版本之间一些差异的摘要，需要抽象化处理：
 - en: '|   | OpenGL 3 | OpenGL ES 2 | OpenGL ES 3 |'
+  id: totrans-160
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '|   | OpenGL 3 | OpenGL ES 2 | OpenGL ES 3 |'
 - en: '| --- | --- | --- | --- |'
+  id: totrans-161
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| --- | --- | --- | --- |'
 - en: '| Version definition | #version 150 core | #version 100 | #version 300 es |'
+  id: totrans-162
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| 版本定义 | #version 150 core | #version 100 | #version 300 es |'
 - en: '| Explicit floats precision | not required | required | not required |'
+  id: totrans-163
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| 显式浮点精度 | 不需要 | 需要 | 不需要 |'
 - en: '| Keywords for varyings and attributes | in and out | varying and attribute
     | in and out |'
+  id: totrans-164
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| 变量和属性的关键字 | in 和 out | varying 和 attribute | in 和 out |'
 - en: '| Fixed-function fragment data location | no, customizable | gl_FragColor |
     no, customizable |'
+  id: totrans-165
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| 固定功能片段数据位置 | 否，可定制 | gl_FragColor | 否，可定制 |'
 - en: '| 2D texture fetching | texture(), overloaded | texture2D() | texture(), overloaded
     |'
+  id: totrans-166
   prefs:
   - PREF_IND
   type: TYPE_TB
+  zh: '| 2D纹理获取 | texture()，重载 | texture2D() | texture()，重载 |'
 - en: 'Let''s implement conversion rules in the following code to downgrade GLSL 1.50
     shaders to GLSL 1.0:'
+  id: totrans-167
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让我们在以下代码中实现转换规则，以将GLSL 1.50着色器降级到GLSL 1.0：
 - en: '[PRE42]'
+  id: totrans-168
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: Note
+  id: totrans-169
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: This kind of search and replace implies some restrictions on the shaders source
     code. For example, it will invalidate shaders containing identifiers such as `grayin`
     and `sprout`. However, the code above is very simple and was used successfully
     in a couple of released commercial projects.
+  id: totrans-170
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这种搜索和替换暗示了对着色器源代码的一些限制。例如，它将使包含如`grayin`和`sprout`等标识符的着色器无效。然而，上述代码非常简单，并且已经在几个已发布的商业项目中成功使用。
 - en: We store our shaders in GLSL 1.5 source code and just do a simple search and
     replace to use them on Android. It is very easy and transparent.
+  id: totrans-171
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将着色器以GLSL 1.5源代码的形式存储，并在Android上通过简单的搜索和替换来使用它们。这样做非常简单且透明。
 - en: How it works…
+  id: totrans-172
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'The complete implementation is presented in the `clGLSLShaderProgram` class
     from the `3_ShadersAndVertexArrays` example. After the code is downgraded, in
     case of need, it is uploaded into OpenGL:'
+  id: totrans-173
   prefs: []
   type: TYPE_NORMAL
+  zh: 完整的实现包含在`3_ShadersAndVertexArrays`示例中的`clGLSLShaderProgram`类中。代码降级后，如有需要，它会被上传到OpenGL：
 - en: '[PRE43]'
+  id: totrans-174
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: 'The `CheckStatus()` function performs error checks and logs a specified error
     message on failure:'
+  id: totrans-175
   prefs: []
   type: TYPE_NORMAL
+  zh: '`CheckStatus()`函数执行错误检查，并在失败时记录指定的错误消息：'
 - en: '[PRE44]'
+  id: totrans-176
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: '`OldShaderID` retains the previous compiled shader. It is used to allow the
     editing of shaders on-the-fly on a PC and prevents loading of invalid shaders.
     After the vertex and fragment shaders have compiled, a shader program should be
     linked:'
+  id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: '`OldShaderID`保留了上一个编译的着色器。它用于允许在PC上即时编辑着色器，并防止加载无效着色器。在顶点和片段着色器编译之后，应该链接着色器程序：'
 - en: '[PRE45]'
+  id: totrans-178
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: 'The same should also be done to the shader program. Replace the old program
     only if the program was linked successfully:'
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 对着色器程序也应该执行相同的操作。只有当程序成功链接后，才替换旧的程序：
 - en: '[PRE46]'
+  id: totrans-180
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'We have to bind the default locations of different attributes that we will
     use throughout our renderer:'
+  id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们必须绑定将在整个渲染器中使用不同属性的默认位置：
 - en: '[PRE47]'
+  id: totrans-182
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: 'The meaning of the `L_VS_` identifiers is explained in the recipe *Manipulating
     geometry*:'
+  id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: '`L_VS_`标识符的含义在*操作几何图形*的食谱中解释：'
 - en: '[PRE48]'
+  id: totrans-184
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: The shader program can now be used for rendering.
+  id: totrans-185
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在着色器程序可以用于渲染了。
 - en: There's more…
+  id: totrans-186
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: 'During rendering, we can specify the location of additional uniforms by name
     and ask the underlying OpenGL API to bind uniforms by name. However, it is more
     convenient to do it in our own code, since we can omit the redundant OpenGL state
     change calls. The following is the listing of the `RebindAllUniforms()` method
     that will get locations of all the active uniforms of a shader program and save
     them for the further use:'
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 在渲染过程中，我们可以通过名称指定附加统一变量的位置，并要求底层OpenGL API通过名称绑定统一变量。然而，在我们自己的代码中这样做更方便，因为我们可以省略多余的OpenGL状态更改调用。以下是`RebindAllUniforms()`方法的清单，它将获取着色器程序中所有活跃统一变量的位置，并为以后的使用保存它们：
 - en: '[PRE49]'
+  id: totrans-188
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: '`sUniform` is a `struct` holding a single active uniform:'
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: '`sUniform`是一个`struct`，它包含了一个活跃的统一变量：'
 - en: '[PRE50]'
+  id: totrans-190
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: It is used in numerous `SetUniformName()`functions to set the values of uniforms
     by name at runtime without touching OpenGL API to resolve the names.
+  id: totrans-191
   prefs: []
   type: TYPE_NORMAL
+  zh: 它在许多`SetUniformName()`函数中使用，以在运行时通过名称设置统一变量的值，而不接触OpenGL API来解决这些名称。
 - en: See also
+  id: totrans-192
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Manipulating geometry*'
+  id: totrans-193
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*操作几何图形*'
 - en: '*Unifying vertex arrays*'
+  id: totrans-194
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*统一顶点数组*'
 - en: '*Creating a canvas for immediate rendering*'
+  id: totrans-195
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*创建立即渲染的画布*'
 - en: Manipulating geometry
+  id: totrans-196
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 操作几何图形
 - en: In [Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
     a Virtual Filesystem*, we created the `Bitmap` class to load and store bitmaps
     in an API-independent way. Now we will create a similar abstraction for geometry
     data representation that we will later use to submit vertices and their attributes
     to OpenGL.
+  id: totrans-197
   prefs: []
   type: TYPE_NORMAL
+  zh: 在[第4章](ch04.html "第4章. 组织虚拟文件系统")，*组织虚拟文件系统*中，我们创建了`Bitmap`类以API无关的方式加载和存储位图。现在，我们将创建一个类似的抽象，用于几何数据的表示，稍后我们将使用它将顶点和它们的属性提交给OpenGL。
 - en: Getting ready
+  id: totrans-198
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Before we proceed with the abstraction, let's take a look at how the vertex
     specification in OpenGL works. Submitting vertex data to OpenGL requires you to
     create different **vertex streams**, and specify ways of their interpretation.
     Refer to the tutorial if you are unfamiliar with this concept at [http://www.opengl.org/wiki/Vertex_Specification](http://www.opengl.org/wiki/Vertex_Specification).
+  id: totrans-199
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们继续进行抽象之前，让我们先看看OpenGL中顶点规范是如何工作的。向OpenGL提交顶点数据需要你创建不同的**顶点流**，并指定它们的解释方式。如果你不熟悉这个概念，请参考教程：[http://www.opengl.org/wiki/Vertex_Specification](http://www.opengl.org/wiki/Vertex_Specification)。
 - en: How to do it…
+  id: totrans-200
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: We have to decide which **vertex attributes**, or vertex streams, we will store
     in our **mesh**. Let's assume that for a given vertex we need a position, texture
     coordinates, a normal, and a color.
+  id: totrans-201
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们必须决定将哪些**顶点属性**，或者说顶点流，存储在我们的**网格**中。假设对于一个给定的顶点，我们需要位置、纹理坐标、法线和颜色。
 - en: 'The following are the names and indices of these streams:'
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是这些流的名称和索引：
 - en: '[PRE51]'
+  id: totrans-203
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: Note
+  id: totrans-204
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: One may require additional texture coordinates, for example, for multi texturing
     algorithms, or additional attributes, such as tangents, binormals, or bones and
     weights for hardware-accelerated GPU skinning. They can be easily introduced using
     these semantics. We leave it as an exercise for the reader.
+  id: totrans-205
   prefs: []
   type: TYPE_NORMAL
+  zh: 有时可能需要额外的纹理坐标，例如，在多纹理算法中，或者额外的属性，如切线、副法线，或者在硬件加速的GPU蒙皮中用到的骨骼和权重。这些属性可以通过这些语义轻易引入。我们将此作为一个练习留给读者。
 - en: 'Let''s define the number of float components for each attribute:'
+  id: totrans-206
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让我们定义每个属性的浮点数组件数量：
 - en: '[PRE52]'
+  id: totrans-207
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: 'This means positions and normals are represented as `vec3`, texture coordinates
     as `vec2`, and colors as `vec4`. We need this information to correctly define
     types in OpenGL shader programs and submit the vertex data. The following is the
     source code of a rendering API-independent container we use for vertex attributes:'
+  id: totrans-208
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这意味着位置和法线以`vec3`表示，纹理坐标以`vec2`表示，颜色以`vec4`表示。我们需要这些信息以正确地在OpenGL着色器程序中定义类型并提交顶点数据。以下是我们用于顶点属性的渲染API无关容器的源代码：
 - en: '[PRE53]'
+  id: totrans-209
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: 'We need a method to map our vertex attributes to enumerated streams:'
+  id: totrans-210
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们需要一个方法将我们的顶点属性映射到枚举流：
 - en: '[PRE54]'
+  id: totrans-211
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'We also need some helper methods to construct the geometry:'
+  id: totrans-212
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们还需要一些辅助方法来构建几何体：
 - en: '[PRE55]'
+  id: totrans-213
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'Actual data holders are made `public` for convenience:'
+  id: totrans-214
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实际数据持有者为了方便被设置为`public`：
 - en: '[PRE56]'
+  id: totrans-215
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: How it works…
+  id: totrans-216
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的…
 - en: 'To use `clVertexAttribs` and populate it with useful data, we declare a few
     helper functions:'
+  id: totrans-217
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了使用`clVertexAttribs`并向其填充有用的数据，我们声明了一些辅助函数：
 - en: '[PRE57]'
+  id: totrans-218
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: 'The following is an example definition of one of these:'
+  id: totrans-219
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是这些定义中的一个示例：
 - en: '[PRE58]'
+  id: totrans-220
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: 'Restart the regeneration and allocate space for `3` vertices:'
+  id: totrans-221
   prefs: []
   type: TYPE_NORMAL
+  zh: 重新开始生成并分配`3`个顶点的空间：
 - en: '[PRE59]'
+  id: totrans-222
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: The complete source code for these functions is found in the `GeomServ.cpp`
     file in the `3_ShadersAndVertexArrays` project. Now we have a set of handy functions
     to create simple 2D and 3D geometry primitives, such as single triangles, rectangles,
     and boxes.
+  id: totrans-223
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些函数的完整源代码可以在`3_ShadersAndVertexArrays`项目的`GeomServ.cpp`文件中找到。现在我们有一组方便的函数来创建简单的2D和3D几何原始物体，如单个三角形、矩形和盒子。
 - en: There's more…
+  id: totrans-224
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: If you want to learn how to create more complex 3D primitives, download the
     source code for Linderdaum Engine ([http://www.linderdaum.com](http://www.linderdaum.com)).
     In `Geometry/GeomServ.h`, you will find out how to generate spheres, tubes, polyhedra,
     gears, and other 3D objects.
+  id: totrans-225
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想要学习如何创建更复杂的3D原始物体，请下载Linderdaum Engine的源代码（[http://www.linderdaum.com](http://www.linderdaum.com)）。在`Geometry/GeomServ.h`中，你会发现如何生成球体、管子、多面体、齿轮和其他3D物体。
 - en: See also
+  id: totrans-226
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Unifying vertex arrays*'
+  id: totrans-227
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*统一顶点数组*'
 - en: Unifying vertex arrays
+  id: totrans-228
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 统一顶点数组
 - en: Geometry data is submitted into OpenGL using Vertex Buffer Objects (**VBO**)
     and Vertex Array Objects (**VAO**). VBOs are part of both OpenGL versions; however,
     VAOs are not part of OpenGL ES 2 but are mandatory in the OpenGL 3.2 Core Profile.
     This means we have to make yet another abstraction to hide the difference between
     the two APIs behind it.
+  id: totrans-229
   prefs: []
   type: TYPE_NORMAL
+  zh: 几何数据通过顶点缓冲对象（**VBO**）和顶点数组对象（**VAO**）提交到OpenGL中。VBO是OpenGL版本的组成部分；然而，VAO不是OpenGL
+    ES 2的一部分，但在OpenGL 3.2核心配置中是必须的。这意味着我们不得不进行另一层抽象，以隐藏两个API之间的差异。
 - en: '*A **Vertex Buffer Object** (**VBO**) is an OpenGL feature that provides methods
     for uploading vertex data (position, normal vector, color, and so on) to the video
     device for non-immediate-mode rendering. VBOs offer substantial performance gains
     over immediate mode rendering, primarily because the data resides in the video
     device memory rather than the system memory and so it can be rendered directly
     by the video device.*'
+  id: totrans-230
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
+  zh: '*一个**顶点缓冲对象**（**VBO**）是OpenGL的一个特性，它提供了上传顶点数据（位置、法线向量、颜色等）到视频设备的方法，用于非立即模式渲染。VBOs比立即模式渲染提供了实质性的性能提升，主要是因为数据位于视频设备内存中，而不是系统内存中，因此可以直接由视频设备渲染。*'
 - en: 'Courtesy: [http://en.wikipedia.org/wiki/Vertex_Buffer_Object](http://en.wikipedia.org/wiki/Vertex_Buffer_Object)'
+  id: totrans-231
   prefs: []
   type: TYPE_NORMAL
+  zh: 出处：[http://en.wikipedia.org/wiki/Vertex_Buffer_Object](http://en.wikipedia.org/wiki/Vertex_Buffer_Object)
 - en: '*A **Vertex Array Object** (**VAO**) is an OpenGL Object that encapsulates
     the state needed to specify vertex data. They define the format of the vertex
     data as well as the sources for the vertex arrays. VAOs do not contain the arrays
     themselves; the arrays are stored in Buffer Objects. The VAOs simply reference
     already existing buffer objects.*'
+  id: totrans-232
   prefs:
   - PREF_BQ
   type: TYPE_NORMAL
+  zh: '*一个**顶点数组对象**（**VAO**）是一个封装了指定顶点数据所需状态的OpenGL对象。它们定义了顶点数据的格式以及顶点数组的数据源。VAOs不包含数组本身；数组存储在缓冲区对象中。VAOs只是引用已经存在的缓冲对象。*'
 - en: 'Courtesy: [http://www.opengl.org/wiki/Vertex_Specification](http://www.opengl.org/wiki/Vertex_Specification)'
+  id: totrans-233
   prefs: []
   type: TYPE_NORMAL
+  zh: 致谢：[http://www.opengl.org/wiki/Vertex_Specification](http://www.opengl.org/wiki/Vertex_Specification)
 - en: Getting ready
+  id: totrans-234
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Before proceeding with vertex arrays, make sure you are familiar with the platform-independent
     storage of geometry from the previous recipe. The source code for this recipe
     can be found in the `4_Canvas` example. Take a look at the `GLVertexArray.cpp`
     and `GLVertexArray.h` files.
+  id: totrans-235
   prefs: []
   type: TYPE_NORMAL
+  zh: 在继续使用顶点数组之前，请确保你已经熟悉了前一个食谱中与平台无关的几何存储。本食谱的源代码可以在`4_Canvas`示例中的`GLVertexArray.cpp`和`GLVertexArray.h`文件中找到。
 - en: How to do it…
+  id: totrans-236
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'Our vertex arrays are hidden behind the interface of the `clGLVertexArray`
     class:'
+  id: totrans-237
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们的顶点数组隐藏在`clGLVertexArray`类的接口后面：
 - en: '[PRE60]'
+  id: totrans-238
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: 'Offsets for VBO are stored through the following code:'
+  id: totrans-239
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 通过以下代码存储VBO的偏移量：
 - en: '[PRE61]'
+  id: totrans-240
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: 'The following are the pointers to the actual data of the attached `clVertexAttribs`:'
+  id: totrans-241
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 以下是附加的`clVertexAttribs`实际数据的指针：
 - en: '[PRE62]'
+  id: totrans-242
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: 'The `clVertexAttribs` should be attached to our vertex array using the `SetVertexAttribs()`
     method:'
+  id: totrans-243
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 应该使用`SetVertexAttribs()`方法将`clVertexAttribs`附加到我们的顶点数组上：
 - en: '[PRE63]'
+  id: totrans-244
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: 'We have to remove any old vertex buffer objects before using the `FVBOID` again
     in order to allow the reuse of `clGLVertexArray`:'
+  id: totrans-245
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们必须在使用`FVBOID`之前移除任何旧的顶点缓冲对象，以允许重用`clGLVertexArray`：
 - en: '[PRE64]'
+  id: totrans-246
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'Calculate the size of a vertex buffer object and allocate it:'
+  id: totrans-247
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 计算顶点缓冲对象的大小并分配它：
 - en: '[PRE65]'
+  id: totrans-248
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: 'Submit data for every vertex attribute:'
+  id: totrans-249
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为每个顶点属性提交数据：
 - en: '[PRE66]'
+  id: totrans-250
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: 'Here we create VAO if we are not on Android:'
+  id: totrans-251
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 如果我们不在Android上，这里将创建VAO：
 - en: '[PRE67]'
+  id: totrans-252
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: Note
+  id: totrans-253
   prefs:
   - PREF_IND
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: VAOs can be used with OpenGL ES 3\. We leave their implementation as a simple
     exercise to the reader. This can be done by using the OpenGL 3 code path for OpenGL
     ES 3.
+  id: totrans-254
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: VAO可以与OpenGL ES 3一起使用。我们将它们的实现留给读者作为一个简单的练习。这可以通过为OpenGL ES 3使用OpenGL 3的代码路径来完成。
 - en: How it works…
+  id: totrans-255
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'The `Bind()` method does the actual job of binding the vertex buffer object
     and preparing the attribute pointers:'
+  id: totrans-256
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Bind()`方法负责实际绑定顶点缓冲对象并准备属性指针：'
 - en: '[PRE68]'
+  id: totrans-257
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: 'Now we can render the geometry via the `Draw()` method:'
+  id: totrans-258
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们可以通过`Draw()`方法渲染几何图形：
 - en: '[PRE69]'
+  id: totrans-259
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: 'Again, there is `#define` to disable VAO on Android. The following is a screenshot
     of the `3_ShadersAndVertexArrays` example, which renders an animated rotating
     cube using the techniques from all of the previous recipes in this chapter:'
+  id: totrans-260
   prefs: []
   type: TYPE_NORMAL
+  zh: 再次提醒，有一个`#define`用于在Android上禁用VAO。以下是在本章所有前一个食谱的技术基础上，使用`3_ShadersAndVertexArrays`示例渲染一个动画旋转立方体的截图：
 - en: '![How it works…](img/7785_06_2.jpg)'
+  id: totrans-261
   prefs: []
   type: TYPE_IMG
+  zh: '![工作原理…](img/7785_06_2.jpg)'
 - en: There's more…
+  id: totrans-262
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: We always assume that every vertex attribute (position, texture coordinate,
     normal, and color) exists in the geometry data in all of our examples. Indeed,
     this is always true for our implementation of `clVertexAttribs`. However, in more
@@ -1155,140 +1705,203 @@
     binormals, tangents, bone weights, and so on, it is wise not to allocate memory
     for unused attributes. This can be done by modifying the `clVertexAttribs::EnumerateVertexStreams()`
     member function and adding NULL-checks to `Bind()` and `SetVertexAttribs()`.
+  id: totrans-263
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们始终假设在所有示例中，每个顶点属性（位置、纹理坐标、法线和颜色）都存在于几何数据中。实际上，这对于我们的`clVertexAttribs`实现来说总是正确的。然而，在更复杂的情况下，例如你可能需要更多的顶点属性，比如副法线、切线、骨骼权重等，为未使用的属性分配内存是不明智的。这可以通过修改`clVertexAttribs::EnumerateVertexStreams()`成员函数，并在`Bind()`和`SetVertexAttribs()`中添加NULL检查来实现。
 - en: See also
+  id: totrans-264
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Manipulating geometry*'
+  id: totrans-265
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*操纵几何图形*'
 - en: Creating a wrapper for textures
+  id: totrans-266
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 创建纹理的包装器
 - en: In previous chapters, we already used OpenGL textures to render an offscreen
     framebuffer on the screen. However, that code path works on Android only and cannot
     be used on a desktop. In this recipe, we will create a wrapper for textures to
     make them portable.
+  id: totrans-267
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的章节中，我们已经使用OpenGL纹理将离屏帧缓冲区渲染到屏幕上。但是，那条代码路径只在Android上有效，不能在桌面上使用。在本食谱中，我们将创建一个纹理包装器，使它们可移植。
 - en: Getting ready
+  id: totrans-268
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: Take a look at the `GLTexture.cpp` and `GLTexture.h` files from `4_Canvas`.
+  id: totrans-269
   prefs: []
   type: TYPE_NORMAL
+  zh: 查看`4_Canvas`中的`GLTexture.cpp`和`GLTexture.h`文件。
 - en: How to do it…
+  id: totrans-270
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'Let''s declare a class to hold an OpenGL texture. We need only two public operations:
     loading the pixel data from a bitmap, and binding the texture to a specified OpenGL
     texture unit:'
+  id: totrans-271
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 让我们声明一个类来保存OpenGL纹理。我们只需要两个公共操作：从位图中加载像素数据，以及将纹理绑定到指定的OpenGL纹理单元：
 - en: '[PRE70]'
+  id: totrans-272
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: 'The interface of the class is very simple, since textures management is almost
     identical in OpenGL ES 2 and OpenGL 3\. All the differences lie in the implementation.
     The following code shows how we bind a texture:'
+  id: totrans-273
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这个类的接口非常简单，因为OpenGL ES 2和OpenGL 3中的纹理管理几乎相同。所有差异都在实现中。以下代码展示了我们如何绑定纹理：
 - en: '[PRE71]'
+  id: totrans-274
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: 'We load a texture from a bitmap through the following code:'
+  id: totrans-275
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们通过以下代码从位图加载纹理：
 - en: '[PRE72]'
+  id: totrans-276
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: 'Not all texture wrapping modes are supported in OpenGL ES 2\. Particularly,
     `GL_CLAMP_TO_BORDER` is unsupported:'
+  id: totrans-277
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: OpenGL ES 2并不支持所有的纹理包装模式。特别是，`GL_CLAMP_TO_BORDER`是不支持的：
 - en: '[PRE73]'
+  id: totrans-278
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: 'There is a helper function `ChooseInternalFormat()`, that we use to select
     the appropriate OpenGL image formats for our bitmap, either RGB or RGBA. The implementation
     looks like the following code:'
+  id: totrans-279
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 有一个辅助函数`ChooseInternalFormat()`，我们用它来为位图选择合适的OpenGL图像格式，无论是RGB还是RGBA。实现如下所示代码：
 - en: '[PRE74]'
+  id: totrans-280
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: 'This also happens with RGBA bitmaps that contain an alpha channel:'
+  id: totrans-281
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这同样适用于包含alpha通道的RGBA位图：
 - en: '[PRE75]'
+  id: totrans-282
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: This function can be easily extended to work with grayscale, float, and compressed
     formats.
+  id: totrans-283
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个函数可以很容易地扩展以支持灰度、浮点数和压缩格式。
 - en: How it works…
+  id: totrans-284
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 工作原理…
 - en: 'Using our texture wrapper is straightforward:'
+  id: totrans-285
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用我们的纹理包装器非常直接：
 - en: '[PRE76]'
+  id: totrans-286
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE76]'
 - en: Here, `g_FS` is a `FileSystem` object that we created in [Chapter 5](ch05.html
     "Chapter 5. Cross-platform Audio Streaming"), *Cross-platform Audio Streaming*.
+  id: totrans-287
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，`g_FS`是一个在[第5章](ch05.html "第5章.跨平台音频流")，*跨平台音频流*中创建的`FileSystem`对象。
 - en: There's more…
+  id: totrans-288
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: The texture loading we have dealt with so far is synchronous and is performed
     on the main rendering thread. This is acceptable if we only have a few bitmaps
     to load. The real-world approach is to load and decode images asynchronously,
     on another thread and then call `glTexImage2D()` and other related OpenGL commands
     only on the rendering thread. We will learn how to do this in [Chapter 9](ch09.html
     "Chapter 9. Writing a Picture Puzzle Game"), *Writing a Picture Puzzle Game*.
+  id: totrans-289
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止我们处理的纹理加载是同步的，并且是在主渲染线程上执行的。如果我们只有几个位图要加载，这是可以接受的。现实世界的方法是在另一个线程上异步加载和解码图像，然后在渲染线程上只调用`glTexImage2D()`和其他相关的OpenGL命令。我们将在[第9章](ch09.html
+    "第9章.编写一个拼图游戏")，*编写一个拼图游戏*中学习如何做到这一点。
 - en: See also
+  id: totrans-290
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '[Chapter 4](ch04.html "Chapter 4. Organizing a Virtual Filesystem"), *Organizing
     a Virtual Filesystem*'
+  id: totrans-291
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第4章](ch04.html "第4章.组织一个虚拟文件系统")，*组织一个虚拟文件系统*'
 - en: '[Chapter 9](ch09.html "Chapter 9. Writing a Picture Puzzle Game"), *Writing
     a Picture Puzzle Game*'
+  id: totrans-292
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '[第9章](ch09.html "第9章.编写一个拼图游戏")，*编写一个拼图游戏*'
 - en: Creating a canvas for immediate rendering
+  id: totrans-293
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 创建一个用于即时渲染的画布
 - en: 'In the previous recipes, we learned how to make abstractions for main OpenGL
     entities: vertex buffers, shader programs, and textures. This basis is enough
     to render many sophisticated effects using OpenGL. However, there are a lot of
@@ -1298,149 +1911,220 @@
     and textures may become a serious burden. Let''s organize a place for such a helper
     code, that is, a canvas that will help us to render simple things in a single
     line of code.'
+  id: totrans-294
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前面的食谱中，我们学习了如何为主要的OpenGL实体制作抽象：顶点缓冲区、着色器程序和纹理。这个基础足以使用OpenGL渲染许多复杂的特效。然而，有许多小的渲染任务，你只需要渲染一个三角形或带有一个纹理的矩形，或者使用特定的着色器渲染一个全屏四边形以应用一些图像空间效果。在这种情况下，管理缓冲区、着色器和纹理的代码可能成为一个严重的负担。让我们为这样的辅助代码组织一个地方，即一个画布，它可以帮助我们用一行代码渲染简单的事物。
 - en: Getting ready
+  id: totrans-295
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 准备就绪
 - en: This recipe uses the `clGLSLShaderProgram`, `clGLTexture`, and `clGLVertexArray`
     classes described in the previous recipes to hide the differences between OpenGL
     ES 2 and OpenGL 3\. Read them carefully before proceeding.
+  id: totrans-296
   prefs: []
   type: TYPE_NORMAL
+  zh: 本食谱使用了前一个食谱中描述的`clGLSLShaderProgram`、`clGLTexture`和`clGLVertexArray`类，以隐藏OpenGL
+    ES 2和OpenGL 3之间的差异。在继续之前请仔细阅读它们。
 - en: How to do it…
+  id: totrans-297
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 如何操作…
 - en: 'We first define a `clCanvas` class as follows:'
+  id: totrans-298
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们首先定义一个`clCanvas`类如下：
 - en: '[PRE77]'
+  id: totrans-299
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE77]'
 - en: 'We store some OpenGL-related entities right here:'
+  id: totrans-300
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们在这里存储一些与OpenGL相关的实体：
 - en: '[PRE78]'
+  id: totrans-301
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE78]'
 - en: 'Before we can use the canvas, we have to construct it. Note `FRect` is created
     as a fullscreen quad:'
+  id: totrans-302
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在使用画布之前，我们必须构建它。注意`FRect`是作为一个全屏四边形创建的：
 - en: '[PRE79]'
+  id: totrans-303
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE79]'
 - en: 'We remap the coordinates of `FRect` in the following vertex shader, so that
     they match the user-specified dimensions:'
+  id: totrans-304
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们在下面的顶点着色器中重新映射`FRect`的坐标，使它们与用户指定的尺寸相匹配：
 - en: '[PRE80]'
+  id: totrans-305
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE80]'
 - en: 'The actual dimensions, specified as the top-left and bottom-right corners of
     the rectangle, are passed as `xyzw` components of the `u_RectSize` uniform. A
     simple arithmetic does the rest. The fragment shader is very simple. Indeed, we
     need to apply just a solid color from the uniform:'
+  id: totrans-306
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 实际尺寸，指定为矩形的左上角和右下角，作为`u_RectSize`统一变量的`xyzw`组件传递。简单的算术完成了剩余的工作。片段着色器非常简单。实际上，我们只需要从统一变量中应用一种纯色：
 - en: '[PRE81]'
+  id: totrans-307
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE81]'
 - en: 'Alternatively, apply an additional color from a texture:'
+  id: totrans-308
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 或者，从纹理应用额外的颜色：
 - en: '[PRE82]'
+  id: totrans-309
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE82]'
 - en: We use the `clGLSLShaderProgram` class from the previous recipes to set up shader
     programs. It hides the syntax differences between OpenGL ES 2 and OpenGL 3, so
     we can store only one version of each shader.
+  id: totrans-310
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们使用前一个食谱中的`clGLSLShaderProgram`类来设置着色器程序。它隐藏了OpenGL ES 2和OpenGL 3之间的语法差异，因此我们可以只存储每个着色器的一个版本。
 - en: Note
+  id: totrans-311
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: You may want to implement a similar wrapper for OpenGL ES 3 as an exercise.
+  id: totrans-312
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以尝试实现一个类似OpenGL ES 3的包装器作为练习。
 - en: How it works…
+  id: totrans-313
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 它是如何工作的…
 - en: 'The actual rendering code inside the canvas is very simple. Bind textures and
     the shader program, set the values of uniforms, and draw the vertex array:'
+  id: totrans-314
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 画布内部的实际渲染代码非常简单。绑定纹理和着色器程序，设置统一变量的值，并绘制顶点数组：
 - en: '[PRE83]'
+  id: totrans-315
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE83]'
 - en: Note
+  id: totrans-316
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Here we always enable and disable blending. This causes a redundant state changes.
     A better approach is to save the value of the previously set blending mode and
     toggle it only when necessary.
+  id: totrans-317
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里我们总是启用和禁用混合。这导致了冗余的状态变化。更好的方法是保存先前设置的混合模式的值，并且只在必要时切换它。
 - en: 'The complete source code is in the `Canvas.cpp` and `Canvas.h` files from the
     `4_Canvas` project. Usage of the canvas is trivial. For example, use this one-liner
     call to render a semi-transparent magenta rectangle:'
+  id: totrans-318
   prefs: []
   type: TYPE_NORMAL
+  zh: 完整的源代码在`4_Canvas`项目中的`Canvas.cpp`和`Canvas.h`文件中。画布的使用非常简单。例如，使用以下单行调用以渲染半透明的洋红色矩形：
 - en: '[PRE84]'
+  id: totrans-319
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE84]'
 - en: 'The example `4_Canvas` shows you how to use the canvas, and produces an image
     similar to the following diagram, which shows overlays rendering using `Canvas`:'
+  id: totrans-320
   prefs: []
   type: TYPE_NORMAL
+  zh: 示例`4_Canvas`展示了如何使用画布，并生成与以下类似的图像，该图像展示了使用`Canvas`的叠加渲染：
 - en: '![How it works…](img/7785_06_3.jpg)'
+  id: totrans-321
   prefs: []
   type: TYPE_IMG
+  zh: '![它是如何工作的…](img/7785_06_3.jpg)'
 - en: There's more…
+  id: totrans-322
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 还有更多…
 - en: The canvas is a placeholder for different immediate rendering functions. In
     the next two chapters, we will augment it with other methods to render the user
     interface of our games.
+  id: totrans-323
   prefs: []
   type: TYPE_NORMAL
+  zh: 画布为不同的即时渲染函数提供了占位符。在接下来的两章中，我们将为其增加其他方法，以渲染我们游戏的用户界面。
 - en: See also
+  id: totrans-324
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 另请参阅
 - en: '*Unifying the OpenGL 3 core profile and OpenGL ES 2*'
+  id: totrans-325
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*统一OpenGL 3核心配置文件和OpenGL ES 2*'
 - en: '*Unifying the GLSL 3 and GLSL ES 2 shaders*'
+  id: totrans-326
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*统一GLSL 3和GLSL ES 2着色器*'
 - en: '*Unifying vertex arrays*'
+  id: totrans-327
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*统一顶点数组*'
 - en: '*Creating a wrapper for textures*'
+  id: totrans-328
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '*为纹理创建包装器*'
