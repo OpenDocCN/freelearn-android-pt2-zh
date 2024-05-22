@@ -1,85 +1,126 @@
 - en: Chapter 13. Getting to Enforcing Mode
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第十三章. 进入强制模式
 - en: 'As an engineer, you''re handed some Android device, and the requirement is
     to apply SE for Android controls to the device to enhance its security posture.
     So far, we have seen all the pieces that need to be configured and how they work
     to enable such a system. In this chapter, we''ll take all the skills covered to
     get our UDOO in enforcing mode. We will:'
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为一名工程师，你拿到一部Android设备，要求你应用SE for Android控制来增强设备的安全态势。到目前为止，我们已经看到了需要配置的所有部分以及它们如何工作来启用这样一个系统。在本章中，我们将运用所学的所有技能，让UDO进入强制模式。我们将：
 - en: Run, evaluate, and respond to audit logs from CTS
+  id: totrans-2
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 运行、评估并响应来自CTS的审核日志
 - en: Develop secure policy for the UDOO
+  id: totrans-3
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 为UDO开发安全策略
 - en: Switch to enforcing mode
+  id: totrans-4
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 切换到强制模式
 - en: Updating to SEPolicy master
+  id: totrans-5
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 更新到SEPolicy master
 - en: Many changes to the `sepolicy` directory have occurred in the AOSP `master`
     branch since the 4.3 release. At the time of this writing, the `master` branch
     of the `external/sepolicy` project was on Git commit SHA `b5ffb`. The authors
     recommend attempting to use the most recent commit. However, for illustrative
     purposes, we will show you how to optionally check out commit `b5ffb` so you can
     accurately follow the examples in this chapter.
+  id: totrans-6
   prefs: []
   type: TYPE_NORMAL
+  zh: 自4.3版本以来，AOSP `master`分支的 `sepolicy` 目录发生了许多变化。在撰写本文时，`external/sepolicy`项目的
+    `master` 分支在Git提交SHA `b5ffb`上。作者建议尝试使用最新的提交。然而，为了说明目的，我们将展示如何选择性地检出提交 `b5ffb`，以便你可以准确地跟随本章中的示例。
 - en: 'First, you''ll need to clone the `external/sepolicy` project. In these instructions,
     we assume your working directory has the UDOO sources contained in the `./udoo`
     directory:'
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，你需要克隆 `external/sepolicy` 项目。在这些说明中，我们假设你的工作目录中包含UDO源码的 `./udoo` 目录：
 - en: '[PRE0]'
+  id: totrans-8
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'If you want to follow the examples in this chapter precisely, you''ll need
     to check out commit `b5ffb` with the following command. If you skip it, you will
     end up using the latest commit in the `master` branch:'
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你想要精确地跟随本章的示例，你需要使用以下命令检出提交 `b5ffb`。如果你跳过这一步，你最终将使用 `master` 分支中的最新提交：
 - en: '[PRE1]'
+  id: totrans-10
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Now, we''ll replace the UDOO 4.3 sepolicy with what we just acquired from Google:'
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们将用从谷歌获取的sepolicy替换UDO 4.3的sepolicy：
 - en: '[PRE2]'
+  id: totrans-12
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: 'Optionally, you can remove the `.git` folder from the newly copied sepolicy
     with the following command, but this is not necessary:'
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 可选地，你可以使用以下命令从新复制的sepolicy中删除 `.git` 文件夹，但这不是必须的：
 - en: '[PRE3]'
+  id: totrans-14
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Also, copy the `audit.te` file and restore it.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时，复制 `audit.te` 文件并恢复它。
 - en: Additionally, restore the `auditd` commit from the NSA Bitbucket `seandroid`
     repository. For your reference, it's commit SHA `d270aa3`.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，从NSA Bitbucket `seandroid` 仓库恢复 `auditd` 提交。作为参考，它的提交SHA是 `d270aa3`。
 - en: 'After that, remove all references to `setool` from `udoo/build/core/Makefile`.
     This command will help you locate them:'
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 之后，从 `udoo/build/core/Makefile` 中删除所有对 `setool` 的引用。这个命令将帮助你找到它们：
 - en: '[PRE4]'
+  id: totrans-18
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: Purging the device
+  id: totrans-19
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 清除设备
 - en: 'At this point, our UDOO is messy, so let''s reflash it, including the data
     directory, and start afresh. We want to have only the code and the `init` script
     changes, without the additional sepolicy. Then we can author a policy properly
@@ -89,23 +130,35 @@
     need to build a `userdebug` version rather than an engineering (`eng`) version
     for CTS. The version is selected in the setup script, which ultimately calls `lunch`.
     To build this version, execute the following commands from the UDOO workspace:'
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，我们的UDO很混乱，所以让我们重新刷新它，包括数据目录，并重新开始。我们希望只有代码和 `init` 脚本更改，而没有额外的sepolicy。然后我们可以适当地编写一个策略，并应用我们遇到的所有的技术和工具。我们将从重置到一个类似于完成[第四章](ch04.html
+    "第四章. UDOO上的安装")，*UDO上的安装*的状态开始。然而，主要区别是我们需要构建一个 `userdebug` 版本而不是工程 (`eng`) 版本用于CTS。版本在设置脚本中选择，最终调用
+    `lunch`。要构建此版本，请从UDO工作区执行以下命令：
 - en: '[PRE5]'
+  id: totrans-21
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Flash the system, boot to the SD card, and wipe `userdata` with the following
     commands, assuming the SD card is inserted into the host and `userdata` is not
     mounted:'
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用以下命令刷新系统，引导到SD卡，并清除 `userdata`，假设SD卡已插入主机且 `userdata` 未挂载：
 - en: '[PRE6]'
+  id: totrans-23
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: Setting up CTS
+  id: totrans-24
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设置CTS
 - en: You must pass CTS if your organization seeks Android branding. However, even
     if you don't, it's a good idea to run these tests to help ensure a device will
     be compliant with applications. Based on your security goals and desires, you
@@ -115,31 +168,50 @@
     `cts/` directory, but we recommend downloading the binary directly from Google.
     You can get more information and the CTS binary itself from [https://source.android.com/compatibility/cts-intro.html](https://source.android.com/compatibility/cts-intro.html)
     and [https://source.android.com/compatibility/android-cts-manual.pdf](https://source.android.com/compatibility/android-cts-manual.pdf).
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你的组织寻求 Android 品牌认证，你必须通过 CTS。然而，即使你不是，运行这些测试也是一个好主意，以确保设备将符合应用程序的要求。根据你的安全目标和愿望，如果你不是在寻求
+    Android 品牌认证，你可能会在 CTS 的某些部分失败。对于我们的情况，我们将 CTS 视为一种锻炼系统并发现阻止 UDOO 正常工作的政策问题的方式。其源代码位于
+    `cts/` 目录中，但我们建议直接从 Google 下载二进制文件。你可以从 [https://source.android.com/compatibility/cts-intro.html](https://source.android.com/compatibility/cts-intro.html)
+    和 [https://source.android.com/compatibility/android-cts-manual.pdf](https://source.android.com/compatibility/android-cts-manual.pdf)
+    获取更多信息及 CTS 二进制文件本身。
 - en: Download the CTS 4.3 binary from the **Downloads** tab. Then select the CTS
     binary. The **Compatibility Definition Document** (**CDD**) is also worth reading.
     It covers the high-level details of CTS and compatibility requirements.
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: 从 **下载** 选项卡下载 CTS 4.3 二进制文件。然后选择 CTS 二进制文件。**兼容性定义文档**（**CDD**）也值得一读。它涵盖了 CTS
+    和兼容性要求的高级详细信息。
 - en: 'Download CTS from [https://source.android.com/compatibility/downloads.html](https://source.android.com/compatibility/downloads.html)
     and extract it. Select the CTS version that matches your Android version. If you
     don''t know which version your device is running, you can always check the `ro.build.version.release`
     property from the UDOO with `getprop ro.build.version.release`:'
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 从 [https://source.android.com/compatibility/downloads.html](https://source.android.com/compatibility/downloads.html)
+    下载 CTS 并解压。选择与你的 Android 版本匹配的 CTS 版本。如果你不知道你的设备正在运行哪个版本，你可以通过 UDOO 使用 `getprop
+    ro.build.version.release` 命令检查 `ro.build.version.release` 属性：
 - en: '[PRE7]'
+  id: totrans-28
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: Running CTS
+  id: totrans-29
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 运行 CTS
 - en: The CTS exercises many components on the device and helps test various parts
     of the system. A good, general policy should allow proper functioning of Android
     and pass CTS.
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: CTS 对设备上的许多组件进行锻炼，并帮助测试系统的各个部分。一个好的通用政策应允许 Android 正常工作并通过 CTS。
 - en: 'Follow the directions in the Android CTS user manual to set up your device
     (see *Section 3.3*, *Setting up your device*). Typically, you will see some failures
     if you don''t follow all the steps precisely, as you may not have the access or
@@ -147,44 +219,66 @@
     exercise some code paths. At a minimum, we recommend getting the media files copied
     and Wi-Fi active. Once your device is set up, ensure `adb` is active and initiate
     the testing:'
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 按照 Android CTS 用户手册中的说明设置你的设备（见 *第 3.3 节*，*设置你的设备*）。通常，如果你没有精确地遵循所有步骤，你可能会看到一些失败，因为你可能无法获取到所有需要的资源或权限。然而，CTS
+    仍然会执行一些代码路径。至少，我们建议复制媒体文件并激活 Wi-Fi。设置好设备后，确保 `adb` 处于活动状态并启动测试：
 - en: '[PRE8]'
+  id: totrans-32
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'The tests take many hours to execute, so be patient; but you can check the
     status of the test:'
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 测试需要执行很多小时，所以请耐心等待；但你可以检查测试的状态：
 - en: '[PRE9]'
+  id: totrans-34
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: Plug in speakers to enjoy the sounds from the media tests and ringtones! Also,
     CTS reboots the device. If your ADB session is not restored after rebooting, ADB
     may not execute any tests. Use the `--disable-reboot` option when running the
     `cts-tf > run cts --plan CTS --disable-reboot` plan.
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 插上扬声器，享受来自媒体测试和铃声的声音！同时，CTS 会重启设备。如果你的 ADB 会话在重启后没有恢复，ADB 可能不会执行任何测试。在运行 `cts-tf
+    > run cts --plan CTS --disable-reboot` 计划时，使用 `--disable-reboot` 选项。
 - en: Gathering the results
+  id: totrans-36
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 收集结果
 - en: First, we'll consider the CTS results. Although we expect some failures, we
     also expect the problem will not get worse when we go to enforcing mode. Second,
     we'll look at the audit logs. Let's pull both of these files from the device.
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们将考虑 CTS 的结果。虽然我们预计会有一些失败，但我们也预计在进入强制模式时问题不会变得更糟。其次，我们将查看审计日志。让我们从设备中提取这两个文件。
 - en: CTS test results
+  id: totrans-38
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: CTS 测试结果
 - en: 'CTS creates a test results directory each time it is run. CTS is indicating
     the directory name but not the location:'
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 每次运行 CTS 时，它都会创建一个测试结果目录。CTS 指出了目录名称，但未指出位置：
 - en: '[PRE10]'
+  id: totrans-40
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: The location is mentioned by the CTS manual and can be found under the extracted
     CTS directory in `repository/results`, typically at `android-cts/repository/results`.
     The test directories contain an XML test report, `testResult.xml`. This can be
@@ -192,137 +286,203 @@
     all executed tests. The `pass:fail` ratio is our baseline. The authors had 18,736
     pass, and only 53 fail, which is fairly good considering half of those are feature
     issues, such as no Bluetooth or returning true for camera support.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: CTS手册中提到了这个位置，可以在提取的CTS目录下的`repository/results`中找到，通常在`android-cts/repository/results`。测试目录包含一个XML测试报告，`testResult.xml`。这可以在大多数网络浏览器中打开，并且有一个很好的测试概览以及所有执行测试的详细信息。`通过:失败`的比例是我们的基线。作者有18,736个通过，只有53个失败，考虑到其中一半是功能问题，比如没有蓝牙或对摄像头支持返回真，这个结果相当不错。
 - en: Audit logs
+  id: totrans-42
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 审计日志
 - en: We will use the audit logs to address deficiencies in our policy. Pull these
     off the device using the standard `adb pull` commands we have used throughout
     the book. Since this is a `userdebug` build and default `adb` terminals are shell
     `uid` (not root), start `adb` as root with `adb root`. `su` is also available
     on `userdebug` builds.
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将使用审计日志来解决我们策略中的不足。使用本书中一直使用的标准`adb pull`命令从设备上提取这些日志。由于这是一个`userdebug`版本，默认的`adb`终端是shell
+    `uid`（不是root），因此以root身份启动`adb`，使用`adb root`命令。在`userdebug`版本上也可以使用`su`。
 - en: Tip
+  id: totrans-44
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: You may get an error saying `/data/misc/audit/audit.log` does not exist. The
     solution is to run `adb` as root via the `adb root` command. Also, when running
     this command, it may hang. Just go to settings, disable, and then enable **USB
     Debugging** under **Developer Options**. Then kill the `adb-root` command and
     verify you have root by running `adb shell`. Now you should be a root user again.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能会遇到错误提示`/data/misc/audit/audit.log`不存在。解决方案是使用`adb root`命令以root身份运行`adb`。此外，在运行此命令时，它可能会挂起。只需进入设置，禁用，然后在**开发者选项**下重新启用**USB调试**。然后杀死`adb-root`命令，并通过运行`adb
+    shell`验证你是否具有root权限。现在你应该再次成为root用户了。
 - en: Authoring device policy
+  id: totrans-46
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设备策略编写
 - en: Run both `audit.log` and `audit.old` through `audit2allow` to see what's going
     on. The output of `audit2allow` is grouped by source domain. Rather than going
     through it all, we will highlight the unusual cases, starting with the interpreted
     results of `audit2allow`. Assuming you are in the audit log directory, perform
     `cat audit.* | audit2allow | less`. Any policy work will be done in the device-specific
     UDOO sepolicy directory.
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过`audit2allow`运行`audit.log`和`audit.old`，看看发生了什么。`audit2allow`的输出按源域名分组。我们不会全部查看，而是从`audit2allow`的解释结果开始，突出不寻常的情况。假设你目前在审计日志目录中，执行`cat
+    audit.* | audit2allow | less`。所有策略工作将在设备特定的UDOOPolicy目录中进行。
 - en: adbd
+  id: totrans-48
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: adbd
 - en: 'The following are our `adbd` denials as filtered through `audit2allow`:'
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下是通过`audit2allow`过滤的我们的`adbd`拒绝：
 - en: '[PRE11]'
+  id: totrans-50
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'The denials in the `adbd` domain are quite strange. The first thing that caught
     our eye was the `execute` on `/dev/ashmem`, which is a character driver. Typically,
     this is only needed for Dalvik JIT. Looking at the raw audits (`cat audit.* |
     grep adbd | grep execute`), we see the following:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: '`adbd`域中的拒绝相当奇怪。首先引起我们注意的是对字符驱动器`/dev/ashmem`的`execute`操作。通常，这只有在Dalvik JIT时才需要。查看原始审计（`cat
+    audit.* | grep adbd | grep execute`），我们看到以下内容：'
 - en: '[PRE12]'
+  id: totrans-52
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'Something with the process `comm` field of the compiler is executing on `ashmem`.
     Our guess is it has something to do with Dalvik, but why is it in the `adbd` domain?
     Also, why is `adbd` writing to the input device? All this is strange behavior.
     Typically, when you see things like this, it''s because the children didn''t end
     up in the proper domain. Run this command to check the domains and confirm our
     suspicions:'
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们发现编译器中的`comm`字段进程正在`ashmem`上执行。我们猜测这与Dalvik有关，但为什么它会出现在`adbd`域中？还有，为什么`adbd`要写入输入设备？这些都是奇怪的行为。通常，当你看到这类事情时，是因为子进程没有进入正确的域。运行以下命令检查域以确认我们的怀疑：
 - en: '[PRE13]'
+  id: totrans-54
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'We then run `adb shell ps -Z | grep adbd` to see which things were running
     in the `adb` domain, further confirming our suspicions:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们运行`adb shell ps -Z | grep adbd`来查看哪些进程在`adb`域中运行，进一步证实了我们的怀疑：
 - en: '[PRE14]'
+  id: totrans-56
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'The `ps` command should not be running in the `adbd` context; it should be
     running in `shell`. This confirmed that `shell` is not in the right domain:'
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ps`命令不应该在`adbd`上下文中运行；它应该在`shell`中运行。这证实了`shell`不在正确的域中：'
 - en: '[PRE15]'
+  id: totrans-58
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'The first thing to check is the context on the file:'
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先要检查的是文件上下文：
 - en: '[PRE16]'
+  id: totrans-60
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: The base policy defines a domain transition when `adbd` loads the shell using
     `exec` to go to the shell domain. This is defined in the `adbd.te` external sepolicy
     as `domain_auto_trans(adbd, shell_exec, shell)`.
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 基本策略定义了当`adbd`使用`exec`加载shell以进入shell域时的域转换。这在外部sepolicy的`adbd.te`中定义为`domain_auto_trans(adbd,
+    shell_exec, shell)`。
 - en: Obviously, an incorrect label has been applied to shell, so let's look at `file_contexts`
     in the external sepolicy to find out why.
+  id: totrans-62
   prefs: []
   type: TYPE_NORMAL
+  zh: 显然，shell被错误地标记了，因此我们来看看外部sepolicy中的`file_contexts`以找出原因。
 - en: '[PRE17]'
+  id: totrans-63
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: The two dashes mean that only regular files will be labeled and symbolic links
     will be skipped. We probably don't want to label the symlink, but rather the `mksh`
     destination. Do this by adding a custom `file_contexts` entry to the device UDOO
     sepolicy and adding the file to the `BOARD_SEPOLICY_UNION` config. In `file_contexts`,
     add `/system/bin/mksh -- u:object_r:shell_exec:s0`, and in `sepolicy.mk`, add
     `BOARD_SEPOLICY_UNION += file_contexts`.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 两个破折号意味着只有常规文件将被标记，而符号链接将被跳过。我们可能不想标记符号链接，而是`mksh`的目标。通过向设备UDOO sepolicy添加自定义`file_contexts`条目，并将文件添加到`BOARD_SEPOLICY_UNION`配置中来实现。在`file_contexts`中添加`/system/bin/mksh
+    -- u:object_r:shell_exec:s0`，在`sepolicy.mk`中添加`BOARD_SEPOLICY_UNION += file_contexts`。
 - en: Tip
+  id: totrans-65
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 提示
 - en: Throughout the remainder of the chapter, whenever you create or modify policy
     files (for example, context files or `*.te` files), don't forget to add them to
     `BOARD_SEPOLICY_UNION` in `sepolicy.mk`.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章的剩余部分，每当你创建或修改策略文件（例如，上下文文件或`*.te`文件）时，别忘了将它们添加到`sepolicy.mk`中的`BOARD_SEPOLICY_UNION`。
 - en: 'Since this is a fairly fatal issue with the policy and `adbd`, we won''t worry
     about the denials for now, with the exception of the unlabeled. Whenever one encounters
     an unlabeled file, it should be addressed. The `avc` denial that caused this is
     as follows:'
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: '由于这是策略和`adbd`的一个相当严重的问题，我们现在不担心拒绝，除了未标记的。每当遇到未标记的文件时，都应该处理。导致此问题的`avc`拒绝如下： '
 - en: '[PRE18]'
+  id: totrans-68
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'Because this is mounted at `/device` and Android mounts are typically at `/`,
     we should look at the mount table:'
+  id: totrans-69
   prefs: []
   type: TYPE_NORMAL
+  zh: 因为这被挂载在`/device`，而Android的挂载通常在`/`，我们应该查看挂载表：
 - en: '[PRE19]'
+  id: totrans-70
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: Typically, mount commands are in the init scripts following a `mkdir`, or in
     an `fstab` file with the init built-in, `mount_all`. A quick search for `device`
     and `mkdir` in `init.rc` finds nothing, but we do find it in `fstab.freescale`.
@@ -332,61 +492,93 @@
     script, we notice that partition 7 of the block device is the `vender` directory.
     This is a misspelling of the common vendor directory that OEMs place proprietary
     blobs in. We place file types in `file.te` and the domain allow rules in `domain.te`.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常，挂载命令位于`mkdir`之后的init脚本中，或者在带有内置init的`fstab`文件中，通过`mount_all`。在`init.rc`中快速搜索`device`和`mkdir`没有发现任何内容，但我们确实在`fstab.freescale`中找到了它。设备是只读的，因此我们应该能够为其指定类型，用文件上下文进行标记，并将其目录类别应用到`getattr`域。既然它是只读且为空的，没有人应该需要更多权限。查看`make_sd.sh`脚本，我们注意到块设备分区7是`vender`目录。这是OEM放置专有blob的常见vendor目录的拼写错误。我们在`file.te`中放置文件类型，并在`domain.te`中放置域允许规则。
 - en: 'In `file.te`, add this:'
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`file.te`中，添加以下内容：
 - en: '[PRE20]'
+  id: totrans-73
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'In `domain.te`, add the following:'
+  id: totrans-74
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`domain.te`中，添加以下内容：
 - en: '[PRE21]'
+  id: totrans-75
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'In `file_contexts`, add this:'
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`file_contexts`中，添加以下内容：
 - en: '[PRE22]'
+  id: totrans-77
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: If this directory is not empty, you must manually run `restorecon -R` on it
     to label existing files.
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果这个目录不为空，你必须手动运行`restorecon -R`来标记现有文件。
 - en: 'If you pull the audit logs multiple times from the UDOO, you may also end up
     with denials showing that you did so, as `adbd` will not be able to access them.
     You may see this:'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你多次从UDOO提取审计日志，你也可能看到拒绝显示你这样做，因为`adbd`将无法访问它们。你可能会看到如下内容：
 - en: '[PRE23]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: 'This rule comes from the end of the test when you `adb pull`ed the audit logs.
     We can safely `dontaudit` this and add a `neverallow` to ensure it doesn''t accidentally
     get allowed. The audit logs contain information a malware writer could use to
     navigate through the policy, and this information should be protected. In a device
     `sepolicy` folder, add an `adbd.te` file and union it in the `sepolicy.mk` file:'
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 这条规则来自于当你通过`adb pull`提取审计日志的测试结束时。我们可以安全地`dontaudit`这个，并添加一个`neverallow`以确保它不会意外被允许。审计日志包含恶意软件作者可能用来导航策略的信息，这些信息应该受到保护。在设备的`sepolicy`文件夹中，添加一个`adbd.te`文件，并在`sepolicy.mk`文件中进行合并：
 - en: 'In `adbd.te`, add this:'
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`adbd.te`文件中，添加以下内容：
 - en: '[PRE24]'
+  id: totrans-83
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'In `auditd.te`, add this:'
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`auditd.te`中，添加以下内容：
 - en: '[PRE25]'
+  id: totrans-85
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: If `auditd.te` is still in `external/sepolicy`, move it to `device/fsl/udoo/sepolicy`
     along with all dependent types.
+  id: totrans-86
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果`auditd.te`仍然在`external/sepolicy`中，将其移到`device/fsl/udoo/sepolicy`，并带上所有依赖的类型。
 - en: The `neverallow` entries show you how to use the compliment, `~`, and set difference,
     `-`, operators for strong assertions or brevity. The first `neverallow` starts
     with domain, and all process types (domains) are members of the domain attribute.
@@ -394,167 +586,257 @@
     access. We then compliment the access vector set to allow only `getattr` or `stat`
     on the logs. The second `neverallow` uses compliment to ensure `system_server`
     is limited to read operations.
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: '`neverallow`条目展示了如何使用补集`~`和集合差集`-`操作符进行强断言或简洁表达。第一个`neverallow`从域开始，所有进程类型（域）都是domain属性的成员。我们通过集合差集阻止访问，留下了永远不应该访问的集合。然后我们对访问向量集取补集，只允许在日志上执行`getattr`或`stat`。第二个`neverallow`使用补集确保`system_server`仅限于读取操作。'
 - en: bootanim
+  id: totrans-88
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: bootanim
 - en: 'The `bootanim` domain is assigned to the boot animation service that presents
     splash screens on boot, typically the carrier''s branding:'
+  id: totrans-89
   prefs: []
   type: TYPE_NORMAL
+  zh: '`bootanim`域被分配给启动动画服务，该服务在启动时显示启动画面，通常是运营商的品牌：'
 - en: '[PRE26]'
+  id: totrans-90
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: 'Anything touching the `init` domain is a red flag. Here, `bootanim` connects
     to an init Unix domain socket. This is a part of the property system, and we can
     see that after connecting, it writes to the property socket. The socket object
     and its URI are separate. In this case, it''s the filesystem, but it could be
     an anonymous socket:'
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 任何接触`init`域的都是一个红旗。这里，`bootanim`连接到一个init Unix域套接字。这是属性系统的一部分，我们可以看到连接后，它会写入属性套接字。套接字对象和它的URI是分开的。在这种情况下，它是文件系统，但它可能是一个匿名套接字：
 - en: '[PRE27]'
+  id: totrans-92
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: The `log_device` is deprecated in new versions of Android and replaced with
     `logd`. However, we are backporting a new master sepolicy to 4.3, so we must support
     this. The patch that removed support is at [https://android-review.googlesource.com/#/c/108147/](https://android-review.googlesource.com/#/c/108147/).
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 在新版本的Android中，`log_device`已被弃用，并用`logd`替换。然而，我们将新的主sepolicy回移植到4.3，因此我们必须支持这个。移除支持的补丁在[https://android-review.googlesource.com/#/c/108147/](https://android-review.googlesource.com/#/c/108147/)。
 - en: 'Rather than apply a reverse patch to the external sepolicy, we can just add
     the rules to our device policy in a `domain.te` file. We can safely allow these
     using the proper macros and styles in the device UDOO `sepolicy` folder. In `bootanim.te`,
     add `unix_socket_connect(bootanim, property, init)`, and in `domain.te`, add this:'
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们不需要对external sepolicy应用反向补丁，只需将规则添加到我们的设备策略中的`domain.te`文件中。我们可以安全地使用设备UDO
+    `sepolicy`文件夹中的正确宏和样式允许这些操作。在`bootanim.te`中，添加`unix_socket_connect(bootanim, property,
+    init)`，在`domain.te`中，添加以下内容：
 - en: '[PRE28]'
+  id: totrans-95
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: debuggerd
+  id: totrans-96
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: debuggerd
 - en: '[PRE29]'
+  id: totrans-97
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'The log device denial was addressed under `bootanim` by adding the allow rules
     for all domains to use `log_device`. The `system_data_file:sock_file write` is
     strange. In most circumstances, you''ll almost never want to allow a cross-domain
     write, but this is special. Look at the raw denial:'
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 通过为所有域添加允许规则来使用`log_device`，在`bootanim`下解决了日志设备的拒绝。`system_data_file:sock_file
+    write`很奇怪。在大多数情况下，你几乎永远不会希望允许跨域写入，但这是一种特殊情况。看看原始拒绝：
 - en: '[PRE30]'
+  id: totrans-99
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'The denial is on `ndebugsocket`. Grepping for this uncovers a named type transition,
     which policy version 23 does not support:'
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 拒绝是关于`ndebugsocket`的。通过搜索这个发现了一个命名类型转换，而策略版本23不支持：
 - en: '[PRE31]'
+  id: totrans-101
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: We have to change the code to set the proper context or just allow it, which
     we will. We won't grant additional permissions because it never asked for open,
     and we're crossing domains. Preventing file opens across domains is ideal, as
     the only way to get this file descriptor is through an IPC call into the owning
     domain. In `debuggerd.te`, add `allow debuggerd system_data_file:sock_file write;`.
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们必须更改代码以设置正确的上下文，或者直接允许它，我们将会这样做。我们不会授予额外的权限，因为它从未请求过open，而且我们正在跨域操作。阻止跨域文件打开是理想的，因为获取这个文件描述符的唯一方式是通过IPC调用到拥有该域的进程中。在`debuggerd.te`中，添加`allow
+    debuggerd system_data_file:sock_file write;`。
 - en: drmserver
+  id: totrans-103
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: drmserver
 - en: '[PRE32]'
+  id: totrans-104
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: This is taken care of by `domain.te` rules, so we have nothing to do here.
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 这由`domain.te`规则处理，所以我们这里不需要做任何事情。
 - en: dumpstate
+  id: totrans-106
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: dumpstate
 - en: '[PRE33]'
+  id: totrans-107
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: 'The denial to `init:binder call` on `dumpstate` is strange because `init` doesn''t
     use binder. Some process must stay in the init domain. Let''s check our process
     listing for init:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`dumpstate`上对`init:binder call`的拒绝很奇怪，因为`init`并不使用binder。某些进程必须停留在init域中。让我们检查一下我们的进程列表中关于init的部分：
 - en: '[PRE34]'
+  id: totrans-109
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE34]'
 - en: 'Here, `zygote` and `com.android.phone` should not be running as `init`. This
     must be a labeling error on the `app_process` file, which is the zygote. The `ls
     -laZ /system/bin/app_process` command reveals `u:object_r:system_file:s0 app_process`,
     so add an entry to `file_contexts` to correct this. We can find the label to use
     in `zygote.te` in the base sepolicy defined as the `zygote_exec` type:'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，`zygote` 和 `com.android.phone` 不应该以 `init` 身份运行。这一定是 `app_process` 文件的标签错误，它是
+    zygote。执行 `ls -laZ /system/bin/app_process` 命令会显示 `u:object_r:system_file:s0 app_process`，因此需要在
+    `file_contexts` 中添加一个条目来纠正此错误。我们可以在基础 sepolicy 中的 `zygote.te` 文件找到要使用的标签，定义为 `zygote_exec`
+    类型：
 - en: '[PRE35]'
+  id: totrans-111
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE35]'
 - en: In `file_contexts`, add `/system/bin/app_process u:object_r:zygote_exec:s0`.
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 在 `file_contexts` 中，添加 `/system/bin/app_process u:object_r:zygote_exec:s0`。
 - en: installd
+  id: totrans-113
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 安装守护进程
 - en: The added `domain.te` rules handle `installd`.
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 添加的 `domain.te` 规则处理 `installd`。
 - en: keystore
+  id: totrans-115
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 密钥存储
 - en: '[PRE36]'
+  id: totrans-116
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE36]'
 - en: 'The log device is taken care of by the `domain.te` rules. Let''s look at the
     raw `app_data_file` denial:'
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 日志设备由 `domain.te` 规则处理。让我们看看原始的 `app_data_file` 拒绝：
 - en: '[PRE37]'
+  id: totrans-118
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE37]'
 - en: 'Categories are defined in the contexts. This means MLS support is activated
     for `app domains`. In the `seapp_contexts` base sepolicy, we see this:'
+  id: totrans-119
   prefs: []
   type: TYPE_NORMAL
+  zh: 类别在上下文中定义。这意味着激活了 `app domains` 的 MLS 支持。在 `seapp_contexts` 基础 sepolicy 中，我们看到以下内容：
 - en: '[PRE38]'
+  id: totrans-120
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE38]'
 - en: MLS separation of application data is still under development and didn't work
     on 4.3, so we can disable this. We can just declare them in a device-specific
     `seapp_contexts` file. In `seapp_contexts`, add `user=_app domain=untrusted_app
     type=app_data_file` and `user=_app seinfo=platform domain=platform_app type=app_data_file`.
     In 4.3, any changes to context on data require a factory reset. The 4.4 version
     added smart relabel capabilities.
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: MLS 应用数据分离仍在开发中，在 4.3 上不起作用，因此我们可以禁用这个功能。我们只需在特定于设备的 `seapp_contexts` 文件中声明它们。在
+    `seapp_contexts` 中，添加 `user=_app domain=untrusted_app type=app_data_file` 和 `user=_app
+    seinfo=platform domain=platform_app type=app_data_file`。在 4.3 版本中，对数据上下文的任何更改都需要进行工厂重置。4.4
+    版本增加了智能重新标签的功能。
 - en: mediaserver
+  id: totrans-122
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 媒体服务器
 - en: '[PRE39]'
+  id: totrans-123
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE39]'
 - en: The log device was addressed in the `domain.te` rules. We'll skip `init` and
     `adbd` too, since their issues were triggered by improper process domains. It's
     important not to add allow rules blindly, as most of the work for existing domains
     can be handled with small label changes or a few rules.
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 日志设备在 `domain.te` 规则中处理。我们将跳过 `init` 和 `adbd`，因为它们的问题是由不正确的进程域引起的。不要盲目添加允许规则，因为现有域的大部分工作可以通过小的标签更改或少数规则处理。
 - en: netd
+  id: totrans-125
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 网络守护进程
 - en: '[PRE40]'
+  id: totrans-126
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE40]'
 - en: The log device denial of `netd` was addressed by `domain.te`. However, we should
     scrutinize anything requesting a capability. When granting capabilities, the policy
     author needs to be very careful. If a domain is granted the ability to load a
@@ -563,54 +845,84 @@
     `netd` needs loadable kernel module support to support some cards. Add the allow
     rule to a file called `netd.te` in the device UDOO sepolicy. In `netd.te`, add
     `allow netd self:capability sys_module;`.
+  id: totrans-127
   prefs: []
   type: TYPE_NORMAL
+  zh: '`netd` 对日志设备的拒绝在 `domain.te` 中处理。然而，我们应该仔细审查任何请求能力的请求。在授予能力时，策略作者需要非常小心。如果一个域被授予加载系统模块的能力，而该域或模块二进制本身受到威胁，它可能导致通过可加载模块将恶意软件注入内核。然而，`netd`
+    需要可加载内核模块支持以支持某些卡片。在设备 UDOO sepolicy 中的名为 `netd.te` 的文件中添加允许规则。在 `netd.te` 中，添加
+    `allow netd self:capability sys_module;`。'
 - en: rild
+  id: totrans-128
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 无线设备守护进程
 - en: '[PRE41]'
+  id: totrans-129
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE41]'
 - en: This is taken care of by `domain.te` rules, so we have nothing to do here.
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 这由 `domain.te` 规则处理，所以我们在这里不需要做任何事情。
 - en: servicemanager
+  id: totrans-131
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 服务管理器
 - en: '[PRE42]'
+  id: totrans-132
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE42]'
 - en: Again, the log device was handled in `domain.te`. We'll skip `init`, since its
     issues were triggered by improper process domains.
+  id: totrans-133
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，日志设备在 `domain.te` 中处理。我们将跳过 `init`，因为其问题是由不正确的进程域引起的。
 - en: surfaceflinger
+  id: totrans-134
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 表面抛掷器
 - en: '[PRE43]'
+  id: totrans-135
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE43]'
 - en: Again, the log device was handled in `domain.te`. We'll skip `init` too, since
     its issues were triggered by improper process domains.
+  id: totrans-136
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，日志设备在 `domain.te` 中处理。我们将跳过 `init`，因为其问题是由不正确的进程域引起的。
 - en: system_server
+  id: totrans-137
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 系统服务器
 - en: '[PRE44]'
+  id: totrans-138
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE44]'
 - en: 'Since `log_device` is taken care of by `domain.te`, and `init` and `adbd` are
     polluted, we will only address the Dalvik cache denial:'
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于 `log_device` 由 `domain.te` 处理，而 `init` 和 `adbd` 被污染，我们只处理 Dalvik 缓存拒绝：
 - en: '[PRE45]'
+  id: totrans-140
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE45]'
 - en: The external sepolicy seandroid-4.3 branch allowed `domain.te:allow domain dalvikcache_data_file:file
     r_file_perms;`. Writes were allowed by `system_app` with `system_app.te:allow
     system_app dalvikcache_data_file:file { write setattr };`. We should be able to
@@ -618,60 +930,95 @@
     file. In `domain.te`, add `allow domain dalvikcache_data_file:file r_file_perms;`,
     and in `system_server.te`, add `allow system_server dalvikcache_data_file:file
     { write setattr };`.
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 外部sepolicy seandroid-4.3分支允许`domain.te:allow domain dalvikcache_data_file:file
+    r_file_perms;`。`system_app`通过`system_app.te:allow system_app dalvikcache_data_file:file
+    { write setattr };`允许写入。我们应该能够授予这种写入权限，因为可能需要更新其Dalvik缓存文件。在`domain.te`中，添加`allow
+    domain dalvikcache_data_file:file r_file_perms;`，在`system_server.te`中，添加`allow
+    system_server dalvikcache_data_file:file { write setattr };`。
 - en: toolbox
+  id: totrans-142
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: toolbox
 - en: '[PRE46]'
+  id: totrans-143
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE46]'
 - en: 'Typically, one should not write to `sysfs`. Now look at the raw denial for
     the offending `sysfs` file:'
+  id: totrans-144
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常，人们不应该写入`sysfs`。现在看看对违规`sysfs`文件的原始否认：
 - en: '[PRE47]'
+  id: totrans-145
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE47]'
 - en: From here, we properly label `/sys/module/usbtouchscreen/parameters/calibration`.
     We place an entry in `file_contexts` to label `sysfs`, declare a type in `file.te`,
     and allow `toolbox` access to it. In `file.te`, add `type sysfs_touchscreen_calibration,
     fs_type, sysfs_type, mlstrustedobject;`, and in `file_contexts`, add `/sys/module/usbtouchscreen/parameters/calibration
     -- u:object_r:sysfs_touchscreen_calibration:s0`, and in `toolbox.te`, add `allow
     toolbox sysfs_touchscreen_calibration:file w_file_perms;`.
+  id: totrans-146
   prefs: []
   type: TYPE_NORMAL
+  zh: 从这里，我们正确标记了`/sys/module/usbtouchscreen/parameters/calibration`。在`file_contexts`中添加一个条目来标记`sysfs`，在`file.te`中声明一个类型，并允许`toolbox`访问它。在`file.te`中，添加`type
+    sysfs_touchscreen_calibration, fs_type, sysfs_type, mlstrustedobject;`，在`file_contexts`中，添加`/sys/module/usbtouchscreen/parameters/calibration
+    -- u:object_r:sysfs_touchscreen_calibration:s0`，在`toolbox.te`中，添加`allow toolbox
+    sysfs_touchscreen_calibration:file w_file_perms;`。
 - en: untrusted_app
+  id: totrans-147
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 非可信应用
 - en: '[PRE48]'
+  id: totrans-148
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE48]'
 - en: '`untrusted_app` had many denials. Considering the domain labeling issues, we
     won''t address most of these now. However, you should look out for mislabeled
     and unlabeled target files. While searching the denial logs as interpreted by
     `audit2allow`, the following was found:'
+  id: totrans-149
   prefs: []
   type: TYPE_NORMAL
+  zh: '`untrusted_app`有许多否认。考虑到域标记问题，我们现在不会解决大多数问题。但是，你应该注意错误标记和未标记的目标文件。在使用`audit2allow`解释的否认日志中搜索时，发现了以下内容：'
 - en: '[PRE49]'
+  id: totrans-150
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE49]'
 - en: 'For the `chr_file` device, we get this:'
+  id: totrans-151
   prefs: []
   type: TYPE_NORMAL
+  zh: 对于`chr_file`设备，我们得到这个：
 - en: '[PRE50]'
+  id: totrans-152
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE50]'
 - en: 'Therefore, we need to label `/dev/.coldboot_done`, `/dev/rfkill` properly,
     and `/dev/mxs_viim`. `/dev/rfkill` should be labeled in line with what the 4.3
     policy had:'
+  id: totrans-153
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，我们需要正确标记`/dev/.coldboot_done`，`/dev/rfkill`和`/dev/mxs_viim`。`/dev/rfkill`应该按照4.3政策的做法进行标记：
 - en: '[PRE51]'
+  id: totrans-154
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE51]'
 - en: The `/dev/mxs_viim` device seems to be a globally accessible GPU. We recommend
     a thorough review of the source code, but for now, we will label it as `gpu_device`.
     `/dev/.coldboot_done` is created by `ueventd` when the `coldboot` process completes.
@@ -679,170 +1026,268 @@
     This denial is caused by the source domain MLS on a target file that is not a
     subset of the categories of the source and does not have the `mlstrustedsubject`
     attribute; it should go away when we drop MLS support from apps.
+  id: totrans-155
   prefs: []
   type: TYPE_NORMAL
+  zh: '`/dev/mxs_viim`设备似乎是一个全局可访问的GPU。我们建议彻底审查源代码，但现在，我们将它标记为`gpu_device`。`/dev/.coldboot_done`是在`coldboot`进程完成后由`ueventd`创建的。如果`ueventd`重新启动，它会跳过冷启动。我们不需要标记这个。这个否认是由源域MLS对目标文件造成的，该文件不是源类别子集，并且没有`mlstrustedsubject`属性；当我们从应用中删除MLS支持时，它应该消失。'
 - en: 'In `file_contexts`:'
+  id: totrans-156
   prefs: []
   type: TYPE_NORMAL
+  zh: 在`file_contexts`中：
 - en: '[PRE52]'
+  id: totrans-157
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE52]'
 - en: vold
+  id: totrans-158
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: vold
 - en: '[PRE53]'
+  id: totrans-159
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE53]'
 - en: Again, the log device was handled in `domain.te`.
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，日志设备在`domain.te`中被处理。
 - en: watchdogd
+  id: totrans-161
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: watchdogd
 - en: '[PRE54]'
+  id: totrans-162
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE54]'
 - en: 'The raw denials from watchdog paint in interesting portrait:'
+  id: totrans-163
   prefs: []
   type: TYPE_NORMAL
+  zh: 监管机构的原始否认描绘了一幅有趣的画像：
 - en: '[PRE55]'
+  id: totrans-164
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE55]'
 - en: 'A file is created and unlinked by `watchdog`, which keeps a handle to an anonymous
     file. No filesystem reference exists after the unlink, but the file descriptor
     is valid and only `watchdog` can use it. In this case, we can just allow watchdog
     this rule. In `watchdogd.te`, add `allow watchdogd device:chr_file create_file_perms;`.
     This rule, however, causes a `neverallow` violation in the base policy:'
+  id: totrans-165
   prefs: []
   type: TYPE_NORMAL
+  zh: '`watchdog`创建并解除了对一个匿名文件的引用。在unlink之后，不存在文件系统引用，但文件描述符有效，只有`watchdog`可以使用它。在这种情况下，我们可以允许watchdog这个规则。在`watchdogd.te`中，添加`allow
+    watchdogd device:chr_file create_file_perms;`。然而，这个规则在基本策略中引起了`neverallow`的违反：'
 - en: '[PRE56]'
+  id: totrans-166
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE56]'
 - en: The `neverallow` rule is in the `domain.te` base policy as `neverallow { domain
     -init -ueventd -recovery } device:chr_file { open read write };`. For such a simple
     change, we'll just modify the base sepolicy to `neverallow { domain -init -ueventd
     -recovery -watchdogd } device:chr_file { open read write };`.
+  id: totrans-167
   prefs: []
   type: TYPE_NORMAL
+  zh: '`neverallow` 规则位于 `domain.te` 基本策略中，为 `neverallow { domain -init -ueventd -recovery
+    } device:chr_file { open read write };`。对于这种简单的更改，我们只需将基本 sepolicy 更改为 `neverallow
+    { domain -init -ueventd -recovery -watchdogd } device:chr_file { open read write
+    };`。'
 - en: wpa
+  id: totrans-168
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: wpa
 - en: '[PRE57]'
+  id: totrans-169
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE57]'
 - en: 'Again, the log device was handled in `domain.te`. The system data accesses
     need further investigation, starting with the raw denials:'
+  id: totrans-170
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，日志设备在 `domain.te` 中处理。系统数据访问需要进一步调查，从原始拒绝开始：
 - en: '[PRE58]'
+  id: totrans-171
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE58]'
 - en: 'The offending file was located using `ls -laR`:'
+  id: totrans-172
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用 `ls -laR` 定位到问题文件：
 - en: '[PRE59]'
+  id: totrans-173
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE59]'
 - en: 'This socket is created by the `wpa_supplicant` itself. Relabeling it without
     type transitions is impossible, so we have to allow it. In `wpa.te`, add `allow
     wpa system_data_file:dir rw_dir_perms;` and `allow wpa system_data_file:sock_file
     create_file_perms;`. The unlabeled device has already been dealt with; it was
     on `rfkill`:'
+  id: totrans-174
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个套接字是由 `wpa_supplicant` 自身创建的。在没有类型转换的情况下重新标记它是不可能的，因此我们必须允许它。在 `wpa.te` 中添加
+    `allow wpa system_data_file:dir rw_dir_perms;` 和 `allow wpa system_data_file:sock_file
+    create_file_perms;`。未标记的设备已经处理过了；它在 `rfkill` 上：
 - en: '[PRE60]'
+  id: totrans-175
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE60]'
 - en: Second policy pass
+  id: totrans-176
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第二次策略传递
 - en: 'After loading the drafted policy, the device still has denials on boot:'
+  id: totrans-177
   prefs: []
   type: TYPE_NORMAL
+  zh: 在加载草拟的策略后，设备在启动时仍然有拒绝：
 - en: '[PRE61]'
+  id: totrans-178
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE61]'
 - en: All of these denials should be investigated because they target sensitive types,
     `tcontext` specifically.
+  id: totrans-179
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有这些拒绝都应该被调查，因为它们针对的是敏感类型，特别是 `tcontext`。
 - en: init
+  id: totrans-180
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: init
 - en: 'The raw denials for `init` are as follows:'
+  id: totrans-181
   prefs: []
   type: TYPE_NORMAL
+  zh: '`init` 的原始拒绝如下：'
 - en: '[PRE62]'
+  id: totrans-182
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE62]'
 - en: 'These occur before `init` remounts `/` as read-only. We can safely allow these,
     and since `init` is running unconfined, we can just add it to `init.te`. We could
     add the `allow` rule to the unconfined set, but since that is going away, let''s
     minimize the permission only to `init`:'
+  id: totrans-183
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些情况发生在 `init` 将 `/` 重新挂载为只读之前。我们可以安全地允许这些，由于 `init` 正在非限制状态下运行，我们只需将其添加到 `init.te`
+    中。我们可以将 `allow` 规则添加到非限制集合中，但由于它即将消失，让我们将权限最小化到仅 `init`：
 - en: '[PRE63]'
+  id: totrans-184
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE63]'
 - en: Note
+  id: totrans-185
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: Unconfined is not completely unconfined. Rules get stripped from this domain
     as AOSP moves closer to zero unconfined domains.
+  id: totrans-186
   prefs: []
   type: TYPE_NORMAL
+  zh: 未限制的域并不是完全不受限制的。随着 AOSP 趋向于零未限制域，这个域的规则会被剥离。
 - en: 'Doing this, however, causes another `neverallow` to fail. We can modify `external/sepolicy
     domain.te` to bypass this. Change the `neverallow` from this:'
+  id: totrans-187
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，这样做会导致另一个 `neverallow` 失败。我们可以修改 `external/sepolicy domain.te` 来绕过这个问题。将
+    `neverallow` 从这个更改为：
 - en: '[PRE64]'
+  id: totrans-188
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE64]'
 - en: 'Change it to this:'
+  id: totrans-189
   prefs: []
   type: TYPE_NORMAL
+  zh: 更改为以下内容：
 - en: '[PRE65]'
+  id: totrans-190
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE65]'
 - en: Note
+  id: totrans-191
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: If you need to modify `neverallow` entries to build, you will fail CTS. The
     proper approach is to remove this behavior from `init`.
+  id: totrans-192
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你需要修改 `neverallow` 条目以构建，你将无法通过 CTS。正确的方法是从 `init` 中移除这种行为。
 - en: 'Additionally, we need to see what is loaded with `exec` without a domain transition,
     causing the `execute_no_trans` denial:'
+  id: totrans-193
   prefs: []
   type: TYPE_NORMAL
+  zh: 此外，我们需要查看哪些内容在没有域转换的情况下通过 `exec` 加载，导致 `execute_no_trans` 拒绝：
 - en: '[PRE66]'
+  id: totrans-194
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE66]'
 - en: To resolve this, we can relabel `magd` with its own type and place it in its
     own unconfined domain. A `neverallow` in the base policy forces us to move each
     executable into its own domain.
+  id: totrans-195
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了解决这个问题，我们可以用其自己的类型重新标记 `magd`，并将其放在自己的非限制域中。基本策略中的 `neverallow` 强迫我们将每个可执行文件移动到其自己的域中。
 - en: 'Create a file called `magd.te`, add it to `BOARD_SEPOLICY_UNION`, and add the
     following contents to it:'
+  id: totrans-196
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建一个名为 `magd.te` 的文件，将其添加到 `BOARD_SEPOLICY_UNION` 中，并向其中添加以下内容：
 - en: '[PRE67]'
+  id: totrans-197
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE67]'
 - en: 'Also update `file_contexts` to contain this:'
+  id: totrans-198
   prefs: []
   type: TYPE_NORMAL
+  zh: 同时更新 `file_contexts` 以包含以下内容：
 - en: '[PRE68]'
+  id: totrans-199
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE68]'
 - en: Repeat the steps that were done for `magd` for `rfkill`. Just replace `magd`
     with `rfkill` in the preceding example. Later testing revealed an entry-point
     denial where the source context was `init_shell` and the target was `rfkill_exec`.
@@ -855,91 +1300,145 @@
     file. Create a new file to declare this device type, called `device.te`, and add
     `type rfkill_device, dev_type;`. After that, label it with `file_contexts` by
     adding `/dev/rfkill u:object_r:rfkill_device:s0`.
+  id: totrans-200
   prefs: []
   type: TYPE_NORMAL
+  zh: 对 `rfkill` 重复为 `magd` 所做的步骤。只需在前面示例中将 `magd` 替换为 `rfkill`。后来的测试发现了一个入口点拒绝，其中源上下文是
+    `init_shell`，目标是 `rfkill_exec`。在添加 shell 规则后，发现 `rfkill` 是从 `init_shell` 域使用 `exec`
+    加载的，因此我们也应该在 `rfkill.te` 文件中添加 `domain_auto_trans(init_shell, rfkill_exec, rfkill)`。此外，与这一发现相关的是
+    `rfkill` 尝试打开、读取和写入 `/dev/rfkill`。因此，我们必须用 `rfkill_device` 标记 `/dev/rfkill`，允许
+    `rfkill` 访问它，并在 `rfkill.te` 文件中追加 `allow rfkill rfkill_device:chr_file rw_file_perms;`。创建一个名为
+    `device.te` 的新文件来声明此设备类型，并添加 `type rfkill_device, dev_type;`。之后，通过在 `file_contexts`
+    中添加 `/dev/rfkill u:object_r:rfkill_device:s0` 来标记它。
 - en: shell
+  id: totrans-201
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: shell
 - en: 'The first shell denial we will evaluate is the denial on `entrypoint`:'
+  id: totrans-202
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将评估的第一个 shell 拒绝是在 `entrypoint` 上：
 - en: '[PRE69]'
+  id: totrans-203
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE69]'
 - en: Since we did not label `mksh`, we need to label it now. We can create an unconfined
     domain for shells spawned by `init` to end up in the `init_shell` domain. The
     console still ends up in the `shell` domain via an explicit `seclabel`, and other
     invocations end up as `init_shell`. Create a new file, `init_shell.te`, and add
     it to `BOARD_SEPOLICY_UNION`.
+  id: totrans-204
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于我们没有给 `mksh` 打标签，现在我们需要给它打标签。我们可以创建一个不受限制的域，让 `init` 启动的 shell 最终进入 `init_shell`
+    域。控制台仍然通过显式 `seclabel` 进入 `shell` 域，而其他调用则作为 `init_shell`。创建一个新文件 `init_shell.te`，并将其添加到
+    `BOARD_SEPOLICY_UNION` 中。
 - en: init_shell.te
+  id: totrans-205
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: init_shell.te
 - en: '[PRE70]'
+  id: totrans-206
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE70]'
 - en: 'Update `file_contexts` to include this:'
+  id: totrans-207
   prefs: []
   type: TYPE_NORMAL
+  zh: 更新 `file_contexts` 以包含以下内容：
 - en: '[PRE71]'
+  id: totrans-208
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE71]'
 - en: 'Now we will handle shell access to the raw device:'
+  id: totrans-209
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，我们将处理对原始设备的 shell 访问：
 - en: '[PRE72]'
+  id: totrans-210
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE72]'
 - en: 'This is just a mislabeled `tty`, so we can label this as a `tty_device`. Add
     the following entry to the file contexts:'
+  id: totrans-211
   prefs: []
   type: TYPE_NORMAL
+  zh: 这只是一个标签错误的 `tty`，我们可以将其标记为 `tty_device`。在文件上下文中添加以下条目：
 - en: '[PRE73]'
+  id: totrans-212
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE73]'
 - en: Field trials
+  id: totrans-213
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 现场试验
 - en: At this point, rebuild the source tree, wipe the data filesystem, flash, and
     re-run CTS. Repeat this until all denials are addressed.
+  id: totrans-214
   prefs: []
   type: TYPE_NORMAL
+  zh: 在此阶段，重新构建源代码树，清除数据文件系统，刷新，并重新运行 CTS。重复此操作直到所有拒绝都被处理。
 - en: Once you're done with CTS and internal QA trials, we recommend performing a
     field trial with the device in permissive mode. During this period, you should
     be gathering the logs and refining policy. If the domains are not stable, you
     can declare them as permissive in the policy file and still put the device in
     enforcing mode; enforcing some domains is better than enforcing none.
+  id: totrans-215
   prefs: []
   type: TYPE_NORMAL
+  zh: 当你完成 CTS 和内部 QA 测试后，我们建议在宽容模式下进行现场试验。在此期间，你应该收集日志并完善策略。如果域不稳定，你可以在策略文件中将它们声明为宽容模式，但仍然将设备设置为执行模式；执行部分域总比一个都不执行要好。
 - en: Going enforcing
+  id: totrans-216
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 转为执行模式
 - en: 'You can pass the enforcing mode either using `bootloader` (which will not be
     covered here) or with the `init.rc` script early in boot time. You can do this
     right after `setcon`:'
+  id: totrans-217
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可以使用 `bootloader` 传递执行模式（这部分内容这里不涉及），或者在启动早期通过 `init.rc` 脚本进行设置。你可以在 `setcon`
+    之后立即进行如下操作：
 - en: '[PRE74]'
+  id: totrans-218
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE74]'
 - en: 'Once this statement is compiled into the `init.rc` script, it can only be undone
     with a subsequent build and a reflash of `boot.img`. You can check this by running
     the `getenforce` command. Also, as an interesting test, you can try to run the
     `reboot` command from the root serial console and watch it fail:'
+  id: totrans-219
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦这条语句被编译到 `init.rc` 脚本中，就只能通过后续构建和重新刷新 `boot.img` 来撤销。你可以通过运行 `getenforce`
+    命令来检查这一点。另外，作为一个有趣的测试，你可以尝试从根串行控制台运行 `reboot` 命令，并观察它失败：
 - en: '[PRE75]'
+  id: totrans-220
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE75]'
 - en: Summary
+  id: totrans-221
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 摘要
 - en: In this chapter, all of your previous understanding of the system was used to
     develop real SE for Android policy for a brand new device. You are now empowered
     with the knowledge of how to write SELinux policy for Android, where and how the
@@ -947,13 +1446,17 @@
     Android platforms. Since this is a fairly new feature that influences many system
     interactions, issues that will require code changes as well as policy changes
     will arise. Understanding both is crucial.
+  id: totrans-222
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，您之前对系统的所有理解都被用来为全新设备开发实际的Android安全增强（SE）策略。现在，您已经掌握了如何编写Android的SELinux策略、系统的各个组件在哪里以及如何工作，以及如何将这些特性移植并启用在各种Android平台上。由于这是一个相当新的特性，它影响许多系统交互，因此将出现需要代码变更以及策略变更的问题。理解这两者是至关重要的。
 - en: As policy authors and security personnel in general, the responsibility to secure
     the system rests on our shoulders. In most organizations, you're required to work
     in the dark. However, if you can, do as much work and ask as many questions as
     you want to in the mailing list, and never accept the status quo. The SE for Android
     and AOSP projects welcome all to contribute, and by contributing, you will help
     make the project better and enhance the feature sets for all.
+  id: totrans-223
   prefs: []
   type: TYPE_NORMAL
+  zh: 作为策略作者和一般的安全人员，确保系统的安全责任落在了我们的肩上。在大多数组织中，您可能需要在缺乏信息的情况下工作。然而，如果您可以，尽可能多地工作并在邮件列表中提出问题，绝不要接受现状。Android安全增强（SE）和AOSP项目欢迎所有人贡献，通过贡献，您将帮助改进项目并增强所有功能的特性集。
