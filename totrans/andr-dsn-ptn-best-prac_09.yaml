@@ -1,16 +1,22 @@
 - en: Chapter 9. Observing Patterns
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第九章. 观察模式
 - en: In the last chapter, we looked at how to simplify interaction by allowing a
     user to store frequently used data, such as location and dietary preferences.
     This is only one way to make using an app as enjoyable as possible. Another valuable
     method is to provide the user with timely notifications.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在上一章，我们探讨了如何通过允许用户存储经常使用的数据，如位置和饮食偏好，来简化交互。这只是让应用使用尽可能愉快的一种方式。另一种有价值的方法是向用户提供及时的通知。
 - en: '![Observing Patterns](img/image_09_001.jpg)'
+  id: totrans-2
   prefs: []
   type: TYPE_IMG
+  zh: '![观察模式](img/image_09_001.jpg)'
 - en: All mobile devices have provision for receiving notifications; usually these
     are delivered using the narrow status bar at the top of the screen, and Android
     is no exception. What makes this process interesting to us as developers, is that
@@ -18,312 +24,446 @@
     There is clearly no callback method for handling such an event in an activity,
     so we will have to look at background components such as **services** to trigger
     such events.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 所有移动设备都有接收通知的机制；通常这些通知是通过屏幕顶部的狭窄状态栏传递的，Android也不例外。对于我们开发者来说，这个过程之所以有趣，是因为这些通知需要在我们的应用可能并未使用时发送。显然，在活动中没有回调方法来处理此类事件，因此我们将不得不查看如**服务**这样的后台组件来触发此类事件。
 - en: In terms of design patterns, there is one pattern that is almost purpose built
     for managing one to many relationships, the **observer pattern**. Although perfect
     for the delivery and reception of notifications, observer patterns occur everywhere
     in software design and you will no doubt have encountered the **Observer** and
     **Observed** Java utilities.
+  id: totrans-4
   prefs: []
   type: TYPE_NORMAL
+  zh: 就设计模式而言，有一个几乎专为管理一对多关系而设计的模式，即**观察者模式**。尽管它完美适用于通知的发送和接收，但观察者模式在软件设计的各个领域无处不在，你无疑已经遇到了**Observer**和**Observed**的Java实用工具。
 - en: We will start the chapter by taking a close look at the observer pattern itself
     and then at how Android notifications are designed, built, and customized.
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从观察者模式本身以及Android通知的设计、构建和自定义方法开始本章的学习。
 - en: 'In this chapter, you will learn how to:'
+  id: totrans-6
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，你将学习如何：
 - en: Create an observer pattern
+  id: totrans-7
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建一个观察者模式
 - en: Issue a notification
+  id: totrans-8
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 发出通知
 - en: Use Java observer utilities
+  id: totrans-9
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 使用Java观察者工具
 - en: Apply a pending intent
+  id: totrans-10
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 应用一个待定意图
 - en: Configure privacy and priority settings
+  id: totrans-11
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 配置隐私和优先级设置
 - en: Customize notifications
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 自定义通知
 - en: Create a service
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 创建一个服务
 - en: This chapter focuses largely on the observer pattern, and how it can be applied
     to managing notifications. The best place to begin is to take a look at the pattern
     itself, its purpose and its structure.
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 本章主要关注观察者模式，以及如何将其应用于管理通知。最好的起点是查看模式本身，它的目的和结构。
 - en: The Observer pattern
+  id: totrans-15
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 观察者模式
 - en: You may not realize it, but you will have encountered the observer pattern many
     times, as every click listener (and any other listener) is in fact an observer.
     The same applies to the icons and features of any desktop or GUI and these type
     of listener interfaces demonstrate very nicely the purpose of the observer pattern.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 你可能没有意识到，其实你已经多次遇到观察者模式，因为每个点击监听器（以及其他任何监听器）实际上都是一个观察者。同样，对于任何桌面或图形用户界面的图标和功能，这些类型的监听器接口非常清晰地展示了观察者模式的目的。
 - en: The observer acts like a sentry, keeping watch for a particular event or state
     change in its subject, or subjects, and then reporting this information to interested
     parties.
+  id: totrans-17
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 观察者像一个哨兵，监视其主体（或主体）的特定事件或状态变化，然后将这些信息报告给感兴趣的相关方。
 - en: As already mentioned, Java has its own observer utilities, and although these
     can be useful in some cases, the way Java handles inheritance and the simplistic
     nature of the pattern makes writing our own preferable. We will see how to use
     these built-in classes but in most of the examples here, we will build our own.
     This will also provide a deeper understanding of the pattern's workings.
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 如已经提到，Java有自己的观察者工具，尽管在某些情况下它们可能很有用，但Java处理继承的方式和模式的简单性使得编写我们自己的版本更为可取。我们将了解如何使用这些内置类，但在大多数示例中，我们将构建自己的版本。这还将提供对模式工作原理的更深入理解。
 - en: Notifications must be used with caution, as few things can annoy a user more
     than unwanted messages. However, if used sparingly, notifications can provide
     an invaluable promotional tool. The secret lies in allowing users to opt in and
     out of various message streams, so that they only receive notifications that interest
     them.
+  id: totrans-19
   prefs: []
   type: TYPE_NORMAL
+  zh: 使用通知时必须谨慎，因为没有什么比不希望收到的消息更能激怒用户了。然而，如果谨慎使用，通知可以提供一个非常有价值的推广工具。秘诀在于允许用户选择加入和退出各种消息流，这样他们只接收他们感兴趣的通知。
 - en: Creating the pattern
+  id: totrans-20
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 创建模式
 - en: Considering our sandwich maker app, there appears to be very little opportunity
     to issue notifications. One such use might be if we were to provide the option
     for customers to collect their sandwiches as well as having them delivered, then
     users may appreciate being notified when their sandwich is ready.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 考虑到我们的三明治制作应用，似乎很少有发送通知的机会。如果我们要提供让客户除了外卖还可以取三明治的选项，那么用户可能会感激在他们的三明治准备好时收到通知。
 - en: To effectively communicate between devices, we would need a central server with
     an associated application. We will not be able to cover that here but that will
     not stop us seeing how the pattern works and how notifications are posted.
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了在设备间有效通信，我们需要一个带有相关应用程序的中心服务器。我们在这里无法涵盖这一点，但这不会阻止我们了解模式的工作原理以及如何发布通知。
 - en: We will begin by building a simple observer pattern, along with a basic notification
     manager to track and report the progress of an order.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们将从构建一个简单的观察者模式开始，以及一个基本的通知管理器来跟踪和报告订单进度。
 - en: 'To see how this is done, follow these steps:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 要了解如何执行此操作，请按照以下步骤操作：
 - en: At the heart of an observer pattern lies an interface for the subject and one
     for the observer.
+  id: totrans-25
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 观察者模式的核心是一个用于主体的接口和一个用于观察者的接口。
 - en: 'The subject interface looks like this:'
+  id: totrans-26
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 主体接口如下所示：
 - en: '[PRE0]'
+  id: totrans-27
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'This is the observer interface:'
+  id: totrans-28
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 这是观察者接口：
 - en: '[PRE1]'
+  id: totrans-29
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'Next, implement the subject as the sandwich being ordered, like so:'
+  id: totrans-30
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来，将正在订购的三明治实现为主体，如下所示：
 - en: 'Next, implement the observer interface like this:'
+  id: totrans-31
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来，像这样实现观察者接口：
 - en: '[PRE2]'
+  id: totrans-32
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: '[PRE3]'
+  id: totrans-33
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: 'This completes the pattern itself; its structure is quite simple as can be
     seen here:'
+  id: totrans-34
   prefs:
   - PREF_IND
   type: TYPE_NORMAL
+  zh: 这完成了模式本身；其结构非常简单，如下所示：
 - en: '![Creating the pattern](img/image_09_002.jpg)'
+  id: totrans-35
   prefs:
   - PREF_IND
   type: TYPE_IMG
+  zh: '![创建模式](img/image_09_002.jpg)'
 - en: It is the subject that does all the work here. It keeps a list of all its observers
     and provides mechanisms for observers to subscribe and unsubscribe to its updates.
     In the previous example, we call `unregister()` during `update()` from the observer
     once the order is complete, as our listener will no longer be interested in this
     subject.
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，主体完成所有工作。它保存了所有观察者的列表，并为观察者提供订阅和取消订阅更新的机制。在前一个示例中，我们从观察者中在`update()`时调用`unregister()`，一旦订单完成，因为我们的监听器将不再对此主体感兴趣。
 - en: The `Observer` interface may seem too simple to be necessary, but it allows
     for loose coupling between the `Sandwich` and its observers, and this means we
     can modify either of them independently of the other.
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: '`Observer`接口看起来可能过于简单而不必要，但它允许`Sandwich`与其观察者之间进行松耦合，这意味着我们可以独立修改它们中的任何一个。'
 - en: Although we have only included one observer, it should be clear how the methods
     implemented in our subject allow for any number of individual orders and respond
     accordingly.
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管我们只包含了一个观察者，但应该清楚的是，我们在主体中实现的方法允许任何数量的单独订单并相应地响应。
 - en: Adding a notification
+  id: totrans-39
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 添加通知
 - en: 'The `order.update()` method provides the appropriate text for us to issue as
     a notification. To test the pattern and deliver notifications to the status bar,
     follow the steps here:'
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: '`order.update()`方法为我们提供了适当的通知文本。要测试该模式并将通知发送到状态栏，请按照以下步骤操作：'
 - en: 'Begin by creating an XML layout with the following nested layout:'
+  id: totrans-41
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先，创建一个包含以下嵌套布局的XML布局：
 - en: '[PRE4]'
+  id: totrans-42
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: 'Open your Java activity and add these fields:'
+  id: totrans-43
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开你的Java活动并添加这些字段：
 - en: '[PRE5]'
+  id: totrans-44
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: 'Add the method that listens for the order button to be clicked:'
+  id: totrans-45
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 添加监听订单按钮被点击的方法：
 - en: '[PRE6]'
+  id: totrans-46
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'And one for the update button:'
+  id: totrans-47
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 为更新按钮添加一个：
 - en: '[PRE7]'
+  id: totrans-48
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'Finally, add the `sendNotification()` method:'
+  id: totrans-49
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，添加`sendNotification()`方法：
 - en: '[PRE8]'
+  id: totrans-50
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: 'We can now run the code on a device or emulator:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们现在可以在设备或模拟器上运行代码：
 - en: '![Adding a notification](img/image_09_003.jpg)'
+  id: totrans-52
   prefs: []
   type: TYPE_IMG
+  zh: '![添加通知](img/image_09_003.jpg)'
 - en: The code above, responsible for issuing the notifications, demonstrates the
     simplest possible way to post a notification, and the icon and two text fields
     are the minimum required for this.
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 上面的代码负责发送通知，它展示了发布通知的最简单方式，其中图标和两个文本字段是此操作的最小要求。
 - en: Note
+  id: totrans-54
   prefs:
   - PREF_H3
   type: TYPE_NORMAL
+  zh: 注意
 - en: As this is only a demonstration and the observer pattern really does nothing
     more than simulate the server, it is important not to confuse this with the native
     notification API calls.
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 由于这只是一个演示，观察者模式实际上所做的并不比模拟服务器更多，因此重要的是不要将其与原生的通知API调用混淆。
 - en: The use of a notification ID is worth noting. This is primarily used for updating
     notifications. Sending a notification with the same ID will update the previous
     message, and in the preceding situation, this is actually what we should have
     done, the incrementing of the ID here was done only to demonstrate how it can
     be used. To correct this, comment out the line and rerun the project so that only
     one message stream is generated.
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 通知ID的使用值得注意。这主要用于更新通知。使用相同的ID发送通知将更新之前的消息，在前面提到的情况下，实际上我们应该这样做，这里ID的递增只是为了演示如何使用它。为了纠正这一点，注释掉该行并重新运行项目，以便只生成一个消息流。
 - en: There is a lot more we can and should do to make the most of this invaluable
     tool, such as have it perform actions and be delivered when our app is not active,
     and we will return to these issues in later sections, but for now it is worth
     taking a look at how Java provides its own utilities for implementing observer
     patterns.
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们还可以并且应该做更多的事情来充分利用这个宝贵的工具，例如在应用不活跃时执行操作并传递通知，我们将在后面的章节回到这些问题，但现在看看Java如何提供自己的工具来实现观察者模式是值得的。
 - en: Utility observers and observables
+  id: totrans-58
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 实用观察者和可观察对象
 - en: 'As mentioned earlier, Java provides its own observer utilities, the `java.util.observer`
     interface and the `java.util.observable` abstract class. These come equipped with
     methods for registering, un-registering, and notifying observers. The example
     from the previous section can be easily implemented using them, as can be seen
     by following these steps:'
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 如前所述，Java提供了自己的观察者工具，即`java.util.observer`接口和`java.util.observable`抽象类。它们配备了注册、注销和通知观察者的方法。正如通过以下步骤可以看到的，前一个示例可以很容易地使用它们实现：
 - en: 'In this case, the subject is realized by extending the observable class, as
     can be seen here:'
+  id: totrans-60
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在这个例子中，主题是通过扩展可观察类来实现的，如下所示：
 - en: '[PRE9]'
+  id: totrans-61
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'The `Order` class is an observer and therefore implements that interface, like
     this:'
+  id: totrans-62
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`Order`类是一个观察者，因此实现了这个接口，如下所示：'
 - en: '[PRE10]'
+  id: totrans-63
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: 'The XML layout and `sendNotification()` method are exactly as before, and the
     only changes to the activity source code are as outlined here:'
+  id: totrans-64
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: XML布局和`sendNotification()`方法与之前完全相同，活动中源代码唯一的变化如下所述：
 - en: '[PRE11]'
+  id: totrans-65
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: As you can see, this code performs the same task as our previous example, and
     it is worth comparing the two listings. The Observer's `setChanged()` and `notifyObservers()`
     methods replaced the method we implemented in our custom version.
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 如你所见，这段代码执行的任务与我们的前一个示例相同，值得比较这两个清单。观察者的`setChanged()`和`notifyObservers()`方法替换了我们自定义版本中实现的方法。
 - en: Which of these approaches you adopt for future observer patterns depends mostly
     on the particular circumstances. Generally, the use of the Java observable utils
     suits simple situations, and if you are unsure it is a good idea to start with
     this method, as you will soon see if a more flexible approach is required.
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 你未来采用哪种观察者模式的方法主要取决于特定情况。通常，Java可观察工具适用于简单情况，如果你不确定，从这种方法开始是个好主意，因为很快你就会看到是否需要更灵活的方法。
 - en: The examples covered above only introduce the observer pattern and notifications.
     The pattern demonstrated a very simple situation and to appreciate its full potential,
     we will need to apply it to a more complex situation. First though, we will take
     a look at how much more we can do with the notification system.
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 以上示例仅介绍了观察者模式和通知。该模式展示了一个非常简单的情况，为了充分发挥其潜力，我们需要将其应用于更复杂的情况。不过首先，我们会看看我们还能用通知系统做些什么。
 - en: Notifications
+  id: totrans-69
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 通知
 - en: Sending a simple string message to a user is the primary purpose of the notification
     system, but there is much more that can be done with it. First and foremost, a
     notification can be made to perform one or more actions; usually one of these
@@ -331,8 +471,10 @@
     notifications that can contain various media and are very useful for situations
     where there is too much information for a single line message, but we want to
     save the user the bother of having to open an app.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 向用户发送简单的字符串消息是通知系统的主要目的，但它还能做更多的事情。首先，通知可以被设置为执行一个或多个操作；通常其中之一是打开相关的应用程序。也可以创建扩展的通知，其中可以包含各种媒体，这对于单行消息无法容纳过多信息的情况非常有用，但我们又想省去用户打开应用程序的麻烦。
 - en: Since API 21, it has been possible to send heads-up notifications and notifications
     to the user's lock screen. This function is something that was taken from other
     mobile platforms and despite its apparent usefulness, it should be used with great
@@ -341,404 +483,586 @@
     if the information cannot wait until the next time the user logs in. A good example
     of a valid notification might be *your sandwich has been delayed,* not *new range
     of cheeses coming soon*.
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 从API 21开始，已经可以发送弹窗通知和用户锁屏上的通知。这个功能是从其他移动平台上借鉴来的，尽管它显然很有用，但应该谨慎使用。几乎不用说，通知应该只包含相关及时的信息。经验法则是，只有在信息不能等到用户下次登录时才能发出通知。一个有效的通知的例子可能是*你的三明治已经延迟了*，而不是*新款奶酪即将推出*。
 - en: Along with the risk of pestering the user, the lock screen notification contains
     another danger. Messages displayed on a locked device are to all intents and purposes
     public. Anyone passing a phone left on a desk can see the content. Now although
     most people would not mind their boss seeing what type of sandwich they like,
     there will no doubt be apps you will write that will contain more sensitive material
     and fortunately the API provides programmable privacy settings.
+  id: totrans-72
   prefs: []
   type: TYPE_NORMAL
+  zh: 除了可能打扰用户的风险，锁屏通知还包含另一个危险。在锁定设备上显示的消息对于所有意图和目的都是公开的。任何经过留在桌上的手机的人都能看到内容。现在尽管大多数人可能不介意他们的老板看到他们喜欢的三明治类型，毫无疑问，你将编写的一些应用程序将包含更敏感的材料，幸运的是API提供了可编程的隐私设置。
 - en: Regardless of the caution that needs applying, the full range of notification
     functionality is still well worth becoming acquainted with, starting with having
     a notification actually do something.
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管需要谨慎使用，但通知功能的完整范围仍然值得熟悉，从让通知实际执行某些操作开始。
 - en: Setting an intent
+  id: totrans-74
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 设置意图
 - en: As with the starting of an activity or any other top level app component, the
     intent provides our route from notification to action. In most cases, we want
     to use the notification to start an activity, and this is what we will do here.
+  id: totrans-75
   prefs: []
   type: TYPE_NORMAL
+  zh: 与启动活动或其他任何顶级应用组件一样，意图为我们提供了从通知到操作的路径。在大多数情况下，我们希望使用通知来启动活动，这就是我们在这里要做的事情。
 - en: Users of mobile devices want to be able to move between activities and applications
     easily and swiftly. As a user navigates between apps, the system keeps track of
     the order which it stores in a back-stack. This is usually sufficient, but when
     a user is drawn away from an app by a notification, then pressing the back button
     will not return them to the app they had previously been engaged in. This is likely
     to annoy users but is fortunately easily avoided by creating an artificial back-stack.
+  id: totrans-76
   prefs: []
   type: TYPE_NORMAL
+  zh: 移动设备的用户希望能够在活动和应用程序之间轻松快速地移动。当用户在应用程序之间导航时，系统会跟踪其顺序并将其存储在返回栈中。这通常已经足够，但是当用户被通知从应用程序中引开，然后按下返回按钮时，他们不会返回之前参与的应用程序。这很可能会激怒用户，但幸运的是，通过创建一个人工的返回栈可以轻松避免这个问题。
 - en: Creating our own back-stack is nowhere as difficult as it might sound as the
     following example demonstrates. It is in fact so simple that this example also
     details how to include a few other notification features, such as a more elaborate
     icon and ticker text that will scroll along the status bar when the notification
     is first delivered.
+  id: totrans-77
   prefs: []
   type: TYPE_NORMAL
+  zh: 创建我们自己的返回栈并不像听起来那么困难，以下示例证明了这一点。实际上它非常简单，这个例子还详细介绍了如何包含一些其他通知功能，例如更详细的通知图标和当通知首次送达时在状态栏上滚动的提示文本。
 - en: 'Follow these steps to see how this is achieved:'
+  id: totrans-78
   prefs: []
   type: TYPE_NORMAL
+  zh: 按照以下步骤了解如何实现这一点：
 - en: 'Open the project we worked on earlier and create a new activity class, like
     so:'
+  id: totrans-79
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 打开我们之前工作的项目，并创建一个新的活动类，如下所示：
 - en: '[PRE12]'
+  id: totrans-80
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: Next we will need a layout file to match the content view set in the `onCreate()`
     method previously. This can be left empty, save for a root layout.
+  id: totrans-81
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 接下来，我们需要一个布局文件以匹配之前在`onCreate()`方法中设置的内容视图。这可以留空，只需包含一个根布局。
 - en: 'Now add the following lines to the top of the `sendNotification()` method in
     your main activity:'
+  id: totrans-82
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在在主活动中的`sendNotification()`方法顶部添加以下行：
 - en: '[PRE13]'
+  id: totrans-83
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE13]'
 - en: 'Append the notification builder with these settings:'
+  id: totrans-84
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在通知构建器中添加这些设置：
 - en: '[PRE14]'
+  id: totrans-85
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE14]'
 - en: 'Finally, include the new activity in the manifest file:'
+  id: totrans-86
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，在清单文件中包含新的活动：
 - en: '[PRE15]'
+  id: totrans-87
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE15]'
 - en: 'The effects of these changes are obvious:'
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些更改的效果是显而易见的：
 - en: '![Setting an intent](img/image_09_004.jpg)'
+  id: totrans-89
   prefs: []
   type: TYPE_IMG
+  zh: '![设置意图](img/image_09_004.jpg)'
 - en: Comment out the lines generating the back-stack and open the notification when
     using another app to see how it maintains intuitive navigation. The `setAutoCancel()`
     call means that the status bar icon is dismissed when the notification is followed.
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 注释掉生成回退堆栈的行，并在使用另一个应用时打开通知，以了解它如何保持直观的导航。`setAutoCancel()`的调用意味着当跟随通知时，状态栏图标会被取消。
 - en: Generally, we want a user to open our app from a notification, but from a user's
     perspective it is important to get things done with the least possible effort
     and if they can garner the same information without having to open another app,
     then that is a good thing. This is where the expanded notification comes in.
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 通常，我们希望用户从通知中打开我们的应用，但从用户的角度来看，最重要的是以最少的努力完成任务，如果他们不需要打开另一个应用就能获取相同的信息，那么这是件好事。这就是扩展通知的作用所在。
 - en: Customizing and configuring notifications
+  id: totrans-92
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 定制和配置通知
 - en: 'The expanded notification was introduced with API 16\. The providing of a larger,
     more flexible content area brought it in line with other mobile platforms. There
     are three styles of expanded notification: text, image, and list. The following
     steps demonstrate how to implement each of them:'
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 扩展通知是在API 16中引入的。它提供了一个更大、更灵活的内容区域，与其他移动平台保持一致。扩展通知有三种样式：文本、图像和列表。以下步骤将演示如何实现每一种样式：
 - en: The following project can either be modified from the one we used earlier, or
     begun from scratch.
+  id: totrans-94
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 下一个项目可以从我们之前使用的项目修改，或者从头开始。
 - en: 'Edit the main layout file so that it contains three buttons with the following
     observer methods:'
+  id: totrans-95
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 编辑主布局文件，使其包含以下三个按钮和观察者方法：
 - en: '[PRE16]'
+  id: totrans-96
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE16]'
 - en: 'Make the following changes to the `sendNotification()` method:'
+  id: totrans-97
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 对`sendNotification()`方法进行以下更改：
 - en: '[PRE17]'
+  id: totrans-98
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE17]'
 - en: 'Now create the three style methods. First the big text style:'
+  id: totrans-99
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 现在创建三种样式方法。首先是大型文本样式：
 - en: '[PRE18]'
+  id: totrans-100
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE18]'
 - en: 'The big picture style requires these settings:'
+  id: totrans-101
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 大图片样式需要以下设置：
 - en: '[PRE19]'
+  id: totrans-102
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE19]'
 - en: 'Finally add the list, or inbox, style, like so:'
+  id: totrans-103
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后添加列表样式或收件箱样式，如下所示：
 - en: '[PRE20]'
+  id: totrans-104
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE20]'
 - en: 'These notifications can now be tested on a device or AVD:'
+  id: totrans-105
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些通知现在可以在设备或AVD上进行测试：
 - en: '![Customizing and configuring notifications](img/image_09_005.jpg)'
+  id: totrans-106
   prefs: []
   type: TYPE_IMG
+  zh: '![定制和配置通知](img/image_09_005.jpg)'
 - en: The most recent notification will always be expanded and others can be expanded
     by swiping down on them. As with most material lists, notifications can be dismissed
     by swiping them horizontally.
+  id: totrans-107
   prefs: []
   type: TYPE_NORMAL
+  zh: 最新的通知将始终展开，其他通知可以通过向下轻扫来展开。与大多数材料列表一样，可以通过水平轻扫来消除通知。
 - en: 'These features provide us with a lot of flexibility when it comes to designing
     notifications and if we want to do more, we can even customize them. This can
     be done very simply by passing an XML layout to our builder. To do this, we need
     the RemoteViews class, which is a form of layout inflater. Create a layout and
     then include the following line in your code to instantiate it:'
+  id: totrans-108
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些功能在通知设计上为我们提供了很大的灵活性，如果我们想要做更多，甚至可以自定义它们。通过向构建器传递一个XML布局，可以非常简单地完成此操作。为此，我们需要RemoteViews类，它是一种布局填充器。创建一个布局，然后在代码中包含以下行以实例化它：
 - en: '[PRE21]'
+  id: totrans-109
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE21]'
 - en: 'Then pass this to the builder with:'
+  id: totrans-110
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后将其传递给构建器：
 - en: '[PRE22]'
+  id: totrans-111
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE22]'
 - en: In terms of implementing Android notifications, all we need to cover is how
     to issue heads-up notifications and lock screen notifications. This is more a
     matter of setting priorities and user permissions and settings than coding.
+  id: totrans-112
   prefs: []
   type: TYPE_NORMAL
+  zh: 在实现Android通知方面，我们需要了解的是如何发出弹窗通知和锁定屏幕通知。这更多的是关于设置优先级和用户权限及设置，而不是编码。
 - en: Visibility and priority
+  id: totrans-113
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 可见性和优先级
 - en: Where and how some notifications appear is often down to two related properties,
     privacy and importance. These are applied using metadata constants and can also
     include categories such as *alarm* and *promo*, which the system can use to sort
     and filter multiple notifications.
+  id: totrans-114
   prefs: []
   type: TYPE_NORMAL
+  zh: 通知显示的位置和方式通常取决于两个相关属性：隐私和重要性。这些是通过元数据常量应用的，也可以包括如*闹钟*和*促销*等类别，系统可以使用这些类别对多个通知进行排序和过滤。
 - en: 'When it comes to delivering a notification to a user''s lock screen, it is
     not only how we set the metadata, it also depends on the user''s security setup.
     To view these notifications, the user will have had to select a secure lock like
     a PIN or gesture and then choose one of the following options from the **Security
     | Notifications** settings:'
+  id: totrans-115
   prefs: []
   type: TYPE_NORMAL
+  zh: 当涉及到向用户锁屏发送通知时，不仅是我们如何设置元数据，还取决于用户的安全设置。为了查看这些通知，用户必须选择一个安全的锁，如PIN码或手势，然后在**安全
+    | 通知**设置中选择以下选项之一：
 - en: '![Visibility and priority](img/image_09_006.jpg)'
+  id: totrans-116
   prefs: []
   type: TYPE_IMG
+  zh: '![可见性和优先级](img/image_09_006.jpg)'
 - en: 'Providing the user has these settings, our notifications will be delivered
     to a user''s lock screen. To protect the user''s privacy, we can set notification
     visibility with our builder. There are three values for this:'
+  id: totrans-117
   prefs: []
   type: TYPE_NORMAL
+  zh: 只要用户设置了这些选项，我们的通知就会被发送到用户的锁屏。为了保护用户的隐私，我们可以通过构建器设置通知的可见性。有三个值可供选择：
 - en: '`VISIBILITY_PUBLIC` - The entire notification is displayed'
+  id: totrans-118
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`VISIBILITY_PUBLIC` - 显示整个通知'
 - en: '`VISIBILITY_PRIVATE` - Title and icon are displayed but content is hidden'
+  id: totrans-119
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`VISIBILITY_PRIVATE` - 显示标题和图标但隐藏内容'
 - en: '`VISIBILTY_SECRET` - Nothing is displayed at all'
+  id: totrans-120
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`VISIBILITY_SECRET` - 完全不显示任何内容'
 - en: 'To implement any of these settings use a line like this:'
+  id: totrans-121
   prefs: []
   type: TYPE_NORMAL
+  zh: 要实现这些设置之一，请使用如下代码行：
 - en: '[PRE23]'
+  id: totrans-122
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE23]'
 - en: Heads up displays alert the user to their importance by appearing as a basic
     (collapsed) notification at the top of the screen for five seconds, before reverting
     to a status bar icon. They should only be used for information that requires the
     user's immediate attention. This is controlled using priority metadata.
+  id: totrans-123
   prefs: []
   type: TYPE_NORMAL
+  zh: 顶部提醒会在屏幕顶部以基本（折叠）通知的形式出现五秒钟，然后恢复到状态栏图标，以此来提醒用户其重要性。它们只应用于需要用户立即注意的信息。这是通过优先级元数据控制的。
 - en: 'By default, the priority of each notification is PRIORITY_DEFAULT. The five
     possible values are:'
+  id: totrans-124
   prefs: []
   type: TYPE_NORMAL
+  zh: 默认情况下，每个通知的优先级是PRIORITY_DEFAULT。五个可能的值分别是：
 - en: '`PRIORITY_MIN` = -2'
+  id: totrans-125
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PRIORITY_MIN` = -2'
 - en: '`PRIORITY_LOW` = -1'
+  id: totrans-126
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PRIORITY_LOW` = -1'
 - en: '`PRIORITY_DEFAULT` = 0'
+  id: totrans-127
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PRIORITY_DEFAULT` = 0'
 - en: '`PRIORITY_HIGH` = 1'
+  id: totrans-128
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PRIORITY_HIGH` = 1'
 - en: '`PRIORITY_MAX` = 2'
+  id: totrans-129
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`PRIORITY_MAX` = 2'
 - en: 'These too can be set by the builder, for example:'
+  id: totrans-130
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些也可以通过构建器设置，例如：
 - en: '[PRE24]'
+  id: totrans-131
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE24]'
 - en: 'Any value greater than DEFAULT will trigger a heads-up notification, providing
     either sound or vibration are also triggered. This too can be added by our builder
     and would take the following form:'
+  id: totrans-132
   prefs: []
   type: TYPE_NORMAL
+  zh: 任何大于DEFAULT的值都会触发顶部提醒，前提是同时触发声音或振动。这也可以通过我们的构建器添加，形式如下：
 - en: '[PRE25]'
+  id: totrans-133
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE25]'
 - en: The vibrator class takes an array of longs and applies these as millisecond
     bursts of vibration, so the previous example would vibrate three times for half
     a second each.
+  id: totrans-134
   prefs: []
   type: TYPE_NORMAL
+  zh: 振动器类接收一个长整型数组，并将其作为毫秒级的振动脉冲，因此前面的例子会振动三次，每次半秒钟。
 - en: 'Including device vibrations anywhere in an app requires user permissions on
     installment. These are added to the manifest file as a direct child of the root
     element, like so:'
+  id: totrans-135
   prefs: []
   type: TYPE_NORMAL
+  zh: 在应用中的任何位置包含设备振动都需要在安装时获得用户权限。这些权限会作为根元素的直接子元素添加到清单文件中，如下所示：
 - en: '[PRE26]'
+  id: totrans-136
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE26]'
 - en: There is little more we need to know about displaying and configuring notifications.
     However, so far we have been issuing notifications from within the app itself
     rather than remotely as they would in the wild.
+  id: totrans-137
   prefs: []
   type: TYPE_NORMAL
+  zh: 关于显示和配置通知，我们还需要了解的并不多。然而，到目前为止，我们一直在应用内部发出通知，而不是像在野外那样远程发出。
 - en: Services
+  id: totrans-138
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 服务
 - en: Services are top-level application components such as activities. Their purpose
     is to manage long-running background tasks such as playing audio or triggering
     reminders or other scheduled events. Services do not require a UI, but in other
     respects they are similar to activities and have a similar life cycle with associated
     callback methods that we can use to intercept key events.
+  id: totrans-139
   prefs: []
   type: TYPE_NORMAL
+  zh: 服务是顶级应用组件，如活动。它们的目的是管理长时间运行的背景任务，如播放音频或触发提醒或其他计划事件。服务不需要UI，但在其他方面与活动类似，具有类似的生命周期和相关的回调方法，我们可以使用它们来拦截关键事件。
 - en: Although all services start out the same, they basically fall into two categories,
     bound and unbound. A service that is bound to an activity will continue to run
     until instructed otherwise or the binding activity is stopped. An unbound service,
     on the other hand, will continue to run regardless of whether the calling activity
     is active or not. In both these cases, the service will often be responsible for
     switching itself off once it has completed its allotted task.
+  id: totrans-140
   prefs: []
   type: TYPE_NORMAL
+  zh: 尽管所有服务一开始都是相同的，但它们基本上分为两类：绑定和非绑定。与活动绑定的服务将继续运行，直到收到停止指令或绑定活动停止。而非绑定的服务，无论调用活动是否活跃，都会继续运行。在这两种情况下，服务通常负责在完成分配的任务后自行关闭。
 - en: 'The following example demonstrates how to create a service that will set a
     reminder. The service will then either post a notification after a set delay or
     be canceled by user action. To see how this is done, follow these steps:'
+  id: totrans-141
   prefs: []
   type: TYPE_NORMAL
+  zh: 下面的示例演示了如何创建一个设置提醒的服务。该服务会在设定的延迟后发布通知，或者由用户操作取消。要了解如何实现这一点，请按照以下步骤操作：
 - en: Start by creating a layout. This will need two buttons:![Services](img/image_09_007.jpg)
+  id: totrans-142
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 首先创建一个布局。这将需要两个按钮：![Services](img/image_09_007.jpg)
 - en: 'Include onClick attributes in both buttons:'
+  id: totrans-143
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 在两个按钮中都包含 onClick 属性：
 - en: '[PRE27]'
+  id: totrans-144
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE27]'
 - en: 'Create a new class to extend Service:'
+  id: totrans-145
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 创建一个新的类来扩展 Service：
 - en: '[PRE28]'
+  id: totrans-146
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE28]'
 - en: 'The `onBind()` method will be insisted upon, but we will not need it, so it
     can be left like this:'
+  id: totrans-147
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: '`onBind()`方法虽然会被要求实现，但我们不需要它，所以可以像这样保留：'
 - en: '[PRE29]'
+  id: totrans-148
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE29]'
 - en: 'We will not be using the `onCreate()` or `onDestroy()` methods either but it
     is always useful to see how background activities are behaving, so complete the
     methods like so:'
+  id: totrans-149
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 我们不会使用`onCreate()`或`onDestroy()`方法，但是了解后台活动的行为总是有用的，所以像这样完成方法：
 - en: '[PRE30]'
+  id: totrans-150
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE30]'
 - en: 'The class will require the following fields:'
+  id: totrans-151
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 该类将需要以下字段：
 - en: '[PRE31]'
+  id: totrans-152
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE31]'
 - en: 'Add the service to the manifest file alongside your activities, like this:'
+  id: totrans-153
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 将服务添加到清单文件中，与您的活动并列，如下所示：
 - en: '[PRE32]'
+  id: totrans-154
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE32]'
 - en: 'Finally, open your main Java activity and complete these two button listeners:'
+  id: totrans-155
   prefs:
   - PREF_OL
   type: TYPE_NORMAL
+  zh: 最后，打开您的 main Java 活动，并完成这两个按钮的监听器：
 - en: '[PRE33]'
+  id: totrans-156
   prefs:
   - PREF_IND
   type: TYPE_PRE
+  zh: '[PRE33]'
 - en: The previous code demonstrates how to run code in the background using a service.
     In many apps, this is an essential feature in many apps. Our only real consideration
     is to ensure that all our services are correctly disposed of when they are no
     longer needed, as services are particularly susceptible to memory leakage.
+  id: totrans-157
   prefs: []
   type: TYPE_NORMAL
+  zh: 上面的代码演示了如何使用服务在后台运行代码。在许多应用程序中，这是一个非常重要的功能。我们唯一真正需要考虑的是确保当不再需要时，所有的服务都能正确地被释放，因为服务特别容易遭受内存泄漏。
 - en: Summary
+  id: totrans-158
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: In this chapter, we have seen how the observer pattern can be used as a tool
     to manage the delivery of user notifications, as well as keeping track of many
     other events and responding accordingly. We began by looking at the pattern itself
     and then at the Android notification APIs, which despite using the system-controlled
     status bar and notification drawer, allow us a great deal of freedom when it comes
     to designing notifications that suit the purpose and look of our apps.
+  id: totrans-159
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们看到了观察者模式如何作为一个工具来管理用户通知的传递，以及跟踪许多其他事件并相应地作出反应。我们从模式本身开始，然后了解了 Android
+    通知 API，尽管它们使用系统控制的状态栏和通知抽屉，但它们在设计和应用通知方面给了我们很大的自由度。
 - en: In the next chapter, we will take this and other patterns and see how we can
     extend extant Android components and have them apply our design patterns directly.
     We will then see how this can help us when it comes to developing for form factors
     other than phones and tablets.
+  id: totrans-160
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将以此和其他模式为例，看看如何扩展现有的 Android 组件，并直接应用我们的设计模式。我们还将了解这在开发除手机和平板电脑以外的其他形态因素时如何帮助我们。
