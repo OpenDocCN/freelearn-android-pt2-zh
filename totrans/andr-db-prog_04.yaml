@@ -1,13 +1,17 @@
 - en: Chapter 4. Using Content Providers
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第四章 使用内容提供者
 - en: We've accomplished a lot so far in this book! In just three chapters, we've
     looked at data storage mechanisms ranging from the simple, unassuming `SharedPreferences`
     class, to the powerful and complex SQLite database, equipped with a variety of
     query methods and classes that leverage the equally powerful language of SQL.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，我们在本书中已经完成了很多工作！在仅仅三章中，我们已经了解了从简单的、不起眼的`SharedPreferences`类到功能强大且复杂的SQLite数据库的各种数据存储机制，SQLite数据库配备了各种查询方法和类，它们利用同样强大的SQL语言。
 - en: However, let's say that you've mastered the last three chapters and you've successfully
     built from scratch a database schema for your application that is now live in
     the market. Now, let's say you want to create a second application that extends
@@ -15,80 +19,108 @@
     database. Or perhaps you don't need to create a second application, but you simply
     want to better market your application by making available your database for external
     applications to access and integrate into their own.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，假设你已经掌握了前三章的内容，并且从头开始成功构建了应用程序的数据库模式，现在该应用程序已经在市场上运行。现在，假设你想创建第二个应用程序，扩展第一个应用程序的功能，并且需要访问你原始应用程序的数据库。或者，也许你并不需要创建第二个应用程序，你只是想通过让外部应用程序访问和集成你的数据库来更好地推广你的应用程序。
 - en: Or, maybe you never even wanted to build your own database, but instead just
     wanted to tap into the wealth of data already existing on each Android device,
     and which is readily available for querying! In this chapter, we'll learn how
     to do all these things with the `ContentProvider` class, and at the end we'll
     spend some time brainstorming practical use cases of why you might benefit from
     exposing your database schema through a `ContentProvider`.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 或者，也许你从未想过要构建自己的数据库，而只是想利用每个Android设备上已经存在的丰富数据，这些数据可以随时查询！在本章中，我们将学习如何使用`ContentProvider`类完成所有这些事情，最后我们将花一些时间讨论实际用例，探讨为什么你可能需要通过`ContentProvider`公开你的数据库模式。
 - en: ContentProvider
+  id: totrans-4
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 内容提供者
 - en: 'Let''s start with the question: What exactly *is* a `ContentProvider?` And
     why do I need to interact with this `ContentProvider?`'
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们先来回答这个问题：`ContentProvider`究竟是什么？为什么我需要与这个`ContentProvider`交互？
 - en: 'A `ContentProvider` is essentially an *interface* that sits between the developer
     and the database schema where the desired data sits. Why is this intermediary
     interface necessary? Consider the following (true) scenario:'
+  id: totrans-6
   prefs: []
   type: TYPE_NORMAL
+  zh: '`ContentProvider`本质上是位于开发人员和存储所需数据的数据库模式之间的一个*接口*。为什么需要这个中介接口呢？考虑以下（真实）场景：'
 - en: In the Android OS, a user's contact list (this includes phone numbers, addresses,
     birthdays, and numerous other data fields pertaining to a contact) is stored in
     a fairly complex database schema on the user's device. Consider a scenario where
     as a developer, I'd like to query this schema for a user's contacts' phone numbers.
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 在Android操作系统中，用户的联系人列表（这包括电话号码、地址、生日以及与联系人相关的许多其他数据字段）存储在用户设备上相当复杂的数据库模式中。设想一个场景，作为开发人员，我想查询用户的联系人电话号码。
 - en: Think about how inconvenient it would be for me to have to learn the entire
     database's schema just to access one or two fields? Or how inconvenient it would
     be if every time Google updated the Android OS and tweaked the contact schema
     (and believe me, this has happened several times already), I had to relearn the
     schema and restructure my query subsequently?
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: 想想看，如果我只想访问一个或两个字段，却要学习整个数据库的模式，这会有多不方便？或者，如果每次谷歌更新Android操作系统并调整联系人模式（相信我，这已经发生了好几次了），我都必须重新学习模式并相应地重构我的查询，这会有多不方便？
 - en: It's for these reasons that such an intermediary exists – so that instead of
     having to interact directly with the schema, one only needs to query through the
     content provider. Now, on that note, each time Google updates its contact schema,
     they need to make sure they re-tweak their implementation of the `Contacts` content
     provider; otherwise our queries through the content provider may fail.
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: 正是因为这些原因，才存在这样的中介——这样，人们就不需要直接与模式交互，只需通过内容提供者查询即可。现在，请注意，每次谷歌更新其联系人模式时，他们都需要确保重新调整他们对`Contacts`内容提供者的实现；否则我们通过内容提供者进行的查询可能会失败。
 - en: Said another way, much of this chapter and its implementation of the `ContentProvider`
     class is going to remind you of what we did earlier when writing convenience methods
     for our database. If you so choose to expose your data through a content provider,
     you will need to define how an external application can query your data, how an
     external application can insert new data or update existing data, and so on. These
     will all be methods that you'll need to override and implement.
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: 换句话说，本章的大部分内容以及`ContentProvider`类的实现，都会让你想起我们之前在编写数据库便捷方法时的操作。如果你选择通过内容提供者公开你的数据，你需要定义外部应用程序如何查询你的数据，如何插入新数据或更新现有数据等。这些都需要你重写和实现的方法。
 - en: 'But now let''s be a little more discreet. There are many parts and pieces in
     implementing a content provider from start to finish, so to start, let''s begin
     by laying out this section and looking at all of these pieces:'
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 但现在让我们更细致一些。从开始到结束实现一个内容提供者有许多部分和步骤，所以首先，让我们开始概述这一部分，并查看所有这些步骤：
 - en: Defining the data model (which is typically a SQLite database, which then extends
     the `ContentProvider` class)
+  id: totrans-12
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 定义数据模型（通常是SQLite数据库，然后扩展`ContentProvider`类）
 - en: Defining its **Uniform Resource Identifier (URI)**
+  id: totrans-13
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 定义其**统一资源标识符（URI）**
 - en: Declaring the content provider in the Manifest file
+  id: totrans-14
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 在Manifest文件中声明内容提供者
 - en: Implementing the abstract methods (`query(), insert(), update(), delete(), getType()`,
     and `onCreate())` of `ContentProvider`
+  id: totrans-15
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: 实现`ContentProvider`的抽象方法（`query(), insert(), update(), delete(), getType()`和`onCreate()`）
 - en: 'Now, let''s start with defining the data model. Typically, the data model resembles
     that of a SQLite database (although it doesn''t necessarily have to), which then
     simply extends the `ContentProvider` class. For my example, I''ve chosen to implement
@@ -97,20 +129,28 @@
     all have a unique ID (think social security ID), a name, a registered state, and
     in my case a reported income. Let''s first define this `CitizensTable` class and
     its schema:'
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们从定义数据模型开始。通常，数据模型类似于SQLite数据库（虽然它不一定是），然后简单地扩展`ContentProvider`类。在我的例子中，我选择实现了一个非常简单的数据库架构，只包含一个表——公民表，旨在复制一个标准的数据库，用于跟踪具有唯一ID（如社会安全ID）、姓名、注册状态，以及在我的案例中报告的收入。首先，让我们定义这个`CitizensTable`类及其架构：
 - en: '[PRE0]'
+  id: totrans-17
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: 'Pretty straightforward. Now let''s create a class that extends the `SQLiteOpenHelper`
     class (just like we did earlier in the previous chapter), but this time we''ll
     declare it as an inner class where the outer class extends the `ContentProvider`
     class:'
+  id: totrans-18
   prefs: []
   type: TYPE_NORMAL
+  zh: 很直观。现在让我们创建一个扩展了`SQLiteOpenHelper`类的类（就像我们在上一章所做的那样），但这次我们将把它声明为一个内部类，其中外部类扩展了`ContentProvider`类：
 - en: '[PRE1]'
+  id: totrans-19
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: You don't have to declare your SQLite database as an inner class – for me, it
     just makes the implementation a little easier and everything is nicely in one
     place. In any case, you'll notice that the implementation of the data model itself
@@ -119,39 +159,55 @@
     In the skeleton we just saw, you'll also see the various methods that need to
     be implemented as a result of extending the `ContentProvider` class (this we will
     get into in the next section).
+  id: totrans-20
   prefs: []
   type: TYPE_NORMAL
+  zh: 你不必将SQLite数据库声明为内部类——对于我来说，这仅仅使实现稍微容易一些，并且所有内容都集中在一个地方。在任何情况下，你会注意到数据模型本身的实现与之前完全相同——重写`onCreate()`方法并创建你的表，然后重写`onUpdate()`方法并删除/重新创建表。在我们刚才看到的框架中，你还会看到由于扩展了`ContentProvider`类而需要实现的各种方法（这将在下一节中介绍）。
 - en: 'The only thing different about the code we just saw is the inclusion of the
     string:'
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: '我们刚才看到的代码唯一不同的地方是包含了以下字符串： '
 - en: '[PRE2]'
+  id: totrans-22
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: This authority is *what identifies the provider* – not necessarily the path.
     What I mean by this is that later on we'll see how you can define the entire *path*
     (this is known as the URI) to direct the query to the correct locations in your
     database schema.
+  id: totrans-23
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个权限是*标识提供者的内容*——不一定是路径。我的意思是，稍后我们会看到，你可以定义整个*路径*（这被称为URI），以指导查询到数据库架构中的正确位置。
 - en: 'In our content provider, we''ll let developers query our database in one of
     two ways:'
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的内容提供者中，我们将允许开发人员以两种方式之一查询我们的数据库：
 - en: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen`'
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen`'
 - en: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen/#`'
+  id: totrans-26
   prefs: []
   type: TYPE_NORMAL
+  zh: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen/#`'
 - en: Those are the two fully specified paths that we'll register in our content provider,
     and based on which path the developer requests, the content provider will know
     how to query our database. So what do these mean – notice that both start with
     the prefix `content://`, which is simply the standard prefix that tells the object
     this is a URI that points to a content provider (just as how `http://` tells the
     browser the path is pointing to a web page).
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 这两个完全指定的路径是我们将在内容提供者中注册的，根据开发者请求的路径，内容提供者将知道如何查询我们的数据库。这些意味着什么——注意，两者都以`content://`前缀开始，这只是告诉对象这是一个指向内容提供者的URI（就像`http://`告诉浏览器路径指向一个网页）。
 - en: After the prefix we specify the authority so that the object knows which content
     provider to go to, and after that we have the suffixes `/citizen` and `/citizen/#`.
     The former we will simply define as the base query – the developer is just issuing
@@ -161,8 +217,10 @@
     Instead of forcing the developer to pass a `WHERE` filter with the ID, we can
     simplify things and allow the developer to specify the `WHERE` filter in the form
     of a path.
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 在前缀之后，我们指定权限，以便对象知道要访问哪个内容提供者，之后我们有后缀`/citizen`和`/citizen/#`。前者我们将简单地定义为基本查询——开发者只需发出一个标准查询，并在`query()`方法中传递任何过滤器。后者适用于开发者已经知道公民的ID（即社会安全号码）并且只想获取表中的特定行。我们不必强迫开发者使用带有ID的`WHERE`过滤器，我们可以简化操作，允许开发者以路径的形式指定`WHERE`过滤器。
 - en: 'Now, in case all of this still sounds confusing, the most intuitive analogy
     to this would likely be: When you register an internet domain, you must specify
     a base URL, and once registered, the browser will know how to find the location
@@ -173,39 +231,57 @@
     URI (that is, the authority), and furthermore he/she will need to specify what
     kind of query they are making by completing the path of the URI. For more on how
     the `ContentProvider` URI is defined, I invite you to check out:'
+  id: totrans-29
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果所有这些听起来仍然让人困惑，最直观的类比可能是：当你注册一个互联网域名时，你必须指定一个基础URL，一旦注册，浏览器就会知道如何根据这个基础URL找到其他文件的位置。同样，在我们的例子中，我们在**Android
+    Manifest**（我们应用程序的主板）中指定我们想要公开一个内容提供者，并定义了到它的路径。一旦注册，任何开发者想要访问我们的内容提供者时，他/她必须指定这个*基础*
+    URI（即权限），并且他/她还需要通过完成URI的路径来指定他们要进行的查询类型。关于如何定义`ContentProvider` URI的更多信息，我邀请您查看：
 - en: '[http://developer.android.com/guide/topics/providers/content-providers.html#urisum](http://developer.android.com/guide/topics/providers/content-providers.html#urisum)'
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: '[Android开发者指南关于内容提供者的部分](http://developer.android.com/guide/topics/providers/content-providers.html#urisum)'
 - en: 'But for now, let''s take a quick look at how you would declare your provider
     in the Android manifest file, and afterwards let''s move on to the meat of the
     implementation, which is in overriding the abstract methods:'
+  id: totrans-31
   prefs: []
   type: TYPE_NORMAL
+  zh: 但现在，让我们快速查看一下如何在Android的Manifest文件中声明你的提供者，之后，我们将深入到实现的核心部分，即重写抽象方法：
 - en: '[PRE3]'
+  id: totrans-32
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Again, pretty straightforward. All you need to do is define a name and authority
     for your content provider – in fact, the Manifest file will complain if you give
     an improper base URI as your authority, so as long as it compiles you know you're
     good to go! Now, let's move on to the more complex implementation of your content
     provider.
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 同样，这非常直观。你需要为你的内容提供者定义一个名称和权限——实际上，如果给定的基础URI作为权限不合适，Manifest文件会报错，只要它能编译，你就知道可以开始了！现在，让我们继续学习内容提供者更复杂的实现部分。
 - en: Implementing the query method
+  id: totrans-34
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 实现`query`方法
 - en: 'Now that we''ve built the data model, defined the table''s authority and URI,
     and successfully declared it in our Android manifest file, it''s time to write
     the bulk of the class and implement its six abstract methods. We''ll begin with
     the `onCreate()` and `query()` methods:'
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们已经构建了数据模型，定义了表的权限和URI，并在我们的Android Manifest文件中成功声明了它，是时候编写类的主体并实现其六个抽象方法了。我们将从`onCreate()`和`query()`方法开始：
 - en: '[PRE4]'
+  id: totrans-36
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: So let's just get the easy stuff out of the way first. You'll notice first off
     that after we define our SQLite database (by extending the `SQLiteOpenHelper`
     class), we declare a global `DatabaseHelper` variable and initialize it in our
@@ -214,8 +290,10 @@
     of a `ContentResolver` object, which we'll talk about later as well). Of course,
     any other initialization should go here, but in our case, all we want to do is
     initialize a connection to our database.
+  id: totrans-37
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以，让我们先从简单的事情开始。你会注意到首先在我们定义了SQLite数据库（通过扩展`SQLiteOpenHelper`类）之后，我们声明了一个全局的`DatabaseHelper`变量，并在我们的`onCreate()`方法中初始化它。`onCreate()`方法是在活动通过`ContentResolver`对象（我们稍后会讨论）请求打开我们的特定内容提供者之后自动调用的。当然，任何其他的初始化工作也应该在这里进行，但在我们的例子中，我们只想初始化与数据库的连接。
 - en: Once that's done, let's take a look at those static variables we've declared
     at the end. What the `projectionMap` does is it allows you to *alias your columns*.
     In most content providers, this mapping will seem a little meaningless, as you're
@@ -224,13 +302,17 @@
     which we just saw). However, there are certain instances where for more complex
     schemas (that is, ones with joint tables), being able to rename and alias your
     table's columns can make accessing your content provider's data much more intuitive.
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 完成这些后，让我们看看我们在最后声明的那些静态变量。`projectionMap`的作用是允许你为列设置别名。在大多数内容提供者中，这种映射看起来可能有些没有意义，因为你只是告诉内容提供者将表的列映射到它们自己（正如我们在`onCreate()`和`query()`方法的实现中所做的那样）。然而，在某些情况下，对于更复杂的架构（即包含联合表的那些），能够重命名和为表的列设置别名可以使访问内容提供者的数据更加直观。
 - en: Now, remember the two paths we talked about earlier (that is, `/citizen` and
     `/citizen/#)?` Well, all we're doing here is instantiating an `UriMatcher` object
     which allows us to define those paths through the method `addURI()`.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在还记得我们之前提到的两个路径吗（即`/citizen`和`/citizen/#`）？这里我们所做的就是实例化一个`UriMatcher`对象，通过`addURI()`方法来定义这些路径。
 - en: At a high level, what this method does is define a set of mappings – it's telling
     our `ContentProvider` class that any queries with path `/citizen` should be mapped
     to any behavior specified with the `CITIZENS` flag. Likewise, any queries with
@@ -238,8 +320,10 @@
     flag (these flags were both defined at the top of the class). Having this functionality
     can be useful for the developer as it allows him to efficiently query for a citizen
     if his/her ID is known ahead of time.
+  id: totrans-40
   prefs: []
   type: TYPE_NORMAL
+  zh: 在高层次上，这个方法定义了一组映射关系——它告诉我们的`ContentProvider`类，任何带有路径`/citizen`的查询都应该映射到带有`CITIZENS`标志的行为上。同理，带有路径`/citizen/#`的查询应该映射到带有`SSID`标志的行为上（这些标志都是在类的顶部定义的）。这种功能对开发者很有用，因为它允许他如果提前知道公民的ID，就可以高效地查询。
 - en: These flags then typically appear in `switch` statements, so now we'll focus
     our attention onto the `query()` method. It starts by initiating a `SqliteQueryBuilder`
     class (which we spent a great deal of time looking at in our previous chapter),
@@ -250,32 +334,43 @@
     then returns that path's associated flag (that is, `CITIZENS` or `SSID` in our
     case), at which point we can use a `switch` statement to navigate to the proper
     functionality.
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些标志通常出现在`switch`语句中，所以现在我们将注意力集中在`query()`方法上。它首先初始化一个`SqliteQueryBuilder`类（我们在前面的章节中花了大量时间研究它），然后使用我们的`UriMatcher`对象来匹配传入的URI。换句话说，`UriMatcher`所做的就是查看请求的路径，首先判断它是否是有效的路径（如果不是，我们会抛出一个带有错误`unknown
+    URI`的异常）。一旦它看到开发者提交了一个有效的URI，它就会返回该路径关联的标志（在我们的例子中就是`CITIZENS`或`SSID`），此时我们可以使用`switch`语句来导航到正确的功能。
 - en: 'Once you understand what''s happening at a high level, the rest should be pretty
     straightforward and familiar by now. If the user just submitted a general query
     (that is, with the `CITIZENS` flag), then all we need to do is define the projection
     map and the table name that will be queried. And again, if the user wants to go
     *directly* to a row in our table, then by specifying the social security ID in
     the path, we can parse that citizen out with the line:'
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 一旦你理解了高级层面的操作，其余部分现在应该相当直接和熟悉。如果用户刚刚提交了一个常规查询（即带有`CITIZENS`标志的查询），那么我们需要做的就是定义投影映射和将被查询的表名。再次强调，如果用户想要直接访问我们表中的某一行，那么通过在路径中指定社会保险ID，我们可以使用以下这行代码解析出该公民信息：
 - en: '[PRE5]'
+  id: totrans-43
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Don't worry too much about the `SSID_PATH_POSITION` variable – all we're doing
     here is taking the passed-in URI and breaking it into its path segments. Once
     we have the path segments, we're going to get the first one (and subsequently
     `SSID_PATH_POSITION` is set to `1` as we'll see soon), as in our example we only
     ever have one path segment passed in.
+  id: totrans-44
   prefs: []
   type: TYPE_NORMAL
+  zh: 不用太担心`SSID_PATH_POSITION`变量——我们在这里所做的就是获取传入的URI并将其分解为路径段。一旦有了路径段，我们将获取第一个路径段（随后`SSID_PATH_POSITION`被设置为`1`，我们很快就会看到），因为在我们的示例中，只会有一个路径段传入。
 - en: Now, once we have the desired social security ID that was passed into the query,
     all we need to do is append it to a `WHERE` filter and the rest is just stuff
     we've seen before – getting the readable database, and filling in the `query()`
     method of `SQLiteDatabase`.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，一旦我们获得了查询中传入的期望的社会保险ID，我们需要做的就是将其附加到`WHERE`过滤器上，其余部分就是我们之前看到的内容——获取可读数据库，并填充`SQLiteDatabase`的`query()`方法。
 - en: The last thing I'll mention is that after the query has been successfully made
     and we get back our `Cursor` pointing at the data, since we are exposing our content
     provider to all external applications on the device, there is a chance that multiple
@@ -284,20 +379,28 @@
     for any changes that are made to its underlying data, so that when a change is
     made, the `Cursor` will know to update itself and subsequently any UI components
     that may use our `Cursor`.
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后我要提到的是，在成功发起查询并获取指向数据的`Cursor`之后，由于我们将内容提供者暴露给了设备上的所有外部应用，可能会有多个应用同时访问我们的数据库，这种情况下我们的数据可能会发生变化。因此，我们告诉返回的`Cursor`去*监听*其基础数据发生的任何变化，这样当有变化发生时，`Cursor`就会知道更新自身，进而更新可能使用我们的`Cursor`的任何UI组件。
 - en: Implementing the delete and update methods
+  id: totrans-47
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 实现 delete 和 update 方法
 - en: 'Hopefully, everything makes sense at this point, so let''s move on to the `delete()`
     and `update()` methods, which will look very similar to the `query()` method in
     structure:'
+  id: totrans-48
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，希望一切都有意义，所以让我们继续看看`delete()`和`update()`方法，这两个方法在结构上将与`query()`方法非常相似：
 - en: '[PRE6]'
+  id: totrans-49
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: And so we see that the logic behind these two statements very much follows that
     of the `query()` method. We see that in the `delete()` method, we first get our
     writable database (note that in this case we don't need the help of a `SQLiteQueryBuilder`,
@@ -305,28 +408,38 @@
     the passed-in URI to our `UriMatcher`. Once the `UriMatcher` validates the path,
     it then directs it to the appropriate flag, at which point we can vary the functionality
     accordingly.
+  id: totrans-50
   prefs: []
   type: TYPE_NORMAL
+  zh: 我们可以看到，这两个语句背后的逻辑与`query()`方法非常相似。我们看到在`delete()`方法中，我们首先获取可写数据库（注意在这种情况下我们不需要`SQLiteQueryBuilder`的帮助，因为我们正在删除某物而不是查询任何内容），然后将传入的URI指向我们的`UriMatcher`。一旦`UriMatcher`验证了路径，它就会将其指向适当的标志，在这一点上我们可以相应地调整功能。
 - en: 'In our case, any queries with the `CITIZEN` path specification just become
     a standard `delete()` statement, while those with the `SSID` path specification
     become a `delete()` statement with an additional `WHERE` filter on the ID column
     of the table. Again, the intuition here is that we are deleting a specific citizen
     from our database. Look at the following snippet of code:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 在我们的案例中，带有`CITIZEN`路径规范的任何查询都变成了一个标准的`delete()`语句，而带有`SSID`路径规范的查询变成了带有对表ID列额外`WHERE`过滤器的`delete()`语句。再次强调，这里的直觉是我们正在从数据库中删除一个特定的公民。看看以下代码片段：
 - en: '[PRE7]'
+  id: totrans-52
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'Note how we''re appending the ID filter onto whatever original `WHERE` filter
     the user may have specified. It''s important to remember details like this in
     your implementation — namely, that the developer may have passed in additional
     arguments along with the ID in the path specification, so your final `WHERE` filter
     should take all of these into consideration. The only detail left is in the line:'
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意我们是如何将ID过滤器添加到用户可能指定的原始`WHERE`过滤器上的。在你的实现中记住这样的细节很重要——即开发者可能在路径规范中与ID一起传递了额外的参数，因此你的最终`WHERE`过滤器应该考虑所有这些因素。剩下的唯一细节就在这一行：
 - en: '[PRE8]'
+  id: totrans-54
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: Here what we're doing is requesting for the `Context` and the `ContentResolver`
     that made this call, and notifying it that a change to its underlying data was
     successfully made. Why this is important will become clearer when we talk about
@@ -335,25 +448,35 @@
     alters a row of the data in the underlying database, you'd want your list to reflect
     those changes, so this is why we need to notify those changes made at the end
     of our methods.
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里我们所做的是请求`Context`和发起此调用的`ContentResolver`，并通知它对底层数据的更改已成功完成。为什么这很重要，当我们讨论如何将`Cursors`绑定到UI时会更加清晰，但现在考虑一个情况，在你的活动中，你将数据的行显示为列表。自然，每次底层数据库中的数据行发生更改时，你都希望你的列表反映出这些变化，这就是为什么我们需要在方法末尾通知这些变化。
 - en: Now, I won't say much about the `update()` method as the logic is identical
     to that of the `delete()` method – the only difference is in the calls made by
     the writable SQLite database that you get. So, let's push onwards and finish our
     implementation with the `getType()` and `insert()` methods!
+  id: totrans-56
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，关于`update()`方法我不会说太多，因为其逻辑与`delete()`方法相同——唯一的不同在于你对可写SQLite数据库调用的差异。所以，让我们继续前进，用`getType()`和`insert()`方法完成我们的实现！
 - en: Implementing the insert and getType methods
+  id: totrans-57
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 实现`insert()`和`getType()`方法
 - en: 'It''s time to implement our final two methods and complete our `ContentProvider`
     implementation. Let''s take a look:'
+  id: totrans-58
   prefs: []
   type: TYPE_NORMAL
+  zh: 是时候实现最后两个方法，完成我们的`ContentProvider`实现了。让我们看看：
 - en: '[PRE9]'
+  id: totrans-59
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE9]'
 - en: 'First, let''s tackle the `getType()` method. This method simply returns the
     **Multipurpose Internet Mail Extensions (MIME)** type of the data object requested
     for a given URI, which really just means you are giving each row (or rows) of
@@ -361,27 +484,39 @@
     the ability to identify whether or not a `Cursor` pointing to your table is indeed
     retrieving valid *citizen* objects. The rules behind specifying MIME types for
     your data are:'
+  id: totrans-60
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，让我们处理`getType()`方法。这个方法只是返回请求给定URI的数据对象的**多用途互联网邮件扩展（MIME）**类型，这实际上意味着你为数据的每一行（或行）指定了一个可区分的数据类型。这使得开发者（如果需要）能够确定指向你的表的`Cursor`是否确实检索到有效的*公民*对象。为你的数据指定MIME类型的规则是：
 - en: '`vnd.android.cursor.item/` for a single record'
+  id: totrans-61
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`vnd.android.cursor.item/`用于单一记录'
 - en: '`vnd.android.cursor.dir/` for multiple records'
+  id: totrans-62
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`vnd.android.cursor.dir/`用于多条记录'
 - en: 'Subsequently, we''ll define our MIME types in our `CitizenTable` class (which
     is also where we define our columns and schema):'
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 接着，我们将在`CitizenTable`类中定义我们的MIME类型（这也是我们定义列和架构的地方）：
 - en: '[PRE10]'
+  id: totrans-64
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE10]'
 - en: So now that we have our MIME types defined, the rest is simply passing the URI
     in the `UriMatcher` (again) and returning the corresponding MIME type.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以现在我们已经定义了我们的MIME类型，剩下的就是将URI再次传递给`UriMatcher`并返回相应的MIME类型。
 - en: And last but not least, we have our `insert()` method. This method is slightly
     different, but not significantly so. The only difference is that when inserting
     something, it doesn't make sense to pass a `SSID` URI path (think about it – if
@@ -390,27 +525,35 @@
     not* have the `CITIZEN` path specification passed in, we throw an error. Otherwise,
     we proceed and simply retrieve our writable database and insert the values into
     our content provider (this we've seen before as well).
+  id: totrans-66
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后但同样重要的是，我们有我们的`insert()`方法。这个方法略有不同，但不是显著不同。唯一的区别在于，当插入某物时，传递一个`SSID` URI路径是没有意义的（想想看——如果你正在插入一个*新的*公民，你怎么可能已经有一个想要传递给URI的社会安全ID）。因此，在这种情况下，如果没有传递带有`CITIZEN`路径规范的URI，我们就抛出一个错误。否则，我们继续并简单地获取我们的可写数据库并将值插入到我们的内容提供者中（这我们之前也见过）。
 - en: That's it! The goal is that after seeing the complete implementation, all the
     pieces tie together and you start to understand, at least intuitively, what is
     happening in our `ContentProvider` class. As long as this makes sense intuitively,
     the rest will follow when you actually program and implement the content provider
     yourself!
+  id: totrans-67
   prefs: []
   type: TYPE_NORMAL
+  zh: 就是这样！目标是看到完整的实现后，所有的部分能够联系在一起，并且你开始直观地了解我们的`ContentProvider`类中发生了什么。只要直观上讲得通，当你自己编程和实现内容提供者时，其余部分就会随之而来！
 - en: 'Now, before moving on to practical reasons for exposing your data through a
     content provider, let''s take a quick look at how you would interact with a content
     provider (let''s just use ours for now) and subsequently introduce the `ContentResolver`
     class, which we''ve seen come up a few times by now. This will seem quick for
     now, but no worries – soon we will devote an entire chapter on querying the most
     commonly used content provider: the `Contacts` content provider.'
+  id: totrans-68
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，在讨论通过内容提供者暴露数据的具体原因之前，让我们快速了解一下如何与内容提供者（现在我们先使用我们自己的）交互，并随后介绍`ContentResolver`类，到现在为止我们已经多次提到过它。现在看起来可能很快，但不用担心——我们将在接下来的章节中专门介绍最常用的内容提供者：`Contacts`内容提供者。
 - en: Interacting with a ContentProvider
+  id: totrans-69
   prefs:
   - PREF_H2
   type: TYPE_NORMAL
+  zh: 与ContentProvider交互
 - en: At this point, we've successfully implemented our own content provider, which
     can now be read, queried, and updated (assuming the proper permissions are granted)
     by external applications! To interact with a content provider, the first step
@@ -420,65 +563,102 @@
     and parameters for the two classes are extremely similar as well), but it's designed
     especially for interacting with content providers through URIs that are passed
     in by the developer.
+  id: totrans-70
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这一点上，我们已经成功实现了自己的内容提供者，现在可以被外部应用程序读取、查询和更新（假设已授予适当的权限）！要交互内容提供者，第一步是从你的`Context`获取相关的`ContentResolver`。这个类与`SQLiteDatabase`类非常相似，因为它具有标准的`insert(),
+    query(), update()`和`delete()`方法（实际上，这两个类的方法语法和参数也非常相似），但它特别设计用于通过开发者传入的URI与内容提供者交互。
 - en: 'Let''s take a look at how you would instantiate a `ContentResolver` within
     an `Activity` class, and then insert and query for data using both path specifications:'
+  id: totrans-71
   prefs: []
   type: TYPE_NORMAL
+  zh: 让我们看看你如何在`Activity`类中实例化一个`ContentResolver`，然后使用路径规范插入和查询数据：
 - en: '[PRE11]'
+  id: totrans-72
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE11]'
 - en: 'So what''s going on here is we first insert three rows into our database, so
     that the citizen table now looks like:'
+  id: totrans-73
   prefs: []
   type: TYPE_NORMAL
+  zh: 这里发生的情况是，我们首先向数据库中插入三行，这样公民表现在看起来像这样：
 - en: '| ID | Name | State | Income |'
+  id: totrans-74
   prefs: []
   type: TYPE_TB
+  zh: '| ID | 姓名 | 州 | 收入 |'
 - en: '| --- | --- | --- | --- |'
+  id: totrans-75
   prefs: []
   type: TYPE_TB
+  zh: '| --- | --- | --- | --- |'
 - en: '| 1 | Jason Wei | CA | 100000 |'
+  id: totrans-76
   prefs: []
   type: TYPE_TB
+  zh: '| 1 | 魏佳森 | 加利福尼亚 | 100000 |'
 - en: '| 2 | James Lee | NY | 120000 |'
+  id: totrans-77
   prefs: []
   type: TYPE_TB
+  zh: '| 2 | 詹姆斯·李 | 纽约 | 120000 |'
 - en: '| 3 | Daniel Lee | NY | 80000 |'
+  id: totrans-78
   prefs: []
   type: TYPE_TB
+  zh: '| 3 | 丹尼尔·李 | 纽约 | 80000 |'
 - en: 'From here, we use our content resolver to make a general query of our table
     (that is, just passing in the basic URI path specification) in an order of increasing
     incomes. Then, we use our content resolver to make a specific query using the
     `SSID` path specification. To do this, we utilize the static method:'
+  id: totrans-79
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们使用内容解析器对我们的表进行一般查询（即，只需传入基本的URI路径规范），按收入递增的顺序。然后，我们使用内容解析器通过`SSID`路径规范进行特定查询。为此，我们使用了以下静态方法：
 - en: '[PRE12]'
+  id: totrans-80
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE12]'
 - en: 'This transforms the base content URI from:'
+  id: totrans-81
   prefs: []
   type: TYPE_NORMAL
+  zh: 这将基本内容URI从以下形式转换：
 - en: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen`'
+  id: totrans-82
   prefs: []
   type: TYPE_NORMAL
+  zh: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen`'
 - en: 'to the following:'
+  id: totrans-83
   prefs: []
   type: TYPE_NORMAL
+  zh: 转换为以下形式：
 - en: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen/2`'
+  id: totrans-84
   prefs: []
   type: TYPE_NORMAL
+  zh: '`content://jwei.apps.dataforandroid.ch4.CitizenContentProvider/citizen/2`'
 - en: 'So, to validate our results, let''s take a look at what was outputted:'
+  id: totrans-85
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，为了验证我们的结果，让我们看看输出的内容：
 - en: '![Interacting with a ContentProvider](img/8123OS_04_01.jpg)'
+  id: totrans-86
   prefs: []
   type: TYPE_IMG
+  zh: '![与ContentProvider交互](img/8123OS_04_01.jpg)'
 - en: From the previous screenshot, we can see that both queries indeed outputted
     the correct rows of data!
+  id: totrans-87
   prefs: []
   type: TYPE_NORMAL
+  zh: 从之前的截图中，我们可以看到两个查询确实输出了正确的数据行！
 - en: Now, the only remaining thing I'll say about the previous example (as most of
     the syntax and `Cursor` handling is identical to that of examples from previous
     chapters) is regarding the method `startManagingCursor()`. In earlier chapters,
@@ -489,29 +669,39 @@
     for you making sure to close it before the `Activity` destroys itself, and so
     on. In general, it's a good idea to allow the `Activity` to manage your `Cursors`
     for you.
+  id: totrans-88
   prefs: []
   type: TYPE_NORMAL
+  zh: 关于上一个例子，我要说的最后一件事（因为大部分语法和`Cursor`处理与之前章节的例子相同）是关于`startManagingCursor()`方法。在之前的章节中，你会注意到每次我通过`query()`打开一个`Cursor`，我必须确保在`Activity`结束时关闭它，否则操作系统会抛出各种悬挂`Cursor`的警告。然而，使用`startManagingCursor()`便利方法，`Activity`会为你管理`Cursor`的生命周期，确保在`Activity`销毁自身之前关闭它，等等。通常，让`Activity`为你管理`Cursors`是一个好主意。
 - en: Practical use cases
+  id: totrans-89
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 实际使用场景
 - en: 'So, now that you know how to both implement and access a content provider,
     you might be scratching your head and thinking to yourself: *Why would I ever
     need to do this?*'
+  id: totrans-90
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以，现在你知道了如何实现和访问内容提供者，你可能会挠头自问：*我为什么要这么做呢？*
 - en: What practical use cases are there for a content provider that would motivate
     you to go through the extra hassle of building a content provider instead of just
     extending a `SQLiteOpenHelper` and writing some convenience methods?
+  id: totrans-91
   prefs: []
   type: TYPE_NORMAL
+  zh: 有哪些实际的使用场景可以证明内容提供者的价值，让你愿意经历构建内容提供者的额外麻烦，而不是仅仅扩展`SQLiteOpenHelper`并编写一些便利方法？
 - en: Well, one thing that is *unique* about the `ContentProvider` is that it allows
     you to expose your data to all external applications, and so we can start our
     brainstorming from there. Let's say you're running a small (or large) startup
     and you've developed an application that allows the user to look up restaurants
     and book reservations.
+  id: totrans-92
   prefs: []
   type: TYPE_NORMAL
+  zh: 好吧，`ContentProvider`的一个特点是它允许你将数据暴露给所有外部应用程序，我们可以从这里开始我们的头脑风暴。比方说你正在运营一家小型（或大型）初创公司，你开发了一款允许用户查找餐厅并预订的应用程序。
 - en: Now, sensibly, your application will most likely store these booked reservations
     in some kind of database, so that the user can see what reservations they made
     previously each time they open the application. But, say you expose your content
@@ -520,29 +710,38 @@
     a calendar application or a tasks list application, could develop some special
     functionality that allows them to *sync* their calendars and/or tasks with that
     user's restaurant reservations!
+  id: totrans-93
   prefs: []
   type: TYPE_NORMAL
+  zh: 当然，你的应用程序很可能会将这些预订信息存储在某种类型的数据库中，这样用户每次打开应用程序时都能看到他们之前所做的预订。但是，假设你暴露了你的内容提供者，并将其变成了一个*本地*
+    API（或许对于一些人来说，将内容提供者视为这样的东西最为简单）——在这种情况下，其他应用程序，比如日历应用程序或任务列表应用程序，可以开发一些特殊功能，使它们能够与该用户的餐厅预订*同步*它们的日历和/或任务！
 - en: In this example, you have two applications, both with their own specific functionalities,
     leveraging the power of content providers to provide the user with a great experience
     (and happy users mean happy reviews for your application)!
+  id: totrans-94
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这个例子中，你有两个应用程序，各自具有特定的功能，利用内容提供者的力量为用户提供出色的体验（用户满意意味着你的应用程序会获得好评！）。
 - en: Let's brainstorm one more example before we wrap up this chapter and move on
     to the next. One of the great things about the Android OS (and about Google in
     general) is the search functionality! As a result, within the Android OS, there's
     a native Quick Search application, which typically appears as a widget on the
     home screen of the device (see [http://developer.android.com/resources/articles/qsb.html](http://developer.android.com/resources/articles/qsb.html)
     for more).
+  id: totrans-95
   prefs: []
   type: TYPE_NORMAL
+  zh: 在结束本章并进入下一章之前，让我们再头脑风暴一个例子。Android OS（以及谷歌公司）的一大优点是搜索功能！因此，在Android OS中，有一个原生的快速搜索应用程序，它通常作为设备主屏幕上的一个小部件出现（更多信息请参见[http://developer.android.com/resources/articles/qsb.html](http://developer.android.com/resources/articles/qsb.html)）。
 - en: This Quick Search widget is especially cool because of how it allows you to
     search through *any and all* databases that declare themselves as searchable.
     And what prerequisites are there for making your database searchable? You guessed
     it – it has to be through a content provider. Again, it's only through exposing
     your data with a content provider that any application (whether native or third
     party) can read and access your database.
+  id: totrans-96
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个快速搜索小部件特别酷，因为它允许你搜索所有声明为可搜索的数据库。那么，让你的数据库可搜索需要什么前提条件呢？你已经猜到了——必须通过内容提供者。再次强调，只有通过内容提供者公开你的数据，任何应用程序（无论是本地还是第三方）才能读取和访问你的数据库。
 - en: And so, say you are writing a texting application, and as a result you maintain
     a content provider that stores all of the most recent texts you've had with your
     friends. One neat feature you could add is to declare your content provider as
@@ -550,17 +749,23 @@
     to be done over (in this case, it would likely be the field containing the body
     of the text). Once you've done this, the user can quickly use the home screen's
     search widget and seamlessly maneuver through their texts with their friends!
+  id: totrans-97
   prefs: []
   type: TYPE_NORMAL
+  zh: 假设你正在编写一个短信应用程序，因此你维护一个内容提供者，存储了你与朋友的所有最新短信。你可以添加的一个很酷的功能是声明你的内容提供者为可搜索的，然后在你的内容提供者中指定搜索应在哪些字段上进行（在这种情况下，它可能是包含短信正文的字段）。完成这些操作后，用户可以使用主屏幕的搜索小部件快速搜索，无缝地浏览与朋友的短信！
 - en: At the end of the day, the principles and concepts behind the content provider
     are simple, and implementing is just half of the work – the other half is being
     creative and thinking of innovative and useful applications for your content provider.
+  id: totrans-98
   prefs: []
   type: TYPE_NORMAL
+  zh: 最终，内容提供者背后的原则和概念是简单的，实现只是工作的一半——另一半是要有创意，思考出创新且有用的应用场景。
 - en: Summary
+  id: totrans-99
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 总结
 - en: In this chapter, we went into great detail about both what a `ContentProvider`
     is and how it is implemented, and as a result we saw a *lot* of code. However,
     conceptually, the `ContentProvider` is fairly simple you first define an inner
@@ -569,21 +774,28 @@
     that are passed into each method. These instructions come in the form of URIs,
     and so in each method you're going to parse the different paths of the URI and
     perform the appropriate functionality.
+  id: totrans-100
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们详细介绍了`ContentProvider`是什么以及如何实现它，因此我们看到了大量的代码。然而，从概念上讲，`ContentProvider`相当简单：你首先定义一个扩展了`SQLiteOpenHelper`的内部类，然后指定如何根据传递给每个方法的*指令*查询和/或修改SQLite数据库。这些指令以URI的形式出现，因此在每个方法中，你将解析URI的不同路径并执行适当的功能。
 - en: We then quickly saw how you could interact with your new content provider (or
     any content provider, in fact) through the use of a `ContentResolver` which is
     obtained from the `Context` and then used to `query(), insert(), delete()`, or
     `update()` a corresponding content provider.
+  id: totrans-101
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后，我们快速了解了如何通过`ContentResolver`与新的内容提供者（实际上是与任何内容提供者）进行交互，`ContentResolver`可以从`Context`获取，然后用于`query(),
+    insert(), delete()`或`update()`相应的内容提供者。
 - en: Lastly, we took some time to step away from the code and consider practical
     ways we could use a content provider. This is always an important exercise to
     do when developing an application, and is one of my goals for this book – to equip
     you with both the low-level implementation details of these techniques as well
     as the high-level motivations and use cases for them.
+  id: totrans-102
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后，我们花了一些时间从代码中抽身，考虑实际使用内容提供者的方法。在开发应用程序时，这始终是一个重要的练习，这也是本书的一个目标——为你提供这些技术的底层实现细节以及高层动机和使用场景。
 - en: Now, earlier I mentioned that the Android OS is replete with pre-existing content
     providers that any developer is free to query and update. This is in fact true,
     and some of the more common content providers that are built into the system are
@@ -591,10 +803,14 @@
     most commonly used `ContentProvider` is the `Contacts` content provider – the
     database schema that is built into the OS and which houses the user's contacts
     list.
+  id: totrans-103
   prefs: []
   type: TYPE_NORMAL
+  zh: 之前我提到过，Android操作系统充满了预先存在的内容提供者，任何开发者都可以自由查询和更新。这是事实，系统中内置的一些更常见的内容提供者包括媒体和日历内容提供者。然而，最重要且最常使用的`ContentProvider`无疑是`Contacts`内容提供者——这是内置于操作系统中的数据库架构，用于存储用户的联系人列表。
 - en: In the next chapter, we'll devote our entire attention into learning and understanding
     this `Contacts` content provider, its schema, and how to interact with it to accomplish
     standard queries and updates.
+  id: totrans-104
   prefs: []
   type: TYPE_NORMAL
+  zh: 在下一章中，我们将全力以赴学习和理解这个`Contacts`内容提供者，它的架构，以及如何与它互动以完成标准查询和更新。

@@ -1,72 +1,100 @@
 - en: Chapter 5. Querying the Contacts Table
+  id: totrans-0
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 第五章 查询联系人表
 - en: Earlier in this book, we looked at how we could build a SQLite database for
     our application by overriding the `SQLiteOpenHelper` class. Then, we extended
     our understanding of databases on Android by introducing the `ContentProvider`
     class, which allowed us to expose our SQLite databases to external applications,
     and more generally to the Android OS itself.
+  id: totrans-1
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本书前面，我们探讨了如何通过重写`SQLiteOpenHelper`类为我们的应用程序构建一个 SQLite 数据库。然后，我们通过引入`ContentProvider`类扩展了对
+    Android 上数据库的理解，它允许我们将 SQLite 数据库暴露给外部应用程序，以及更一般地暴露给 Android 操作系统本身。
 - en: However, while knowing how to design and implement your own database is a powerful
     skill to have, knowing how to leverage existing data on the user's device can
     be just as beneficial. Oftentimes, this will mean querying existing content providers
     for various types of data, but one especially important content provider and by
     far the most commonly queried content provider - is the `Contacts` content provider.
+  id: totrans-2
   prefs: []
   type: TYPE_NORMAL
+  zh: 然而，尽管设计和实现你自己的数据库是一项强大的技能，但利用用户设备上现有的数据同样有益。通常，这意味着查询现有内容提供者以获取各种类型的数据，但尤其重要的是`联系人`内容提供者，到目前为止它是最常被查询的内容提供者。
 - en: In this chapter, we'll start by exploring the structure of the `Contacts` content
     provider (that is, its schema) and then look at the various ways to query for
     contacts and their associated metadata.
+  id: totrans-3
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们将首先探索`联系人`内容提供者的结构（即其模式），然后查看查询联系人和其相关元数据的不同方式。
 - en: Structure of the Contacts content provider
+  id: totrans-4
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 联系人内容提供者结构
 - en: 'Understanding the schema of the `Contacts` content provider is half of the
     challenge. Because of the wealth of data that can potentially be associated with
     a contact, much work had to be done in designing a schema which would be both
     flexible and powerful enough to meet every user''s needs. In the following table,
     I''ve sketched out how this schema is laid out, and from there we''ll examine
     how the schema works at a high level, before diving into each table of the schema:'
+  id: totrans-5
   prefs: []
   type: TYPE_NORMAL
+  zh: 理解`联系人`内容提供者的模式架构是挑战的一半。由于潜在地与一个联系人关联的数据量很大，因此在设计一个既灵活又强大到足以满足每个用户需求的模式上，我们必须做了大量的工作。在下面的表格中，我勾勒出了这个模式是如何布局的，然后我们将从高层次上探讨这个模式是如何工作的，再深入到模式中的每个表：
 - en: '![Structure of the Contacts content provider](img/Image1.jpg)'
+  id: totrans-6
   prefs: []
   type: TYPE_IMG
+  zh: '![联系人内容提供者结构](img/Image1.jpg)'
 - en: 'So here you have it – doesn''t look too daunting right? Of course, the columns
     shown previously are just a subset of the actual columns in each table, but it
     should hopefully be enough to give you an idea of how these tables all work together.
     If you''d like to see all the columns in each table, I invite you to look at the
     following links:'
+  id: totrans-7
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以你现在看到的就是这些——看起来并不是特别令人畏惧，对吧？当然，之前显示的列只是每个表中实际列的一个子集，但希望这足以让你了解这些表是如何协同工作的。如果你想查看每个表中的所有列，我建议你查看以下链接：
 - en: '[http://developer.android.com/reference/android/provider/ContactsContract.Contacts.html](http://developer.android.com/reference/android/provider/ContactsContract.Contacts.html)'
+  id: totrans-8
   prefs: []
   type: TYPE_NORMAL
+  zh: '[Android 联系人数据提供者参考](http://developer.android.com/reference/android/provider/ContactsContract.Contacts.html)'
 - en: '[http://developer.android.com/reference/android/provider/ContactsContract.RawContacts.html](http://developer.android.com/reference/android/provider/ContactsContract.RawContacts.html)'
+  id: totrans-9
   prefs: []
   type: TYPE_NORMAL
+  zh: '[Android 联系人原始数据提供者参考](http://developer.android.com/reference/android/provider/ContactsContract.RawContacts.html)'
 - en: '[http://developer.android.com/reference/android/provider/ContactsContract.Data.html](http://developer.android.com/reference/android/provider/ContactsContract.Data.html)'
+  id: totrans-10
   prefs: []
   type: TYPE_NORMAL
+  zh: '[Android 联系人数据提供者参考](http://developer.android.com/reference/android/provider/ContactsContract.Data.html)'
 - en: Let's think about the schema from a high level first. At the top, we have the
     `Contacts` table. In previous versions of Android (API levels 4 and under), this
     was more or less all you had. It was just the typical, intuitive, `Contacts` table,
     which contained each contact's unique ID as well as their names, phone numbers,
     e-mails, and so on.
+  id: totrans-11
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先让我们从高层次思考这个模式。最顶层是`联系人`表。在之前版本的 Android（API 级别 4 及以下）中，这几乎是你可以使用的一切。它只是一个典型的、直观的`联系人`表，包含了每个联系人的唯一
+    ID 以及他们的姓名、电话号码、电子邮件等。
 - en: Then things got complicated. Suddenly, Android 2.0 (API levels 5 and up) came
     out and users were allowed to sync their contacts with Facebook, with Twitter,
     with Google, along with numerous other services. Does it still make sense to have
     just a simple `Contacts` table? Would each contact for each source be its own
     separate row? And how would we know which rows are actually referring to the same
     contact?
+  id: totrans-12
   prefs: []
   type: TYPE_NORMAL
+  zh: 然后事情变得复杂了。突然间，Android 2.0（API级别5及以上）出现了，用户可以将联系人同步到Facebook、Twitter、谷歌以及众多其他服务。仅有一个简单的`Contacts`表还有意义吗？每个来源的每个联系人是否都是独立的一行？我们如何知道哪些行实际上指的是同一个联系人？
 - en: Because of this, Google had to develop a second layer of tables which reference
     the `Contacts` table – these tables are called `Raw Contacts`. Every contact the
     user has is an aggregation of raw contacts, where each raw contact represents
@@ -75,15 +103,21 @@
     Contact` tables, one describing his/her metadata from Facebook and the other describing
     his/her metadata from Twitter. Both of these raw contacts would then both point
     to a single entry in the `Contacts` table.
+  id: totrans-13
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，谷歌不得不开发一个引用`Contacts`表的第二层表格——这些表格被称为`Raw Contacts`。用户拥有的每个联系人都是由原始联系人汇总而成的，其中每个原始联系人代表来自特定来源的单个联系人。例如，你有一个朋友，并且你已经将这个联系人同步到了Facebook和Twitter。这位朋友就会有两组`Raw
+    Contact`表格，一组描述了他/她在Facebook的元数据，另一组描述了他/她在Twitter的元数据。这两个原始联系人都会指向`Contacts`表中的单一条目。
 - en: But wait, whereas before each contact's metadata was more or less limited to
     a few phone numbers and a few e-mails, now there's an enormous amount of metadata
     available for each contact, thanks to social networking. So how would we store
     all this metadata? Each contact's latest status messages or latest tweets? Would
     we just have one enormous `Raw Contacts` table with thirty or so columns?
+  id: totrans-14
   prefs: []
   type: TYPE_NORMAL
+  zh: 但是等等，之前每个联系人的元数据基本上限于几个电话号码和电子邮件，现在由于社交网络，每个联系人都有大量的元数据可用。我们如何存储所有这些元数据？每个联系人的最新状态消息或最新推文？我们是否只需要一个拥有大约三十列的巨大`Raw
+    Contacts`表？
 - en: Preferably no – that's probably not a good use of memory, as that table would
     likely be fairly sparse. So instead, the team at Google decided to create a third
     layer of tables, known as the `Data` tables. These `Data` tables all reference
@@ -95,57 +129,77 @@
     and so on). That's the high-level picture of what's happening, and in the next
     section we'll look at how you actually query these tables for common fields, such
     as phone numbers and e-mails.
+  id: totrans-15
   prefs: []
   type: TYPE_NORMAL
+  zh: 最好不要——这很可能不是内存的好用法，因为那个表格可能会相当稀疏。因此，谷歌团队决定创建一个第三层表格，称为`Data`表。这些`Data`表都引用一个原始联系人，后者再次引用一个联系人。因此，在Android操作系统中描述联系人的方式基本上是这样的：一个联系人是特定于各个来源（即Facebook或Twitter）的原始联系人的汇总，每个原始联系人又是一组独立数据表的汇总，每个数据表包含一种类型的数据（即电话号码、电子邮件、状态消息等）。这是发生的事情的高级视图，下一节我们将探讨如何实际查询这些表以获取常见字段，如电话号码和电子邮件。
 - en: Now, there are many technical details that fully describe what's happening in
     the schema, but for now I'll end this section with a brief discussion of how this
     aggregation between raw contacts actually works.
+  id: totrans-16
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，有许多技术细节可以完全描述架构中发生的事情，但现在我将以此节的一个简短讨论结束，介绍原始联系人之间实际如何进行汇总。
 - en: 'The system automatically aggregates raw contacts, and so each time you create
     a new contact or sync a new account to an existing contact, that raw contact is
     created with aggregation mode set to `DEFAULT`, which tells the system to aggregate
     this raw contact with other raw contacts referencing the same contact. However,
     you can explicitly define what kind of aggregation you want for that raw contact
     and the options are as follows:'
+  id: totrans-17
   prefs: []
   type: TYPE_NORMAL
+  zh: 系统会自动汇总原始联系人，因此每次你创建新联系人或同步新账户到现有联系人时，都会以`DEFAULT`聚合模式创建一个原始联系人，这告诉系统将这个原始联系人与其他引用同一联系人的原始联系人进行汇总。但你可以明确指定你想要对该原始联系人进行的汇总类型，以下是可以选择的选项：
 - en: '`AGGREGATION_MODE_DEFAULT` The default state, where automatic aggregation is
     allowed'
+  id: totrans-18
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`AGGREGATION_MODE_DEFAULT` 允许自动汇总的默认状态'
 - en: '`AGGREGATION_MODE_DISABLED` Automatic aggregation is not allowed and the raw
     contact will not be aggregated'
+  id: totrans-19
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`AGGREGATION_MODE_DISABLED` 不允许自动聚合，原始联系人将不会被聚合'
 - en: '`AGGREGATION_MODE_SUSPENDED` Automatic aggregation is deactivated, however,
     if the raw contact was previously aggregated, then it will remain aggregated'
+  id: totrans-20
   prefs:
   - PREF_UL
   type: TYPE_NORMAL
+  zh: '`AGGREGATION_MODE_SUSPENDED` 自动聚合被禁用，但是，如果原始联系人之前已经聚合，那么它将保持聚合状态'
 - en: These are the three modes of aggregation, which you can update and adjust for
     each raw contact. As for how the aggregation is done, it's primarily done by matching
     names and/or nicknames, and if names are not present, then the match is attempted
     using phone numbers and e-mails.
+  id: totrans-21
   prefs: []
   type: TYPE_NORMAL
+  zh: 这三种是聚合模式，你可以针对每个原始联系人进行更新和调整。至于聚合是如何完成的，它主要是通过匹配名字和/或昵称来完成的，如果没有名字，那么将尝试使用电话号码和电子邮件进行匹配。
 - en: By now you should have a decent understanding of what the `Contacts` content
     provider looks like, and so we'll move on to looking at some code!
+  id: totrans-22
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，你应该对`Contacts`内容提供者的样子有了相当的了解，因此我们将继续看一些代码！
 - en: Querying for Contacts
+  id: totrans-23
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 查询联系人
 - en: First, let's start with a simple query that targets the `Contacts` table and
     gives us back the contact IDs, each contact's name (remember this is an aggregated
     display name), as well as their `lookup` key. This `lookup` key is a relatively
     new concept to the `Contacts` content provider and is meant to be a more reliable
     way to reference `Contacts` than using the traditional row ID.
+  id: totrans-24
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，让我们从一个简单的查询开始，这个查询针对的是`Contacts`表，并返回联系人ID，每个联系人的名字（请记住，这是一个聚合的显示名称），以及他们的`lookup`键。这个`lookup`键对于`Contacts`内容提供者来说是一个相对较新的概念，它被设计成比使用传统的行ID更可靠的方式来引用`Contacts`。
 - en: 'The reason for this is that row IDs tend to be unreliable, especially for a
     content provider like the `Contacts` content provider, which is likely to have
     numerous applications referencing, and potentially updating, it simultaneously.
@@ -156,27 +210,37 @@
     for each raw contact (in other words, it is a function of the raw contact''s metadata)
     and will be much more stable. But enough with the explanations, let''s take a
     look at how a simple query might look:'
+  id: totrans-25
   prefs: []
   type: TYPE_NORMAL
+  zh: 这是因为行ID往往不可靠，特别是对于像`Contacts`内容提供者这样的内容提供者，它可能有多个应用程序引用，并可能同时对其进行更新。假设你尝试通过其行ID引用联系人，但用户设备上的另一个应用程序之前已经对`Contacts`数据库进行了更改，以至于该行ID的联系人现在不同了，或者可能现在它已经不再那里了！相反，`lookup`键是每个原始联系人的服务器端标识符的串联（换句话说，它是原始联系人元数据的一个函数），将更加稳定。但解释就到这里，让我们看看一个简单查询可能长什么样：
 - en: '[PRE0]'
+  id: totrans-26
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE0]'
 - en: So, here we retrieve our content resolver as we did in the previous chapter,
     and pass in the `Contacts CONTENT_URI`. We then iterate through the cursor and
     get the fields that we asked for in the projection array. Notice that I also use
     a `Map` to keep track of each contact's `lookup` key. In my case, I set the keys
     to be the contact's display name, but you could store the `lookup` keys and/or
     the contact IDs with any data structure that you like.
+  id: totrans-27
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，这里我们像上一章一样获取内容解析器，并传入`Contacts CONTENT_URI`。然后，我们遍历游标并获取我们在投影数组中请求的字段。注意，我还使用了一个`Map`来跟踪每个联系人的`lookup`键。在我的例子中，我将键设置为联系人的显示名称，但你可以使用任何你喜欢的数据结构来存储`lookup`键和/或联系人ID。
 - en: 'If you already know the `lookup` key of your contact (perhaps it had previously
     been cached somewhere), then you can use that `lookup` key to directly access
     the contact with the following snippet of code:'
+  id: totrans-28
   prefs: []
   type: TYPE_NORMAL
+  zh: 如果你已经知道你的联系人的`lookup`键（可能它之前已经被缓存在某个地方），那么你可以使用以下代码片段中的`lookup`键直接访问联系人：
 - en: '[PRE1]'
+  id: totrans-29
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE1]'
 - en: 'So, here we append the `lookup` value to the URI itself – similar to how we
     earlier appended a row ID to the standard content URI to retrieve a single citizen.
     However, the problem with this method is that there tends to be some more overhead
@@ -184,28 +248,38 @@
     ID. In other words, you sacrifice some performance in speed in order to obtain
     better accuracy with your query. However, Android provides you with one more method
     that is meant to give you both increased accuracy and increased performance:'
+  id: totrans-30
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以，在这里我们将`lookup`值附加到URI本身——类似于我们之前将行ID附加到标准内容URI以获取单个市民的方式。但是，这种方法的问题是，与传统的通过行ID匹配相比，通过`lookup`键匹配通常会有一些额外的开销。换句话说，你牺牲了一些速度性能，以获得更好的查询准确性。然而，Android为你提供了另一种方法，旨在让你既提高准确性又提高性能：
 - en: '[PRE2]'
+  id: totrans-31
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE2]'
 - en: This method allows you to first search for a contact by its contact ID – a much
     faster and still somewhat reliable method. However, in the event that a contact
     is not found with that contact ID, the system reverts to using the `lookup` key.
     In either case, as long as the contact exists, you're guaranteed to retrieve the
     correct `lookup` URI for that contact, but oftentimes using this method will give
     you a nice performance boost without sacrificing any accuracy.
+  id: totrans-32
   prefs: []
   type: TYPE_NORMAL
+  zh: 这个方法允许你首先通过联系人ID查找联系人——这是一个更快且仍然相当可靠的方法。但是，如果系统未能通过该联系人ID找到联系人，它会转而使用`lookup`键。在任何一种情况下，只要联系人存在，你就能保证获取到该联系人的正确`lookup`URI，但通常使用这种方法会给你带来很好的性能提升，而不会牺牲任何准确性。
 - en: 'Now that you have the contact IDs, the `lookup` keys, and their names, how
     would you query for more specific metadata – say their phone numbers or e-mails?
     Let''s take a look at the following example, where I request a contact''s phone
     number and phone type by filtering through their `lookup` key:'
+  id: totrans-33
   prefs: []
   type: TYPE_NORMAL
+  zh: 既然你已经有了联系人ID、`lookup`键和他们的名字，那么你如何查询更具体的元数据——比如他们的电话号码或电子邮件？让我们看看以下示例，其中我通过过滤他们的`lookup`键来请求联系人的电话号码和电话类型：
 - en: '[PRE3]'
+  id: totrans-34
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE3]'
 - en: Notice that we leave some of the full package paths to the `Phone` and `Data`
     classes to again give you a glimpse at the hierarchical nature of the schema.
     Here, since we're targeting the `Data` tables now and not the `Contact` table,
@@ -216,42 +290,58 @@
     Vicky; otherwise, we would use a `while` loop) and grab the fields again. Notice
     that we write a simple `switch` statement, which allows us to convert the `PHONE_TYPE`
     – returned as an integer – into a more user-friendly string.
+  id: totrans-35
   prefs: []
   type: TYPE_NORMAL
+  zh: 请注意，我们省略了到`Phone`和`Data`类的完整包路径，以再次让你了解架构的层次性质。在这里，由于我们现在针对的是`Data`表而不是`Contact`表，因此我们传递相应的`Data
+    CONTENT_URI`。然后在投影参数中，我们请求电话号码以及电话类型，在选择参数中我确保通过`lookup`键进行过滤。成功查询后，我们只需移动光标（此时只有一个与Vicky相关的号码；否则，我们将使用`while`循环）并再次获取字段。注意，我们编写了一个简单的`switch`语句，它允许我们将作为整数返回的`PHONE_TYPE`转换成更友好的字符串。
 - en: 'And last but not least, let''s take a look at how we could query the `Raw Contacts`
     table:'
+  id: totrans-36
   prefs: []
   type: TYPE_NORMAL
+  zh: 最后但同样重要的是，让我们看看如何查询`Raw Contacts`表：
 - en: '[PRE4]'
+  id: totrans-37
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE4]'
 - en: This is particularly useful if you want to look at a contact's metadata for
     a specific source (say you only care about what information Facebook has on that
     contact). Then you could potentially filter the `Raw Contacts` table by the `ACCOUNT_NAME`
     or `ACCOUNT_TYPE`, and once you have the raw contact IDs associated with that
     specific source, you could then query the `Data` tables for any metadata associated
     with those specific raw contact IDs!
+  id: totrans-38
   prefs: []
   type: TYPE_NORMAL
+  zh: 这特别适用于如果你想查看特定来源（比如你只想了解Facebook上该联系人的元数据）的联系人元数据。那么你可能会通过`ACCOUNT_NAME`或`ACCOUNT_TYPE`过滤`Raw
+    Contacts`表，一旦你获得了与特定来源相关联的原始联系人ID，你就可以查询与这些特定原始联系人ID相关联的`Data`表中的任何元数据！
 - en: Now, let's take a quick look at how to modify contact data – more specifically,
     how to insert and update contact data. Note that in order to successfully run
     these Activities, we'll need to request special permissions in the `Android Manifest`
     file. However, for now, let's continue to focus on the code, and we'll make sure
     to take a detour and cover all the permissions at the very end.
+  id: totrans-39
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，让我们快速了解一下如何修改联系人数据——更具体地说，是如何插入和更新联系人数据。需要注意的是，为了成功运行这些活动，我们将在`Android Manifest`文件中请求特殊权限。但现在，让我们继续关注代码，并确保在最后详细探讨所有权限问题。
 - en: Modifying Contacts
+  id: totrans-40
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 修改联系人
 - en: The code for the following examples should again look very familiar. And like
     I said earlier, half of the challenge is just mastering the schema and understanding
     how each table interacts with the others (it helps to see the schema laid out
     like previously otherwise it can be extremely confusing and may require browsing
     through a lot of verbose documentation). Let's say we want to insert a new phone
     number for a user. Which table's URI should we reference?
+  id: totrans-41
   prefs: []
   type: TYPE_NORMAL
+  zh: 以下示例的代码应该看起来非常熟悉。正如我之前所说，挑战的一半在于掌握模式并理解每个表如何与其他表交互（如果之前没有像这样展开模式，可能会非常困惑，可能需要浏览大量详细的文档）。假设我们想要为用户插入一个新的电话号码。我们应该引用哪个表的URI呢？
 - en: Well, it'd have to be one of the `Data` tables and we should probably pass in
     the `MIMETYPE` of the data so that the content provider knows exactly which of
     the `Data` tables to insert the new row in. In this case, we'll specify the phone
@@ -259,22 +349,31 @@
     is the ID - whose phone `Data` table should this new row go into? Well, recalling
     that each `Data` table points to a `Raw Contact` table, it would make sense to
     pass in the raw contact ID of the contact.
+  id: totrans-42
   prefs: []
   type: TYPE_NORMAL
+  zh: 好吧，它必须是`Data`表中的一个，我们可能还需要传递数据的`MIMETYPE`，以便内容提供者确切知道要在哪个`Data`表中插入新行。在这种情况下，我们将指定电话内容类型，并传递一个数字和数字类型。我们唯一缺少的字段是ID——这个新行应该进入哪个联系人的电话`Data`表？回想一下，每个`Data`表都指向一个`Raw
+    Contact`表，传递相应联系人的原始联系人ID是合理的。
 - en: 'So we try to repeat this thought process for every insert, update, or delete
     that we have to make, and the code ends up looking like this:'
+  id: totrans-43
   prefs: []
   type: TYPE_NORMAL
+  zh: 因此，我们尝试对每一个需要进行的插入、更新或删除操作都重复这一思考过程，最终代码如下所示：
 - en: '[PRE5]'
+  id: totrans-44
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE5]'
 - en: Here we use our content resolver along with a `ContentValues` object to do a
     standard insert. Once we insert it, we're returned the URI of that newly-inserted
     row, and so we simply run a query on that URI and read back the data that we just
     inserted, just as a sanity check that the insertion worked. I'll point this out
     in the screenshot which follows.
+  id: totrans-45
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们使用内容解析器和一个`ContentValues`对象进行标准的插入操作。一旦我们插入了它，系统会返回新插入行的URI，然后我们只需对该URI运行查询，并读取我们刚刚插入的数据，以验证插入是否成功。以下面的截图我会指出这一点。
 - en: Now, the developers over at Google encourage another way to do an insertion,
     and this is through using batch insertions. This is another relatively new concept
     for the Android OS and is a variant on the traditional `ContentValues` class.
@@ -285,31 +384,45 @@
     the rows will get inserted or none will, so that if an error occurs midway through
     your insertions, the system will make sure to roll back those previous insertions
     so that the consistency of the database is preserved.
+  id: totrans-46
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在，谷歌的开发者们提倡另一种插入方式，即使用批量插入。这是Android操作系统中的另一个相对较新的概念，是传统`ContentValues`类的一个变体。通过使用批量操作，你不仅可以一次性插入多行时获得相当大的性能提升（节省了从客户端到服务器端切换的时间），而且还能保证插入的**原子性**。这是一个花哨的数据库术语，意思是所有行要么全部插入，要么都不插入，这样如果在插入过程中发生错误，系统将确保回滚之前的插入，以保持数据库的一致性。
 - en: 'The syntax for these batch insertions is shown as follows and is pretty intuitive:'
+  id: totrans-47
   prefs: []
   type: TYPE_NORMAL
+  zh: 这些批量插入的语法如下所示，非常直观：
 - en: '[PRE6]'
+  id: totrans-48
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE6]'
 - en: 'To wrap up this chapter, we''ll take a quick look at how you could use this
     new batch operation mechanism to update the e-mail of a contact:'
+  id: totrans-49
   prefs: []
   type: TYPE_NORMAL
+  zh: 为了结束本章内容，我们将快速了解一下如何使用这种新的批量操作机制来更新联系人的电子邮件：
 - en: '[PRE7]'
+  id: totrans-50
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE7]'
 - en: 'That''s it! Here again, we think to ourselves that we''ll likely need to specify
     both the raw contact ID so that the content provider knows whose `Data` table
     to update, as well as the `MIMETYPE` of the `Data` table so that the content provider
     knows which of the `Data` tables to update. As for the results from all the queries,
     insertions, and updates done in this section, see the following:'
+  id: totrans-51
   prefs: []
   type: TYPE_NORMAL
+  zh: 就是这样！再次，我们认为我们可能需要指定原始联系人ID，以便内容提供者知道要更新哪个`Data`表，以及`Data`表的`MIMETYPE`，以便内容提供者知道要更新哪个`Data`表。至于本节中所有查询、插入和更新的结果，请参考以下内容：
 - en: '![Modifying Contacts](img/8123OS_05_01.jpg)'
+  id: totrans-52
   prefs: []
   type: TYPE_IMG
+  zh: '![修改联系人](img/8123OS_05_01.jpg)'
 - en: 'Here we first see all the contacts in my contact list along with their `lookup`
     keys, IDs, and display names. Then, we see the phone numbers we retrieved from
     Vicky, as well as the results of looking her up by her `lookup` key instead of
@@ -320,30 +433,43 @@
     results. Lastly, we just see some of the results from our insertions and updates
     and can further validate that our insertions/updates were successful by actually
     looking at the contacts in the contacts list as follows:'
+  id: totrans-53
   prefs: []
   type: TYPE_NORMAL
+  zh: 首先，我们看到了我的联系人列表中的所有联系人以及他们的`lookup`键、ID和显示名称。然后，我们看到了从Vicky那里获取的电话号码，以及通过她的`lookup`键而不是联系人ID查找她的结果，以及对我们查询`Raw
+    Contacts`表的跟进。注意，对于账户名称和账户类型，你会看到一堆空值，但这只是我在模拟器上运行代码的结果。当你尝试在完全同步且实时的联系人列表上运行代码时，预计会看到更多丰富多彩的结果。最后，我们只是看到了我们插入和更新的一些结果，并且可以通过实际查看联系人列表中的联系人来进一步验证我们的插入/更新是否成功，如下所示：
 - en: '![Modifying Contacts](img/8123OS_05_02.jpg)'
+  id: totrans-54
   prefs: []
   type: TYPE_IMG
+  zh: '![修改联系人](img/8123OS_05_02.jpg)'
 - en: 'Here we see that we''ve successfully inserted a work number for contact Vicky,
     and then again for Daniel, we see the following:'
+  id: totrans-55
   prefs: []
   type: TYPE_NORMAL
+  zh: 在这里，我们可以看到我们已经成功为联系人Vicky插入了一个工作号码，然后对于Daniel，我们看到了以下内容：
 - en: '![Modifying Contacts](img/8123OS_05_03.jpg)'
+  id: totrans-56
   prefs: []
   type: TYPE_IMG
+  zh: '![修改联系人](img/8123OS_05_03.jpg)'
 - en: So that he indeed now has a work e-mail with the correct e-mail that we specified.
     And so that's it! Hopefully, now you'll have a strong understanding of both the
     schema of the `Contacts` content provider as well as the general syntax for how
     you would construct a valid query or insertion. Remember to keep the schema in
     mind as you think through which fields to pass in and which tables you really
     want to be querying from.
+  id: totrans-57
   prefs: []
   type: TYPE_NORMAL
+  zh: 这样，他现在确实有一个与我们指定的工作电子邮件地址正确对应的工作电子邮件。就是这样！希望现在你能够对`Contacts`内容提供者的架构以及构建有效查询或插入的通用语法有一个深入的理解。在考虑要传递哪些字段以及你真正想要查询的表时，请记住保持架构在心中。
 - en: Setting permissions
+  id: totrans-58
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 设置权限
 - en: 'Now that we''ve mastered the `Contacts` content provider without declaring
     the proper permissions, you might encounter some rude force closes when trying
     to run the previous code. To protect the user''s personal contact information
@@ -351,23 +477,32 @@
     some read and write permissions in your applications in the `Android Manifest`
     file. To do this, all you need to do is add the following two lines to your manifest
     file:'
+  id: totrans-59
   prefs: []
   type: TYPE_NORMAL
+  zh: 现在我们已经掌握了在不声明适当权限的情况下使用`Contacts`内容提供者的方法，你可能发现在尝试运行前面的代码时遇到了一些粗鲁的强制关闭。为了保护用户的个人联系人信息，防止潜在恶意应用程序的侵犯，Android操作系统要求你在应用程序的`Android
+    Manifest`文件中声明一些读取和写入权限。要做到这一点，你只需要在清单文件中添加以下两行内容：
 - en: '[PRE8]'
+  id: totrans-60
   prefs: []
   type: TYPE_PRE
+  zh: '[PRE8]'
 - en: So basically, you just need to declare in your manifest that you want to be
     able to both read and write (that is, modify) contacts (or just declare one or
     the other according to what your application needs). This will then prompt the
     user before they download your application that your application requires these
     permissions, and as long as the user accepts them your application is all set
     to run!
+  id: totrans-61
   prefs: []
   type: TYPE_NORMAL
+  zh: 所以基本上，你只需要在清单文件中声明你希望既能读取也能写入（即修改）联系人（或者根据你的应用程序需求只声明其中一个）。这样，在用户下载你的应用程序之前，系统会提示用户你的应用程序需要这些权限，只要用户接受，你的应用程序就可以运行了！
 - en: Summary
+  id: totrans-62
   prefs:
   - PREF_H1
   type: TYPE_NORMAL
+  zh: 概述
 - en: In this chapter, we expanded upon our knowledge of content providers by mastering
     the most widely used content provider available to every application across every
     device – the `Contacts` content provider. We started off by taking a look at the
@@ -381,16 +516,21 @@
     specific to a source (that is, Facebook or Twitter), and each raw contact is then
     an aggregation of a series of `Data` tables, each having its own type of data
     (that is, phone numbers or e-mails).
+  id: totrans-63
   prefs: []
   type: TYPE_NORMAL
+  zh: 在本章中，我们通过掌握每个应用在每个设备上都可以使用的最广泛使用的内容提供者——`Contacts`内容提供者，扩展了我们对内容提供者的知识。我们从查看`Contacts`内容提供者的模式开始，由于各种社交网络来源，与给定联系人关联的元数据越来越多，这一模式变得日益复杂。为了解决这个问题，谷歌的团队决定通过一个简单称为`Contacts`表的一级表，接着是称为`Raw
+    Contact`表的二级表，然后是简单称为`Data`表的三级表，来改变模式。每个联系人然后是一个特定于源（即Facebook或Twitter）的原始联系人组的聚合，每个原始联系人又是一系列`Data`表的聚合，每个表都有自己的数据类型（即电话号码或电子邮件）。
 - en: Afterwards, we looked at multiple ways to query the `Contacts` content provider
     as well as multiple ways to insert and update existing contacts in the content
     provider. This proved to be relatively straightforward code-wise (extremely similar
     to what we saw in previous chapters) and again, showed us how half the battle
     is just in understanding the schema and making sure we include all the proper
     fields.
+  id: totrans-64
   prefs: []
   type: TYPE_NORMAL
+  zh: 之后，我们探讨了多种查询`Contacts`内容提供者的方法，以及多种在内容提供者中插入和更新现有联系人的方法。这在代码上相对简单（与我们之前章节看到的非常相似），再次证明了半数战斗在于理解模式并确保我们包含了所有适当的字段。
 - en: Now, so far in this book, we've looked at ways to query your own as well as
     external databases, but each time we've relied on simple system print statements
     to actually see the results of our queries (by now I'm sure you're sick of seeing
@@ -399,5 +539,7 @@
     to the UI for the user to see and interact with? This is what we'll focus on in
     the next chapter as we explore ways to bind and interact with our databases through
     the user interface.
+  id: totrans-65
   prefs: []
   type: TYPE_NORMAL
+  zh: 到目前为止，在这本书中，我们已经探讨了查询自己的以及外部数据库的方法，但每次我们都依赖于简单的系统打印语句来实际查看查询结果（我相信到现在你已经厌倦了看DDMS日志）。因此问题变成了——既然我已经知道如何实际构建和查询数据库，那么我应该如何设计活动，以便将这数据绑定到用户界面供用户查看和交互？这将是我们在下一章关注的重点，我们将探讨如何通过用户界面与数据库进行绑定和交互。
