@@ -1,0 +1,250 @@
+- en: Chapter 5. Booting the System
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that we have an SE for Android system, we need to see how we can make use
+    of it, and get it into a usable state. In this chapter, we will:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Modify the log level to gain more details while debugging
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Follow the boot process relative to the policy loader
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Investigate SELinux APIs and SELinuxFS
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Correct issues with the maximum policy version number
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Apply patches to load and verify an NSA policy
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'You might have noticed some disturbing error messages `dmesg` in [Chapter 4](ch04.html
+    "Chapter 4. Installation on the UDOO"), *Installation on the UDOO*. To refresh
+    your memory, here are some of them:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: It would appear that even though SELinux is enabled, we don't quite have an
+    error-free system. At this point, we need to understand what causes this error,
+    and what we can do to rectify it. At the end of this chapter, we should be able
+    to identify the boot process of an SE for Android device with respect to policy
+    loading, and how that policy is loaded into the kernel. We will then address the
+    policy version error.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Policy load
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: An Android device follows a boot sequence similar to that of the *NIX booting
+    sequence. The boot loader boots the kernel, and the kernel finally executes the
+    init process. The init process is responsible for managing the boot process of
+    the device through init scripts and some hard coded logic in the daemon. Like
+    all processes, init has an entry point at the main function. This is where the
+    first userspace process begins. The code can be found by navigating to `system/core/init/init.c`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When the init process enters `main` (refer to the following code excerpt),
+    it processes `cmdline`, mounts some `tmpfs` filesystems such as `/dev`, and some
+    pseudo-filesystems such as `procfs`. For SE for Android devices, init was modified
+    to load the policy into the kernel as early in the boot process as possible. The
+    policy in an SELinux system is not built into the kernel; it resides in a separate
+    file. In Android, the only filesystem mounted in early boot is the root filesystem,
+    a ramdisk built into `boot.img`. The policy can be found in this root filesystem
+    at `/sepolicy` on the UDOO or target device. At this point, the init process calls
+    a function to load the policy from the disk and sends it to the kernel, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In the preceding code, you will notice the very nice log message, `SELinux:
+    Disabled due to failed policy load`, and wonder why we didn''t see this when we
+    ran `dmesg` before. This code executes before `setlevel` in `init.rc` is executed.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The default init log level is set by the definition of `KLOG_DEFAULT_LEVEL`
+    in `system/core/include/cutils/klog.h`. If we really wanted to, we could change
+    that, rebuild, and actually see that message.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that we have identified the initial path of the policy load, let's follow
+    it on its course through the system. The `selinux_android_load_policy()` function
+    can be found in the Android fork of `libselinux`, which is in the UDOO Android
+    source tree. The library can be found at `external/libselinux`, and all of the
+    Android modifications can be found in `src/android.c`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The function starts by mounting a pseudo-filesystem called **SELinuxFS**. If
+    you recall, this was one of the new filesystems mentioned in `/proc/filesystems`
+    that we saw in [Chapter 4](ch04.html "Chapter 4. Installation on the UDOO"), *Installation
+    on the UDOO*. In systems that do not have `sysfs` mounted, the mount point is
+    `/selinux`; on systems that have `sysfs` mounted, the mount point is `/sys/fs/selinux`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You can check `mountpoints` on a running system using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'SELinuxFS is an important filesystem as it provides the interface between the
+    kernel and userspace for controlling and manipulating SELinux. As such, it has
+    to be mounted for the policy load to work. The policy load uses the filesystem
+    to send the policy file bytes to the kernel. This happens in the `selinux_android_load_policy()`
+    function:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `set_selinuxmnt(car *mnt)` function changes a global variable in `libselinux`
+    so that other routines can find the location of this vital interface. From there
+    it calls another helper function, `selinux_android_reload_policy()`, which is
+    located in the same `libselinux` `android.c` file. It loops through an array of
+    possible policy locations in priority order. This array is defined as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Since only the root filesystem is mounted, it chooses `/sepolicy` at this time.
+    The other path is for dynamic runtime reloads of policy. After acquiring a valid
+    file descriptor to the policy file, the system is memory mapped into its address
+    space, and calls `security_load_policy(map, size)` to load it to the kernel. This
+    function is defined in `load_policy.c`. Here, the map parameter is the pointer
+    to the beginning of the policy file, and the size parameter is the size of the
+    file in bytes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The security load policy opens the `<selinuxmnt>/load` file, which in our case
+    is `/sys/fs/selinux/load`. At this point, the policy is written to the kernel
+    via this pseudo file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Fixing the policy version
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: At this point, we have a clear idea of how the policy is loaded into the kernel.
+    This is very important. SELinux integration with Android began in Android 4.0,
+    so when porting to various forks and fragments, this breaks, and code is often
+    missing. Understanding all parts of the system, however cursory, will help us
+    to correct issues as they appear in the wild and develop. This information is
+    also useful to understand the system as a whole, so when modifications need to
+    be made, you'll know where to look and how things work. At this point, we're ready
+    to correct the policy versions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The logs and kernel config are clear; only policy versions up to 23 are supported,
+    and we're trying to load policy version 26\. This will probably be a common problem
+    with Android considering kernels are often out of date.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is also an issue with the 4.3 sepolicy shipped by Google. Some changes
+    by Google made it a bit more difficult to configure devices as they tailored the
+    policy to meet their release goals. Essentially, the policy allows nearly everything
+    and therefore generates very few denial logs. Some domains in the policy are completely
+    permissive via a per-domain permissive statement, and those domains also have
+    rules to allow everything so denial logs do not get generated. To correct this,
+    we can use a more complete policy from the NSA. Replace `external/sepolicy` with
+    the download from [https://bitbucket.org/seandroid/external-sepolicy/get/seandroid-4.3.tar.bz2](https://bitbucket.org/seandroid/external-sepolicy/get/seandroid-4.3.tar.bz2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After we extract the NSA''s policy, we need to correct the policy version.
+    The policy is located in `external/sepolicy` and is compiled with a tool called
+    `check_policy`. The `Android.mk` file for sepolicy will have to pass this version
+    number to the compiler, so we can adjust this here. On the top of the file, we
+    find the culprit:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Since the variable is overridable by the `?=` assignment. We can override this
+    in `BoardConfig.mk`. Edit `device/fsl/imx6/BoardConfigCommon.mk`, adding the following
+    `POLICYVERS` line to the bottom of the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Since the policy is on the `boot.img` image, build the policy and `bootimage`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Eject the SD card, place it into the UDOO, and boot.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'The first of the preceding commands should produce the following log output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At this point, by checking the SELinux logs using `dmesg`, we can see the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Another command we need to run is `getenforce`. The `getenforce` command gets
+    the SELinux enforcing status. It can be in one of three states:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '**Disabled**: No policy is loaded or there is no kernel support'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Permissive**: Policy is loaded and the device logs denials (but is not in
+    enforcing mode)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '**Enforcing**: This state is similar to the permissive state except that policy
+    violations result in EACCESS being returned to userspace'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'One of the goals while booting an SELinux system is to get to the enforcing
+    state. Permissive is used for debugging, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we covered the important policy load flow through the init
+    process. We also changed the policy version to suit our development efforts and
+    kernel version. From there, we were able to load the NSA policy and verify that
+    the system loaded it. This chapter additionally showcased some of the SELinux
+    APIs and their interactions with SELinuxFS. In the next chapter, we will examine
+    the filesystem and then move forward in our quest to get the system into enforcing
+    mode.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,379 @@
+- en: Chapter 3. Android Is Weird
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'It really is. Although it is built on the familiar Linux kernel, Android has
+    a completely custom user space, and while many of its functionalities are rewrites
+    of their GNU cousins, some are either new or have significantly different functions
+    than their desktop counterparts. Because of these differences, these systems had
+    to be modified to support SELinux. In this chapter, we will:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Introduce the Android security model
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Investigate binder, zygote, and the property service
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Cover which SELinux elements were added to complement these systems and why
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The coverage of these systems will be moderate, but we will present more intricate
+    details of each system later, when appropriate, in our exploratory investigation
+    of SE for Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android's security model
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android's core security model is based on Linux DAC, including capabilities.
+    Android, however, uses the Linux concept of UID/GID in a very non-traditional
+    way. Each process on the system has its own UID rather than the UID of whoever
+    launched it. These UIDs (generally unique) provide sandboxing and process isolation.
+    There are a few circumstances, though, where processes can share UIDs and GIDs.
+    Typically, when a process shares a UID with another process, it is because they
+    both need the same set of permissions on the system and share data. The same could
+    be possible for GIDs. However, some GIDs in Android are actually used to gain
+    permission to access underlying systems, such as the SD card filesystem. In a
+    nutshell, the UID is used to isolate processes and not the human users of the
+    system. In fact, Android didn't have support for multiple human users until its
+    Jelly Bean 4.3 release. It was always intended for devices with a single human
+    user… at least in operation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Within this security model, there are two process classes. The first is called
+    system component services. These are the services declared in the system init
+    scripts. They tend to be highly privileged and thus almost never share a UID with
+    another process. An example system component service would be the **Radio Interface
+    Layer Daemon** (**RILD**). RILD is responsible for processing messages between
+    Android userspace and the modem on the device. Because of the nature of what it
+    does, it typically runs as UID root. There is no requirement that processes be
+    pure native code. System server has non-native components, runs as the system
+    UID, and is highly privileged. Almost all of these systems share a common theme;
+    they have a UID that is either root or is set to the owner of many sensitive kernel
+    objects, such as sockets, pipes, and files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second class is applications. Applications are typically written in Java,
+    although this is not a requirement; this is similar to how system component services
+    are typically written in native code without it being a requirement. These applications
+    have UIDs assigned automatically when they are installed, and these UIDs are reserved
+    by the system for this purpose. The package manager is responsible for issuing
+    UIDs to applications. These UIDs have no ties to anything sensitive or dangerous
+    on the system, and the applications run with no capabilities. In order to access
+    a system resource, an application must have its supplementary group appended to
+    or it must be arbitrated by a separate process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A simple example of utilizing the supplementary group is seen when an application
+    needs to use the SD card. For applications to access the SD card, they must have
+    `SDCARD_RW` in their supplementary GIDs. These permissions are enforced with standard
+    Linux DAC permissions by the kernel. The supplementary group is assigned by the
+    package manager during the application's installation based on a declared permission.
+    Applications in Android must declare something called `uses-permission` in the
+    application's manifest. This permission appears as a string which is mapped to
+    a supplementary GID. This mapping is maintained in a file in the system, specifically
+    `/system/etc/permissions/platform.xml`. You will see an application of these permission
+    strings in a later chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The second way an application gains access to a system resource is through another
+    process. The application wishing to use a system resource must get another process
+    to do this on its behalf. Most requests are handled by a process known as the
+    **system server**. The system server checks whether the application making the
+    arbitration request had declared a matching permission string in its manifest
+    file. If it did, it's allowed to proceed, otherwise a security exception is thrown.
+    Even arbitrated accesses in Android use a DAC model, in essence. While the object
+    owner controls the access rules on the object via permission strings, any consumer
+    of the protected object can just request the permission string to get access.
+    Essentially, anyone can write an application requesting any permission strings
+    they want. While installing an application, the user is presented with the list
+    of permissions requested by the application, which they choose to accept or reject
+    en masse. If the user's intent is to install the application, all requested permissions
+    must be granted. If the user is not careful, they might inadvertently allow that
+    application to access protected objects in a way that can threaten the security
+    of the device, applications, or user data. The owners of the devices should always
+    ensure they are comfortable with the application using the declared permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For examples or further discussion, refer to [http://developer.android.com/guide/topics/security/permissions.html](http://developer.android.com/guide/topics/security/permissions.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Binder
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The arbitrated access method discussed before requires some form of **Interprocess
+    Communication** (**IPC**), and while Android does use Unix domain sockets, it
+    also brings its own IPC mechanism that is used more widely throughout the system.
+    This IPC mechanism is called binder and is the core IPC mechanism in the Android
+    operating system. It has historical relevance from the BeOS and Palm OS implementations
+    of OpenBinder, and since the initial Android development team was comprised of
+    many OpenBinder engineers, binder went with them to Android. However, Android
+    has a complete, from scratch rewrite of the binder code base that is specific
+    to Linux.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Binder is currently not completely mainstreamed into the Linux kernel, and many
+    of Android's kernel changes are still staged.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is some controversy around binder and its mainline adoption. Some people
+    argue against the amount of heavy lifting it does within the driver in contrast
+    to competing implementations such as `dbus`. However, it will likely be a long
+    time before we see the resolution of this debate. Regardless of whether binder
+    stays an Android-specific technology, is mainstreamed in the Linux kernel, or
+    is eventually replaced by another technology in Android, binder is here to stay
+    for the foreseeable future.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Binder's architecture
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Binder IPC follows a client/server architecture. A service publishes an interface
+    and clients consume from that interface. Clients can bind to services via one
+    of the two methods: known address or service name.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Each binder interface in the system is known as a binder node. Each binder node
+    has an address. When clients want to use an interface, they must bind to a binder
+    node via this address. This is analogous to browsing a webpage via its IP address.
+    However, unlike an IP address that is usually fixed for long durations of time,
+    the binder address could change based on restarts of the publishing service or
+    on the service startup order at the boot time of the device. The order of processes
+    isn't quite guaranteed, thus the publishing of process services can result in
+    a different binder token (a simple binder object to share among processes) being
+    assigned. Also, this indirection allows the runtime ability to reseat service
+    implementations using just the published service names without the necessity to
+    utilize the token.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The way this redirection functions is similar to how DNS provides the resolution
+    from name to IP address for networked device accesses. Binder has something called
+    the context manager (also known as the service manager). The context manager lives
+    at a fixed node address of `0`. Publishing services send a name and a binder token
+    to the context manager, and then, when clients need to find a service by name,
+    they check binder node 0 and resolve the name to the binder token. A binder token
+    is the proper name for this address, or ID, that uniquely addresses a binder interface.
+    After a client binds to the binder object, which is a process that implements
+    the binder interface, the processes then perform binder transactions using a well-established
+    binder protocol. This protocol allows synchronous transactions analog to a method
+    call.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since binder is a kernel driver, it has some nice features that determine what
+    one can do across the interface. For starters, it allows the transmission of file
+    descriptors. It also manages a thread pool for dispatching service methods. Additionally,
+    it employs an approach referred to as zero copy whereby binder does not copy any
+    of the transaction data between processes... it shares them instead. Binder also
+    affords reference counting of objects and lets services query the client application's
+    Linux credentials like UID, GID, and **Process ID** (**PID**). Binder also allows
+    the service and client to know when the other has terminated via its link to death
+    functionality.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Typically in Android, you don''t work with binder directly. Instead, you work
+    with a service rather via a service and its **Android Interface Description Language**
+    (**AIDL**) interface. The final chapter will provide detailed examples of AIDL
+    in practice for our custom SE for Android system, but in the meantime, the following
+    is a simple example of an AIDL interface providing the means for remote processes
+    to execute the `getAccountName()` and `putAccountName()` functions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The beauty in working with an AIDL interface is that it is used to generate
+    a significant amount of code to manage data and processes that would otherwise
+    have to be done by hand. For example, the following is only a small portion of
+    the code generated from the preceding AIDL sample:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Binder and security
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The security implications of binder are quite large. You should be able to control
+    who becomes the context manager, as a rogue context manager could compromise the
+    whole system by sending clients to rogue services, rather than the proper ones.
+    Outside of that, you might want to control which clients can bind to which binder
+    objects. Lastly, you might wish to control whether file descriptors can be sent
+    via binder. The binder also has the capability to allow someone to fake credentials
+    over the interface, which is designed to be used for good. For example, some privileged
+    system processes, such as **Activity Manager Service** (**AMS**), perform operations
+    on behalf of other processes. The credentials exposed in this kind of masquerading
+    are of the process you are doing the work for, not of the privileged entity. This
+    is analogous to a power of attorney, used when someone is acting on your behalf.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android's binder IPC mechanism was traditionally controlled with DAC permissions.
+    However, as we saw in [Chapter 1](ch01.html "Chapter 1. Linux Access Controls"),
+    *Linux Access Controls*, these permissions have some flaws. It follows that binder
+    needs to be modified to support SELinux because the binder driver does not otherwise
+    implement hooks to any additional security modules. To do this, a patch was sent
+    to Google by Stephen Smalley implementing these features. The patch implements
+    new hooks for consumers of what is known as the **Linux Security Module** (**LSM**)
+    framework. This framework allows LSMs such as SELinux to be invoked and then make
+    access decisions. The details of this patch are outside the scope of this book.
+    It suffices that binder was patched, and SELinux can now control its capabilities
+    with MAC.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Stephen Smalley is a computer security researcher at the Trusted Systems Research
+    organization of the United States **National Security Agency** (**NSA**) and leads
+    the SE Android project. The patch he sent to Google to modify the binder for SELinux
+    hooks can be viewed at [https://android-review.googlesource.com/45984](https://android-review.googlesource.com/45984).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Because of the integration of SELinux and binder, SE for Android has an additional
+    class with access vectors (a fancy way of saying, "things it can do.") In previous
+    examples from [Chapter 2](ch02.html "Chapter 2. Mandatory Access Controls and
+    SELinux"), *Mandatory Access Controls and SELinux*, the target class is `food`.
+    Similarly, the SELinux class for binder is `binder`. It defines the access vectors
+    listed in the following bullets. If you recall, the access vector for `food` in
+    [Chapter 2](ch02.html "Chapter 2. Mandatory Access Controls and SELinux"), *Mandatory
+    Access Controls and SELinux*, was `eat`. The following access vectors are available
+    for binder:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`impersonate`: This creates fake credentials over a binder interface'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`call`: This binds a client to a binder interface and uses it'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`set_context_mgr`: This sets the context manager'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`transfer`: This transfers a file descriptor'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Zygote – application spawn
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Non-native applications in Android historically make use of the Dalvik **virtual
+    machine** (**VM**) and run a proprietary byte code called DEX. Applications are
+    also spawned from a common process called zygote through a mechanism called fork
+    and specialize. Zygote itself is a process that has the Dalvik VM and some common
+    classes, such as `java.util.*`, loaded into the VM. Fork and specialize is the
+    mechanism of going from a zygote to a child process of zygote that executes some
+    application code.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Versions of Android since Android 4.4 are replacing this with the **Android
+    RunTime** (**ART**). It is speculated that Android L will not use the Dalvik VM
+    at all.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first part of this process involves a socket connection. Zygote listens
+    over this socket for an application's spawn requests. Some of the arguments include
+    the package name of the application that should be loaded and a flag that indicates
+    whether the application is the system server or not. Once the spawn command is
+    received, the fork can proceed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A great way to start tracing back this initial socket connection is with the
+    `app_process` tool. This command starts a process with Dalvik. For more information,
+    navigate to `frameworks/base/cmds/app_process/app_main.cpp`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After the fork, the now parent zygote returns to listen on the socket for more
+    requests. The child process is executing and a few things need to happen. The
+    first thing that needs to happen is a UID and GID switch. Zygote runs with the
+    UID root, and thus to meet the Android security model, it must set the child process
+    UIDs and GIDs to something other than root. The child process will set UID and
+    GID as defined by the package manager and the supplementary GIDs. It also sets
+    the process' resource limits and scheduling policy. Then it clears the capability
+    set of the application to zero (no capabilities). In the case of the system server,
+    the capability set is not cleared but rather set as one of the arguments sent
+    over the socket. After this point, the child process runs. Code further along
+    in the zygote loads the class, and other system interactions, such as intent delivery,
+    are used to start an activity. These parts of zygote are beyond the scope of this
+    book.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The property service
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The property service in Android provides a shared mapping of key-value pairs
+    between all processes. All processes on an Android system share some pages of
+    memory dedicated to this system. However, the mapping in all processes is `READ
+    ONLY` with the exception of init processes, which have a `READ/WRITE` mapping.
+    The property service system resides within init, and it is this system's job to
+    update or add values to this key-value map. In order to change a value, you must
+    go through property service, but anyone can read a value. It's imperative that
+    if you use property service, you do not store sensitive information. It is primarily
+    intended to be used for small values, not a generic large-value store. What follows
+    is only a very basic introduction to the property service. A thorough investigation
+    will be conducted later.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To set a property, you must send a request using a Unix domain socket to the
+    property service. Property service will then parse the request and set the value
+    if the permissions allow it to do so. Properties have period-delimited segments,
+    like package names, that have permissions assigned to it statically at build time.
+    The permissions and property service code can be found together at `system/core/property_service.c`.
+    The arguments expected over this interface include a command, the property name,
+    and the property value. For those who are curious, these are all defined in the
+    structure `prop_msg`, which is defined in `bionic/libc/include/sys/_system_properties.h`.
+    Upon receiving the message, the property service checks the peer socket's credentials
+    against the static map of permissions. If the UID is root, it can write to anything,
+    otherwise it must be a match for either UID or GID. In very new Android versions,
+    or those with the patch applied from [https://android-review.googlesource.com/#/c/98428/](https://android-review.googlesource.com/#/c/98428/),
+    both the permission checking and hardcoded DAC have been replaced by SELinux controls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since the permission to set a value is controlled by user space using DAC, it
+    follows that the property set mechanisms share the inherent rooting vulnerability
+    flaw. With this in mind, the property service code was augmented in SELinux. Since
+    this is a user space process, it uses the SELinux API through the kernel to program
+    something called a user space object manager. This just means the user space application
+    checks with SELinux in the kernel to ensure it can perform an activity… in this
+    case, set on a property.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android has some very unique properties. From its use of the common UID and
+    GID model to promote its security goals, to its custom binder IPC mechanism, these
+    systems have implications on the security and functionality of the device. In
+    the next chapter, these systems will come back into play as we get the UDOO up
+    and running and enable SE for Android on it.
+  prefs: []
+  type: TYPE_NORMAL

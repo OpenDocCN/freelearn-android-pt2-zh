@@ -1,0 +1,541 @@
+- en: Chapter 1. Linux Access Controls
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android is an operating system composed of two distinct components. The first
+    component is a forked mainline Linux kernel and shares almost everything in common
+    with Linux. The second component, which will be discussed later, is the user space
+    portion, which is very custom and Android specific. Since the Linux kernel underpins
+    this system and is responsible for the majority of access control decisions, it
+    is the logical place to begin a detailed look at Android.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter we will:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examine the basics of Discretionary Access Control
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduce Linux permissions flags and capabilities
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Trace syscalls as we validate access policies
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Make the case for more robust access control technology
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Discuss Android exploits that leverage problems with Discretionary Access Control
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Linux's default and familiar access control mechanism is called **Discretionary
+    Access Control** (**DAC**). This is just a term that means permissions regarding
+    access to an object are at the discretion of its creator/owner.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Linux, when a process invokes most system calls, a permission check is performed.
+    As an example, a process wishing to open a file would invoke the `open()` syscall.
+    When this syscall is invoked, a context switch is performed, and the operating
+    system code is executed. The OS has the ability to determine whether a file descriptor
+    should be returned to the requesting process or not. During this decision-making
+    process, the OS checks the access permissions of both the requesting process and
+    the target file it wishes to obtain the file descriptor to. Either the file descriptor
+    or EPERM is returned, dependent on whether the permission checks pass or fail
+    respectively.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Linux maintains data structures in the kernel for managing these permission
+    fields, which are accessible from user space, and ones that should be familiar
+    to Linux and *NIX users alike. The first set of access control metadata belongs
+    to the process, and forms a portion of its credential set. The common credentials
+    are user and group. In general, we use the term group to mean both primary group
+    and possible secondary group(s). You can view these permissions by running the
+    `ps` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, we have processes running as the users `root` and `bookuser`.
+    You can also see that their primary group is only one part of the equation. Processes
+    also have a secondary set of groups called supplementary groups. This set might
+    be empty, indicated by the dash in the `SUPGRP` field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The file we wish to open, referred to as the target object, target, or object
+    also maintains a set of permissions. The object maintains `USER` and `GROUP`,
+    as well as a set of permission bits. In the context of the target object, `USER`
+    can be referred to as *owner* or *creator*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we look at the preceding command''s output, we can see that `hello.txt`
+    has a `USER` of `bookuser` and `GROUP` as `bookuser`. We can also see the permission
+    bits or flags on the left-hand side of the output. There are seven fields to consider
+    as well. Each empty field is denoted with a dash. When printed with `ls`, the
+    first fields can get convoluted by semantics. For this reason, let''s use `stat`
+    to investigate the file permissions:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first access line is the most compelling. It contains all the important
+    information for the access controls. The second line is just a timestamp letting
+    us know when the file was last accessed. As we can see, `USER` or `UID` of the
+    object is `bookuser`, and `GROUP` is `bookuser` as well. The permission flags,
+    (`0664/-rw-rw-r--`), identify the two ways that permission flags are represented.
+    The first, the octal form `0664`, condenses each three-flag field into one of
+    the three base-8 (octal) digits. The second is the friendly form, `-rw-rw-r--`,
+    equivalent to the octal form but easier to interpret visually. In either case,
+    we can see the leftmost field is 0, and the rest of our discussions will ignore
+    it. That field is for `setuid` and `setgid` capabilities, which is not important
+    for this discussion. If we convert the remaining octal digits, 664, to binary,
+    we get 110 110 100\. This binary representation directly relates to the friendly
+    form. Each triple maps to read, write, and execute permissions. Often you will
+    see this permission triple represented as `RWX`. The first triple are the permissions
+    given to `USER`, the second are the permissions given to `GROUP`, and the third
+    is what is given to `OTHERS`. Translating to conventional English would yield,
+    "The user, `bookuser`, has permission to read from and write to `hello.txt`. The
+    group, `bookuser`, has permission to read from and write to `hello.txt`, and everyone
+    else has permission only to read from `hello.txt`." Let's test this with some
+    real-world examples.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changing permission bits
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Let''s test the access controls in the example running processes as user `bookuser`.
+    Most processes run in the context of the user that invoked them (excluding `setuid`
+    and `getuid` programs), so any command we invoke should inherit our user''s permissions.
+    We can view it by issuing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: My user, `bookuser`, is `USER bookuser`, `GROUP bookuser` and `SUPGRP sudo`
+    and `fuse`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To test for read access, we can use the `cat` command, which opens the file
+    and prints its content to `stdout`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can introspect the syscalls executed by running the `strace` command and
+    viewing the output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: The output can be quite verbose, so I am only showing the relevant parts. We
+    can see that `cat` invoked the `open` syscall and obtained the file descriptor
+    `3`. We can use that descriptor to find other accesses via other syscalls. Later
+    we will see a read occurring on file descriptor `3`, which returns `365`, the
+    number of bytes read. If we didn't have permission to read from `hello.txt`, the
+    open would fail, and we would never have a valid file descriptor for the file.
+    We would additionally see the failure in the `strace` output.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now that read permission is verified, let's try write. One simple way to do
+    this is to write a simple program that writes something to the existing file.
+    In this case, we will write the line `my new text\n` (refer to `write.c`.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Compile the program using the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now run using the newly compiled program:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'On verification, you will see:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, the write succeeded and returned `12`, the number of bytes written
+    to `hello.txt`. No errors were reported, so the permissions seem in check so far.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s attempt to execute `hello.txt` and see what happens. We are expecting
+    to see an error. Let''s execute it like a normal command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is exactly what we expected, but let''s invoke it with `strace` to gain
+    a deeper understanding of what failed:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `execve` system call, which launches processes, failed with `EACCESS`. This
+    is just the sort of thing one would hope for when no execute permission is given.
+    The Linux access controls worked as expected!
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s test the access controls in the context of another user. First, we''ll
+    create a new user called `testuser` using the `adduser` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Verify the `USER`, `GROUP`, and `SUPGRP` of `testuser`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: Since the `USER` and `GROUP` do not match any of the permissions on `a.S`, all
+    accesses will be subject to the `OTHERS` permissions checks, which if you recall,
+    is read only (`0664`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Start by temporarily working as `testuser`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, we are still in bookuser's home directory, but the current user
+    has been changed to `testuser`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will start by testing `read` with the `cat` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Similar to the earlier example, `testuser` can read the data just fine, as expected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now let''s move on to write. The expectation is that this will fail without
+    appropriate access:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As expected, the syscall operation failed. When we attempt to execute `hello.txt`
+    as `testuser`, this should fail as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we need to test the group access permissions. We can do this by adding
+    a supplementary group to `testuser`. To do this, we need to exit to `bookuser`,
+    who has permissions to execute the `sudo` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now let''s check the groups of `testuser`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As a result of the previous `usermod` command `testuser` now belongs to two
+    groups: `testuser` and `bookuser`. That means when `testuser` accesses a file
+    or other object (such as a socket) with the group `bookuser`, the `GROUP` permissions,
+    rather than `OTHERS`, will apply to it. In the context of `hello.txt`, `testuser`
+    can now read from and write to the file, but not execute it.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Switch to `testuser` by executing the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Test `read` by executing the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: As before, `testuser` is able to read the file. The only difference is that
+    it can now `read` the file through the access permissions of `OTHERS` and `GROUP`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Test `write` by executing the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: This time, `testuser` was able to write the file as well, instead of failing
+    with the `EACCESS` permission error shown before.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Attempting to execute the file should still fail:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: These concepts are the foundation of Linux access control permission bits, users
+    and groups.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Changing owners and groups
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Using `hello.txt` for exploratory work in the previous sections, we have shown
+    how the owner of an object can allow various forms of access by managing the permission
+    bits of the object. Changing the permissions is accomplished using the `chmod`
+    syscall. Changing the user and/or group is done with the `chown` syscall. In this
+    section, we will investigate the details of these operations in action.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's start by granting read and write permissions only to the owner of `hello.txt`
+    file, `bookuser`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: As we can see, the file permissions are now set to only allow read and write
+    access for `bookuser`. A thorough reader could execute the commands from earlier
+    sections in this chapter to verify that permissions work as expected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Changing the group can be done in a similar fashion with `chown`. Let''s change
+    the group to `testuser`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This did not work as we intended, but what is the issue? In Linux, only privileged
+    processes can change the `USER` and `GROUP` fields of objects. The initial `USER`
+    and `GROUP` fields are set during object creation from the effective `USER` and
+    `GROUP`, which are checked when attempting to execute that process. Only processes
+    create objects. Privileged processes come in two forms: those running as the almighty
+    `root` and those that have their capabilities set. We will dive into the details
+    of capabilities later. For now, let''s focus on the `root`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s change the user to `root` to ensure executing the `chown` command will
+    change the group of that object:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: The case for more
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: You can see the `GROUP` (`GID`) is now `testuser`, and things seem reasonably
+    secure because in order to change the user and group of an object, you need to
+    be privileged. You can only change the permission bits on an object if you own
+    it, with the exception of the `root` user. This means that if you're running as
+    `root`, you can do whatever you like to the system, even without permission. This
+    absolute authority is why a successful attack or an error on a root running process
+    can cause grave damage to the system. Also, a successful attack on a non-root
+    process could also cause damage by inadvertently changing the permissions bits.
+    For example, suppose there is an unintended `chmod 0666` command on your SSH private
+    key. This would expose your secret key to all users on the system, which is almost
+    certainly something you would never want to happen. The root limitation is partially
+    addressed by the capabilities model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Capabilities model
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: For many operations on Linux, the object permission model doesn't quite fit.
+    For instance, changing `UID` and `GID` requires some magical `USER` known as `root`.
+    Suppose you have a long running service that needs to utilize some of these capabilities.
+    Perhaps this service listens to kernel events and creates the device nodes for
+    you? Such a service exists, and it's called `ueventd` or user event daemon. This
+    daemon traditionally runs as `root`, which means if it is compromised, it could
+    potentially read your private keys from your home directory and send them back
+    to the attacker. This might be an extraordinary example, but it's meant to showcase
+    that running processes as `root` can be dangerous. Suppose you could start a service
+    as the `root` user and have the process change its `UID` and `GID` to something
+    not privileged, but retain some smaller set of privileged capabilities to do its
+    job? This is exactly what the capabilities model in Linux is.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The capabilities model in Linux is an attempt to break down the set of permissions
+    that `root` has into smaller subsets. This way, processes can be confined to the
+    set of minimum privileges they need to perform their intended function. This is
+    known as least privilege, a key ideology when securing systems that minimizes
+    the amount of damage a successful attack can do. In some instances, it can even
+    prevent a successful attack from occurring by blocking an otherwise open attack
+    vector.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are many capabilities. The man page for capabilities is the de facto
+    documentation. Let''s take a look at the `CAP_SYS_BOOT` capability:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This means a process running with this capability can reboot the system. However,
+    that process can''t arbitrarily change `USERS` and `GROUP` as it could if it was
+    running as `root` or with `CAP_DAC_READ_SEARCH`. This limits what an attacker
+    can do:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now suppose the case where our restart process runs with `CAP_CHOWN`. Let's
+    say it uses this capability to ensure that when a restart request is received,
+    it backs up a file from each user's home directory to a server before restarting.
+    Let's say this file is `~/backup`, the permissions are 0600, and `USER` and `GROUP`
+    are the respective user of that home directory. In this case, we have minimized
+    the permissions as best we can, but the process could still access the users SSH
+    keys and upload those either by error or attack. Another approach to this would
+    be to set the group to `backup` and run the process with `GROUP backup`. However,
+    this has limitations. Suppose you want to share this file with another user. That
+    user would require a supplementary group of `backup`, but now the user can read
+    *all* of the backup files, not just the ones intended. An astute reader might
+    think about the `bind` mounts, however the process doing the `bind` mounts and
+    file permissions also runs with some capability, and thus suffers from this granularity
+    problem as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The major issue, and the case for another access control system can be summarized
+    by one word, *granularity*. The DAC model doesn't have the granularity required
+    to safely handle complex access control models or to minimize the amount of damage
+    a process can do. This is particularly important on Android, where the entire
+    isolation system is dependent on this control, and a rogue root process can compromise
+    the whole system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android's use of DAC
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the Android sandbox model, every application runs as its own `UID`. This
+    means that each app can separate its stored data from one another. The user and
+    group are set to the `UID` and `GID` of that application, so no app can access
+    the private files of an application without the application explicitly performing
+    `chmod` on its objects. Also, applications in Android cannot have capabilities,
+    so we don't have to worry about capabilities such as `CAP_SYS_PTRACE`, which is
+    the ability to debug another application. In Android, in a perfect world, only
+    system components run with privileges, and applications don't accidentally `chmod`
+    private files for all to read. This issue was not corrected by the current AOSP
+    SELinux policy due to app compatibility, but could be closed with SELinux. The
+    proper way to share data between applications on Android is via binder, and sharing
+    file descriptors. For smaller amounts of data, the provider model suffices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Glancing at Android vulnerabilities
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: With our newly found understanding of the DAC permission model and some of its
+    limitations, let's look at some Android exploits against it. We will cover only
+    a few exploits to understand how the DAC model failed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Skype vulnerability
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: CVE-2011-1717 was released in 2011\. In this exploit, the Skype application
+    left a SQLite3 database world readable (something analogous to 0666 permissions).
+    This database contained usernames and chat logs, and personal data such as name
+    and e-mail. An application called Skypwned was able to demonstrate this capability.
+    This is an example of how being able to change the permissions on your objects
+    could be bad, especially when the case opens `READ` to `OTHERS`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: GingerBreak
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: CVE-2011-1823 showcases a root attack on Android. The volume management daemon
+    (vold) on Android is responsible for the mounting and unmounting of the external
+    SD card. The daemon listens for messages over a NETLINK socket. The daemon never
+    checked where the messages were sourced from, and any application could open and
+    create a NETLINK socket to send messages to vold. Once the attacker opened the
+    NETLINK socket, they sent a very carefully crafted message to bypass a sanity
+    check. The check tested a signed integer for a maximum bound, but never checked
+    it for negativity. It was then used to index an array. This negative access would
+    lead to memory corruption and, with a proper message, could result in the execution
+    of arbitrary code. The GingerBreak implementation resulted in an arbitrary user
+    gaining root privileges, a textbook privilege execution attack. Once rooted, the
+    device's sandboxes were no longer valid.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rage against the cage
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: CVE-2010-EASY is a `setuid` exhaustion via fork bomb attack. It successfully
+    attacks the `adb` daemon on Android, which starts life as root and downgrades
+    its permissions if root is not needed. This attack keeps `adb` as `root` and returns
+    a root shell to the user. In Linux kernel 2.6, the `setuid` system call returns
+    an error when the number of running processes `RLIMIT_NPROC` is met. The `adb`
+    daemon code does not check the return of `setuid`, which leaves a small race window
+    open for the attacker. The attacker needs to fork enough processes to reach `RLIMIT_NPROC`
+    and then kill the daemon. The `adb` daemon downgrades to shell `UID` and the attacker
+    runs the program as shell `USER`, thus the kill will work. At this point, the
+    `adb` service is respawned, and if `RLIMIT_NPROC` is maxed out, `setuid` will
+    fail and `adb` will stay running as root. Then, running `adb` shell from a host
+    returns a nice root shell to the user.
+  prefs: []
+  type: TYPE_NORMAL
+- en: MotoChopper
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: CVE-2013-2596 is a vulnerability in the `mmap` functionality of a Qualcomm video
+    driver. Access to the GPU is provided by apps to do advanced graphics rendering
+    such as in the case of OpenGL calls. The vulnerability in `mmap` allows the attacker
+    to `mmap` kernel address space, at which point the attacker is able to directly
+    change their kernel credential structure. This exploit is an example where the
+    DAC model was not at fault. In reality, outside of patching the code or removing
+    direct graphics access, nothing but programming checks of the `mmap` bounds could
+    have prevented this attack.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The DAC model is extremely powerful, but its lack of fine granularity and use
+    of an extraordinarily powerful `root` user leaves something to be desired. With
+    the increasing sensitivity of mobile handset use, the case to increase the security
+    of the system is well-founded. Thankfully, Android is built on Linux and thus
+    benefits from a large ecosystem of engineers and researchers. Since the Linux
+    Kernel 2.6, a new access control model called **Mandatory Access Controls (MAC)**
+    was added. This is a framework by which modules can be loaded into the kernel
+    to provide a new form of access control model. The very first module was called
+    SELinux. It is used by Red Hat and others to secure sensitive government systems.
+    Thus, a solution was found to enable such access controls for Android.
+  prefs: []
+  type: TYPE_NORMAL

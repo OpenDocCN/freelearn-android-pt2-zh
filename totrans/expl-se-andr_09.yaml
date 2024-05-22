@@ -1,0 +1,576 @@
+- en: Chapter 9. Adding Services to Domains
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the previous chapter, we covered the process of getting file objects in
+    the proper domain. In most cases, the file object is the target. However, in this
+    chapter, we will:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Emphasize labeling processes—notably Android services run and managed by init
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Manage the ancillary associated objects created by init
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Init – the king of daemons
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The init process is vital in a Linux system, and Android is not special in this
+    case. However, Android has its own implementation of init. Init is the first process
+    on the system, and thus has a **Process ID** (**PID**) of 1\. All other processes
+    are the result of a direct `fork()` from init, thus all processes eventually are
+    parented under init, either directly or indirectly. Init is responsible for cleaning
+    up and maintaining these processes. For instance, any child process whose parent
+    dies is reparented under init by the kernel. In this way, init can call `wait()`
+    (`man 2 wait` for more details) to clean up after the process when it exits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: A process which has terminated but has not had `wait()` called is a **zombie**
+    process. The kernel must keep the process data structures around until this call.
+    Failing to do so will consume memory indefinitely.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Since init is the root of all processes, it also provides a mechanism to declare
+    and execute commands through its own scripting language. Files using this language
+    to control init are referred to as init scripts, and we have already modified
+    some of them. In the source tree, we used the `init.rc` file, which you can reach
+    by navigating to `device/fsl/imx6/etc/init.rc`, but on the device, it is packaged
+    with the ramdisk at `/init.rc`, and is made available to init, which is also packaged
+    in the ramdisk at `/init`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To add a service to the init script, you can modihe `init.r`e and add a declaration,
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, `name` is the service name, `path` is the path to the executable, and
+    `argument` are space delimited argument strings to be delivered to the executable
+    in its `argv` array.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'For example, here is the service declaration for `rild`, the **Radio Interface
+    Layer Daemon** (**RILD**):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: It is often the case that additional service options can and need to be added.
+    The init script `service` statement supports a rich assortment of options. For
+    the complete list, refer to the informational file located at `system/core/init/readme.txt`.
+    Additionally, we covered the SE for Android-specific changes in [Chapter 3](ch03.html
+    "Chapter 3. Android Is Weird"), *Android Is Weird*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Continuing to dissect `rild`, we see that the rest of the declaration in the
+    UDOO `init.rc` is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The interesting thing to note here is that it creates quite a few sockets.
+    The `socket` keyword in `init.rc` is described by the `readme.txt` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'From the source tree file `system/core/init/readme.txt`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Create a Unix domain socket named `/dev/socket/<name>` and pass its `fd` to
+    the launched process. The type must be `dgram`, `stream`, or `seqpacket`. The
+    `user` and `group` IDs default to `0`. The SELinux security context for the socket
+    is `context`. It defaults to the service security context, as specified by `seclabel`,
+    or is computed based on the service executable file's security context.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Let's take a look at this directory and see what we've found.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: This raises the question, "How did it get into that domain?" Using our knowledge
+    from the previous chapter, we know that **/** `dev` is a `tmpfs`, so we know that
+    it did not enter this domain through `xattrs`. It must be either a code modification
+    or a type transition. Let's check whether it's a type transition. If it is, we
+    would expect to see a statement in the expanded `policy.conf`. SELinux policy
+    is based on the `m4` macro language. During builds, it is expanded into `policy.conf`,
+    and then compiled. [Chapter 12](ch12.html "Chapter 12. Mastering the Tool Chain"),
+    *Mastering the Tool Chain*, has more details on this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can discover this by using sesearch to find type transitions for `adbd_socket`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see from the empty output, there are zero such lines, so it's not
+    the policy which is doing this but a code change.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In Linux, processes are created with `fork()` followed by `exec()`. Because
+    of this, we are able to afford great keywords to search the init daemon. We suspect
+    that the code to set up the socket is just after a call to `fork()` in the child
+    processes and before a call to `exec()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So, the fork we are searching for is on line 235 of `init.c`; let''s open `init.c`
+    in a text editor and take a look. We will find the following snippet to examine:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: According to `man 2 fork`, the return code of `fork()` in the child process
+    is `0`. The child process executes within this `if` statement and the parent skips
+    it. The function `create` **_** `socket()` also seems interesting. It appears
+    to take the name of the service, the type of socket, permissions flags, `uid`,
+    `gid`, and `socketcon`. What is `socketcon`? Let's check whether we can trace
+    back to where it is set.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'If we look before `fork()`, we can see that the parent process gets its `scon`
+    based on two factors:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: The first path through the `if` statement occurs when `svc->seclabel` is not
+    null. This `svc` structure is populated with the options that can be associated
+    with a service. As a refresher from [Chapter 3](ch03.html "Chapter 3. Android
+    Is Weird"), *Android Is Weird*, `seclabel` lets you explicitly set the context
+    on a service, hardcoded to the value in `init.rc`. The `else` clause is a bit
+    more involved and interesting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In the `else` clause, we get the context of the current process by calling
+    `getcon()`. This function, since we''re running in init, should return `u:r:init:s0`
+    and store it in `mycon`. The next function, `getfilecon()` is passed the path
+    of the executable, and checks the context of the file itself. The third function
+    is the workhorse here: `security_compute_create()`. This takes the `mycon`, `fcon`,
+    and `target` class and computes the security context, `scon`. Given these inputs,
+    it tries to determine, based on policy type transitions, what the resulting domain
+    for the child should be. If no transitions are defined, `scon` will be the same
+    as `mycon`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A conditional expression within the `create_socket()` function additionally
+    determines the socket context passed. The variable `si` is a structure that contains
+    all the options to the socket statement in the init `service` section. As specified
+    by the `readme.txt` file, `si->socketcon` is the socket context argument. In other
+    words, the socket context can come from one of three places (in descending priority):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `socketcon` option on the socket option in the `service` declaration
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The `seclabel` option on the `service` keyword
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Dynamically computed from source and target contexts
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The socket context is passed to `create_socket()`. Now, let''s look at `create_socket()`.
+    This function is defined at `system/core/init/util.c:87`. The snippets of code
+    around `socket()` seem interesting:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `setsockcreatecon()` function sets the process' socket creation context.
+    This means that the socket created by the `socket()` call will have the context
+    set via `setsockcreatecon()`. After it's created, the process resets it to the
+    original by using `setsockcreatecon(NULL)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next bit of interesting code is around `bind()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we have set the file creation context. The functions are analogous to
+    `setsock_creation()`, but work for filesystem objects. However, the `selabel_lookup()`
+    function looks in `file_contexts` for the context of the file. The part you might
+    be missing is that the call to `bind()`, for path-based sockets, creates a file
+    at the path specified in `sockaddr_un struct`. So, the socket object and the filesystem
+    node entry are distinctly separate things and can have different contexts. Typically,
+    the socket belongs to the process' context, and the filesystem node is given some
+    other context.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dynamic domain transitions
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'We saw init computing of the contexts for the init sockets, but we never encountered
+    it while setting the domains for child processes. In this section, we will dive
+    into the two techniques to do so: explicit setting with an init script and sepolicy
+    dynamic domain transitions.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first way to the domains for child processes is with the `seclabel` statement
+    in the init script service declaration. Within the child processes execution after
+    `fork()`, we find this statement:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: To clarify, the `svc` variable is the structure that contains the service options
+    and arguments, so `svc->seclabel` is `seclabel`. If it's set, it calls `setexeccon()`,
+    which sets the process' execution context for anything it executes via `exec()`.
+    Further down, we see that the `exec()` function calls are made. The `exec()` syscall
+    never returns on success; it only returns on failure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The other way to set the domains for child processes, which is the preferred
+    way, is by using sepolicy. It''s preferred because the policy has no dependencies
+    on anything else. By hardcoding a context into init, you''re coupling a dependency
+    between the init script and the sepolicy. For instance, if the sepolicy removes
+    a type that was hardcoded in the init script, the init `setcon` will fail, but
+    both systems will compile correctly. If you remove a type for a type transition
+    and leave the transition statement, you can catch the error at compile time. Since
+    we looked at the `rild` service statement, let''s look at the `rild.te` policy
+    file located in `sepolicy`. We should search for the `type_transition` keyword
+    in this file using `grep`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'No instances of `type_transition` are found, but this keyword must exist, similar
+    to files. However, it can be hidden in an unexpanded macro. The SELinux policy
+    files are in the m4 macro language, and they get expanded prior to being compiled.
+    Let''s look through `rild.te` and check whether we can find some macros. They
+    are distinguished and look like functions with parameters. The first macro we
+    come across is the `init_daemon_domain(rild)` macro. Now, we need to find this
+    macro''s definition in `sepolicy`. The m4 language uses the `define` keyword to
+    declare macros, so we can search for that:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Our macro is declared in `te_macros`, which coincidentally holds all the macros
+    related to **type enforcement** (**TE**). Let''s take a look at what this macro
+    does in more detail. First, its definition is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The commented lines in the preceding code (lines starting with `#` in m4),
+    state that it sets up a transition from init to the daemon domain. This sounds
+    like something we want. However, both the encompassing statements are macros,
+    and we need to recursively expand them. We will start with `domain_auto_trans()`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The comment here indicates that we are headed in the proper direction; however,
+    we need to keep expanding macros in our search. According to the comment, the
+    `domain_trans()` macro allows just the transition to occur. Remember that almost
+    everything in SELinux needs explicit permission from the policy in order to happen,
+    including type transitions. The last statement in the macro is the one we were
+    searching for:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you expand this statement out, you''ll get:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: What this statement conveys is that if you make an `exec()` syscall on a file
+    with the type `rild_exec`, and the executing domain is init, then make the child
+    process' domain `rild`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Explicit contexts via seclabel
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'The other option for setting contexts is very straightforward. It''s hardcoding
+    them with the init script in the `service` declaration. In the `service` declaration,
+    as we saw in [Chapter 3](ch03.html "Chapter 3. Android Is Weird"), *Android Is
+    Weird*, there were modifications to the init language. One of the additions is
+    `seclabel`. This option just lets init explicitly change the context of the service
+    to the argument given to `seclabel`. Here is an example of `adbd`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: So why use dynamic transitions on some and `seclabel` on others? The answer
+    is dependent on where you're executing from. Things such as `adbd` execute early
+    on from the ramdisk, and since the ramdisk really doesn't use per file labels,
+    you can't set up transitions properly—the target has the same context.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Relabeling processes
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Now that we are armed with dynamic process transitions, and the ability to
+    set socket contexts from init scripts is needed. Let''s attempt to relabel the
+    services that are in improper contexts. We can tell if they''re improper by checking
+    them against the following rules:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: No other process but init should be in the init context
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: No long running process should be in the `init_shell` domain
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Nothing but zygote should be in the zygote domain
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'A more comprehensive test suite is part of CTS on AOSP. Refer to the Android
+    CTS project for more details: (git clone) [https://android.googlesource.com/platform/cts](https://android.googlesource.com/platform/cts).
+    Take note of the `./hostsidetests/security/src/android/cts/security/SELinuxHostTest.java`
+    and `./tests/tests/security/src/android/security/cts/SELinux.*.java` tests.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s run some basic commands and evaluate the status of our UDOO over the
+    `adb` connection:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: We have two processes in the improper domains. The first is `watchdogd`, and
+    the second is a `sh` process. We need to find these and correct them.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will start with the mystery `sh` program. As you can recall from the previous
+    chapter, our UDOO serial console process had the context of `init_shell`, so this
+    is a good suspect. Let''s check PIDs and find out. From a UDOO serial console
+    execute:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can compare this PID to the PID field in the `adb shell ps` output here (PID
+    field is the third field, index 2), and as you can see, we have a match.
+  prefs: []
+  type: TYPE_NORMAL
+- en: From there, we need to find the service declaration for this. We know that it
+    is in `init.rc` since it's running in `init_shell`, a type that can only be transitioned
+    to by init directly as per the SELinux policy. Also, init only starts processing
+    things by service declarations, so in order to be in `init_shell`, you must start
+    by init via a service declaration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Use `sesearch` to find out such things on the compiled sepolicy binary:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we search `init.rc` for the UDOO, which is in `udoo/device/fsl/imx6/etc`,
+    we can `grep` its contents for `/system/bin/sh`, the command in question. If we
+    do that, we will find:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s look at `499` since we don''t have anything to do with Wi-Fi:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If this is the service in question, we should be able to disable it, and verify
+    that our serial connection no longer works:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'My live serial connection died at:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now that we have verified what it is, we can start it back up:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With the system back in a working state, we now need to address the best way
+    to correct the label on this service. We have two options:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Using an explicit `seclabel` entry in `init.rc`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Using a type transition
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The option we will use here is the first. The reason is because init executes
+    shell from time to time, and we don't want all of these in the console processes
+    domain. We want least privilege to segregate the running processes. By using the
+    explicit seclabel, we won't change any of the other shells that are executed along
+    the way.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To do this, we need to modify the `init.rc` entry for console; add:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The proper domain for this executable is `shell`, since it should have the
+    same permission set as `adb shell`. After you make this change, recompile the
+    bootimage, flash, and then reboot. We can see that it is now in a shell domain.
+    To verify, execute the following from a UDOO serial connection:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Alternatively, execute the following command using `adb`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next one we need to take care of is `watchdogd`. The `watchdogd` process
+    already has a domain and allows rules in `watchdog.te`; so we just need to add
+    a `seclabel` statement and get it into this proper domain. Modify `init.rc`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To verify using `adb`, execute the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: At this point, we have made actual policy corrections that the UDOO was in need
+    of. However, we need to practice the use of dynamic domain transitions. A good
+    teaching example would have subshells from a shell in their own domain. Let's
+    start by defining a new domain and setting up the transition.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will create a new `.te` file in `sepolicy` called `subshell.te`, and edit
+    it so that its contents contain the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, the `mmm` trick used earlier in the book can be used to compile just the
+    policy Also, use `adb push` command to push the new policy to `/data/security/current/sepolicy`
+    and execute `setprop` to reload the policy, just as we did in [Chapter 8](ch08.html
+    "Chapter 8. Applying Contexts to Files"), *Applying Contexts to Files*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'To test this, we should be able to type `sh`, and verify the domain transition.
+    We will start by getting our current context:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then execute a shell by doing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: We were able to use a dynamic type transition to get a new process in a domain.
+    If you couple this with labeling files, as presented in [Chapter 8](ch08.html
+    "Chapter 8. Applying Contexts to Files"), *Applying Contexts to Files,* you have
+    a powerful tool to control process permissions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Limitations on app labeling
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'A fundamental limitation of these dynamic process transitions is that they
+    require an `exec()` system call to be made. Only then can SELinux compute the
+    new domain, and trigger the context switch. The only other way to do this is by
+    modifying the code, which essentially is what init is doing when you specify `seclabel()`.
+    The init code sets the exec context for its process, causing the next `exec` to
+    end up in the specified domain. In fact, we can see this in the `init.c` code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, the child process gets its execute context set by a call to `setexeccon()`
+    before the `exec()` system call hands over control to a new binary image. In Android,
+    applications are not spawned this way, and no `exec()` syscall exists in the process
+    creation path; so a new mechanism will be needed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we learned how to label processes via type transitions as well
+    as via the `seclabel` statements. We also investigated how init manages service
+    sockets, and how to properly label them. We then corrected the process contexts
+    for the serial console as well as the watchdog daemon.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Applications in Android never have an explicit call to `exec()` to start their
+    program execution. Since there is no `exec()`, we have to label applications with
+    a code change. In the next chapter, we will address how this happens, and how
+    applications get labeled.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,313 @@
+- en: Chapter 11. Labeling Properties
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we will cover how to label properties via the `property_contexts`
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Properties are a unique Android feature we learned about in [Chapter 3](ch03.html
+    "Chapter 3. Android Is Weird"), *Android Is Weird*. We want to label these to
+    restrict setting of our properties to only the domains that should set them, preventing
+    a classic DAC root attack from inadvertently changing the value. In this chapter,
+    we will learn to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Create new properties
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Label new and existing properties
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Interpret and deal with property denials
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Enumerate special Android properties and their behaviors
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Labeling via property_contexts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'All properties are labeled using the `property_contexts` file, and its syntax
+    is similar to `file_contexts`. However, instead of working on file paths, it works
+    on property names or property keys (properties in Android are a key-value store).
+    The property keys themselves are typically delimited with periods (`.`). This
+    is analogous to `file_contexts`, except the slash (`/`) becomes a period. Some
+    sample properties and their entries in `property_contexts` would look like the
+    following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice how all `ctl.` properties are labeled with the `ctl_default_prop` type,
+    but `ctl.ril-daemon` has a different type label of `ctl_rildaemon_prop`. These
+    are representative of how you can start generically and move to more specific
+    values/types as necessary.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Additionally, anything not explicitly labeled defaults to `default_prop` through
+    a "match all" expression in `property_contexts`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Permissions on properties
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'One can view the current properties on the system, and create new ones with
+    the command line utilities `getprop` and `setprop`, as shown in the following
+    code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Recall from [Chapter 3](ch03.html "Chapter 3. Android Is Weird"), *Android
+    Is Weird*, that properties are mapped into everyone''s address space, thus anyone
+    can read them. However, not everyone can set (write) them. The DAC permission
+    model for properties is hardcoded into `system/core/init/property_service.c`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: You must have the UID or GID in the `property_perms` array to set any property
+    that the prefix matches with. For instance, in order to set the `selinux.` properties,
+    you must be UID `AID_SYSTEM` (uid 1000) or root. Yes, root can always set a property,
+    and this is a key benefit to applying SELinux to Android properties. Unfortunately,
+    there is no way to `getprop -Z` to list the properties and their labels, like
+    with `ls -Z` and files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Relabeling existing properties
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In order to become more comfortable with labeling properties, let''s relabel
+    the `wifi.interface` property. First, let''s verify its context by causing a denial
+    and viewing the denial log, as shown in the following code:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: An interesting action occurred when we executed the `setprop` command over the
+    UDOO serial console. The AVC denial record was printed out. This is because the
+    serial console includes anything printed from the kernel using `printk()`. What
+    happens here is the `init` process, which controls `setprops` as detailed in [Chapter
+    3](ch03.html "Chapter 3. Android Is Weird"), *Android Is Weird*, writes a message
+    to the kernel log. This log message shows up when we execute our `setprop` command.
+    If you run this through `adb shell`, you'll see the message on the serial console,
+    but not in the `adb` console. To do this, however, you must reboot your system
+    because SELinux only prints denial records once while in permissive mode.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The command using `adb shell` is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The command using the serial console is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: From the denial output, we can see that the property type label is `default_prop`.
+    Let's change this to `wifi_prop`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We start by editing `property.te` in the `sepolicy` directory to declare the
+    new type to label these properties by appending the following line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With the type declared, the next step is to apply the label by modifying `property_contexts`
+    by adding the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Build the policy, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Push the new `property_contexts` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Trigger a dynamic reload:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Ok, that didn't work! The `property_contexts` file must be in `/data/security`,
+    not `/data/security/current`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To discover this, search the `libselinux/src/android.c` file. There is no mention
+    of `property_contexts` in this file; thus, it must be mentioned elsewhere. This
+    leads us to search `system/core`, which contains the property service for uses
+    of that file. The matches are on code in `init.c` to load the file from priority
+    locations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s push the `property_contexts` file to the proper location and try again:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Wow! It failed yet again. This exercise was meant to point out how tricky this
+    can be if you forget to do something. No informative denial messages were displayed,
+    only an indicator that it *was* denied. This is because the `sepolicy` file that
+    contains the type declaration for `wifi_prop` was never pushed. This causes `check_mac_perms()`
+    in `system/core/init/property_service.c` to fail in the `selinux_check_access()`
+    function because it cannot find the type to compute the access check against,
+    even though the look up in `property_contexts` succeeded. There are no verbose
+    error logs from this.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can correct this by ensuring that the `sepolicy` is pushed as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now we see a denial message, as expected, but the label of the target (or property)
+    is `u:object_r:wifi_prop:s0`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now with the target property labeled, you can allow access to it. Note that
+    this is a contrived example, and in the real world, you probably would *not* want
+    to allow access from shell to most properties. The policy should align with your
+    security goals and the property of least privilege.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We can add an `allow` rule in `shell.te` in the following way:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Compile the policy, push it to the phone, and trigger a dynamic reload:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now attempt to set the `wifi.interface` property and notice the lack of denial.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: Creating and labeling new properties
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: All properties are dynamically created in the system using `setprop` calls or
+    function calls that do the equivalent from C (`bionic/libc/include/sys/system_properties.h`)
+    and Java (`android.os.SystemProperties`). Note that the `System.getProperty()`
+    and `System.setProperty()` Java calls work on application private property stores
+    and are not tied into the global one.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For DAC controls, you need to modify `property_perms[]` as noted earlier to
+    have permissions for non-root users to create or set the property. Note that root
+    can always `set` and `create`, unless constrained by SELinux policy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Suppose we want to create the `udoo.name` and `udoo.owner` properties; we only
+    want the root user and shell domain to access them. We could create them like
+    this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice the denial shows these as being `default_prop` type. To correct this,
+    we would relabel these, exactly as we did in the preceding section, *Relabeling
+    existing properties*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Special properties
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In Android, there are some special properties that have different behaviors.
+    We enumerate the property names and meanings in the proceeding sections.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Control properties
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Properties that start with `ctl` are reserved as control properties for controlling
+    services through `init`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`start`: Starts a service (`setprop ctl.start <servicename>`)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`stop`: Stops a service (`setprop ctl.stop <servicename>`)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`restart`: Restarts a service (`setprop ctl.restart <servicename>`)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Persistent properties
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Any property starting with the prefix `persist` persists across reboots and
+    is restored. The data is saved to `/data/property` in files of the same name as
+    the property.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: SELinux properties
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `selinux.reload_policy` property is special. As we have seen, its use is
+    for triggering a dynamic reload event.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we have examined how to create and label new and existing properties
+    and some of the oddities that occur when doing so. We have also examined the hard
+    coded DAC permission table for properties in `property_service.c`, as well as
+    the hardcoded specialty properties like the `ctl.` family. In the next chapter,
+    we look at how the tool chain builds and creates all the policy files we have
+    been using.
+  prefs: []
+  type: TYPE_NORMAL

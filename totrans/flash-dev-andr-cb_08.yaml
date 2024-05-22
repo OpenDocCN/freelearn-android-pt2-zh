@@ -1,0 +1,1254 @@
+- en: 'Chapter 8. Abundant Access: File System and Local Database'
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'This chapter will cover the following recipes:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Opening a local file from device storage
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Saving a file to device storage
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Saving data across sessions through Local Shared Object
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Storing application state automatically by using Flex
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Creating a local SQLite database
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Providing a default application database
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Automating database tasks with FlexORM
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduction
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Many file system attributes are shared between desktop and mobile, yet there
+    are specific use cases on Android devices for handling application state preservation
+    in case of session interruption, or to simply preserve data across sessions. This
+    chapter will cover tips for loading and saving individual files, creating and
+    managing local databases, dealing with local shared objects, and preserving navigation
+    state using the mobile Flex framework.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Opening a local file from device storage
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Oftentimes, we may want to read certain files from the application storage or
+    from some other location on our Android device. In the following example, we will
+    perform this action upon a simple text file, but this can also be used to read
+    in all sorts of files from image data to encoded `MP3` audio bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Employ a variety of classes within the `flash.filesystem` package to open local
+    file data within an application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will need to import the following classes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will now go about defining a set of constants and variables to be used throughout
+    the application. Initialize a `String` constant to retain the file path, which
+    will be used within the example. We will also require a `File` and accompanying
+    `FileStream` in order to open the text file within our application, along with
+    a `TextField` and `TextFormat` pair to serve as our final output display:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, we will continue to set up our `TextField`, apply a `TextFormat`, and
+    add it to the `DisplayList`. Here, we create a method to perform all of these
+    actions for us:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: To actually open the file within our application, we will first instantiate
+    our `File` object and assign it to the current application directory through `File.applicationDirectory`.
+    We can then specify a file within that location by passing in the constant, which
+    declares it through the `File.resolvePath()` method.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The second portion of this process involves instantiating a `FileStream`, which
+    will allow us to perform the remainder of our processes. Register an event listener
+    of type `Event.COMPLETE` upon the `FileStream`. Finally, invoke `FileStream.openAsync()`
+    passing in the previously defined `File` as the first parameter followed by the
+    `FileMode`. We are going to simply read in the bytes of this file, so use `FileMode.READ:`
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Once the `FileStream` has completed its work, our `fileOpened` method will
+    fire, allowing us to read in the `File` bytes as plain text (specified by `File.systemCharset)`
+    and assign the text to our `TextField`. Whenever we are finished working with
+    a `FileStream` object, we must invoke `close()` upon it:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: When we compile and run our application upon a device, it should appear as follows:![How
+    to do it...](img/1420_08_01.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We can open a file within our application by creating a `File` reference and
+    opening that reference through a `FileStream`. Once the process is complete, we
+    can then work with the contents of the file itself, either through direct assignment
+    or through the processing of the bytes within. In this example, we are reading
+    in the contents of a text file and outputting that to a basic `TextField` in our
+    application. The `FileStream` class has many different methods and properties,
+    which can be used more or less effectively on different file types and processes.
+    For example, we use the `FileStream.openAsync()` method here to actually open
+    the `FileStream`. We could have also used use the `FileStream.open()` method just
+    as well, but using `openAsync()` will allow us to employ an event listener so
+    that we can react to the data that is loaded with confidence. The important thing
+    is to read up on these through the documentation and use what is best for your
+    particular situation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There are a number of static properties that we can leverage with the `flash.filesystem.File`
+    class for quick access to a variety of storage locations. These are listed as
+    follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`File.applicationStorageDirectory:` Unique application storage directory [read/write]'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`File.applicationDirectory:` Application installation directory [read only]'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`File.desktopDirectory:` Maps to the SD card root[read/write]'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`File.documentsDirectory:` Maps to the SD card root[read/write]'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`File.userDirectory:` Maps to the SD card root[read/write]'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'For a comprehensive look at the `File` class, please refer to the Adobe LiveDocs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/filesystem/File.html](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/filesystem/File.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: While we are opening a text file in this example, any file can be opened and
+    processed in a similar fashion. However, reading the bytes of a complex file type
+    can be incredibly difficult if you do not have a good background on how such things
+    work, and for larger files, the process can be slow on mobile devices due to the
+    amount of processing you may be performing upon the loaded bytes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Saving a file to device storage
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are a number of ways in which we can save data from an application to
+    local device storage. Audio, images, and text data can all be created by the user
+    and saved to either an application-defined location, or the user can be allowed
+    to choose, which specific location to store the file upon within an Android device.
+    In this example, we will demonstrate this through the generation of a simple text
+    file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We will allow the user to select the location and name of a basic text file
+    that they will generate within our application and save to their Android device:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will need to import the following classes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will need to declare a number of objects for use within this application.
+    A `String` constant will serve to define our file name. Next, we declare a `File`
+    object, which will be used eventually to save our text file to disk. A `TextField`
+    and `TextFormat` pair will relay text messages onto the device display. Finally,
+    declare a `Sprite` as our interactive element, along with an additional `TextField`
+    and `TextFormat` pair to serve as a button label:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, we will continue to set up our `TextField`, apply a `TextFormat`, and add
+    it to the `DisplayList`. Here, we create a method to perform all of these actions
+    for us. Be sure to set the `TextField.type` to `input` in order to allow the user
+    to type!
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now; we will continue to set up our `TextField`, apply a `TextFormat` object,
+    and construct a `Sprite` with a simple background fill using the graphics API.
+    The final step in the construction of our button is to add the `TextField` to
+    our `Sprite` and then add the `Sprite` to the `DisplayList`. Here, we create a
+    method to perform all of these actions for us along with some stylistic enhancements:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: If we run our application, we can see how everything lays out on the display.
+    We can also, at this point, freely edit the `TextField`, which serves as input
+    for our text file:![How to do it...](img/1420_08_02.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We will now assign the `Multitouch.inputMode` to respond to raw touch events
+    through the `MultitouchInputMode.TOUCH_POINT` constant. Register an event listener
+    of type `TouchEvent.TOUCH_TAP` upon the `Sprite` button. This will detect any
+    touch tap events initiated by the user and invoke a method called `onTouchTap`,
+    which contains the remainder of our logic:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'As the user interacts with the application and performs a touch tap upon the
+    button to save any text input as a file, the following method is fired. Within
+    this function, we first create a new `File` object and register an event listener
+    of type `Event.COMPLETE` before invoking `File.save()`. The `File.Save()` method
+    expects two arguments, the contents of the file to create, and the name of the
+    file:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Once the user inputs some text and hits the button to save it as a file, Android
+    will produce an overlay requesting confirmation to perform the save. The user,
+    at this point, can rename the file or save to an alternate location. By default,
+    the file is saved to the root of the device SD card. If we want to avoid a save
+    dialog, we can employ a `flash.filesystem.FileStream` class to do so:![How to
+    do it...](img/1420_08_03.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Once the save has completed successfully, we can remove our event listeners,
+    clear out the input `TextField` and change the button label `TextField` to let
+    the user know everything has saved correctly:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The following image illustrates what the user will see upon a successful save:![How
+    to do it...](img/1420_08_04.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The user can now use a file browser or some other application to open the text
+    file within the default Android text viewer, as seen in the following screenshot:![How
+    to do it...](img/1420_08_05.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Writing a plain text file to the device storage is fairly straightforward. The
+    process involves creating a `File` object and then invoking the `save()` method
+    upon that object. Using this method, we pass over the contents of the file to
+    save, along with the desired file name. Note that while we are passing over simple
+    text in this case, we can also save bytes in the form of audio files or images.
+    If we require more control over the entire process, we can also use a `FileStream`
+    object to set various encodings and write the bytes in a greater variety of ways.
+    Using a `FileStream` will also allow us to append a previously created file with
+    new information, and avoids the save dialog seen in this example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'You will need to provide any application which writes local files access to
+    write to the local file system through the Android manifest file. For more information
+    on this, see [Chapter 9](ch09.html "Chapter 9. Manifest Assurance: Security and
+    Android Permissions"), *Manifest Assurance: Security and Android Permissions.*'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Saving data across sessions through local shared object
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Shared objects have been used for years in browser-based Flash applications.
+    They are sometimes referred to as "Flash Cookies" or "Super Cookies" and do provide
+    much of the same functionality as normal browser-based cookies, but are tailored
+    more to the Flash environment. Normally explicit permissions are needed to save
+    such data using a Flash application on the web; however, using AIR frees us of
+    many of these restrictions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Create a local `SharedObject` to preserve specific application data across
+    sessions. We will use an interactive `Sprite` to illustrate this visually:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will need to import the following classes:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Then we will need to declare a number of objects for use within this application.
+    Declare a `SharedObject`, which will be used to preserve session data. The `Point`
+    object will be used to write coordinates onto the `SharedObject`. A `Sprite` will
+    serve as the user interaction element and visual reference for this example. Finally,
+    declare a `TextField` and `TextFormat` pair to relay text messages onto the device
+    display:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, we will continue to set up our `TextField`, apply a `TextFormat`, and
+    add it to the `DisplayList`. Here, we create a method to perform all of these
+    actions for us:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will need to set up an interactive object for the user to move around based
+    on touch. The coordinates of this object will eventually be preserved across application
+    sessions. Let''s create a basic circular `Sprite` with the graphics API:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Before moving too far into this example, we must perform some actions upon the
+    `SharedObject` we've declared. First, invoke `SharedObject.getLocal("airandroid")`
+    upon our `SharedObject` instance. This will read in the `SharedObject` called
+    `airandroid`, if it exists. If the `SharedObject` does not yet exist, this invocation
+    will create it for us.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Now we can check to see whether the `ballPoint` object exists within the `SharedObjectdata`
+    property. If so, this means we have gone through and completed a session previously
+    and can assign the `ballPoint x` and `y` properties to our `ballSprite:`
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: When we run the application for the first time, we are told that no shared object
+    is detected and the ball is placed in the default position:![How to do it...](img/1420_08_06.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'We will now assign the `Multitouch.inputMode` to respond to raw touch events
+    through the `MultitouchInputMode.TOUCH_POINT` constant. Register two event listeners
+    of type `TouchEvent.TOUCH_MOVE` and `TouchEvent.TOUCH_END` upon the circular `Sprite`.
+    This will detect any touch events initiated by the user and invoke certain methods
+    to deal with each:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: As `TouchEvent.TOUCH_MOVE` events are detected upon our `Sprite`, the `onTouchMove`
+    method fires, allowing us to change the `x` and `y` coordinates of the `Sprite`
+    to allow the user to drag it around the `Stage:`
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: When our application detects a `TouchEvent.TOUCH_END` event upon the `Sprite`
+    object, we will use this opportunity to wrap the `Sprite x` and `y` coordinates
+    in a `Point` object, and assign it to our `SharedObject`. To perform this action,
+    we first assign the `Sprite` coordinates to our `Point` object, which is then
+    assigned to our `SharedObjectdata` property.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'In order to write the `SharedObject` to the local file system, we must invoke
+    `SharedObject.flush()`. We can assign the `flush()` commands return value to a
+    `String` in order to monitor and respond to its status. In this example, we simply
+    use a switch/case statement to check `SharedObjectFlushStatus` and write a message
+    into our `TextField`, letting the user know what is happening:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The user can now interact with the ball by touching and moving it around the
+    display. When the user stops interacting with the ball, these coordinates are
+    saved to our local shared object:![How to do it...](img/1420_08_07.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: If the user exists and at some future time opens the application again, the
+    local shared object is read in and the ball is repositioned based upon this preserved
+    data. In order to truly test this upon a device, a developer will need to kill
+    the application using the application management features under the Android **Settings**
+    menu, or employ a third party "task killer" to ensure the application is completely
+    stopped.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '![How to do it...](img/1420_08_08.jpg)'
+  prefs:
+  - PREF_IND
+  type: TYPE_IMG
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: A `SharedObject` in Flash is a lot like the cookie implementation used in web
+    browsers. It was initially implemented in browser-based Flash to allow for a similar
+    experience when developers wanted to preserve small pieces of data across user
+    sessions. Luckily, this also works in AIR and cam be used as simple storage within
+    our Android applications.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To read a `SharedObject`, simply invoke the `getLocal()` method upon it, passing
+    in the name of the `SharedObject` we wish to retrieve. To save a `SharedObject`,
+    we assign it with new data and invoke the `flush()` method, which saves the new
+    information to disk.
+  prefs: []
+  type: TYPE_NORMAL
+- en: There's more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We use a local `SharedObject` in this instance, but could also save such data
+    to a local or remote database, a text or XML file, or even use a remote `SharedObject`
+    depending upon our needs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Storing application state automatically by using Flex
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: While there are many times in which we will need to store specific application
+    parameters in the case that our session is interrupted by other device functions
+    (such as an incoming phone call), the mobile Flex framework does provide a good
+    level of session preservation, which can be handled automatically for us.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Instruct Flex to preserve application state for us automatically by enabling
+    `persistNavigatorState:`
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will first set up a new mobile Flex project with two views, these we simply
+    call `first` and `second`. Our initial `ViewNavigatorApplication` file will appear
+    as such:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a button to our `first` view that will enable us to push the `second` view
+    from there:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Add a button to our `second` view allowing us to return to the `first` view.
+    Now we can navigate back and forth, building up our `ViewNavigator` history:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'In order to allow Flex to preserve both our `ViewNavigator` history and retain
+    our current place within that history in the event that our session is interrupted,
+    we will modify the `ViewNavigatorApplication` to include an attribute called `persistNavigatorState`
+    and we will set this to `true`. Let''s also declare a `creationComplete` event,
+    which will invoke a function called `init()`. We will use this to set up some
+    additional functionality:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a `Script` tag within the MXML and import the `FlexEvent` class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, we must declare our `init()` method, which will be invoked upon `creationComplete`.
+    Within this method, we will register an event listener of type `FlexEvent.NAVIGATOR_STATE_SAVING`
+    on our application:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Whenever our application begins to save the application state upon application
+    exit through the Flex persistence manager, our `stateSaving` method will fire,
+    allowing us to perform additional actions, or even invoke `preventDefault()` upon
+    the `FlexEvent` to allow our own logic to take command before exiting. In development
+    and testing, we can easily place a breakpoint within this method in order to introspect
+    our application state.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: When we compile and run our application, it will appear as shown in the next
+    screenshot. Flipping from our first to second view and back a number of times
+    will populate the application `ViewNavigator` history:![How to do it...](img/1420_08_09.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If our application session is interrupted by a phone call, or some other event,
+    the navigation history and current view will be preserved. When the application
+    is run again, the user will be able to continue exactly where the interruption
+    occurred:![How to do it...](img/1420_08_10.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: When using the mobile Flex framework, we have the option of enabling `persistNavigatorState`
+    within the application. This will automatically preserve our `ViewNavigator` history,
+    as well as remember which view we were interacting with upon application session
+    interruption. It does this by saving session information to a local Shared Object
+    on the device. The data which is saved includes information about the application
+    version number, the full navigation stack, and the current navigation view.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Additionally, we can intercept the `FlexEvent.NAVIGATOR_STATE_SAVING` event
+    when the application begins to exit and perform our own desired actions in its
+    place, such as saving critical application data to the file system, a Local Shared
+    Object, or even an SQLite database.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Creating a local SQLite database
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Adobe AIR has had support for embedded SQLite databases from the beginning.
+    This is one of the best ways of storing structured information within our Android
+    applications. SQLite is a software library that implements a self-contained, serverless,
+    zero-configuration, transactional SQL database engine. The database files it creates
+    are simply individual `.db` files, which can be transported across a network,
+    copied, and deleted just like any other file type.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We will create a mobile application along with a local SQLite database, which
+    can employ the SQL query language to allow the user access to add new records
+    and run a simple query based upon these entries:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, import the following classes necessary for this example:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will need to declare a number of objects for use within this application.
+    A `SQLConnection` will allow us to interact with a local SQLite database. The
+    first `TextField` and `TextFormat` pair will serve as an input field for the user
+    to type into. Another `TextField` and `TextFormat` pair will relay text messages
+    onto the device display. Finally, declare a `Sprite` as our interactive element,
+    along with a final `TextField` and `TextFormat` pair to serve as a button label:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Now, we will continue to set up our `TextField`, apply a `TextFormat`, and add
+    it to the `DisplayList`. Here, we create a method to perform all of these actions
+    for us. Be sure to set the `TextField.type` to `input` in order to allow the user
+    to type!
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'For our interactive `Sprite`, we will set up a `TextField`, apply a `TextFormat`
+    object, and construct a `Sprite` with a simple background fill using the graphics
+    API. The final step in the construction of our button is to add the `TextField`
+    to our `Sprite` and then add the `Sprite` to the `DisplayList`. Here, we create
+    a method to perform all of these actions for us along with some stylistic enhancements:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Our final visual element involves another `TextField` and `TextFormat` pair
+    to display database records upon the device:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We will now assign the `Multitouch.inputMode` to respond to raw touch events
+    through the `MultitouchInputMode.TOUCH_POINT` constant. Register an event listener
+    of type `TouchEvent.TOUCH_TAP` upon the `Sprite` button. This will detect any
+    touch tap events initiated by the user and invoke a method called `onTouchTap`
+    to perform additional actions.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To create the application database, we must first initialize our `SQLConnection`
+    object and pass a `File.db` reference into the `SQLConnection.open()` method to
+    establish the connection. If the database file does not exist, it will be automatically
+    created. In order to write SQL syntax to interact with our database, we must initialize
+    a `SQLStatement` object and assign our established `SQLConnection` to the `SQLStatement.sqlConnection`
+    property. At this point, we can pass in a `String` of SQL statements into the
+    `SQLStatement.text` property and invoke `SQLConnection.execute()` to actually
+    execute the statement. This syntax will create a table within our database with
+    two columns, `name` and `time`. If the table already exists, the statement will
+    be ignored:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: To retrieve existing records from the database, we will again initialize a `SQLStatement`
+    and assign the established `SQLConnection` to the `SQLStatement.sqlConnection`
+    property. We will then pass in a `String` of SQL statements into the `SQLStatement.text`
+    property and invoke `SQLConnection.execute()` to retrieve all records from the
+    database.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To write out the returned data to a `TextField`, we simply initialize a new
+    `Array` to contain the returned records by assigning the `data` property (which
+    is itself an `Array)` of `SQLStatement.getResult()` to the `Array`. Now create
+    a `for` loop to parse the results, outputting the various properties assigned
+    to each record to our `TextField`. This visually exposes the query results on
+    an Android device:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The final method we need to write will allow the user to insert records to
+    the database. A lot of this is very similar to how we have established and executed
+    `SQLStatement` objects in the past two methods. An insertion, however, can be
+    a bit more complex and structured, so we are making use of the inbuilt `SQLStatement.parametersArray`
+    in assigning values to our record. For the `name` value, we read from the input
+    `TextField` value provided by the user. In order to generate a timestamp to populate
+    the value of `time`, we instantiate a new `Date` object and invoke `toUTCString()`.
+    Following the execution of this fully-formed statement, we invoke `getDBItems()`
+    once again to return the new database results, letting the user see immediately
+    that the record has been inserted correctly:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Running the application on our Android device allows us to input a name using
+    the native virtual keyboard touch tap the **Insert to DB** button, which will
+    create a new entry in our database consisting of the input text and current timestamp.![How
+    to do it...](img/1420_08_11.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Each time we enter a new name into the application, the new entry is inserted
+    and a query is made to trace all entries out into the `TextField`, along with
+    the timestamp from when they were inserted:![How to do it...](img/1420_08_12.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: SQLite is a local, self-contained database, which can be used within AIR for
+    Android applications for a variety of tasks, ranging from simple to complex. In
+    order to use this functionality, we must establish a `SQLConnection` to a local
+    `.db` file on the device. Once this connection is established, we can use a set
+    of `SQLStatements` to perform table creation and management tasks, selection,
+    insertion, and deletion queries through standard SQL syntax. In this example,
+    a user can insert records and perform a general selection query upon a database
+    file within the application storage directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this demonstration, we make use of `flash.data.SQLStatement` to perform
+    both `INSERT` and `SELECT` operations. For further exploration of this, and related
+    classes, we refer you to the Adobe LiveDocs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/data/SQLStatement.html](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/data/SQLStatement.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Providing a default application database
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Allowing the user to add and remove items from an application database, directly
+    or indirectly, can be very useful in all sorts of scenarios. Perhaps though, we
+    want to start the user out with a standard data set, or maybe provide some default
+    settings for the user to manipulate down the road? These scenarios call for the
+    ability of the application to provide itself with a default database. In this
+    recipe, we will demonstrate how to handle this intelligently through the file
+    system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In this recipe, we will be bundling an already established SQLite database file
+    within our application directory. If you do not have access to a SQLite database
+    file already, you can either use some of the other recipes in this chapter to
+    generate one, else use any one of a variety of other freely available mechanisms
+    for creating these portable little database files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We will package a default SQLite database along with our application, check
+    to see whether a user defined database exists, and provide the user with our default
+    if need be:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, import the following classes necessary for this example:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will need to declare a few objects for use within this application. A `SQLConnection`
+    will allow us to interact with a local SQLite database and a `TextField` and `TextFormat`
+    pair will relay text messages onto the device display:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now, we will set up our `TextField`, apply a `TextFormat`, and add it to the
+    `DisplayList` along with some stylistic enhancements. Here, we create a method
+    to perform all of these actions for us:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: This method will fire as soon as the `TextField` has been established, as we
+    will be outputting messages to this visual element as each step in the copy process
+    is completed.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The first thing to do is establish whether or not an application database exists,
+    as this will determine whether or not we need to copy the default database over.
+    To do this, we will instantiate a new `File` object and reference a file called
+    `products.db` within the application installation directory. If this file does
+    not exist, we must create another `File` object, referencing the file name and
+    location we wish to copy the file to.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'Once this is established, use the `File.copyTo()` method upon the source `File`,
+    passing in the destination `File`. If all goes well, you should now have an exact
+    copy of the default database within the application storage directory:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'To open the application database, we must first initialize our `SQLConnection`
+    object and pass a `File.db` reference into the `SQLConnection.open()` method to
+    establish the connection. Now that we have a connection to the newly copied database,
+    we invoke the `getDBItems()` method to retrieve the records for display:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: To retrieve all of the records from the copied database, we will initialize
+    a `SQLStatement` and assign the established `SQLConnection` to the `SQLStatement.sqlConnection`
+    property. We will then pass in a `String` of SQL statements into the `SQLStatement.text`
+    property and invoke `SQLConnection.execute()` to retrieve all records from the
+    database.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: 'To write out the returned data to a `TextField`, we simply initialize a new
+    `Array` to contain the returned records by assigning the `data` property (which
+    is itself an `Array)` of `SQLStatement.getResult()` to the `Array`. Now create
+    a `for` loop to parse the results, outputting the various properties assigned
+    to each record to our `TextField`. This visually exposes the query results on
+    an Android device:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The first time the application is run, a database is not found within the application
+    storage directory. The default database is then copied into the expected position
+    and then records are retrieved and displayed for the user to view:![How to do
+    it...](img/1420_08_13.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: If the user runs this application subsequent times, the database is now in the
+    expected location and the application simply performs a query and displays the
+    records without any need to copy files from one location to another:![How to do
+    it...](img/1420_08_14.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'In this recipe, we use a combination of `File` and `SQLConnection/SQLStatement`
+    objects to determine whether or not a database exists, followed by either a simple
+    query and record display, or a more involved file copy from the application install
+    directory into the application storage directory using `File.copyTo()`. This method
+    will copy a file reference, which is passed in as an initial argument into the
+    specified location. There are many other similar methods for file manipulation.
+    We will list some of these as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`File.copyTo():` Copies the file or directory to a new location'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`File.moveTo():` Moves the file or directory to a new location'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`File.deleteFile()XE`"default application database:File.deleteFile() method"
+    : Deletes the specified file'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`File.createDirectory():` Creates a directory as well as any needed parent
+    directories'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`File.deleteDirectory():` Deletes the specified directory'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'For a comprehensive look at the `File` class, please refer to the Adobe LiveDocs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/filesystem/File.html](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/filesystem/File.html)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The database file, being just a regular file, can easily be manipulated through
+    ActionScript just like any other file. It is important though to have a fair understanding
+    of which directories the application does or does not have permission to write
+    to, in such a case. For instance, `File.applicationDirectory` is read only. We
+    cannot write files to this directory.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you require a tool to create or manage SQLite database files, you may be
+    interested in a software project such as SQLite Database browser, freely downloaded
+    from [http://sqlitebrowser.sourceforge.net/](http://sqlitebrowser.sourceforge.net/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Automating database tasks with FlexORM
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: While we certainly do have full control over application databases through supported
+    SQLite syntax, there are libraries of code to make things a bit easier. One such
+    library is called **FlexORM**, and as the name suggests, it can only be used within
+    a Flex project so pure ActionScript is out.
+  prefs: []
+  type: TYPE_NORMAL
+- en: FlexORM is an Object Relational Mapping framework, which avoids having the developer
+    write any database code or SQL for a project. Objects are made to be persistent,
+    and any database transitions are handled by the framework itself, behind the scenes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting ready...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'When preparing this application example, you will want to take some additional
+    steps to get ready as there is some setup involved in regard to acquiring the
+    FlexORM library and setting it up within a project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: First, we must open a web browser and go to [http://flexorm.riaforge.org/](http://flexorm.riaforge.org/)
+    the project page for FlexORM.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Download the files either through the `ZIP` package at the bottom of the screen,
+    or through the SVN repository.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Once the files are on your system, we will want to navigate to **trunk | flexorm
+    | src** and grab everything under **src**. This is the package we must import
+    into Flash Builder in order to use FlexORM.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Create a new Mobile Flex Project and drag the files from **src** under the Flex
+    project **src** folder. We can now begin to use **FlexORM** within our application.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Your project will look very similar to the one shown in the following screenshot:![Getting
+    ready...](img/1420_08_15.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How to do it...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Using the **FlexORM** framework, we will define a persistent object structure
+    and manage the creation and deletion of object entries through a simple Flex mobile
+    project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The first thing we will do is create a class within a `vo` [Value Object] package
+    called `Product`. This will serve as the declaration of our bindable object and
+    is a reflection of what we will be inserting and reading from our database. Using
+    metadata specific to **FlexORM**, we declare a table called `Products` with an
+    ID column named `id` and an additional column called `ProductName`. These objects
+    act as interfaces to our actual table structure and allow us to manage SQL commands
+    through a familiar object-oriented paradigm:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'The next step will be to write a `ViewNavigatorApplication` MXML file to serve
+    as our main application file. We can include both a `firstView` attribute pointing
+    to a specific `View`, and an `applicationComplete` attribute, which will invoke
+    an initialization function for us:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now we will declare a `Script` block and perform a set of imports, which are
+    necessary for this portion of our application. All we need from **FlexORM** is
+    the `EntityManager`. This is what is used to read from and write to our database.
+    We must also import our `vo` object class for use with **FlexORM**, along with
+    `ArrayCollection` to hold any records that are produced:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: Here, we will instantiate both the `EntityManager` and the `ArrayCollection`
+    for use in the application. Invoking `EntityManager.getInstance()` will allow
+    us to begin using **FlexORM:**
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: We must define the initialization method referred to in our `ViewNavigatorApplication`
+    tag. Within this method, use the `File` class to refer to the database file to
+    create within the application storage directory. Create a new `SQLConnection`
+    and open the previously defined `File` reference with it. The `SQLConnection`
+    can now be bound to the `sqlConnection` property of our `EntityManager`, allowing
+    us to interact with the database using **FlexORM:**
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'This method can be invoked whenever we want to refresh our collection from
+    the database. Simply invoking `findAll()` upon the `EntityManager` and passing
+    in the class name we want to retrieve from will return all the records from the
+    table bound to that class:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'We will need to set up methods to insert and delete records from the application
+    database. To save a record, we create an object based upon the class corresponding
+    to the table we wish to save to. Now, we will assign properties to this class
+    based upon the fields we are writing values to for this insertion. Invoking `EntityManager.save()`
+    while passing in this object will instruct **FlexORM** to insert a new record
+    into the database:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Deleting a record from the database is just as simple. Invoke `EntityManager.remove()`
+    while passing along the object within our collection, which corresponds to the
+    specific record to remove from our database will ensure that **FlexORM** deletes
+    the true record for us:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now to construct our application view. Create a new `View` MXML file with whatever
+    properties suits your specific project view. In this case, we are assigning it
+    with a `VerticalLayout` with some generous padding:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: The controls in our application which a user is able to interact with will consist
+    of a `TextInput` to type in, a `Button` to submit from, and a `List` to display
+    all of our database records. We will invoke a function called `addProduct()` on
+    button click, and another function called `removeProduct()`, which is tied to
+    our list change event. The final modification will be to bind our `ListdataProvider`
+    to the defined `productArrayCollection` within our main MXML file.
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_IND
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We are using `parentApplication` as a convenience in this example. Depending
+    upon the structure of your application, you may not want to do this, as it creates
+    an oftentimes unwanted relationship between the application and its various modules.
+  prefs:
+  - PREF_IND
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Create a `Script` block and import the `IndexChangeEvent` class needed for
+    our `List` change event to properly fire:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Now all that is left to do is to create some local functions to pass along
+    information to our main MXML file and perform local cleanup duty. First we create
+    the method for our `Button` click event, which passes data along to the `saveProduct()`
+    method we created previously. We will pass along the entered text and then clear
+    out our `TextInput` to allow for further records to be defined:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: 'Finally, write the function to handle removal of records based upon change
+    events generated from the `List`. Any index change detected upon the `List` will
+    pass index data along to the `deleteProduct()` method we created previously. We
+    then set our `ListselectedIndex` to `-1`, signifying that no items are selected:'
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs:
+  - PREF_IND
+  type: TYPE_PRE
+- en: When the user runs our application upon a device, they are able to type in data
+    through the native Android virtual keyboard. Tapping the **Insert New Product**
+    button will add their information to the database:![How to do it...](img/1420_08_16.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: The user will be able to add multiple records to the database and they will
+    immediately appear within the `List` control. Tapping an item within the `List`
+    will cause a change event to fire and consequently remove the corresponding record
+    from the application database:![How to do it...](img/1420_08_17.jpg)
+  prefs:
+  - PREF_OL
+  type: TYPE_NORMAL
+- en: How it works...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: FlexORM takes some initial setup to get the framework functioning in a way that
+    is beneficial for us when developing an application, but once everything is in
+    place, it can be a huge time saver with less complex databases. Whereas SQL is
+    nothing at all such as ActionScript in syntax or usage. FlexORM provides an interface
+    through which we can manage database records in an object-oriented manner through
+    the use of the same language we are using for the rest of our application, ActionScript!
+  prefs: []
+  type: TYPE_NORMAL
+- en: There is more...
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: FlexORM is great for simple transactions, but does not fully support everything
+    that SQLite offers. For example, we cannot create and manage an encrypted database
+    using FlexORM. For such specific activities, it is best to write your queries
+    by hand.
+  prefs: []
+  type: TYPE_NORMAL

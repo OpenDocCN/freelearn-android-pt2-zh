@@ -1,0 +1,830 @@
+- en: Chapter 8. Applying Contexts to Files
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In the last chapter, we upgraded our system, collected the audit logs, and
+    started to analyze the audit records. We discovered that some objects on the filesystem
+    were unlabeled. In this chapter, we will:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Learn how filesystems and filesystem objects get their labels
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Demonstrate techniques to change labels
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduce extended attributes for labeling
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Investigate file contexts and dynamic type transitions
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Labeling filesystems
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Filesystems on Linux originate from mount, with the exception of `ramdisk rootfs`
+    on Android. Filesystems on Linux vary drastically. In general, in order to support
+    all the features of SELinux, you need a filesystem with the support for `xattr`
+    and the `security` namespace. We saw this requirement when we were setting up
+    the kernel configuration.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Filesystem objects, as they are created, all start with an initial context,
+    just like all other kernel objects. Contexts on files simply inherit from their
+    parent, so if the parent is unlabeled, then the child is unlabeled, with the exception
+    of a type transition rule. Typically, if the context is unlabeled, it infers that
+    the data was created on a filesystem prior to enabling SELinux support, or the
+    type label in the `xattr` does not exist in the currently loaded policy.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The initial label or initial **security id** (**sid**), is in the `sepolicy`
+    file `initial_sid_contexts`. Each object class has its associated initial `sid`
+    present. For example, let''s take a look at the following code snippet:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: fs_use
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Filesystems can be labeled in a variety of ways. The best case scenario is
+    when the filesystem supports `xattrs`. In that case, an `fs_use_xattr` statement
+    should appear in the policy. These statements appear in the `fs_use` file in the
+    `sepolicy` directory. The syntax for `fs_use_xattr` is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'To look at `fs_use` from `sepolicy`, we can refer to an example for the `ext4`
+    filesystems:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This tells SELinux that when it encounters an `ext4` `fs` object; look in the
+    extended attributes for the label or file context.
+  prefs: []
+  type: TYPE_NORMAL
+- en: fs_task_use
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The other way a filesystem can be labeled is by using the process'' context
+    while creating objects. This makes sense for pseudo filesystems where the objects
+    are really process contexts, such as `pipefs` and `sockfs`. These pseudo filesystems
+    manage the pipe and socket syscalls and are not really mounted to userspace. They
+    exist internally to the kernel, for the kernels use. However, they do have objects,
+    and like any other object, they need to be labeled. This is the context in which
+    the `fs_task_use` policy statement makes sense. These internal filesystems can
+    only be accessed by processes directly, and provide services to those processes.
+    Hence, labeling them with the creator makes sense. The syntax is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Examples from the `sepolicy` file `fs_use` are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: fs_use_trans
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The next way you might wish to set labels on pseudo filesystems that are actually
+    mounted, is by using `fs_use_trans`. This sets a filesystem wide label on the
+    pseudo filesystem. The syntax for this is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Example from the `sepolicy` file `fs_use` is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: genfscon
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: If none of the `fs_use_*` statements meet your use cases, which would be the
+    case for `vfat` filesystems and `procfs`, then you would use the `genfscon` statement.
+    The label specified for `genfscon` applies to *all* instances of that filesystem
+    mount. For instance, you might wish to use `genfscon` with the `vfat` filesystems.
+    If you have two `vfat` mounts, they will use the same `genfscon` statement for
+    each mount. However, `genfscon` behaves differently with `procfs`, and lets you
+    label each file or directory within the filesystem.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The syntax of `genfscon` is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Examples from `sepolicy genfs_contexts` are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that the `rootfs` partial path is `/`. It's not `procfs`, so it doesn't
+    support any fine granularity to its labeling; so `/` is the only thing you can
+    use. However, you can get wild with `procfs` and set to any granularity you desire.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Mount options
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Another option, if none of those fit your needs, is to pass the `context` option
+    via the `mount` command line. This sets a filesystem wide mount context, such
+    as `genfscon`, but is useful in the case of multiple filesystems that need to
+    have separate labels. For instance, if you have two `vfat` filesystems mounted,
+    you might wish to separate accesses to them. With `genfscon` statements, both
+    filesystems would use the same label provided by `genfscon`. By specifying the
+    label at mount time, you can have two `vfat` filesystems mounted with different
+    labels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Take the following command as an example:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Additional to the context as a mount option are: `fscontext` and `defcontext`.
+    These options are mutually exclusive from context. The `fscontext` option sets
+    the meta filesystem type that is used for certain operations, such as mount, but
+    does not change the per file labels. The `defcontext` sets the default context
+    for unlabeled files overriding the `initial_sid` statements. Lastly, another option,
+    `rootcontext` allows you to set the root inode context in the filesystem, but
+    only for that object. According to the man page mount (`man 8 mount`), it was
+    found useful in stateless Linux.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Labeling with extended attributes
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Lastly, and probably the most frequently used way of labeling, is by using the
+    extended attributes support also known as `xattr` or EA support. Even with `xattr`
+    support, new objects inherit the context of their parent directory; however, these
+    labels have the granularity of being per filesystem object-based or inode-based.
+    If you remember, we had to turn on or verify that `XATTR(CONFIG_EXT4_FS_XATTR)`
+    support was enabled for our filesystems on Android as well as configuring SELinux
+    to use it via the config option `CONFIG_EXT4_FS_SECURITY`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Extended attributes are a key-value metadata stores for files. SELinux security
+    contexts use the `security.selinux` key, and the value is a string that is the
+    security context or label.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The file_contexts file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Within the `sepolicy` directory, you will find the `file_contexts` file. This
+    file is consulted to set the attributes on filesystems that support per file security
+    labels. Note that a couple of pseudo filesystems support this as well, such as
+    `tmpfs`, `sysfs`, and recently `rootfs`. The `file_context` file has a regular
+    expression-based syntax as follows, where `regexp` is the regular expression for
+    the path:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: If multiple regular expressions are defined for a file, the last match is used,
+    so order is important.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The following list shows each type field value for the type of filesystem object,
+    their meanings, and syscall interface:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`--`: This denotes a regular file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-d`: This denotes a directory.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-b`: This denotes a block file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-s`: This denotes a socket file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-c`: This denotes a character file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-l`: This denotes a link file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`-p`: This denotes a named pipe file.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: As you can see, the type is essentially the mode as output by `ls -la` command.
+    If it's not specified, it matches everything.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next field is the file label or the special identifier `<<none>>`. Either
+    one would supply a context or the identifier `<<none>>`. If you specify the context,
+    the SELinux tools that consult `file_contexts` use the last match to the specified
+    context. If the context specified is `<<none>>`, it means that no context is assigned.
+    So, leave the one that we have found. The keyword `<<none>>` is not used in the
+    AOSP reference, `sepolicy`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It's important to note that the preceding paragraph explicitly states that SELinux
+    tools use the `file_contexts` policy. The kernel is not aware that this file exists.
+    SELinux labels all its objects by explicitly setting them from userspace with
+    tools that look up the context in `file_context` or via the `fs_use_*` and `genfs`
+    policy statements. In other words, `file_contexts` is not built in the core policy
+    file, and it is not loaded or used directly by the kernel. At build time, the
+    `file_contexts` file is built in the ramdisk rootfs and can be found at `/file_contexts`.
+    Also, during build time, the system image is labeled, freeing the device itself
+    from this burden.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Android, `init`, `ueventd`, and `installd` have all been modified to look
+    up the contexts of objects they are creating; so that they can label them properly.
+    Thus, all the init built ins that create filesystem objects, such as `mkdir`,
+    have been modified to make use of the `file_contexts` file if it exists, and the
+    same goes for `installd` and `ueventd`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s take a look at some snippets from the `file_context` file located in
+    `sepolicy`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Here, we are setting up the contexts for files in `/dev`. Note how the entries
+    are in order from most generic to more specific `dev` files. Thus, any files not
+    covered by the more specific entries will end up with the context `u:object_r:device:s0`,
+    and the files that match further down, end up with a more specific label. For
+    instance, the accelerometer at `/dev/accelerometer` will get the context `u:object_r:sensors_device:s0`.
+    Note that the type field was omitted, which means that it matches on *all* filesystem
+    objects, such as directories (`type -d`).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You might be wondering how `/dev`, the directory itself, gets a file context.
+    Looking at some of the snippets, we say the `/` or root, got labeled via the statement
+    `genfscon rootfs / u:object_r:rootfs:s0` in the `genfs_context` file. This chapter
+    stated earlier that, "new objects inherit the context of their parent directory."
+    Hence, we can reason that `/dev` is of context `u:object_r:rootfs:s0` since that
+    is the label `/` has. We can test this by passing the `-Z` flag to `ls` to show
+    us the label of `/dev`. On the UDOO serial connection, execute the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: It seems that the hypothesis is incorrect, but note that it is true that everything
+    has a label, and if it's not specified, then it inherits from the parent. Looking
+    back at `sepolicy`, we can see that the `dev` filesystem was initially set with
+    a `fs_use_trans devtmpfs u:object_r:device:s0;` policy statement. So when the
+    filesystem is mounted, it is set filesystem wide. Later, when entries are added
+    by `init` or `ueventd`, they use `file_contexts` entries to set the context of
+    the newly created filesystem object to what is specified in the `file_contexts`
+    file. The filesystem at `/dev`, which is a `devtmps` pseudo filesystem, is an
+    example of a filesystem that has both a filesystem-wide label via the `fs_use_trans`
+    statement, but can also support fine grained labeling via `file_contexts;`. Filesystems
+    are not very consistent in capabilities on Linux.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Dynamic type transitions
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Dynamic type transitions indicated by the SELinux policy statement `type_transition`
+    are a way to allow files to dynamically determine their types. Because these are
+    compiled into the policy, these do not have any relation to the `file_contexts`
+    file. These policy statements allow the policy author to dynamically dictate the
+    context of a file based on the context in which the file is created. These are
+    useful in situations where you don''t control source code, or do not wish to couple
+    SELinux in any way. For instance, the `wpa` supplicant, which is a service that
+    runs for Wi-Fi support and creates a socket file in its data directory. Its data
+    directory is labeled with the type `wifi_data_file` and as expected, the socket
+    ends up with that label. However, this socket is shared by the system server.
+    Now, we can allow just the system server to access the type and object class,
+    however, `hostapd` and other things are creating sockets and other objects in
+    that directory and thus the objects also have this type. We really want to ensure
+    that the two sockets in question, the one used by `hostapd` and the other by system
+    server, are kept exclusive from each other. To do this, we need to be able to
+    label one of the sockets at a finer granularity, and to do so, we can either modify
+    the code or use a dynamic type transition. Rather than mucking with the code,
+    let''s use a type transition, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This is an actual statement from the `sepolicy` file, `wpa_supplicant.te`.
+    It says that, when a process of the type `wpa` creates a file of the type `wifi_data_file`
+    and the object class is `sock_file` to label it as `wpa_socket` on creation. The
+    statement syntax is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As of SELinux policy version 25, the `type_transition` statement can support
+    named type transitions where a fourth argument exists and is the name of the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will see an example use of this filename in the `sepolicy` file, `system_server.te`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note the filename or basename and not the path, and it must match exactly. Regex
+    is not supported. It's also interesting to note that the dynamic transitions are
+    not limited to file objects, but any object class event processes. We will see
+    how dynamic process transitions are used in [Chapter 9](ch09.html "Chapter 9. Adding
+    Services to Domains"), *Adding Services to Domains*.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examples and tools
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'With the theory behind us, let''s look at the tools and techniques to label
+    files in the system. Let''s start by mounting a `ramfs` filesystem. We will start
+    by remounting `/` since it is read only and create a mount point for the filesystem.
+    Via the UDOO serial console, execute:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we want to see which label the filesystem has:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can recall, the `initial_sid_context` file had this initial `sid` set
+    for the filesystem:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we want to get this ramdisk in a new label, we need to create the type in
+    the policy, and set a new `genfscon` statement to use it. We will declare the
+    new type in the sepolicy file `file.te`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The type policy statement syntax is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: Attributes in SELinux are statements that let you define common groups. They
+    are defined via the `attribute` statement. In Android SELinux policy, we have
+    `file_type` and `fs_type` defined for us already. We will use them here because
+    this new type, which we're creating, has the attributes `file_type` and `fs_type`.
+    The `file_type` attribute is associated with a type for a file, and the `fs_type`
+    attribute means that this type is also associated with filesystems. Attributes,
+    right now, are not of great importance; so don't get caught up in the detail.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next thing to modify is the `sepolicy` file, `genfs_context` by adding
+    the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, we will compile the boot image and flash it to the device, or better yet,
+    let's use the dynamic policy reload support like the following.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'From the root of the UDOO project tree build just the `sepolicy` project:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Push the new policy over `adb`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Trigger a reload by using the `setprop` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you have the serial console connected, you should see:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If you don''t, and just have `adb`, check `dmesg`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A successful load should use our policy at the path, `/data/security/current/sepolicy`.
+    Let''s unmount the ramdisk and remount it to check out its type:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We were able to modify the policy and use `genfscon` to change the filesystem
+    type, and now to show inheritance, let''s go ahead and create a file on the filesystem
+    with `touch`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As we expected, the new file is labeled with the type ramdisk. Now, suppose
+    when we do touch from the shell, we want the file to be of a different type, such
+    as `ramdisk_newfile`; how can we do this? We can do this by modifying touch itself
+    to consult `file_contexts`, or we can define a dynamic type transition; let us
+    try the dynamic type transition approach. The first argument to the `type_transition`
+    statement is the creating type; so what type is our shell in? You can get this
+    by performing:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'A simpler way is to run the `id -Z` command, which uses the aforementioned
+    `proc` file. For a serial console, execute:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'And to run the same command for the `adb` shell:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note the discrepancy between our serial console shell and the `adb` shell, in
+    [Chapter 9](ch09.html "Chapter 9. Adding Services to Domains"), *Adding Services
+    to Domains*; we will fix this. Because of this, the policy we author now will
+    address both cases.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Start by opening the `sepolicy` file, `init_shell.te` and append the following
+    to the end of the file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Do this for the `sepolicy` file, `shell.te`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, we need to declare the new type; so open up the `sepolicy` file, `file.te`
+    and append the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that we have only used the `file_type` attribute. This is because a filesystem
+    should never have the type `ramdisk_newfile`, only a file residing within that
+    file system should.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, build the `adb` policy, push it to the device, and trigger a reload. With
+    that done, create the file and check the results:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So it didn''t work. Let''s investigate the reason by trying on an example of
+    an `ext4` filesystem. Let''s use the following commands:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, check its context:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The label is `system_data_file`. This is not helpful, as it doesn''t apply
+    to our type transition rule; to fix this, we can use the `chcon` command to explicitly
+    change the files context:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now with the context changed to match what we were trying earlier with the
+    ramdisk, let''s try to create a file within this directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'As you can see, the type transition has occurred. This was meant to illustrate
+    the issues you may find while working with SELinux and Android. Now that we have
+    shown that our `type_transition` statement is valid, there are only two possibilities
+    why this is failing: the filesystem doesn''t support it or we''re missing something
+    somewhere to "turn it on". It turns out that the latter is the case; we were missing
+    our `fs_use_trans` statements. So go ahead and open up the `sepolicy` file, `fs_use`
+    and add the following line:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This statement enables SELinux dynamic transitions on this filesystem. Now,
+    rebuild the `sepolicy` project, `adb push` the policy file, and enable a dynamic
+    reload via `setprop`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: There you have it, the object has the right value determined by a dynamic type
+    transition. We were missing `fs_use_trans`, which enabled type transitions on
+    filesystems that don't support `xattrs`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, suppose we want to mount another ramdisk, what would happen? Well since
+    it was labeled with the `genfscon` statement, all filesystems mounted with that
+    type should get the context, `u:object_r:ramdisk:s0`. We will mount this filesystem
+    at `/ramdisk2`, and verify this behavior:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE43]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Also, check the contexts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE44]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'If we want to write allow rules to separate accesses to these file systems,
+    we will need to have their target files in separate types. To do this, we can
+    mount the new ramdisk with the context option. But first, we need to create the
+    new type; lets go to the `sepolicy` file, `file.te` and add a new type called
+    `ramdisk2`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE45]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, build the `sepolicy` with the command `mmm`, followed be using the command
+    `abd push` to push the policy, and trigger a reload with the `setprop` command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE46]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At this point, let''s umount `/ramdisk2` and remount it with the `context=`
+    option:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE47]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, verify the contexts:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE48]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can override the `genfscon` context with the `mount` option, `context=<context>`.
+    In fact, if we look at `dmesg`, we can see some great messages. When we mounted
+    `ramfs` without the context option, we got:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE49]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'When we mounted it with the `context=<context>` option, we got:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE50]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can see that SELinux gives us some helpful messages while trying to figure
+    out from where it sources its labels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now, let's go onto labeling filesystems with the `xattr` support, such as `ext4`.
+    We will start with the toolbox command, `chcon`. The `chcon` command allows you
+    to set the context of a file system object explicitly, it does not consult `file_contexts`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s take a look at `/system/bin` and in it, at the first 10 files:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE51]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that many of them have the `system_file` label, which is the default
+    label for that filesystem; let''s change the `am` type to `am_exec`. Again, we
+    need to create a new type by adding the following to `sepolicy` file, `file.te`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE52]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, rebuild the policy file, push it to the UDOO, and trigger a reload. After
+    that, let''s start remounting the system, since it is read only:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE53]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now perform `chcon`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE54]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Verify the result:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE55]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Additionally, the `restorecon` command will use `file_contexts`, and restore
+    that file to what is set in the `file_contexts` file, which should be `system_file`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE56]'
+  prefs: []
+  type: TYPE_PRE
+- en: As you can see, `restorecon` was able to consult `file_contexts` and restore
+    the specified context on that object.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The Android system''s filesystem gets constructed during the build time, and
+    consequently, all its file objects are labeled during that process. We can also
+    change this at build time by changing `file_contexts`. With this changed, the
+    system partition rebuilt, and after reflashing the system, we should see the `am`
+    file with the `am_exec` type. We can test this by amending the `sepolicy` file,
+    `file_contexts` by adding this line at the end of the `system/bin` section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE57]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Rebuild the whole system with:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE58]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now flash and reboot, and let''s take a look at the `/system/bin/am` context
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE59]'
+  prefs: []
+  type: TYPE_PRE
+- en: This shows that the system partition respects the file contexts for build-time
+    labeling, and how we can control these labels.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fixing up /data
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'Additionally in the audit logs, we have seen a bunch of unlabeled files, for
+    instance, the following denial:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE60]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that the device is `mmcblk0p4`, which mount commands and will tell
+    us what filesystem this is mounted to, in its output:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE61]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'So why does the `/data` filesystem have so many unlabeled files? The reason
+    is that SELinux is meant to be turned on from an empty device, that is, from first
+    boot. Android builds the data directory structures on demand. Thus, all the labels
+    for the `/data` are handled by the `file_contexts` file since it is `ext4`. Also,
+    it is handled by the systems that create the `/data` files and directories. These
+    systems have been modified to label the data partition based on the `file_contexts`
+    specifications. So this presents two options: wipe `/data` and reboot, or `restorecon
+    -R /data`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Option one is a bit harsh, but if you eject the SD card and remove all the files
+    on the data partition, `partition 4`, Android will rebuild and you won't see any
+    more unlabeled issues. However, this is not recommended for deployed devices when
+    you upgrade; you will destroy all of the users' data.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Option two is more palatable in deployed scenarios, but has its limitations.
+    Notably, executing `restorecon -R /data` will take a long time and must be done
+    early in boot, right after the mount. However, this is really the only option
+    at this point. Google, however, has done a lot of work in this area, and created
+    a system that intelligently relabels `/data` on policy updates. For our use, we
+    will choose a variant of option two, especially after considering how sparsely
+    populated the `/data` filesystem is; we really haven''t installed or generated
+    a lot of user data yet. With that stated, execute:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE62]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We don''t have to execute `restorecon` early in boot since our system is in
+    permissive mode, and we''re not in a deployed scenario. Now, let''s pull the `audit.log`
+    file and compare it to the already pulled `audit.log`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE63]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s use `grep` to count the number of occurrences in each file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE64]'
+  prefs: []
+  type: TYPE_PRE
+- en: Great, we fixed up all of our unlabeled issues on `/data`!
+  prefs: []
+  type: TYPE_NORMAL
+- en: A side note on security
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'Note that even though we are running all these commands and changing all these
+    things, this is not a security vulnerability within SELinux. Being able to change
+    type labels, mounting filesystems, and associating filesystems with a type, all
+    require allow rules. If you look through the audit logs, you''ll see a slew of
+    denials; a sample is provided:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE65]'
+  prefs: []
+  type: TYPE_PRE
+- en: If we were in an enforcing mode, we wouldn't have been able to perform any of
+    the experiments shown here.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we saw how to get files into contexts by relabeling them. We
+    used a variety of techniques to accomplish this task, from toolbox commands such
+    as `chcon` and `restorecon`, to mount options and dynamic transitions. With these
+    tools, we can ensure that all filesystem objects are labeled correctly. This way,
+    we end up with the right target contexts so that the policies we author are effective.
+    In the next chapter, we will focus on the processes, making sure that they are
+    in the right domain or context.
+  prefs: []
+  type: TYPE_NORMAL

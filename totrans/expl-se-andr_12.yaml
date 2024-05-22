@@ -1,0 +1,619 @@
+- en: Chapter 12. Mastering the Tool Chain
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'So far, we have taken a deep dive into the code and policies that drive SE
+    for Android technologies, but the build system and tools are often overlooked.
+    Mastering the tool chain will help you improve your development practices. In
+    this chapter, we will look at all the components of the SE for Android build and
+    how they work. We will cover the following topics:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building specific targets
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The sepolicy `Android.mk` file
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Custom build policy configuration
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Build tools:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`check_seapp`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`insertkeys.py`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`checkpolicy`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`checkfc`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sepolicy-check`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sepolicy-analyze`'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Building subcomponents – targets and projects
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far, we have run some magical commands such as `mm`, `mmm`, and `make bootimage`
+    to actually build various portions of the SE for Android code. Google officially
+    describes some of these tools in the documents at [https://source.android.com/source/building-running.html](https://source.android.com/source/building-running.html),
+    but most commands are not listed. Nonetheless, [http://elinux.org/Android_Build_System](http://elinux.org/Android_Build_System)
+    has a write up that is more comprehensive.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Google's "building and running" documentation, they describe the target as
+    the device, which is ultimately what you lunch for. When building Android, the
+    `lunch` command sets up environment variables for the `make` command you execute
+    later. It sets up the build system to output the correct configuration for the
+    target device. This concept of a target is *not* what will be discussed in this
+    chapter. Instead, when `target` is mentioned herein, it means a specific `make`
+    target. However, in the event of needing to mention the target device, the complete
+    phrase "`target device`" will be used. While somewhat confusing, this terminology
+    is standard and will be understood by engineers in the field.
+  prefs: []
+  type: TYPE_NORMAL
+- en: We have issued `make` a few times, optionally providing a target as an argument
+    and an option, for example the `-j16` option. Something like `make` or `make -j16`
+    essentially builds all of Android. Optionally, you can specify a target or list
+    of targets as command arguments. An example of this is when `boot.img` was built.
+    The `boot.img` file can be built and rebuilt by specifying the `bootimage` target.
+    The command we use for this purpose is `make bootimage`. It helps to expedite
+    builds by rebuilding only the portions of the system that are needed. But what
+    if you only need to rebuild a particular file? Perhaps, you only want to rebuild
+    `sepolicy`. You can specify that as the target to build, as in `make sepolicy`.
+    This leads to the question, "What about the other files such as `mac_permissions.xml`,
+    `seapp_contexts`, and so on?" They can be built in the same way. The more intriguing
+    question is, "How does one know what the target name is? Is it always the file
+    output name?"
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Android''s build system is constructed on top of GNU `make` ([http://www.gnu.org/software/make/](http://www.gnu.org/software/make/)).
+    The core of the Android build system''s makefiles system can be found in `build/core`,
+    and the documentation can be found in the NDK ([https://developer.android.com/tools/sdk/ndk/index.html](https://developer.android.com/tools/sdk/ndk/index.html)).
+    The major take away from that reading is that a typical `Android.mk` file defines
+    something called `LOCAL_MODULE := mymodulename`, and something called `mymodulename`
+    is built. The target names are defined by these `LOCAL_MODULE` statements. Let''s
+    look at the `Android.mk` for external sepolicy, and focus on the sepolicy portion
+    of it, as there are other local modules or targets defined in that `Makefile`.
+    The following is an example from Android 4.3:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'One can find all the modules for within an `Android.mk` file by just looking
+    for lines that begin with `LOCAL_MODULE` declarations and are whole word matches:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: Regular expressions dictate that ^ is the beginning of the line, and the `grep`
+    man page states that `-w` provides whole word search.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The preceding list is comprehensive for the version of Android we are using
+    on the UDOO. However, you should run the command on your exact version of the
+    `Makefile` to get an idea of what things can be built.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Android has some additional tools that are separate from building targets and
+    get added to your environment when you use `source build/envsetup.sh`. These are
+    `mm` and `mmm`. They both perform the same task, which is to build all the targets
+    specified in an `Android.mk` file, however, differing that they do not build any
+    of their dependencies. The two commands only differ in where they source the location
+    of the `Android.mk` to scour for build targets. The `mm` command uses the current
+    working directory, whereas `mmm` uses a supplied path. Also, a great option for
+    either command is `-B`, which forces a rebuild. An engineer can save a lot of
+    time by using the `mm(m)` commands over `make <target>`. The full `make` command
+    wastes a lot of time figuring out the dependency tree, so executing `mmm path/to/project`
+    on a previously built source tree (if you know that all your changes are within
+    a project) can save a few minutes. However, since it doesn't build the dependencies,
+    you'll need to ensure that they are already built and have no dependent changes.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Exploring sepolicy's Android.mk
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The project located at `external/sepolicy` uses an `Android.mk` file, like any
+    other Android project, to build their outputs. Let's dissect this file and see
+    what it does.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building sepolicy
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'We''ll start in the middle by looking at the target for `sepolicy`. It starts
+    off with fairly boilerplate `Android.mk` stuff:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next portion is a bit more like standard `make`. It starts off by declaring
+    a target file that gets built into the `intermediates` location. The `intermediates`
+    location is defined by the Android build system. It then assigns the values of
+    `MLS_SENS` and `MLS_CATS` to some local variables for later use. The last line
+    is the most interesting. It uses a `make` function, called `build_policy`, and
+    takes filenames as arguments:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: Next, we define the recipe for building this intermediate target, `policy.conf`.
+    The interesting bits of the recipe are the `m4` command and the `sed` command.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: For more information on `m4`, see [http://www.gnu.org/software/m4/manual/m4.html](http://www.gnu.org/software/m4/manual/m4.html),
+    and for more information on `sed`, refer to [https://www.gnu.org/software/sed/manual/sed.html](https://www.gnu.org/software/sed/manual/sed.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'SELinux policy files get processed using `m4`. `m4` is a macro processor language
+    that is often used as a frontend to a compiler. The `m4` command takes some of
+    the values such as `PRIVATE_MLS_SENS` and `PRIVATE_MLS_CATS` and passes them through
+    as macro definitions. This is analogous to the `gcc -D` option. It then takes
+    the dependencies for the target as input via the `make` expansion, `$^`, and outputs
+    them to the target name using the `make` expansion of `$@`. It also takes that
+    output and generates a `.dontaudit` version. That version has all of the `dontaudit`
+    lines deleted from the policy file using `sed`. The MLS values tell SELinux how
+    many categories and sensitivities to generate. These must be statically defined
+    in the policy blob that is loaded into the kernel, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The next portion defines the recipe for building the actual target, named from
+    `LOCAL_MODULE_POLICY`, even if this is not obvious. `LOCAL_BUILT_MODULE` expands
+    to the intermediate file to be built, `sepolicy` in this case. It finally gets
+    copied by the Android build system as `LOCAL_INSTALLED_MODULE` behind the scenes.
+    This target depends on the intermediate `policy.conf` file and on `checkpolicy`.
+    It uses `checkpolicy` to transform the `m4` expanded `policy.conf` and `policy.conf.dontaudit`
+    into two sepolicy files, `sepolicy` and `sepolicy.dontaudit`. The actual tool
+    that is used to compile the SELinux statements in binary form to load to the kernel
+    is `checkpolicy`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, it ends by setting a local variable, `built_policy`, for use elsewhere
+    within the `Android.mk` file, and clears `policy.conf` to avoid polluting the
+    global namespace of `make`, as shown:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Additionally, building `sepolicy` also depends on the `POLICYVERS` variable,
+    which is conditionally assigned a value of `26` if not set. This is the policy
+    version number used by `checkpolicy`, and as we saw earlier in the book, we had
+    to override this for our UDOO.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Controlling the policy build
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: We saw that the `sepolicy` statement calls the `build_policy` function. We also
+    see its use in that `Android.mk` file for building `sepolicy`, `file_contexts`,
+    `seapp_contexts`, `property_contexts`, and `mac_permissions.xml`, so it reasons
+    that it is fairly important. This function outputs a list of fully resolved paths
+    used for policy files. The function takes as inputs a variable argument list of
+    filenames and includes regular expression support (note `*.te` in the `build_policy`
+    for target sepolicy). Internally, that function uses some magic to allow you to
+    override or append to the current policy build without modifying the `external/sepolicy`
+    directory directly. This is meant for OEMs and device builders to be able to augment
+    policy to cover their specific devices.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'When building a policy, you can set the following `make` variables, typically
+    in the device''s `Makefile`, to control the resulting build. The variables are
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`BOARD_SEPOLICY_DIRS`: This is the search path for potential policy files'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BOARD_SEPOLICY_UNION`: This is a policy file of name to append to all files
+    with the same name'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BOARD_SEPOLICY_REPLACE`: This is a policy file used to override the base `external/sepolicy`
+    policy file'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`BOARD_SEPOLICY_IGNORE`: This is used to remove a particular policy file from
+    the build, given a repository''s relative path'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Using the UDOO as an example, the proper way to author a policy was never to
+    modify `external/sepolicy` but to create a directory in `device/fsl/udoo/sepolicy`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then we modify the `BoardConfig.mk`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Next, we add the following lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Be very careful with `+=` as opposed to `:=`. In large project trees, some of
+    these variables may be set higher in the build tree by common `BoardConfigs`,
+    and you could wipe out their settings. Typically, the safest bet is `+=`. For
+    further details, see *Variable Assignment* in the GNU make manual, at [http://www.gnu.org/software/make/manual/make.html](http://www.gnu.org/software/make/manual/make.html).
+  prefs: []
+  type: TYPE_NORMAL
+- en: This will tell the `build_policy()` function in `Android.mk` to search not only
+    `external/sepolicy` but also `device/fsl/udoo/sepolicy` for policy files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Next, we can create a `file_contexts` file in this directory, and move our changes
+    for labeling to this directory by creating a new `file_contexts` file in `device/fsl/udoo/sepolicy`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'After this, we need to instruct the build system to combine, or union, our
+    `file_contexts` file with the one in `external/sepolicy`. We accomplish this by
+    adding the following statement to the `BoardConfig.mk` file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'You can do this for any policy file, even custom files. It does a match on
+    the filename by basename only (no directories). For instance, if you had a `watchdog.te`
+    rules file you wanted to add to the base `watchdog.te` rules file, you could just
+    add `watchdog.te`, as shown:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: This produces a new `watchdog.te` file during the build that unions your new
+    rules with the ones found in `external/sepolicy/watchdog.te`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Also note that you add new files into the build with `BOARD_SEPOLICY_UNION`,
+    so to add a `.te` file for a custom domain, such as `custom.te`, you could:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Let''s say you want to override the `external/sepolicy watchdog.te` file with
+    your own. You can add it to `BOARD_SEPOLICY_REPLACE`, as shown:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note that you can't replace a file that does not exist in the base policy. Also,
+    you can't have the same file appear in `UNION` and `REPLACE`, as it's ambiguous.
+    You can't have more than one specification of `BOARD_SEPOLICY_REPLACE` on the
+    same policy file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Suppose we have a hierarchical build occurring for two fictitious devices, device
+    X and device Y. The two devices, device X and device Y, both inherit `BoardConfigCommon.mk`
+    from device A. Device A is not a real device, but since X and Y share commonalities,
+    the common bits are kept in device A.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Suppose the `BoardConfigCommon.mk` for device A contains these statements:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Suppose that device X''s `BoardConfig.mk` contains:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Finally, suppose device Y''s `BoardConfig.mk` contains:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The resulting policy sets used to build device X and device Y are the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Device X policy set:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Device Y also contains:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In a common scenario, you might not want the resulting policy set for device
+    Y to contain `device/OEM/A/custom.te`. This is a use case for `BOARD_SEPOLICY_IGNORE`.
+    You can use this to filter out specific policy files. However, you have to be
+    specific and use the repository''s relative path. For example, in device Y''s
+    `BoardConfig.mk`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: Now, when you build a policy for device Y, the policy set will not include that
+    file. `BOARD_SEPOLICY_IGNORE` can also be used with `BOARD_SEPOLICY_REPLACE`,
+    allowing multiple uses in the device hierarchy, but only one `BOARD_SEPOLICY_REPLACE`
+    statement takes effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Digging deeper into build_policy
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Now that we have seen how to use some new mechanisms to control the policy build,
+    let's actually dissect where in the build process happens. As stated earlier,
+    the policy build is controlled by the `Android.mk` file. We encountered calls
+    to the `build_policy()` function earlier, and this is precisely where the magic
+    happens with respect to all of the `BOARD_SEPOLICY_*` variables we set. Examining
+    the `build_policy` function, we see references to the `sepolicy_replace_paths`
+    variable, so let's start by looking at that variable.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `sepolicy_replace_paths` variable begins life by getting evaluated when
+    the `Makefile` is evaluated. In other words, it is executed unconditionally. The
+    code starts off by looping over all the `BOARD_SEPOLICY_REPLACE` files and checks
+    whether any are in `BOARD_SEPOLICY_UNION`. If one is found, an error is printed
+    and the build fails, showing `Ambiguous request for sepolicy $(pf). Appears in
+    both BOARD_SEPOLICY_REPLACE and BOARD_SEPOLICY_UNION`, where `$(pf)` is expanded
+    to the offending policy file. After that, it expands the `BOARD_SEPOLICY_REPLACE`
+    entries with those found on the search paths set by `BOARD_SEPOLICY_DIRS`, thus
+    resulting in full relative paths from the root of the Android tree. Then it filters
+    these entries against `BOARD_SEPOLICY_IGNORE`, dropping anything that should be
+    ignored. It then ensures that only one file candidate for replacement is found.
+    Otherwise, it issues the appropriate error message. Lastly, it ensures that the
+    file exists in the `LOCAL_PATH` or base policy, and if none of the two is found,
+    it issues an error message:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: After this, calls to build policy can use `replace_paths` as an expanded list
+    of files that will be replaced during the build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The arguments of the `build_policy` function are the filenames you wish to
+    expand into their Android root-relative path names, using the power provided by
+    the `BOARD_SEPOLICY_*` family of variables. For instance, a call to `$(build_policy,
+    file_contexts)` in the context of our devices A, X, and Y would result in this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The `build_policy` function is a bit tricky to read. Many nested function calls
+    result in the deepest indents running first. However, like all code, we read it
+    from top to bottom and left to right, so the explanation will begin there. The
+    function starts by looping through all the files passed as arguments. It then
+    expands them against the `BOARD_SEPOLICY_DIRS` once for replace and once for a
+    union. The `sepolicy_replace_paths` variable is error checked to ensure a file
+    does not appear in both locations, replace and union. For the replace path expansion,
+    it checks whether the expanded path is in `sepolicy_replace_dirs`, and if it is,
+    replaces it. For the union portion, it just expands them. The results of these
+    expansions are then fed through a filter on `BOARD_SEPOLICY_IGNORE`, thus dropping
+    any of the explicitly ignored paths:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: Building mac_permissions.xml
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `mac_permissions.xml` build is a bit tricky, as we saw in [Chapter 10](ch10.html
+    "Chapter 10. Placing Applications in Domains"), *Placing Applications in Domains*.
+    First, `mac_permissions.xml` can be used with all the `BOARD_SEPOLICY_*` variables
+    introduced thus far. The end result is one XML file adhering to the rules of those
+    variables. Additionally, the raw XML files are processed by a tool called `insertkeys.py`,
+    located in `sepolicy/tools`. The `insertkeys.py` tool uses `keys.conf` to map
+    tags in the XML file signature stanza with `.pem` files containing the certificate.
+    The `keys.conf` file is also subject to use in `BOARD_SEPOLICY_*` variables. The
+    build recipe first calls `build_policy` on `keys.conf` and uses `m4` to concatenate
+    the results. Thus, `m4` declarations in `keys.conf` will be respected. However,
+    this has not been used. The initial intention was to use the `m4 -s` sync lines
+    so that you can follow the inclusion chain in the `keys.conf` file when concatenated
+    by `m4` processing. On the other hand, sync lines are provided by `m4` when concatenating
+    many files, and they provide commented lines adhering to the `#line NUM "FILE"'`
+    lines. These are useful because `m4` takes multiple input files and combines them
+    into a single, expanded output file. There will be sync lines indicating the beginning
+    of each of those files, and they can help you track down issues. Continuing back
+    to the `mac_permissions.xml` build, after expansion of `keys.conf` by `m4`, this
+    file, along with all the `mac_permissions.xml` files from a call to `build_policy()`
+    are finally fed to `insertkeys.py`. The `insertkeys.py` tool then uses the `keys.conf`
+    file to replace all matching `signature=<TAG>` lines with an actual hex-encoded
+    X509 from the PEM file, that is, `signature=308E3600`. Additionally, the `insertkeys.py`
+    tool combines the XML files into one file, and strips whitespace and comments
+    to reduce its size on disk. This has no build dependencies on the other major
+    files such as `sepolicy`, `seapp_contexts`, `property_contexts`, and `mac_permissions.xml`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building seapp_contexts
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `seapp_contexts` file is also subject to all the `BOARD_SEPOLICY_*` variables.
+    All of the `seapp_contexts` files from a resultant call to `build_policy()` are
+    also fed through `m4 -s` to get a single `seapp_contexts` file that contains sync
+    lines. Again, like `mac_permissions.xml` file's build of `keys.conf`, `m4` hasn't
+    been used other than for the synclines. This resulting, concatenated `seapp_contexts`
+    file is then fed into `check_seapp`. This tool is authored in the C programming
+    language and built into an executable during the build. The source can be found
+    in `tools/check_seapp`. This tool reads the `seapp_contexts` file and checks its
+    syntax. It verifies that there are no invalid key value pairs, that `levelFrom`
+    is a valid identifier, and that the type and domain fields are valid for a given
+    `sepolicy`. This build is dependent on `sepolicy` for the strict type checking
+    of domain and type fields against the policy file.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building file_contexts
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `file_contexts` file is also subject to all of the `BOARD_SEPOLICY_*` variables.
+    The resulting set is passed through `m4 -s`, and the single output is run through
+    the `checkfc` tool. The `checkfc` tool checks the grammar and syntax of the file
+    and also verifies that the types exist in the built `sepolicy`. Because of this,
+    it is dependent on the `sepolicy` build.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Building property_contexts
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `property_contexts` behaves exactly like the `file_contexts` build, except
+    that it checks a `property_contexts` file. It also uses `checkfc`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Current NSA research files
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Additionally, work on Enterprise Operations (`eops`) is already underway at
+    the NSA. As this feature hasn't been merged into mainstream Android and is likely
+    to change wildly, it won't be covered here. However, the best place for the bleeding
+    edge is always the source and NSA Bitbucket repositories. The `selinux-network.sh`
+    also falls under this category; it hasn't seen mainstream adoption yet, and will
+    likely be dropped from AOSP ([https://android-review.googlesource.com/#/c/114380/](https://android-review.googlesource.com/#/c/114380/)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Standalone tools
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: There are also some standalone tools built for Android policy evaluation that
+    you may find useful. We will explore some of them and their usages. Most of the
+    standard desktop tools you'll find in other references still work on SE for Android
+    SELinux policy. Note that if you run any of the following tools and get a segmentation
+    fault, you will likely need to apply the patch from the thread at [http://marc.info/?l=seandroid-list&m=141684060409894&w=2](http://marc.info/?l=seandroid-list&m=141684060409894&w=2).
+  prefs: []
+  type: TYPE_NORMAL
+- en: sepolicy-check
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'This tool allows you to see whether a given allow rule exists in a policy file.
+    The basic syntax of its command is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'For instance, if you want to see whether `system_app` can write to `system_data_file`
+    for class file, you can execute:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: sepolicy-analyze
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: This is a good tool to check for common issues in SELinux development and it
+    catches some of the common pitfalls of new SELinux policy writers. It can check
+    for equivalent domains, duplicate allow rules. It can also perform policy type
+    difference checks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The domain equivalence check feature is very helpful. It shows you domains
+    you may (in theory) want to be different, even though they converged in the implementation.
+    These types would be ideal candidates to coalesce. However, it might have also
+    shown an issue in the design of the policy that should be corrected. In other
+    words, you didn''t expect these domains to be equivalent. Invoking the command
+    is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The duplicate allow rule checks whether allow rules exist on types that also
+    exist on attributes that the type inherits from. The allow rule on the specific
+    type is a candidate for removal, since there is already an `allow` on the attribute.
+    To execute this check, run the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The difference is also handy is also handy to view type differences within
+    a file. If you want to see what the difference between two domains is, you can
+    use this feature. This is useful for identifying possible domains to coalesce.
+    To perform this check, execute the following command:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we covered how the various components that control the policy
+    on the device are actually built and created, such as `sepolicy` and `mac_permissions.xml`.
+    This chapter also presented the `BOARD_SEPOLICY_*` variables used to manage and
+    build a policy across devices and configurations. Then we reviewed the `Android.mk`
+    components, detailing how the heart of the build and configuration management
+    works.
+  prefs: []
+  type: TYPE_NORMAL

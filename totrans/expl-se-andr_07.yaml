@@ -1,0 +1,700 @@
+- en: Chapter 7. Utilizing Audit Logs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: So far we've seen AVC records or the SELinux denial messages show up in `dmesg`,
+    but `dmesg` is a circular memory buffer, subject to frequent rollover dependent
+    on how verbose your kernel is. By using the audit kernel subsystem, we can route
+    these messages into user space and log them to disk. On the desktop, the daemon
+    that does this is called `auditd`. A minimal port of `auditd` is maintained in
+    the NSA branches however, it has not officially been merged into AOSP. We are
+    going to use the `auditd` version from the NSA branches since we are working on
+    Android 4.3\. The officially merged version as of April 7, 2014 can be found at
+    [https://android-review.googlesource.com/#/c/89645/](https://android-review.googlesource.com/#/c/89645/).
+    It's implemented within `logd`, and merged at [https://android-review.googlesource.com/#/c/83526/](https://android-review.googlesource.com/#/c/83526/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Update our system with the fast-paced SE for **Android Open Source Community**
+    (**AOSP**)
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Investigate how the audit subsystem works
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Learn to read SELinux audit logs and start writing policy
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Look at contexts relative to the logs
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: All LSMs should log their messages into the audit subsystem. The audit subsystem
+    can then route the messages to the kernel circular buffer using `printk`, or to
+    the auditing daemon in user space, if one is present. The kernel and userspace
+    logging daemon communicate using the `AUDIT_NETLINK` socket. We will dissect this
+    interface further in the chapter.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Lastly, the audit subsystem has the capability to print comprehensive records
+    when policy violations occur. Although you don't need this feature to enable and
+    work with SELinux, it can make your life easier. To enable this system, you must
+    use `auditd`, because `logd` currently doesn't have this support. You'll need
+    to build your kernel with `CONFIG_AUDITSYSCALL=y` and place an `audit.rules` file
+    in `/data/misc/audit/`. After you patch your tree with the following instructions,
+    read `system/core/auditd/README`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Unfortunately, the UDOO kernel version 3.0.35 does not support `CONFIG_AUDITSYSCALL`.
+    The patch located at [https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=29ef73b7a823b77a7cd0bdd7d7cded3fb6c2587b](https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=29ef73b7a823b77a7cd0bdd7d7cded3fb6c2587b)
+    should enable the support. However, on the UDOO, it causes a deadlock we could
+    not trace down.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Upgrades – patches galore
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Although Android 4.3, released from Google, had SE for Android support, it is
+    still limited, especially in the areas of auditing. One of the simplest ways to
+    bring this to a more useable state is to get the patches for some of the projects
+    from the NSA's SE for Android 4.3 branch. Here, the community has staged and deployed
+    many of the more advanced features which were not merged in the 4.3 timeframe.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The NSA maintains repositories at [https://bitbucket.org/seandroid/](https://bitbucket.org/seandroid/).
+    There are many projects so figuring out which to use and what branch can be daunting.
+    A way to find them is to go through each project and find the projects with a
+    `SEAndroid-4.3` branch. You don''t need to descend into the device trees since
+    we''re not building AOSP devices. The list of such project is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://bitbucket.org/seandroid/system-core](https://bitbucket.org/seandroid/system-core)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[https://bitbucket.org/seandroid/frameworks-base](https://bitbucket.org/seandroid/frameworks-base)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[https://bitbucket.org/seandroid/external-libselinux](https://bitbucket.org/seandroid/external-libselinux)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[https://bitbucket.org/seandroid/build](https://bitbucket.org/seandroid/build)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '[https://bitbucket.org/seandroid/frameworks-native](https://bitbucket.org/seandroid/frameworks-native)'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We can also safely skip `sepolicy` since we''ve already updated it to the bleeding
+    edge, but the kernels are a bit trickier. We need the changes from kernel-common
+    ([https://bitbucket.org/seandroid/kernel-common](https://bitbucket.org/seandroid/kernel-common))
+    and the binder patch ([https://android-review.googlesource.com/#/c/45984/](https://android-review.googlesource.com/#/c/45984/)),
+    which can be attained as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: We can start by figuring out the exact version we need to patch to by looking
+    at the `build/core/build_id.mk` file, and by using the webpage [https://source.android.com/source/build-numbers.html](https://source.android.com/source/build-numbers.html)
+    to do a lookup.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The file shows `BUILD_ID` is `JSS15J`, and the lookup shows that we are working
+    with the `android-4.3_r2.1` release for the UDOO.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For each downloaded project so far, generate the patches by running the command
+    `git checkout origin/seandroid-4.3_r2`. Finally, execute `git format-patch origin/jb-mr2.0-release`.
+    Since there is no `4.3._r2.1` branch, we're using `r2`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: For each of these patches, you'll need to apply them in the tree from their
+    corresponding `udoo/<project>` folder. It is important to apply the patches for
+    each project in numeric order starting with the `0001*` patch, moving on to `0002*`,
+    and so on. As an example of how to apply a specific patch for a project, let's
+    look at the first patch needed for `system-core`. Note that these Git repositories
+    use hyphens in place of the slashes in the source tree; so `frameworks-base` correlates
+    to `frameworks/base`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, generate the patches:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Apply the first patch, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: Note that for UDOO, it is important not to apply a patch number higher than
+    `0005` in `frameworks/base`. For other projects, you should apply all the patches.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note the error. Just hit *Ctrl* + *C* to quit the patching process whenever
+    you see this. The Git trees are not quite perfect, and because of this, some of
+    the patches are already in the UDOO source. The patch command will let us know,
+    and we can skip these by canceling them, when warned, with *Ctrl* + *C*. Keep
+    going through the patches, canceling the ones already applied, and fixing up any
+    failures. After patching userspace, it's *highly* recommended that you build to
+    ensure nothing is broken.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Once userspace is completely patched, we need to patch the kernel. Start by
+    cloning the kernel-common project from Bitbucket with the `git clone https://bitbucket.org/seandroid/kernel-common.git`
+    command. We will patch the kernel with the same method as the rest of the projects
+    with the exception of the binder patch. By viewing the link for the binder patch
+    mentioned, [https://android-review.googlesource.com/#/c/45984/](https://android-review.googlesource.com/#/c/45984/),
+    we found that the Git SHA hash is `a3c9991b560cf0a8dec1622fcc0edca5d0ced936`,
+    as given in the **Patch set 4** reference field in the following screenshot:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '![Upgrades – patches galore](img/0594OS_7_1.jpg)'
+  prefs: []
+  type: TYPE_IMG
+- en: 'We can then generate the patch for this SHA hash:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then, apply that patch with the patch command as we did before. The patch has
+    a failed hunk for a header file inclusion; just fix it up like the others by using
+    the reject file. When you build, you''ll get this error in the kernel:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Go ahead and remove this line and all references. This was a change made in
+    the 3.0 kernels:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'We figured this out by looking through the original 3.0 patches, which can
+    be found at following link:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[https://bitbucket.org/seandroid/kernel-omap/commits/59bc19226c746f479edc2acca9a41f60669cbe82?at=seandroid-omap-tuna-3.0](https://bitbucket.org/seandroid/kernel-omap/commits/59bc19226c746f479edc2acca9a41f60669cbe82?at=seandroid-omap-tuna-3.0)'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'As you recall, the UDOO uses a custom `init.rc`. We need to add any changes
+    to `init.rc` to the one UDOO actually uses. All the patches that can modify `init.rc`
+    will be in the system-core project, specifically these:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`0003-Auditd-initial-commit.patch`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`0007-Handle-policy-reloads-within-ueventd-rather-than-res.patch`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`0009-Allow-system-UID-to-set-enforcing-and-booleans.patch`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Go ahead and find the changes to `init.rc` in these patches and apply them to
+    `device/fsl/imx6/etc/init.rc` using the same patch technique.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The audit system
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the previous section, we did a lot of patching; the point of which was to
+    enable the audit integration work done on Android and its dependencies. These
+    patches also fix some bugs in the code and, very importantly, enable the SELinux/LSM
+    binder hooks and policy controls.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The audit system in Linux is used by LSMs to print the denial records as well
+    as to gather very thorough and complete records of events. No matter what, when
+    an LSM prints a message, it gets propagated to the audit subsystem and printed.
+    However, if the audit subsystem has been enabled, then you get more context associated
+    with the denial. The audit subsystem even supports loading rules for watching
+    this. For instance, you could watch all writes to `/system` that were not done
+    by the system UID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The auditd daemon
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `auditd` daemon, or service, runs in userspace and listens over a NETLINK
+    socket to the audit subsystem. The daemon registers itself to receive the kernel
+    messages, and can also load the audit rules over this socket. Once registered,
+    the `auditd` daemon receives all the audit events. The `auditd` daemon was minimally
+    ported, and there was an attempt to mainline it into Android that was later rejected.
+    However, `auditd` has been used by various OEMs (such as Samsung) and by the NSA's
+    4.3 branch. An alternative approach that put records in logcat was later merged
+    into Android (for more information, refer to [https://android-review.googlesource.com/89645](https://android-review.googlesource.com/89645)).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Earlier, we saw the AVC denial messages from SELinux in `dmesg`. The problem
+    with this is that the circular memory log is prone to rollover when you have many
+    denials or a chatty kernel. With `auditd`, all the messages come to the daemon
+    and are written to the `/data/misc/audit/audit.log` file. This log file, herein
+    referred to as `audit.log`, may exist on device boot and is rotated into the `/data/misc/audit/audit.old`
+    file, known as `audit.old`. The daemon resumes logging to a new `audit.log` file.
+    This rotate event occurs when the size threshold `AUDITD_MAX_LOG_FILE_SIZEKB`
+    (set during compile time in the `system/core/auditd/Android.mk` file) is exceeded.
+    This threshold is typically 1000 KB but can be changed in the device's `makefile`.
+    Also, sending `SIGHUP` with `kill` will cause a rotate as in the following example.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Verify the daemon is running and get its PID:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Verify only one log exists:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Rotate the logs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Verify `audit.old`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: Auditd internals
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Since the `auditd` and `libaudit` code from the Linux desktop have a GPL license,
+    a rewrite was done for Android, released under the Apache license. The rewrite
+    is minimal, thus you will only find the functions implemented that were required
+    to support the daemon. The functional and header interfaces should remain identical
+    though.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `auditd` daemon starts life at `main()` in `system/core/auditd.c`. It quickly
+    changes its permissions from UID root to a special `auditd` UID. When it does
+    this, it retains `CAPSYS_AUDIT`, which is a required DAC capability check to use
+    the `AUDIT` NETLINK socket. It does this via a call to `drop_privileges_or_die()`.
+    From there, it does some option parsing with `getopt()`, and we finally get to
+    the audit-specific calls, the first of which opens the NETLINK socket using `audit_open()`.
+    This function simply calls `socket(PF_NETLINK, SOCK_RAW, NETLINK_AUDIT)`, which
+    opens a file descriptor to the NETLINK socket. After opening the socket, the daemon
+    opens a handle to `audit.log` with a call to `audit_log_open(const char *logfile,
+    const char *rotatefile, size_t threshold)`. This function checks whether the `audit.log`
+    file exists and, if it does, renames it to `audit.old`. It then creates a new
+    empty log file in which the data is recorded.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next step is to register the daemon with the audit subsystem so that it
+    knows to whom to send messages. By setting the PID of the daemon, you ensure that
+    only this daemon will get the messages. Since NETLINK can support many readers,
+    you don't want a "rogue `auditd`" to read the messages. With that stated, the
+    daemon calls `audit_set_pid(audit_fd, getpid(), WAIT_YES)`, where `audit_fd` is
+    the NETLINK socket from `audit_open()`, `getpid()` returns the daemon's PID, and
+    `WAIT_YES` causes the daemon to block until the operation is complete. Next, the
+    daemon enables the audit subsystem's advanced features with a call to `audit_set_enabled(audit_fd,
+    1)` and adds rules to the audit subsystem via `audit_rules_read_and_add(audit_fd,
+    AUDITD_RULES_FILE)`. This function reads the rules from that file, formats some
+    structures, and sends those structures to the kernel.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The `audit_set_enabled()` and `audit_rules_read_and_add()`only have an effect
+    if the kernel is built with `CONFIG_AUDITSYSCALL`. After this, the daemon checks
+    whether the `-k` option was specified. The `-k` option tells `auditd` to look
+    in `dmesg` for any missed audit records. It does this because there is a race
+    between capturing audit records before the circular buffer overflows and userspace
+    starting many services, generating audit events and policy violations. Essentially,
+    this helps coalesce the audit events from early boot into the same log files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After this, the daemon enters a loop to read from the NETLINK socket, formatting
+    the messages, and writing them to the log file. It starts this loop by waiting
+    for IO on the NETLINK socket using `poll()`. If `poll()` exits with an error,
+    the loop continues to check the `quit` variable. If `EINTR` is raised, the loop
+    guard, `quit`, is set to `true` in the signal handler, and the daemon exits. If
+    `poll()` is data on the NETLINK, the daemon calls `audit_get_reply(audit_fd, &rep,
+    GET_REPLY_BLOCKING, 0)`, getting an `audit_reply` structure back with the `rep`
+    parameter. It then writes the `audit_reply` structure (with formatting) to the
+    `audit.log` file with `audit_log_write(alog, "type=%d msg=%.*s\n", rep.type, rep.len,
+    rep.msg.data)`. It does this until `EINTR` is raised, at which point, the daemon
+    exits.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When the daemon exits, it clears the PID registered with the kernel (`audit_set_pid(audit_fd,
+    0)`), closes the audit socket via `audit_close()` (which is really just the syscall,
+    `close(audit_fd)`), and closes the `audit.log` with `audit_log_close()`. The `audit_log_*`
+    family of functions is not part of the GPLed interface to audit and is a custom
+    write.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When Google ported `auditd` to the `logd` infrastructure in Android, it used
+    the same functions and library code used by the daemon's `main()` and wrapped
+    it into `logd`. However, Google *did not* take the `audit_set_enabled()` and `audit_rules_read_and_add()`
+    functions.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Interpreting SELinux denial logs
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: The SELinux denials get routed to the kernel audit subsystem, to `auditd`, and
+    finally, to `audit.log` and `audit.old`. With the logs resident in `audit.log`,
+    let's pull this file over `adb` and have a closer look at it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Run the following command from the host, with `adb` enabled:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, let''s tail that file and look for these lines:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The records here consist of two major portions: `type` and `msg`. The `type`
+    field indicates what type of message it is. Messages with type 1400 are AVC messages,
+    which are SELinux denial messages (there are other types, as well). The `msg`
+    (short for message) portion of the preceding policy contains the part for us to
+    analyze.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The last command we executed was `adb pull /data/misc/audit/aduit.log` and,
+    as you can see, we have a few `adb` policy violations at the tail of the `audit.log`
+    file. Let''s start by looking at this event:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can see that the `comm` field is `adbd`. However, it''s not wise to trust
+    this value since it can be controlled from userspace using the `prctl()` interface.
+    It can only be viewed as a hint. The best way to verify this is to check the PID
+    using `ps -Z`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With the daemon verified, we can now check the message in more detail. The
+    message consists of the following fields (optional fields are identified by `*`):'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`avc: denied`: This part will always happen and denotes it is a denial record.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`{ permission }`: This is the permission that was denied, in this case, `getattr`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`for`: This will always be printed and makes the output readable.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`Path*`: This is the optional field that contains the path of the object in
+    question. It only makes sense for filesystem access denials.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`dev*`: This is the optional field that identifies the block device for the
+    mounted filesystem. It only makes sense for filesystem access denials.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`ino*`: This is the optional inode of the file. Only the anonymous files in
+    Linux print inode. It only makes sense for filesystem access denials.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`tclass`: This is the target class of the object, which in our case was `file`.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'At this point, we need to understand what the `msg` portion of the denial record
+    is telling us at a very distilled level. It is saying that the Android debug bridge
+    daemon wants to be able to call `getattr` on our policy file. A few events down,
+    we will see it also wants `read` and `open`. This is the side effect of running
+    `adb pull`. A `getattr` permission denial occurs from a `stat()` syscall, and
+    the `read/open` are from `read()` and `open()` syscalls. If you want to allow
+    this in your policy, which would be a security decision based on your threat model,
+    you should add:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Alternatively, use the macro sets defined in `global_macros`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Most of the time, you should use the macros defined in `global_macros` for file
+    permission accesses. Typically, adding them one by one is very time consuming
+    and tedious. The macros group the permissions in a context analogous to read,
+    write, and execute DAC permissions. For instance, if you give it `open` and `read`,
+    there's a good chance at some point that the source domain will need to stat the
+    file. So, the `r_file_perms` macro has those permissions in it already.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'You should add this rule to `external/sepolicy/adbd.te`. The `.te` files (also
+    called `type enforcement` files) are organized by source context, so make sure
+    you add it to the correct file. We do not recommend adding this allow rule—there''s
+    no legitimate reason that `adbd` needs access to the audit logs—we can safely
+    ignore these with a `dontaudit` rule:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `dontaudit` rule is a policy statement that says don't audit (print) denials
+    that match this rule.
+  prefs: []
+  type: TYPE_NORMAL
+- en: If you're not sure what to do, the best advice is to leverage the mailing lists
+    for SE for Android, SELinux, and audit. Just keep the messages appropriate to
+    the specific mailing lists topic.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'A tool exists called `audit2allow`, which can help you write policy allow rules.
+    However, it''s only a tool and can be misused. It translates the policy file to
+    the allow rules for the policy:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `audit2allow` tool is not macro aware or aware if you really want to add
+    this allow rule to the policy file. Only the policy author can make this decision.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'There is also a tool to enable the `r_file_*` macro mapping called `fixup.py`.
+    You can get the tool at [https://bitbucket.org/billcroberts/fixup/overview](https://bitbucket.org/billcroberts/fixup/overview).
+    After downloading, make it executable, and place it somewhere in your executable
+    path:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Contexts
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In the simplest sense, writing policies is just the activity of identifying
+    policy violations and adding the appropriate allow rules to the policy file. However,
+    in order for SELinux to be effective, the source and target contexts must be correct.
+    If they are not, the allow rules are meaningless.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The first things you might encounter are denials where the target type is unlabeled.
+    In this case, the proper target label needs to be set (refer to [Chapter 11](ch11.html
+    "Chapter 11. Labeling Properties"), *Labeling Properties*). Also, process labels
+    can be wrong. Multiple processes can belong to a domain, and unless explicitly
+    done via policy, the child process of a parent inherits the parent's domain. However,
+    in Android, domains that have multiple processes are quite limited. You will never
+    see multiple processes in `init`, `system_server`, `adbd`, `auditd`, `debuggerd`,
+    `dhcp`, `servicemanager`, `vold`, `netd`, `surfaceflinger`, `drmserver`, `mediaserver`,
+    `installd`, `keystore`, `sdcardd`, `wpa`, and `zygote` domains.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It''s okay to see multiple processes in the following domains:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`system_app`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`untrusted_app`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`platform_app`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`shared_app`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`media_app`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`release_app`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`isolated_app`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`shell`'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'On a released device, nothing should be run in the `su`, `recovery`, and `init_shell`
+    domains. The following table provides a complete mapping of domains to the expected
+    executables and cardinality:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Domain | Executable(s) | Cardinality (N) |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:init:s0"` | `/init` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:ueventd:s0` | `/sbin/ueventd` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:healthd:s0` | `/sbin/healthd` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:servicemanager:s0` | `/system/bin/servicemanager` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:vold:s0` | `/system/bin/vold` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:netd:s0` | `/system/bin/netd` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:debuggerd:s0` | `/system/bin/debuggerd, /system/bin/debuggerd64` | `N
+    == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:surfaceflinger:s0` | `/system/bin/surfaceflinger` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:zygote:s0` | `zygote, zygote64` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:drmserver:s0` | `/system/bin/drmserver` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:mediaserver:s0` | `/system/bin/mediaserver` | `N >= 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:installd:s0` | `/system/bin/installd` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:keystore:s0` | `/system/bin/keystore` | `N == 1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:system_server:s0` | `system_server` | `N ==1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:sdcardd:s0` | `/system/bin/sdcard` | `N >=1` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:watchdogd:s0` | `/sbin/watchdogd` | `N >=0 && N < 2` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:wpa:s0` | `/system/bin/wpa_supplicant` | `N >=0 && N < 2` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:init_shell:s0` | `null` | `N == 0` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:recovery:s0` | `null` | `N == 0` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| `u:r:su:s0` | `null` | `N == 0` |'
+  prefs: []
+  type: TYPE_TB
+- en: Several **Compatibility Test Suite** (**CTS**) tests have been written around
+    this and submitted to AOSP at [https://android-review.googlesource.com/#/c/82861/](https://android-review.googlesource.com/#/c/82861/).
+  prefs: []
+  type: TYPE_NORMAL
+- en: Based on these generic assertions of what a good policy should look like, let's
+    evaluate ours.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'First, we will check for unlabeled objects. From the host, with the `audit.log`
+    file you obtained with `adb pull`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: It looks like we have some files and other things that are not labeled properly;
+    we will address these in the [Chapter 11](ch11.html "Chapter 11. Labeling Properties"),
+    *Labeling Properties*. Now, let's check for domains that have multiple processes
+    when they should not, and find improper binaries in those domains (refer to the
+    previous table for the complete mapping.)
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Init:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Zygote:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: After doing this, we found issues because something is running in the `init_shell`
+    domain, and `watchdogd` is in the `init` domain. These must be corrected.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Writing `sepolicy` is relatively easy, writing good policy is an art. It requires
+    the policy author to understand the system and the implications of the `allow`
+    rule. Policy itself is a meta-programming language where the language controls
+    how userspace and the kernel get along, and much like any program, the policy
+    can be architected for a specific use. Policies can be too porous (essentially
+    useless) or very tight and difficult to change without breaking the portions that
+    already work.
+  prefs: []
+  type: TYPE_NORMAL
+- en: A good policy needs to preserve the intended proper function of the system,
+    so thorough testing of all the systems within Android is essential. CTS is a great
+    help in exercising Android, but it often does not cover all the cases; user testing
+    is recommended. In the next chapter, we will cover how filesystems and filesystem
+    objects get their security labels and how we can change them. Later, we will go
+    over how to use CTS as a tool to test the system and generate policy violations
+    for intended behaviors.
+  prefs: []
+  type: TYPE_NORMAL

@@ -1,0 +1,534 @@
+- en: Chapter 2. Mandatory Access Controls and SELinux
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: 'In [Chapter 1](ch01.html "Chapter 1. Linux Access Controls"), *Linux Access
+    Controls*, we introduced some of the shortcomings of a discretionary access control
+    system. In these systems, the owner of an object has full control over its permissions
+    flags and can demonstrate greater capabilities (for example, the ability to `chown`)
+    when executing as `root` or with certain capabilities. In this chapter, we will:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Examine the fundamentals of MAC
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Introduce some industry drivers for SELinux
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Discuss labels, users, roles, and types
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Explore the implementation of tangible policy to allow and constrain object
+    interaction
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Ideal MAC systems maintain the property of providing definitive access controls
+    on kernel resources, such as files, irrespective of an object's owner. For instance,
+    with a MAC system, the owner of an object might not have full control of its permissions.
+    In Linux, the MAC framework works orthogonally to the current DAC controls. This
+    means that the MAC controls do not interfere with the DAC controls. In other words,
+    to avoid potential conflicts between the MAC and DAC systems, the kernel validates
+    access using the DAC permissions before checking the MAC permissions. If the DAC
+    permissions result in a permissions violation, then the MAC permissions are never
+    checked. The kernel will validate access against the MAC permissions provider
+    only when the DAC permissions pass. Failure at either level will result in a return
+    of `EACCESS`. If the DAC and the MAC permissions pass, then the kernel resource
+    (for example, a file descriptor) is sent back to user space.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In Linux, a framework called the **Linux Security Module** (**LSM**) framework
+    was merged during the Linux 2.6.x series of kernels. This framework allows you
+    to enable the mandatory access control systems in a build time selection by tethering
+    the LSM hooks to the security provider. **Security Enhanced Linux** (**SELinux**)
+    is the first consumer of this MAC security framework within the kernel and is
+    an implementation of a mandatory access control system. SELinux ships in a wide
+    variety of Linux systems, such as **Red Hat Enterprise Linux** (**RHEL**) and
+    consequently Fedora. Recently, it has begun shipping with Android. The source
+    code for SELinux can be found in the Linux source code tree under `kernel/security/selinux`
+    for those wishing to review it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Getting back to the basics
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: SELinux is a reimplementation of a design engineered by the U.S. government
+    and The University of Utah known as the **FLUX Advanced Security Kernel** (**FLASK**).
+    The SELinux and FLASK architecture provide a central policy file utilized while
+    determining the results of access control decisions. This central policy is in
+    a whitelist form. This means that all access control rules must be defined explicitly
+    by the policy file. This policy file is abstracted and served by a software component
+    called a security server. When the Linux kernel needs to make an access control
+    decision and SELinux is enabled, the kernel interacts with the security server
+    by means of the LSM hooks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: In a running system, a process is the active entity that gets time on the CPU
+    to perform tasks. The user merely invokes these processes to do the work on their
+    behalf. This is an important concept. As we type this book, we trust that the
+    word processors running on our machines with our credentials aren't opening our
+    SSH keys and embedding them in the document metadata. Right now, the process is
+    in control of the computing resources, not the user. The process is the running
+    entity, it is the process that makes system calls to the kernel for resources,
+    not the physical human being. With this in mind, the very first actor in this
+    SELinux system is the process, typically referred to as the **subject**. It is
+    the subject that accesses files. It is the subject that the security server will
+    use to make access decisions on.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Consequently, the subject utilizes kernel resources. This kind of kernel resource
+    is an example of a **target**. The subject performs actions on the target. Naturally,
+    one should ask, "What actions does a subject perform?" These are known as access
+    vectors and typically correlate to the name of the syscall performed. For example,
+    the subject could perform an `open` on the target. It is important to note that
+    targets could be processes as well. For instance, if the system call is `ptrace`,
+    the subject could be something along the lines of a debugger, and the target would
+    be the process you wish to debug. A subject is frequently a process, but a target
+    could be a process, socket, file, or something else.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Labels
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: SELinux provides semantics for describing policies related to the targets and
+    subjects using labels. Labels are the metadata associated with an object that
+    maintains the subject's and target's access information. The data associated with
+    this object is a string. Returning to the debugger example, the `gdb` process
+    might have a subject label string of `debugger`, and the target might have a label
+    of `debugee`. Then in the security policy, some semantic could be used to express
+    that processes with the subject label `debugger` are allowed to debug applications
+    with target label `debugee`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Fortunately, and perhaps unfortunately, SELinux does not use such simple labels.
+    In fact, the labels are made up of four colon-delimited fields: user, role, type,
+    and level. This additional complexity affords very flexible control options.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Users
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The very first field in a label identifies the user. The user field is used
+    as part of the design for **user-based access controls** (**UBAC**). However,
+    this is not typically associated with human users as it is with the concept of
+    users in DAC. SELinux users typically define a group of traditional users. A common
+    example is to identify all normal users as the SELinux user, `user_u`. Perhaps
+    a separate user for system processes, such as `system_u`. By convention in the
+    desktop SELinux community, user portions of the string are suffixed with a `_u`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Roles
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The second field in a label is role. The role is used as part of the design
+    for **role-based access controls** (**RBAC**). Roles are used to provide additional
+    granularity to the user. For instance, suppose we have the user field, `sysadm_u`,
+    reserved for administrators. The administrator might be in separate tasks, and
+    depending on the tasks, the role (and therefore, privileges) of users in `sysadm_u`
+    may change. For example, when an administrator needs to mount and unmount file
+    systems, the role field might change to `mount_admin_r`. When an administrator
+    is setting the `iptables` rules, the role might change to `net_admin_r`. Roles
+    allow the isolation of privileges within the scope of the tasks being performed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Types
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: Type is the third field of the colon-delimited label. The type field is evaluated
+    during the **type enforcement** (**TE**) portion of SELinux's access control model.
+    TE is the major component that drives SELinux's security capabilities, and it
+    is at this point where the policy starts to take effect.
+  prefs: []
+  type: TYPE_NORMAL
+- en: SELinux is based on a whitelist system where everything is denied by default
+    and requires explicit approval from the policy for an interaction to occur. This
+    approval is initially determined from the policy via an allow rule that references
+    both the subject's and target's type. SELinux types can also be assigned attributes.
+    Attributes allow you to give numerous types a common set of rules. Attributes
+    can help minimize the amount of types, and can be used in fashion similar to that
+    of an inheritance model.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Access vectors
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Data is accessed by processes via system calls and possible user defined access
+    methods. The user defined access methods are usually controlled via a userspace
+    object manager. These access paths, also known as vectors, make up a set of actions
+    that can be applied to the object. For instance, if a process opens a file, writes
+    some data into the file, and then reads it back, the access vectors exercised
+    would be `open`, `read`, and `write`. If a process debugs another process, the
+    access vector would be `ptrace`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Multilevel security
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: SELinux also supports a **multilevel security** (**MLS**) model, which pays
+    homage to the **Bell-LaPadula** (**BLP**) model, but alternate models could be
+    used. The BLP model was created to formalize the Department of Defense's security
+    policies. For example, a person with a secret clearance should not be able to
+    read top-secret material. However, let's suppose this person has a brilliant idea
+    that ultimately needs to be protected at the top-secret level; that data could
+    then be "up-classified" to top-secret. This is referred to as "no read up or write
+    down".
+  prefs: []
+  type: TYPE_NORMAL
+- en: The SELinux implementation of this field has subfields. The first field is sensitivity,
+    and will always be present. In the context of the previous example, pertinent
+    sensitivities include secret and top secret. The second subfield is category,
+    and might not be present. These fields also make sense in the context of government
+    classification. The data itself might be compartmentalized, so while the sensitivity
+    is the same, such as top secret, the data should only be disseminated to people
+    within the same compartment or category. Sensitivities are defined in a hierarchical
+    fashion via the dominance keyword. In a typical policy, `s0` is the lowest sensitivity
+    and `sN` where `n > 0` is the highest. Thus, `s1` has a greater sensitivity than
+    `s0`. Categories are sets. The controls associated with the level, which is comprised
+    of sensitivities and potentially categories, follow set theory concepts, such
+    as dominance and equality. In MLS security, all interactions are allowed by default,
+    unlike type enforcement. Both the sensitivity and the category can be ranged,
+    and categories can be enumerated. Thus, a label might have some number of sensitivities
+    and different number of categories.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Putting it together
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: SELinux labels are quite flexible and sometimes complex. It's often beneficial
+    to start with a contrived example that focuses on type enforcement. Later, we
+    can add additional fields later as the need for finer granularity becomes more
+    apparent. Conveniently, you can project this model to scenarios in everyday life
+    to provide some sense of tangibility to the material. Dan Walsh, a prominent SELinux
+    figure, posted a blog post using pets as an analogy. Let's continue on with that
+    premise, but we will make some modifications as we go and define our own examples.
+    It's best to start with simple type enforcement as it is the easiest to understand.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You can read Dan Walsh's original blog post introducing the pet analogy at [http://opensource.com/business/13/11/selinux-policy-guide](http://opensource.com/business/13/11/selinux-policy-guide).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Suppose we own a cat and a dog. We don''t want the cat to eat dog food. We
+    don''t want the dog to eat cat food. At this point, we have already identified
+    two subjects, a cat and a dog, and two targets, cat food and dog food. We also
+    have identified an access vector, eating. We can use allow rules to implement
+    our policy. Possible rules could look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: Let's use this example to start and define a basic syntax for expressing the
+    access controls we would like to enforce. The first token is `allow`, stating
+    we wish to allow an interaction between a subject and a target. The dog is assigned
+    the type, `dog`, and the cat, `cat`. The cat food is assigned the type `cat_chow`,
+    and the dog food, `dog_chow`. The access vector in this case is `eat`. With this
+    basic syntax, which is also valid SELinux syntax, we restrict the animals to the
+    food they should eat. Notice the `:food` annotation after the type. This is the
+    class field of the target object. For instance, there might also be `dog_chow`
+    `treat` and `cat_chow` classes that could indicate our desire to allow access
+    to treats in a fashion that is potentially different from the way we allow access
+    to foods that are not treats.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s say we get two more dogs, and our scenario has three dogs. The dogs
+    are of different sizes: small, medium, and large. We want to make sure none of
+    these new dogs eat others'' food. We could do something like create a new type
+    for each of the dogs and prevent dogs from eating the food of other dogs. It would
+    look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This would work; however, the total number of types would be difficult to manage,
+    and that would continue to grow if we allow the large dog to eat the smaller breeds''
+    food. What we could do is use MLS support to assign a sensitivity to each target
+    or dog food bowl. Let''s assume the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The cat's food bowl has sensitivity, `tiny`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The small dog's food bowl has sensitivity, `small`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The medium-sized dog's food bowl has sensitivity, `medium`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The large dog's food bowl has sensitivity, `large`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'We also need to make sure that the subjects are labeled with the proper sensitivity
+    as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: The cat should have sensitivity, `tiny`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The small dog should have sensitivity, `small`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The medium-sized dog should have sensitivity, `medium`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The large dog should have sensitivity, `large`
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'At this point, we need to introduce additional syntax to allow the interactions,
+    since by default, MLS allows everything and TE denies everything. We''ll use `mlsconstrain`,
+    to restrict interactions within the system. The rule could look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: This constraint only allows subjects to eat food with the same sensitivity level.
+    SELinux defines the keywords `l1` and `l2`. The `l1` keyword is the level of the
+    target and `l2` is the level of the source. Because the rules are part of a whitelist,
+    this also prevents subjects from eating food that does not have the equivalent
+    sensitivity level.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Now, let''s say we get yet another large dog. Now we have two large breed dogs.
+    However, they have different diets and need to access different foods. We could
+    add a new type or modify an existing type, but this would have the same limitations
+    that led us to use sensitivities to prevent access. We could add another sensitivity,
+    but it might get confusing that there are `large1` and `large2` sensitivities.
+    At this point, categories would allow us to get a bit more granular in our controls.
+    Suppose we add a category denoting the breed. Our MLS portion of our label would
+    look something like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: These could be used to prevent the black lab from eating the golden retriever's
+    food. Now suppose you're surprised with another dog, a Saint Bernard. Let's say
+    this new Bernard can eat any large dog's food, but the other large dogs can't
+    eat his food. We could label the food bowls and the dogs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '| Dog Breed | Subject label | Target label |'
+  prefs: []
+  type: TYPE_TB
+- en: '| --- | --- | --- |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Golden Retriever | `Dog:large:golden_retriver` | `dog_chow:large:golden_retriver`
+    |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Black Lab | `Dog:large:black_lab` | `dog_chow:large:black_lab` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Saint Bernard | `Dog:large:saint_bernard, black_lab, golden_retriever` |
+    `dog_chow:large:saint_bernard` |'
+  prefs: []
+  type: TYPE_TB
+- en: '| Cat | `Cat:tiny` | `cat_chow:tiny` |'
+  prefs: []
+  type: TYPE_TB
+- en: The existing `mlsconstraint` needs modification. If the Saint Bernard ran out
+    of food and went to the Black Lab's dish, the Saint Bernard would not be able
+    to eat from it since the levels are not equal (`Dog:large:saint_bernard, black_lab,
+    golden_retriever` is not the same as `dog_chow:large:black_lab`). Remember, the
+    levels are sets, so we need to introduce some notion that if the subjects set
+    dominates the target set, that interaction should be allowed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This could be accomplished with the `dom` keyword:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The dominate keyword, `dom`, differs from equality, indicating `l1` is a superset
+    of `l2` In other words, the levels associated with the target, `l2`, are among
+    the potentially larger set of levels associated with the subject, `l1`. At this
+    point, we are able to keep all the food separated and used however we see fit.
+  prefs: []
+  type: TYPE_NORMAL
+- en: After getting all these dogs, you realize it's time to feed them, so you get
+    a bag of dog food and put some in each bowl. However, before you can add dog food
+    to the bowls, we need some allow rules and labels that will let you. Remember,
+    SELinux is a whitelist-based system, and everything must be explicitly allowed.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We will label the human with the `human` label and define some rules. Oh yeah...
+    don''t forget to feed the cat, as well:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We will also need to label `human` with all the sensitivities and categories,
+    but this would become cumbersome when we need to add additional dogs, breeds,
+    and breed sizes to our system. We could just bypass the constraint if the type
+    is `human`. With this approach, we always trust `human` to put the correct food
+    in the appropriate bowl:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: Note the addition of `put` in the access vectors of the MLS constraint. Viola!
+    The human can now feed his ever-growing pack of animals.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'So your birthday rolls around, and you receive an automatic dog feeder as a
+    present. You label the food dispenser, `dispenser` and modify the MLS constraints:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Again, we see a need to condense the number of types and get organized to prevent
+    having to duplicate lines. This is where attributes are quite handy. We can assign
+    an attribute to our `human` and `dispenser` types by first defining the attribute:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Then we can add it to the type:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This could also be done at type declaration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'At this point, we could modify the MLS statements to look like this:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now let''s suppose you hire a maid service. You want to ensure anyone sent
+    by the maid service is able to feed your pets. For that matter, let''s let your
+    family members feed them, as well. This would be a good use case for the user
+    capabilities. We will define the following users: `adults_u`, `kids_u`, and `maid_u`.
+    Then we''ll need to add a constraint statement to allow interactions by these
+    users:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This would prevent the kids from feeding the dogs, but let the maids and adults
+    feed them. Now suppose you hire a gardener. You could create yet another user,
+    `gardener_u`, or you could collapse the users into a few classes and use roles.
+    Let''s suppose we collapse `gardener_u` and `maid_u` into `staff_u`. There is
+    no reason the gardener should be feeding the dog, so we could use role-based transitions
+    to move the staff between their duties. For instance, suppose staff can perform
+    more than one service, that is, the same person might garden and clean. In this
+    case, they might take on the role of `gardener_r` or `maid_r`. We could use the
+    role capability of SELinux to meet this need:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: Staff may only feed the dogs when they're in the `animal_care_r` role. How to
+    get into and back out of that role is really the only component missing. You need
+    to have a well-defined system for how the staff can move into the animal care
+    role and transition back out. These transitions in SELinux occur either automatically
+    via dynamic role transitions or via source code modifications. We'll assume that
+    any human entity (gardener, adults, kids) all start in the `human_r` role.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Dynamic role transitions work with a two-part rule, the first part allows the
+    transition to occur via an allow rule:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'The role transition statements are as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This would be a good case to attribute the `dog_chow` and `cat_chow` types
+    to a new attribute, `animal_chow`, and rewrite the preceding role transitions
+    to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: With these role transitions, you can only go from the `human_r` role to `animal_care_r`.
+    You would need to define transitions to get back as well. It's also important
+    to note that you might define other roles. Suppose you define the role `gardener_r`,
+    and when someone is in that role, they cannot transition to `animal_care_r`. Suppose
+    your justification for this policy is that gardeners might work with chemicals
+    unsafe for pets, so they would need to wash their hands before feeding pets. In
+    such a situation, they should only be able to transition to `animal_care_r` from
+    the `hand_wash_r` role.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Complexities and best practices
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: As you can now appreciate, SELinux is complex, and can be thought of as a general
+    purpose "meta programming policy language". You're literally programming what
+    interactions are allowed to occur in a very complex OS such as Linux, where the
+    interactions themselves are often complex. Just like a programming language, you
+    can do things with different styles and methods that will yield differing results.
+    Perhaps using a `switch()` in that program will make it cleaner and easier to
+    understand rather than an `else-if` block, even though functionally you will end
+    up with the same thing. SELinux is the same; you can often accomplish things with
+    one portion of the enforcement mechanisms that would be more appropriately accomplished
+    using an alternate mechanism. In later chapters, we will cover the process of
+    labeling the target and subject, one of the more difficult parts of the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: When someone authors a program, they often have a set of requirements in place
+    that the software should perform. These are the requirements of the software.
+    In SELinux, you should do the same thing. You should gather the security requirements
+    and understand the threat models you wish to protect yourself from. A well designed
+    SELinux policy would meet these goals. A great design would do it in a way that
+    is easy to extend. That's ultimately where careful and judicious use of the combination
+    of UBAC, RBAC, TE, and MLS will help achieve the requirements and design goals.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we covered the major working portions of SELinux that include
+    type enforcement, multilevel and multicategory security, as well as users and
+    roles. Additionally, we saw how to apply these technologies to implement increasingly
+    complex access policies to a tangible example. In the next chapter, we will move
+    outside of the kernel and discover how Android works in its very unique user space.
+  prefs: []
+  type: TYPE_NORMAL

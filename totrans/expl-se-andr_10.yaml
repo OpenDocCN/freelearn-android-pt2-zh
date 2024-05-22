@@ -1,0 +1,1042 @@
+- en: Chapter 10. Placing Applications in Domains
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In [Chapter 3](ch03.html "Chapter 3. Android Is Weird"), *Android Is Weird*,
+    we introduced the zygote and that all applications, APKs in Android speak, emanate
+    from the zygote just like services emanate from the `init` process. As such, they
+    need to be labeled, as we did in the previous chapter. Recall that labeling is
+    the same as placing a process in a domain of that label. Applications need to
+    be labeled as well.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: APK is the file extension and format for installable application packages on
+    Android. It's analogous to the desktop package formats like RPM (Redhat based)
+    or DEB (Debian based).
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'In this chapter, we will learn to:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: Properly label application private data directories and their runtime contexts
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Further examine zygote and methods to secure it
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Discover how a finished `mac_permssions.xml` file assigns `seinfo` value
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Create a new custom domain
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The case to secure the zygote
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Android applications with elevated permissions and capabilities are spawned
+    from the zygote. An example of this is the system server, a large process comprised
+    of native and non-native code hosting a variety of services. The system server
+    houses the activity manager, package manager, GPS feeds and so on. The system
+    server also runs with a highly sensitive UID of `system` (`1000`). Also, many
+    OEMs package what are known as **system apps**, which are standalone applications
+    running with the `system` UID.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The zygote also spawns applications that do not need elevated permissions. All
+    third-party applications represent this. Third party applications run as their
+    own UID, separate from sensitive UIDs, such as `system`. Additionally, applications
+    get spawned into various UIDs such as `media`, `nfc`, and so on. OEMs tend to
+    define additional UIDs.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'It''s important to note that to get into a special UID, like `system`, you
+    must be signed with the proper key. Android has four major keys used to sign applications:
+    `media`, `platform`, `shared`, and `testkey`. They are located in `build/target/product/security`,
+    along with a `README`.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'According to the `README`, the key usage is as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '`testkey`: A generic key for packages that do not otherwise specify a key.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`platform`: A test key for packages that are part of the core platform.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`shared`: A test key for things that are shared in the home/contacts process.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`media`: A test key for packages that are part of the media/download system.'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In order to request `system` UID for your application, you must be signed with
+    the `platform` key. Possession of the private key is required to execute in these
+    more privileged environments.
+  prefs: []
+  type: TYPE_NORMAL
+- en: As you can see, we have applications executing at a variety of permission levels,
+    and trust levels. We cannot trust third party applications since they are created
+    by unknown entities, and we can trust things signed with our private keys. However,
+    before SELinux, application permissions were still bound by the same DAC permission
+    limitations as those identified in [Chapter 1](ch01.html "Chapter 1. Linux Access
+    Controls"), *Linux Access Controls*. Because of these properties, it makes the
+    zygote a prime target for attack, as well as fortification with SELinux.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Fortifying the zygote
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: Now that we have identified a problem with zygote, the next step is understanding
+    how to get applications into appropriate domains. We need either SELinux policy
+    or code changes to place new processes into a domain. In [Chapter 9,](ch09.html
+    "Chapter 9. Adding Services to Domains") *Adding Services to Domains*, we covered
+    dynamic domain transitions with init-based services and the end of the chapter
+    mentions the importance of the `exec()` syscall in the "Limitations on App Labeling"
+    section. This is the trigger on which dynamic domain transitions occur. If there
+    is no `exec` in the path, we would have to rely on code changes. However, one
+    also has to consider the signing key in this security model, and there is no way
+    in pure SELinux policy language to express the key the process was signed with.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rather than exploring the whole zygote, we can dissect the following patches
+    that introduce application labeling into Android. Additionally, we can discover
+    how the introduced design meets the requirements of respecting the signing key,
+    working within the design of SELinux and the zygote.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Plumbing the zygote socket
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: In [Chapter 3](ch03.html "Chapter 3. Android Is Weird"), *Android Is Weird*,
+    we learned that the zygote listens for requests to spawn a new application from
+    a socket. The first patch to examine is [https://android-review.googlesource.com/#/c/31066/](https://android-review.googlesource.com/#/c/31066/).
+    This patch modifies three files in the base frameworks of Android. The first file
+    is `Process.java` in the method `startViaZygote()`. This method is the main entry
+    point for other methods with respect to building string arguments and passing
+    them to the zygote with `zygoteSendArgsAndGetResult()`. The patch introduces a
+    new argument called `seinfo`. Later on, we will see how this gets used. It appears
+    that this patch is plumbing this new `seinfo` argument over the socket. Note that
+    this code is called external to the zygote process.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next file to look at in this patch is `ZygoteConnection.java`. This code
+    executes from within the context. The patch starts off by declaring a string member
+    variable `peerContext` in the `ZygoteConnection` class. In the constructor, this
+    `peerContext` member is set to the value obtained from a call to `SELinux.getPeerContext(mSocket.getFileDescriptor())`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Since the `LocalSocket` `mSocket` is a Unix domain socket under the hood, you
+    can obtain the connected client''s credentials. In this case, the call to `getPeerContext()`
+    gets the client''s security context, or in more formal terms, the process label.
+    After the initialization, further down in method `runOnce()`, we see it being
+    used in calls to `applyUidSecurityPolicy` and other `apply*SecurityPolicy` routines.
+    The protected method `runOnce()` is called to read one start command from the
+    socket and arguments. Eventually, after the `apply*SecurityPolicy` checks, it
+    calls `forkandSpecialize()`. Each security policy check has been modified to use
+    SELinux on top of the existing DAC security controls. If we review `applyUidSecurityPolicy`,
+    we see they make the call:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE0]'
+  prefs: []
+  type: TYPE_PRE
+- en: This is an example of a userspace leveraging mandatory access controls in what
+    is known as an object manager. Additionally, a security check has been added for
+    the mysterious `seinfo` string in the `applyseInfoSecurityPolicy()` method. All
+    the security checks here for SELinux specify the target class `zygote`. So if
+    we look into `sepolicy access_vectors`, we see the added class `zygote`. This
+    is a custom class for Android and defines all the vectors checked in the security
+    checks.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last file we'll consider from this patch is `ActivityManagerService.java`.
+    The `ActivityManager` is responsible for starting applications and managing their
+    lifecycles. It's a consumer of the `Process.start` API and needs to specify `seinfo`.
+    This patch is simple, and for now, just sends `null`. Later, we will see the patch
+    enabling its use.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next patch, [https://android-review.googlesource.com/#/c/31063/](https://android-review.googlesource.com/#/c/31063/),
+    executes within the context of the Android Dalvik VM and is coded in the VM zygote
+    process space. The `forkAndSpecialize()` we saw in `ZygoteConnection` ends up
+    in this native routine. It enters using `static pid_t forkAndSpecializeCommon(const
+    u4* args, bool isSystemServer)`. This routine is responsible for creating the
+    new process that becomes the application.
+  prefs: []
+  type: TYPE_NORMAL
+- en: It begins with housekeeping code moving from Java to C and sets up the `niceName`
+    and `seinfo` values as C-style strings. Eventually, the code calls `fork()` and
+    the child process starts doing things, like executing `setgid` and `setuid`. The
+    `uid` and `gid` values are specified to the zygote connection with the `Process.start`
+    method. We also see a new call to `setSELinuxContext()`. As an aside, the order
+    of these events is important here. If you set the SELinux context of the new process
+    too early, the process would need additional capabilities in the new context to
+    do things like `setuid` and `setgid`. However, those permissions are best left
+    to the `zygote` domain, so the application domain we entered can be as minimal
+    as possible.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Continuing, `setSELinuxContext` eventually calls `selinux_android_setcontext()`.
+    Note that the `HAVE_SELINUX` conditional compilation macros were removed after
+    this commit, but prior to the 4.3 release. Also note that `selinux_android_setcontext()`
+    is defined in `libselinux`, so our journey will take us there. Here we see the
+    mysterious `seinfo` is still being passed along.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next patch to evaluate is [https://android-review.googlesource.com/#/c/39601/](https://android-review.googlesource.com/#/c/39601/).
+    This patch actually passes a more meaningful `seinfo` value from the Java layer.
+    Rather than being set to `null`, this patch introduces some parsing logic from
+    an XML file, and passes this along to the `Process.start` method.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'This patch modifies two major components: `PackageManager` and `installd`.
+    `PackageManager` runs inside the `system_server`, and performs application installation.
+    It maintains the state of all installed packages in the system. The second component,
+    a service known as `installd`, is a very privileged root service that creates
+    all the applications'' private directories on disk. Rather than giving system
+    server, and therefore `PackageManager`, the capability to create these directories,
+    only `installd` has these permissions. Using this approach, even the system server
+    cannot read data in your private data directories unless you make it world readable.'
+  prefs: []
+  type: TYPE_NORMAL
+- en: This patch is larger than the others, so we are only going to inspect the parts
+    directly relevant to our discussion. We'll start by looking at `PackageManagerService.java`.
+    This class is the package manager, proper for Android. In the constructor for
+    `PackageManagerService()`, we see the addition of `mFoundPolicyFile = SELinuxMMAC.readInstallPolicy();`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Based on the naming, we can conjecture that this method is looking for some
+    type of policy configuration file, and if found, returns true, setting the `mFoundPolicyFile`
+    member variable. We also see some calls to `createDataDirs` and `mInstaller.*`
+    calls. These we can ignore, since those calls are headed to `installd`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The next major portion adds the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE1]'
+  prefs: []
+  type: TYPE_PRE
+- en: It's important to note that this code was added into the `scanPackageLI()` method.
+    This method is called every time a package needs to be scanned for installation.
+    So at a high level, if some policy file is found during service startup, then
+    a `seinfo` value is assigned to the package.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The next file to look at is `ApplicationInfo.java`, a container class for maintaining
+    meta information about a package. As we can see, the `seinfo` value is specified
+    here for storage purposes. Additionally, there is some code for serializing and
+    deserializing the class via the Android specific `Parcel` implementation.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, we should have a closer look at the `SELinuxMMAC.java` code to
+    confirm our understanding of what's going on. The class starts by declaring two
+    locations for policy files.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE2]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'According to this, policy files can exist in two locations- `/data/system/mac_permissions.xml`
+    and `/system/etc/security/mac_permissions.xml`. Eventually, we see the call from
+    `PackageManagerService` initialization to the method defined in the class `readInstallPolicy()`,
+    which eventually reduces to a call of:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE3]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'With `policyFiles` set to `INSTALL_POLICY_FILE`, this code uses the array to
+    find a file at the specified locations. It is priority based, with the `/data`
+    location taking precedence over `/system`. The rest of the code in this method
+    looks like parsing logic and fills up two hash tables that were defined in the
+    class declaration:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE4]'
+  prefs: []
+  type: TYPE_PRE
+- en: The `sSigSeinfo` maps `Signatures`, or signing keys, to `seinfo` strings. The
+    other map, `sPackageSeinfo` maps a package name to a string.
+  prefs: []
+  type: TYPE_NORMAL
+- en: At this point, we can read some formatted XML from the `mac_permissions.xml`
+    file and create internal mappings from signing key to `seinfo` and package name
+    to `seinfo`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The other call from `PackageManagerService` into this class came from `void
+    assignSeinfoValue(PackageParser.Package pkg)`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s investigate what this method can do. It starts by checking if the application
+    is system UID or a system installed app. In other words, it checks whether the
+    application is a third-party application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE5]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This code has subsequently been dropped by Google, and was initially a requirement
+    for merge. We can, however, continue our evaluation. The code loops over all the
+    signatures in the package, and checks against the hash table. If it is signed
+    with something in that map, it uses the associated `seinfo` value. The other case
+    is that it matches by package name. In either case, the package''s `ApplictionInfo`
+    class `seinfo` value is updated to reflect this and be used elsewhere by `installd`
+    and zygote application spawn:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE6]'
+  prefs: []
+  type: TYPE_PRE
+- en: As an aside, what is merged into mainline AOSP and what is maintained in the
+    NSA Bitbucket repositories is a bit different. The NSA has additional controls
+    in these policy files that can cause an application installation to abort. Google
+    and the NSA are "forked" over this issue, so to speak. In the NSA versions of
+    `SELinuxMMAC.java`, you can specify that applications matching a specific signature
+    or package name are allowed to have certain sets of Android-level permissions.
+    For instance, you can block all applications from being installed that request
+    `CAMERA` permissions or block applications signed with certain keys. This also
+    highlights how important it can be to find patches within large code bases and
+    quickly come up to speed on how projects evolve, which can often seem daunting.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The last file in this patch for us to consider is `ActivityManagerService.java`.
+    This patch replaces the null with `app.info.seinfo`. After all that work and all
+    that plumbing, we finally have the mystical `seinfo` value fully parsed, associated
+    per application package, and sent along to the zygote for use in `selinux_android_setcontext()`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Now it would benefit us to sit back and think about some of the properties we
+    wanted to achieve in labeling applications. One of them is to somehow couple a
+    security context with the application signing key, and this is precisely the main
+    benefit of `seinfo`. This is a highly sensitive and trusted string associated
+    value of a signing key. The actual contents of the string are arbitrary and dictated
+    in `mac_permissions.xml`, which is the next stop on our adventure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: The mac_permissions.xml file
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: The `mac_permissions.xml` file has a very confusing name. Expanded, the name
+    is MAC permissions. However, its major mainline functionality is to map a signing
+    key to a `seinfo` string. Secondarily, it can also be used to configure a non-mainstream
+    install-time permission-checking feature, known as install time MMAC. MMAC controls
+    are part of the NSA's work to implement mandatory access controls in the middleware
+    layer. MMAC stands for "Middleware Mandatory Access Controls". Google has not
+    merged any of the MMAC features. However, since we used the NSA Bitbucket repositories,
+    our code base contains these features.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The `mac_permissions.xml` is an XML file, and should adhere to the following
+    rules, where italicized portions are only supported on NSA branches:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: A signature is a hex encoded X.509 certificate and is required for each signer
+    tag.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'A `<signer signature="" >` element may have multiple child elements:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`allow-permission`: It produces a set of maximal allowed permissions (whitelist)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`deny-permission`: It produces a blacklist of permissions to deny'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`allow-all`: It is a wildcard tag that will allow every permission requested'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`package`: It is a complex tag which defines allow, deny, and wildcard sub-elements
+    for a specific package name protected by the signature'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Zero or more global `<package name="">` tags are allowed. These tags allow a
+    policy to be set outside any signature for specific package names.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A `<default>` tag is allowed that can contain install policy for all apps not
+    signed with a previously listed cert and not having a per package global policy.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Unknown tags at any level are skipped.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Zero or more signer tags are allowed.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Zero or more package tags are allowed per signer tag.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A `<package name="">` tag may not contain another `<package name="">` tag. If
+    found, it's skipped.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'When multiple sub-elements appear for a tag, the following logic is used to
+    ultimately determine the type of enforcement:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A blacklist is used if at least one deny-permission tag is found.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A whitelist is used, if not a blacklist, and at least one allow-permission tag
+    is found.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A wildcard (accept all permissions) policy is used if not a blacklist and not
+    a whitelist, and at least one allow-all tag is present.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If a `<package name="">` sub-element is found, then that sub-element's policy
+    is used according to the earlier logic and overrides any signature global policy
+    type.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In order for a policy stanza to be enforced, at least one of the preceding situations
+    must apply. Meaning, empty signer, default or package tags will not be accepted.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Each `signer/default/package` (global or attached to a signer) tag is allowed
+    to contain one `<seinfo value=""/>` tag. This tag represents additional info that
+    each app can use in setting an SELinux security context on the eventual process.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Strict enforcing of any XML stanza is not enforced in most cases. This mainly
+    applies to duplicate tags, which are allowed. In the event that a tag already
+    exists, the original tag is replaced.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: There are also no checks on the validity of permission names. Although valid
+    Android permissions are expected, nothing prevents unknowns.
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Following are the enforcement decisions:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: All signatures used to sign an app are checked for policy according to signer
+    tags. However, only one of the signature policies has to pass.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: In the event that none of the signature policies pass, or none even match, then
+    a global package policy is sought. If found, this policy mediates the install.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: The default tag is consulted last, if needed.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A local package policy always overrides any parent policy.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: If none of the cases apply, then the app is denied.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'The following examples ignore the Install MMAC support and focus on the mainline
+    usage of `seinfo` mapping. The following is an example of stanza mapping all things
+    signed with the platform key to `seinfo` value platform:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE7]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Here is an example mapping all things signed with the release key to the release
+    domain with the exception of the browser. The browser gets assigned a `seinfo`
+    value of `browser`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE8]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Anything with an unknown key, gets mapped to the default tag:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE9]'
+  prefs: []
+  type: TYPE_PRE
+- en: The signing tags are of interest, the `@PLATFORM` and `@RELEASE` are special
+    processing strings used during build. Another mapping file maps these to actual
+    key values. The file that is processed and placed onto the device has all key
+    references replaced with hex encoded public keys rather than these placeholders.
+    It also has all whitespace and comments stripped to reduce size. Let's take a
+    look by pulling the built file from the device and formatting it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE10]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now, scroll to the top of the formatted output; you should see the following:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE11]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice that `signature=@PLATFORM` is now a hex string. This hex string is a
+    valid X509 certificate.
+  prefs: []
+  type: TYPE_NORMAL
+- en: keys.conf
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'The actual magic doing the mapping from `signature=@PLATFORM` in `mac_permissions.xml`
+    is `keys.conf`. This configuration file allows you to map a pem encoded x509 to
+    an arbitrary string. The convention is to start them with `@`, but this is not
+    enforced. The format of the file is based on the Python config parser and contains
+    sections. The section names are the tags in the `mac_permissions.xml` file you
+    wish to replace with key values. The platform example is:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE12]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'In Android, when you build, you can have three levels of builds: `engineering`,
+    `userdebug`, or `user`. In the `keys.conf` file, you can associate a key to be
+    used for all levels with the section attribute `ALL`, or you can assign different
+    keys per level. This is helpful when building release or user builds with very
+    special release keys. We see an example of this in the `@RELEASE` section:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE13]'
+  prefs: []
+  type: TYPE_PRE
+- en: The file also allows the use of environment variables through the traditional
+    `$` special character. The default location for the pem files is `build/target/product/security`.
+    However, you should *never* use these keys for a user release build. These keys
+    are the AOSP test keys and are public! By doing so, anyone can use the system
+    key to sign their app and gain system privilege. The `keys.conf` file is only
+    used during the build and is not located on the system.
+  prefs: []
+  type: TYPE_NORMAL
+- en: seapp_contexts
+  prefs:
+  - PREF_H2
+  type: TYPE_NORMAL
+- en: 'So far, we have looked at how a finished `mac_permssions.xml` file assigns
+    the `seinfo` value. Now we should address how the labeling is actually configured
+    and utilizes this value. The labeling of applications is managed in another configuration
+    file, `seapp_contexts`. Like `mac_permissions.xml`, it is loaded to the device.
+    However, the default location is `/seapp_contexts`. The format of `seapp_contexts`
+    is the `key=value` pair mappings per line, adhering to the following rules:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Input selectors:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`isSystemServer` (boolean)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`user` (string)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`seinfo` (string)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`name` (string)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`sebool` (string)'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Input selector rules:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`isSystemServer=true` can only be used once.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An unspecified `isSystemServer` defaults to false.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: An unspecified string selector will match any value.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: A user string selector that ends in `*` will perform a prefix match.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`user=_app` will match any regular app UID.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`user=_isolated` will match any isolated service UID.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: All specified input selectors in an entry must match (logical AND).
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Matching is case-insensitive.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Precedence rules in order:'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`isSystemServer=true` before `isSystemServer=false`'
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Specified `user=` string before unspecified `user=` string
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Fixed the `user=` string before the `user=` prefix (ending in `*`)
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Longer `user=` prefix before shorter `user=` prefix
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Specified `seinfo=` string before unspecified `seinfo=` string.
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Specified `name=` string before unspecified `name=` string.
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Specified `sebool=` string before unspecified `sebool=` string.
+  prefs:
+  - PREF_IND
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Outputs:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`domain` (string): It specifies the process domain for the application.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`type` (string): It specifies the disk label for the applications'' private
+    data directory.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`levelFrom` (string; one of `none`, `all`, `app`, or `user`): It gives the
+    MLS specifier.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`level` (string): It shows the hardcoded MLS value.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'Output rules:'
+  prefs:
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Only entries that specify `domain=` will be used for app process labeling.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: Only entries that specify `type=` will be used for app directory labeling.
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`levelFrom=user` is only supported for `_app` or `_isolated` UIDs.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`levelFrom=app` or `levelFrom=all` is only supported for `_app` UIDs.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: '`level` may be used to specify a fixed level for any UID.'
+  prefs:
+  - PREF_IND
+  - PREF_UL
+  type: TYPE_NORMAL
+- en: 'During application spawn, this file is used by the `selinux_android_setcontext()`
+    and `selinux_android_setfilecon2()` functions to look up the proper application
+    domain or filesystem context, respectively. The source for these can be found
+    in `external/libselinux/src/android.c` and are recommended reads. For example,
+    this entry places all applications with UID `bluetooth` in the `bluetooth` domain
+    with a data directory label of `bluetooth_data_file`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE14]'
+  prefs: []
+  type: TYPE_PRE
+- en: This example places all third party or "default" applications into a process
+    domain of `untrusted_app` and a data directory of `app_data_file`. It additionally
+    uses MLS categories of `levelFrom=app` to help provide additional MLS-based separations.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE15]'
+  prefs: []
+  type: TYPE_PRE
+- en: Currently, this feature is experimental as this breaks some known application
+    compatibility issues. At the time of this writing, this was a hot item of focus
+    for both Google and NSA engineers. Since it is experimental, let's validate its
+    functionality and then disable it.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'We have not installed any third party applications yet, so we''ll need to do
+    so in order to experiment. FDroid is a useful place to find third party applications,
+    so let''s download something from there and install it. We can use the `0xbenchmark`
+    application located at [https://f-droid.org/repository/browse/?fdid=org.zeroxlab.zeroxbenchmark](https://f-droid.org/repository/browse/?fdid=org.zeroxlab.zeroxbenchmark)
+    with an APK at [https://f-droid.org/repo/org.zeroxlab.zeroxbenchmark_9.apk](https://f-droid.org/repo/org.zeroxlab.zeroxbenchmark_9.apk),
+    as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE16]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: 'Check `logcat` for the install time `seinfo` value:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE17]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'From your UDOO, launch the `0xbenchmark` APK. We should see it running with
+    its label in `ps`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE18]'
+  prefs: []
+  type: TYPE_PRE
+- en: Notice the level portion of the context string `s0:c40,c256`. These categories
+    were created with the `level=app` setting from `seapp_contexts`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: To disable it, we could simply remove the key-value pair for level from the
+    entry in `seapp_contexts`, or we could leverage the `sebool` conditional assignment.
+    Let's use the Boolean approach. Modify the sepolicy `seapp_contexts` file so the
+    existing `untrusted_app` entry is modified, and a new one is added. Change `user=_app
+    domain=untrusted_app type=app_data_file` to `user=_app sebool=app_level domain=untrusted_app
+    type=app_data_file levelFrom=app`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Build that with `mmm external/sepolicy`, as follows:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE19]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Well, there was a build error complaining about not finding the `selinux` Boolean
+    on line 42 of `seapp_contexts`. Let''s attempt to correct the issue by declaring
+    the Boolean. In `app.te`, add: `bool app_level false;`. Now push the newly built
+    `seapp_contexts` and sepolicy file to the device and trigger a dynamic reload:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE20]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can verify that the Boolean exists by:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE21]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Due to design limitations, we need to uninstall and reinstall the application:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE22]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Re-install and check the context of the process *after* launching it:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE23]'
+  prefs: []
+  type: TYPE_PRE
+- en: Great! It failed. After some debugging, we discovered the source of the issue
+    is that the path `/data/security` is not world searchable, causing a DAC permissions
+    failure.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Note
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: We found this by printing off the result and error codes in `android.c` where
+    we saw the `fopen` on `seapp_contexts_file[]` array (files in priority order)
+    while checking the result of `fp = fopen(seapp_contexts_file[i++], "r")` in `selinux_android_seapp_context_reload()`
+    and using `selinux_log()` to dump the data to `logcat`.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE24]'
+  prefs: []
+  type: TYPE_PRE
+- en: Remember the `set selinux` context occurs after the UID switch, so we need to
+    make it searchable for others. We can fix the permissions on the UDOO `init.rc`
+    script by changing `device/fsl/imx6/etc/init.rc`. Specifically, change the line
+    `mkdir /data/security 0700 system system` to `mkdir /data/security 0711 system
+    system`. Build and flash the `bootimage`, and try the context test again.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE25]'
+  prefs: []
+  type: TYPE_PRE
+- en: So far, we've demonstrated how to use the `sebool` option on `seapp_contexts`
+    to disable the MLS categories. It's important to note that when changing categories
+    or types on APKs, it is required to remove and install the APK, or you will orphan
+    the process from its data directory because it won't have access permissions under
+    most circumstances.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Next, let''s take this APK, uninstall it, and assign it a unique domain by
+    changing its `seinfo` string. Typically, you use this feature to take a set of
+    applications signed with a common key and get them into a custom domain to do
+    custom things. For example, if you''re an OEM, you may need to allow custom permissions
+    to third party applications that are not signed with an OEM controlled key. Start
+    by uninstalling the APK:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE26]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Create a new entry in `mac_permissions.xml` by adding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE27]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now we need to get a pem file for `keys.conf`. So unpackage the APK and extract
+    the public certificate:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE28]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We''ll have to strip any cruft from the generated `CERT.pem` file. If you open
+    it up, you should see these lines at the top:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE29]'
+  prefs: []
+  type: TYPE_PRE
+- en: They need to be removed, so remove *only* the subject and issuer lines. The
+    file should start with `BEGIN CERTIFICATE` and end with `END CERTIFICATE` scissor
+    lines.
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'Let''s move this to a new folder in our workspace called `certs` and move the
+    certificate into this folder with a better name:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE30]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'We can set up our `keys.conf` by adding:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE31]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Don''t forget to update `seapp_contexts` in order to use the new mapping:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE32]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now declare the new types to be used. The domain type should be declared in
+    a file called `benchmark_app.te` in `sepolicy`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE33]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Also, add the `benchmark_app_data_file` in `file.te`:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE34]'
+  prefs: []
+  type: TYPE_PRE
+- en: Tip
+  prefs:
+  - PREF_H3
+  type: TYPE_NORMAL
+- en: You may not always want *all* of these attributes, especially if you're doing
+    something security critical. Make sure you look at each attribute and macro and
+    see its usage. You don't want to open up an unintended hole by having an overly
+    permissive domain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Rebuild the policy, push the required pieces, and trigger a reload.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE35]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Start a shell and grep logcat to see the `seinfo` value the benchmark APK is
+    installed as. Then install the APK:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE36]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'On the `logcat` output, you should see:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE37]'
+  prefs: []
+  type: TYPE_PRE
+- en: It should have been `seinfo=benchmark`! What could have happened?
+  prefs: []
+  type: TYPE_NORMAL
+- en: 'The problem is in `frameworks/base/services/java/com/android/server/pm/SELinuxMMAC.java`.
+    It looks in `/data/security/mac_permissions.xml`; so we can just push `mac_permissions.xml`.
+    This is another bug in the dynamic policy reload and has to do with historical
+    changes in this loading procedure. The culprit is within the `frameworks/base/services/java/com/android/server/pm/SELinuxMMAC.java`
+    file:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE38]'
+  prefs: []
+  type: TYPE_PRE
+- en: To get around this, remount `system` and push it to the default location.
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE39]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'This does *not* require a `setprop selinux.reload_policy 1`. Uninstall and
+    reinstall the benchmark APK, and check the logs:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE40]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'OK. It still didn''t work. When we examined the code, the `mac_permissions.xml`
+    file was loaded during package manager service start. This file won''t get reloaded
+    without a reboot, so let''s uninstall the benchmark APK, and reboot the UDOO.
+    After it''s been booted and `adb` is enabled, trigger a dynamic reload, install
+    the APK, and check `logcat`. It should have:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE41]'
+  prefs: []
+  type: TYPE_PRE
+- en: 'Now let''s verify the process domain by launching the APK, checking `ps`, and
+    verifying its application private directory:'
+  prefs: []
+  type: TYPE_NORMAL
+- en: '[PRE42]'
+  prefs: []
+  type: TYPE_PRE
+- en: This time, all the types check out. We successfully created a new custom domain.
+  prefs: []
+  type: TYPE_NORMAL
+- en: Summary
+  prefs:
+  - PREF_H1
+  type: TYPE_NORMAL
+- en: In this chapter, we investigated how to properly label application private data
+    directories as well as their runtime contexts via the configuration files and
+    SELinux policy. We also looked into the subsystems and code to make all of this
+    work as well as some basic things that may go wrong along the way. In the next
+    chapter, we will expand on how the policy and configuration files get built by
+    peering into the SE for Android build system.
+  prefs: []
+  type: TYPE_NORMAL
