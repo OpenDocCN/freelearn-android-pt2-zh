@@ -1,4 +1,4 @@
-# 第六章. 探索 SELinuxFS
+# 第六章：探索 SELinuxFS
 
 在前面的几章中，我们看到 SELinuxFS 在许多场合出现。从它在 `/proc/filesystems` 中的条目到 init 守护进程中的策略加载，在启用了 SELinux 的系统中经常使用。SELinuxFS 是内核到用户空间的接口，也是构建更高用户空间习惯用法和 `libselinux` 的基础。在本章中，我们将探索这个文件系统的功能，以更深入地了解系统的工作原理。具体来说，我们将：
 

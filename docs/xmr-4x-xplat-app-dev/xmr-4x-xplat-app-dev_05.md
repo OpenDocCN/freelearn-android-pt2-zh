@@ -1,4 +1,4 @@
-# 第五章. iOS 的 XamSnap
+# 第五章：iOS 的 XamSnap
 
 要开始编写 XamSnap 的 iOS 版本，请打开我们在上一章创建的解决方案。在本章中，我们主要在`XamSnap.iOS`项目中工作。项目模板将自动创建一个名为`ViewController`的控制器；请继续并删除它。我们将在进行中创建我们自己的控制器。
 

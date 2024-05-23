@@ -1,4 +1,4 @@
-# 第一章。Xamarin 设置
+# 第一章：Xamarin 设置
 
 如果你正在阅读这本书，你可能已经深深爱上了 C#、.NET 和像 Microsoft Visual Studio 这样的工具。当你考虑到学习新平台、新 IDE、新的应用程序模型，或许还有一两种编程语言的困难时，使用本地 SDK 的移动开发似乎令人畏惧。Xamarin 旨在用 C#为.NET 开发者提供开发本地 iOS、Android 和 Mac 应用程序的工具。
 

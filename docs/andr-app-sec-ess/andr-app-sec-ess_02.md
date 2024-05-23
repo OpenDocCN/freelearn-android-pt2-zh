@@ -1,4 +1,4 @@
-# 第二章. 应用程序构建块
+# 第二章：应用程序构建块
 
 本章节关注 Android 应用程序的构建块，即应用程序组件和组件间通信。Android 系统中有四种类型的组件：活动（Activities）、服务（Services）、广播接收器（Broadcast Receivers）和内容提供器（Content Providers）。每个组件都特别设计用来完成一个特定任务。这些组件的集合构成了一个 Android 应用程序。这些组件通过 Intents 进行相互通信，Intents 是 Android 的跨进程通信机制。
 

@@ -1,4 +1,4 @@
-# 第七章.本地交互：StageWebView 和 URI 处理程序
+# 第七章：本地交互：StageWebView 和 URI 处理程序
 
 本章将涵盖以下食谱：
 

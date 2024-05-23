@@ -1,4 +1,4 @@
-# 第六章. Android NDK 多线程
+# 第六章：Android NDK 多线程
 
 本章将涵盖以下内容：
 

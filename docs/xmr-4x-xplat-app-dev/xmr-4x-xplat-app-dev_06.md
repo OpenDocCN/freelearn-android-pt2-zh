@@ -1,4 +1,4 @@
-# 第六章. XamSnap for Android
+# 第六章：XamSnap for Android
 
 要开始编写 XamSnap 的 Android 版本，请打开前两章的解决方案。我们将要在 `XamSnap.Droid` 项目中工作，该项目应该已经从 Xamarin 项目模板中设置好了。
 

@@ -1,4 +1,4 @@
-# 第七章 Android 兼容性包
+# 第七章：Android 兼容性包
 
 新的 Android API 在之前版本的 Android 中无法工作，因此引入了 Android 兼容性包，以便将新的 API 移植到旧版本的 Android 平台。本章展示了我们如何使用 Android 兼容性包。
 

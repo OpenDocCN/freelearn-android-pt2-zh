@@ -1,4 +1,4 @@
-# 第五章 查询联系人表
+# 第五章：查询联系人表
 
 在本书前面，我们探讨了如何通过重写`SQLiteOpenHelper`类为我们的应用程序构建一个 SQLite 数据库。然后，我们通过引入`ContentProvider`类扩展了对 Android 上数据库的理解，它允许我们将 SQLite 数据库暴露给外部应用程序，以及更一般地暴露给 Android 操作系统本身。
 

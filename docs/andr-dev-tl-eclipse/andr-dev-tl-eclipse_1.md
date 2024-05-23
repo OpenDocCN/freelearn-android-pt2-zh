@@ -1,4 +1,4 @@
-# 第一章。安装 Eclipse、ADT 和 SDK
+# 第一章：安装 Eclipse、ADT 和 SDK
 
 本章节作为在 Windows 环境下开发 Android 所需的所有开发工具包的安装说明。它分为以下子主题：
 

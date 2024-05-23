@@ -1,4 +1,4 @@
-# 第一章。Spring for Android 快速入门
+# 第一章：Spring for Android 快速入门
 
 欢迎阅读《Spring for Android 快速入门》。本书特别为您提供了使用 Spring for Android 进行 Android 开发所需的所有信息。您将学习 Spring for Android 提供的不同功能，并开始使用这些功能构建您的第一个应用。
 

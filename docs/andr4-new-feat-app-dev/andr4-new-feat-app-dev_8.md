@@ -1,4 +1,4 @@
-# 第八章. 新的连接性 API - Android Beam 和 Wi-Fi Direct
+# 第八章：新的连接性 API - Android Beam 和 Wi-Fi Direct
 
 随着 Android Ice Cream Sandwich 的推出，引入了新的连接性 API - **Android Beam**，它使用设备的 NFC 硬件，以及**Wi-Fi Direct**，允许设备在不使用无线接入点的情况下相互连接。本章将教我们如何使用 Android Beam 和 Wi-Fi Direct API。
 

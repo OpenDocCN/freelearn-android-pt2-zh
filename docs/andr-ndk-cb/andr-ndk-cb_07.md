@@ -1,4 +1,4 @@
-# 第七章. 其他 Android NDK API
+# 第七章：其他 Android NDK API
 
 在本章中，我们将涵盖以下内容：
 

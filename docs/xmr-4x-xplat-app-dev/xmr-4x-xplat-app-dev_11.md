@@ -1,4 +1,4 @@
-# 第十一章。Xamarin.Forms
+# 第十一章：Xamarin.Forms
 
 自从 Xamarin 公司成立以来，他们的宗旨一直是将 iOS 和 Android 的本地 API 以符合 C# 习惯的方式呈现出来。这在最初是一个很好的策略，因为使用 Xamarin.iOS 或 Xamarin.Android 构建的应用程序几乎与本地 Objective-C 或 Java 应用程序无法区分。代码共享通常仅限于非 UI 代码，这为 Xamarin 生态系统留下了一个潜在的空白：跨平台 UI 抽象。Xamarin.Forms 就是解决这一问题的方案，它是一个跨平台 UI 框架，在每个平台上渲染本地控件。`Xamarin.Forms` 是一个非常适合那些懂 C#（和 XAML）但可能不想深入了解本地 iOS 和 Android API 的人的框架。
 

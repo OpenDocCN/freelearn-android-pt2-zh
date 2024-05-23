@@ -1,4 +1,4 @@
-# 第三章. 社交 API
+# 第三章：社交 API
 
 随着 Android Ice Cream Sandwich 的推出，引入了新的社交 API，这个 API 使得集成社交网络变得简单。此外，在 Android Ice Cream Sandwich 发布后，可以使用高分辨率照片作为联系人照片。本章通过示例展示了社交 API 的使用。
 

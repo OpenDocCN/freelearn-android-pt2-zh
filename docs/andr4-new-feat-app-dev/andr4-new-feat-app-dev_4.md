@@ -1,4 +1,4 @@
-# 第四章. 日历 API
+# 第四章：日历 API
 
 Android Ice Cream Sandwich 引入了新的日历 API，用于管理日历。这些 API 可以管理事件、参与者、提醒和重复事件的数据库。这些 API 允许我们轻松地将日历与我们的 Android 应用程序集成。本章展示了如何使用示例使用日历 API。
 

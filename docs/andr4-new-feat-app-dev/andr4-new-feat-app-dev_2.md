@@ -1,4 +1,4 @@
-# 第二章. 新布局——GridLayout
+# 第二章：新布局——GridLayout
 
 随着 Android Ice Cream Sandwich 的推出，引入了一种新的布局，称为**GridLayout**。这个布局是一个优化的布局，可以代替**LinearLayout**和**RelativeLayout**。本章展示了如何使用和配置 GridLayout。
 

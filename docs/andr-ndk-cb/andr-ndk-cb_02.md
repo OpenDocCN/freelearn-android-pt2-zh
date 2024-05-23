@@ -1,4 +1,4 @@
-# 第二章. Java Native Interface
+# 第二章：Java Native Interface
 
 在本章中，我们将介绍以下食谱：
 

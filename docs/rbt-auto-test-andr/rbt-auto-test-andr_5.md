@@ -1,4 +1,4 @@
-# 第五章.与其他框架的比较
+# 第五章：与其他框架的比较
 
 本章节将根据某些参数对 Robotium 与其他测试框架进行比较。这将为你提供一个根据项目需求选择合适框架的方法。在本章中，我们将比较 Robotium 与 MonkeyRunner、Robolectric、UI Automator 和 Calabash 框架。
 

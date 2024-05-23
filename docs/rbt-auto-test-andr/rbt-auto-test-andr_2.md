@@ -1,4 +1,4 @@
-# 第二章. 使用 Robotium 创建测试项目
+# 第二章：使用 Robotium 创建测试项目
 
 本章将指导您使用 Robotium Framework 为 Android 创建第一个测试项目。首先，让我们实现一个简单的计算器 Android 应用。然后，使用这个**被测应用（AUT）**，我们将了解创建 Robotium 测试项目的过程。
 

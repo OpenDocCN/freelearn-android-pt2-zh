@@ -1,4 +1,4 @@
-# 第七章 其他 Robotium 实用工具
+# 第七章：其他 Robotium 实用工具
 
 本章包括 Robotium 框架中的各种实用工具。这些实用工具包括 `RobotiumUtils` 类、XPath 的使用、Robotium 对已安装的 Android 应用程序的用途，以及在应用程序签名和解签名操作期间涉及的签名过程，以执行测试。让我们逐一了解本章中的这些实用工具。
 

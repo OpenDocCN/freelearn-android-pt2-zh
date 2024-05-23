@@ -1,4 +1,4 @@
-# 第三章. Robotium APIs
+# 第三章：Robotium APIs
 
 本章将向你介绍`Solo`类以及框架中存在的 API 信息。完成这部分后，我们将考虑资源 ID 测试用例，它简要介绍了如何使用 Robotium 实现国际化。
 

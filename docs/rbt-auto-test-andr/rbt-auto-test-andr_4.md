@@ -1,4 +1,4 @@
-# 第四章. Robotium 中的 Web 支持
+# 第四章：Robotium 中的 Web 支持
 
 本章将简要介绍如何使用 Robotium 的 Web 支持在 Android 中访问 WebElements。我们将在本章的前部分看到这些方法，并继续一个简单的测试混合应用程序的示例。
 
