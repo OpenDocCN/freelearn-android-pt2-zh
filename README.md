@@ -4,7 +4,7 @@
 > 
 > 不接受，不拒绝，不主动，不负责。
 
-* [在线阅读](https://flandr2.opendoccn.org)
+* [在线阅读](https://flandr2.flygon.net)
 
 ## 下载
 
